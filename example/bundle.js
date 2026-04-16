@@ -14037,7 +14037,7 @@ ${addLineNumbers(fragment)}`);
 
   // src/core/Novel.ts
   var Novel = class {
-    /** 전역 변수. 씬 전환에도 유지됩니다 */
+    /** 전역 변수. 씨 전환에도 유지됩니다 */
     vars;
     _config;
     _option;
@@ -14047,8 +14047,15 @@ ${addLineNumbers(fragment)}`);
     _currentScene = null;
     _currentSceneDef = null;
     _inputMode = "none";
-    _ui = null;
     _inputBound = null;
+    /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
+    _dialogueBgObj = null;
+    /** 화자 이름 (Leviar Text, 카메라 자식) */
+    _speakerTextObj = null;
+    /** 대사 텍스트 (Leviar Text, 카메라 자식) */
+    _dialogueTextObj = null;
+    /** 선택지 컨테이너 (HTML — 클릭 이벤트 처리) */
+    _choicesEl = null;
     constructor(config, option) {
       this._config = config;
       const canvas = option.canvas;
@@ -14186,43 +14193,59 @@ ${addLineNumbers(fragment)}`);
       }
       this._inputMode = "none";
     }
-    // ─── 빌트인 대화 UI (HTML 오버레이) ──────────────────────────
+    // ─── 빌트인 대화 UI (Leviar 오브젝트 + HTML 선택지) ──────────────────
     _setupBuiltinUI() {
+      const cam = this._world.camera;
+      const w = this._option.width;
+      const h = this._option.height;
+      const focalLength = cam?.attribute?.focalLength ?? 100;
+      const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: focalLength };
+      const BOX_H = h * 0.3;
+      const BOX_CY = h - BOX_H / 2;
+      const bgRect = this._world.createRectangle({
+        style: {
+          color: "rgba(0,0,0,0.82)",
+          width: w,
+          height: BOX_H,
+          zIndex: 300,
+          opacity: 0,
+          pointerEvents: false
+        },
+        transform: { position: toLocal(w / 2, BOX_CY) }
+      });
+      this._world.camera?.addChild(bgRect);
+      this._dialogueBgObj = bgRect;
+      const speakerText = this._world.createText({
+        attribute: { text: "" },
+        style: {
+          fontSize: 18,
+          fontWeight: "bold",
+          color: "#ffe066",
+          zIndex: 301,
+          opacity: 0,
+          pointerEvents: false
+        },
+        transform: { position: toLocal(w * 0.05, h * 0.73) }
+      });
+      this._world.camera?.addChild(speakerText);
+      this._speakerTextObj = speakerText;
+      const dialogueText = this._world.createText({
+        attribute: { text: "" },
+        style: {
+          fontSize: 20,
+          color: "#ffffff",
+          width: w * 0.9,
+          lineHeight: 1.6,
+          zIndex: 301,
+          opacity: 0,
+          pointerEvents: false
+        },
+        transform: { position: toLocal(w * 0.05, h * 0.79) }
+      });
+      this._world.camera?.addChild(dialogueText);
+      this._dialogueTextObj = dialogueText;
       const canvas = this._option.canvas;
       const parent = canvas.parentElement ?? document.body;
-      const container = document.createElement("div");
-      container.style.cssText = [
-        "position:absolute",
-        "bottom:0",
-        "left:0",
-        "right:0",
-        "display:none",
-        "flex-direction:column",
-        "align-items:flex-start",
-        "padding:24px 32px 32px",
-        "box-sizing:border-box",
-        "gap:8px",
-        "background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)",
-        "pointer-events:none",
-        "user-select:none",
-        'font-family:"Noto Sans KR", "Malgun Gothic", sans-serif'
-      ].join(";");
-      const speaker = document.createElement("div");
-      speaker.style.cssText = [
-        "font-size:18px",
-        "font-weight:700",
-        "color:#ffe066",
-        "text-shadow:0 1px 4px rgba(0,0,0,0.8)",
-        "min-height:22px"
-      ].join(";");
-      const text = document.createElement("div");
-      text.style.cssText = [
-        "font-size:20px",
-        "line-height:1.6",
-        "color:#ffffff",
-        "text-shadow:0 1px 3px rgba(0,0,0,0.9)",
-        "width:100%"
-      ].join(";");
       const choices = document.createElement("div");
       choices.style.cssText = [
         "position:absolute",
@@ -14236,29 +14259,32 @@ ${addLineNumbers(fragment)}`);
         "align-items:center",
         "gap:12px",
         "background:rgba(0,0,0,0.6)",
-        "pointer-events:auto"
+        "pointer-events:auto",
+        'font-family:"Noto Sans KR","Malgun Gothic",sans-serif'
       ].join(";");
-      container.appendChild(speaker);
-      container.appendChild(text);
       parent.style.position = "relative";
-      parent.appendChild(container);
       parent.appendChild(choices);
-      container.style.width = canvas.offsetWidth + "px";
-      container.style.height = Math.floor(canvas.offsetHeight * 0.28) + "px";
-      this._ui = { container, speaker, text, choices };
+      this._choicesEl = choices;
     }
     _showDialogue(speaker, text) {
-      if (!this._ui) return;
-      this._ui.speaker.textContent = speaker ?? "";
-      this._ui.text.textContent = text;
-      this._ui.container.style.display = "flex";
-      this._ui.choices.style.display = "none";
+      if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return;
+      this._dialogueBgObj.animate({ style: { opacity: 1 } }, 250, "easeOut");
+      this._speakerTextObj.attribute.text = speaker ?? "";
+      this._speakerTextObj.animate({ style: { opacity: speaker ? 1 : 0 } }, 150, "easeOut");
+      this._dialogueTextObj.transition(text, 300);
+      this._dialogueTextObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
+      if (this._choicesEl) {
+        this._choicesEl.style.display = "none";
+        this._choicesEl.innerHTML = "";
+      }
     }
     _showChoices(choices) {
-      if (!this._ui) return;
-      this._ui.container.style.display = "none";
-      this._ui.choices.style.display = "flex";
-      this._ui.choices.innerHTML = "";
+      if (!this._choicesEl) return;
+      if (this._dialogueBgObj) this._dialogueBgObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
+      if (this._speakerTextObj) this._speakerTextObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
+      if (this._dialogueTextObj) this._dialogueTextObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
+      this._choicesEl.style.display = "flex";
+      this._choicesEl.innerHTML = "";
       this._inputMode = "choice";
       choices.forEach((choice, i) => {
         const btn = document.createElement("button");
@@ -14295,14 +14321,17 @@ ${addLineNumbers(fragment)}`);
             }
           }
         });
-        this._ui.choices.appendChild(btn);
+        this._choicesEl.appendChild(btn);
       });
     }
     _hideDialogueUI() {
-      if (!this._ui) return;
-      this._ui.container.style.display = "none";
-      this._ui.choices.style.display = "none";
-      this._ui.choices.innerHTML = "";
+      if (this._dialogueBgObj) this._dialogueBgObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
+      if (this._speakerTextObj) this._speakerTextObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
+      if (this._dialogueTextObj) this._dialogueTextObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
+      if (this._choicesEl) {
+        this._choicesEl.style.display = "none";
+        this._choicesEl.innerHTML = "";
+      }
     }
   };
 

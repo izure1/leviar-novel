@@ -26,20 +26,12 @@ type ActiveScene = DialogueScene | ExploreScene
 /** 현재 입력 모드 */
 type InputMode = 'dialogue' | 'choice' | 'none'
 
-// 대화창 HTML 요소 구조체
-interface DialogueUI {
-  container: HTMLDivElement
-  speaker:   HTMLDivElement
-  text:      HTMLDivElement
-  choices:   HTMLDivElement
-}
-
 // =============================================================
 // Novel 클래스
 // =============================================================
 
 export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>> {
-  /** 전역 변수. 씬 전환에도 유지됩니다 */
+  /** 전역 변수. 씨 전환에도 유지됩니다 */
   readonly vars: TConfig['vars']
 
   private readonly _config:   TConfig
@@ -51,8 +43,16 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _currentScene:    ActiveScene | null    = null
   private _currentSceneDef: AnySceneDef | null    = null
   private _inputMode:       InputMode              = 'none'
-  private _ui:              DialogueUI | null      = null
   private _inputBound:      (() => void) | null    = null
+
+  /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
+  private _dialogueBgObj:   any = null
+  /** 화자 이름 (Leviar Text, 카메라 자식) */
+  private _speakerTextObj:  any = null
+  /** 대사 텍스트 (Leviar Text, 카메라 자식) */
+  private _dialogueTextObj: any = null
+  /** 선택지 컨테이너 (HTML — 클릭 이벤트 처리) */
+  private _choicesEl:       HTMLDivElement | null  = null
 
   constructor(config: TConfig, option: NovelOption) {
     this._config = config
@@ -218,92 +218,121 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._inputMode = 'none'
   }
 
-  // ─── 빌트인 대화 UI (HTML 오버레이) ──────────────────────────
+  // ─── 빌트인 대화 UI (Leviar 오브젝트 + HTML 선택지) ──────────────────
 
   private _setupBuiltinUI(): void {
-    const canvas = this._option.canvas
-    const parent = canvas.parentElement ?? document.body
+    const cam = this._world.camera as any
+    const w   = this._option.width
+    const h   = this._option.height
+    const focalLength = cam?.attribute?.focalLength ?? 100
 
-    // 컨테이너: canvas 위에 absolute 포지션
-    const container = document.createElement('div')
-    container.style.cssText = [
-      'position:absolute',
-      'bottom:0', 'left:0', 'right:0',
-      'display:none',
-      'flex-direction:column',
-      'align-items:flex-start',
-      'padding:24px 32px 32px',
-      'box-sizing:border-box',
-      'gap:8px',
-      'background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)',
-      'pointer-events:none',
-      'user-select:none',
-      'font-family:"Noto Sans KR", "Malgun Gothic", sans-serif',
-    ].join(';')
+    // canvas 픽셀 좌표 → 카메라-로컬 3D 좌표
+    const toLocal = (cx: number, cy: number) =>
+      (cam && typeof cam.canvasToLocal === 'function')
+        ? cam.canvasToLocal(cx, cy)
+        : { x: cx - w / 2, y: -(cy - h / 2), z: focalLength }
 
-    // 화자 이름
-    const speaker = document.createElement('div')
-    speaker.style.cssText = [
-      'font-size:18px',
-      'font-weight:700',
-      'color:#ffe066',
-      'text-shadow:0 1px 4px rgba(0,0,0,0.8)',
-      'min-height:22px',
-    ].join(';')
+    const BOX_H  = h * 0.30
+    const BOX_CY = h - BOX_H / 2
 
-    // 대사 텍스트
-    const text = document.createElement('div')
-    text.style.cssText = [
-      'font-size:20px',
-      'line-height:1.6',
-      'color:#ffffff',
-      'text-shadow:0 1px 3px rgba(0,0,0,0.9)',
-      'width:100%',
-    ].join(';')
+    // ── 대화창 배경 (Rectangle)
+    const bgRect = this._world.createRectangle({
+      style: {
+        color:         'rgba(0,0,0,0.82)',
+        width:         w,
+        height:        BOX_H,
+        zIndex:        300,
+        opacity:       0,
+        pointerEvents: false,
+      } as any,
+      transform: { position: toLocal(w / 2, BOX_CY) },
+    })
+    this._world.camera?.addChild(bgRect as any)
+    this._dialogueBgObj = bgRect
 
-    // 선택지 컨테이너
+    // ── 화자 이름 (Text)
+    const speakerText = this._world.createText({
+      attribute: { text: '' } as any,
+      style: {
+        fontSize:      18,
+        fontWeight:    'bold' as any,
+        color:         '#ffe066',
+        zIndex:        301,
+        opacity:       0,
+        pointerEvents: false,
+      } as any,
+      transform: { position: toLocal(w * 0.05, h * 0.73) },
+    })
+    this._world.camera?.addChild(speakerText as any)
+    this._speakerTextObj = speakerText
+
+    // ── 대사 텍스트 (Text)
+    const dialogueText = this._world.createText({
+      attribute: { text: '' } as any,
+      style: {
+        fontSize:      20,
+        color:         '#ffffff',
+        width:         w * 0.90,
+        lineHeight:    1.6 as any,
+        zIndex:        301,
+        opacity:       0,
+        pointerEvents: false,
+      } as any,
+      transform: { position: toLocal(w * 0.05, h * 0.79) },
+    })
+    this._world.camera?.addChild(dialogueText as any)
+    this._dialogueTextObj = dialogueText
+
+    // ── 선택지 컨테이너 (HTML)
+    const canvas  = this._option.canvas
+    const parent  = canvas.parentElement ?? document.body
     const choices = document.createElement('div')
     choices.style.cssText = [
-      'position:absolute',
-      'top:0', 'left:0', 'right:0', 'bottom:0',
+      'position:absolute', 'top:0', 'left:0', 'right:0', 'bottom:0',
       'display:none',
-      'flex-direction:column',
-      'justify-content:center',
-      'align-items:center',
+      'flex-direction:column', 'justify-content:center', 'align-items:center',
       'gap:12px',
       'background:rgba(0,0,0,0.6)',
       'pointer-events:auto',
+      'font-family:"Noto Sans KR","Malgun Gothic",sans-serif',
     ].join(';')
-
-    container.appendChild(speaker)
-    container.appendChild(text)
     parent.style.position = 'relative'
-    parent.appendChild(container)
     parent.appendChild(choices)
-
-    // canvas 크기에 맞게 정렬
-    container.style.width  = canvas.offsetWidth  + 'px'
-    container.style.height = Math.floor(canvas.offsetHeight * 0.28) + 'px'
-
-    this._ui = { container, speaker, text, choices }
+    this._choicesEl = choices
   }
 
   private _showDialogue(speaker: string | undefined, text: string): void {
-    if (!this._ui) return
-    this._ui.speaker.textContent     = speaker ?? ''
-    this._ui.text.textContent        = text
-    this._ui.container.style.display = 'flex'
-    this._ui.choices.style.display   = 'none'
-    // _inputMode는 _syncUIState에서 일괄 설정
+    if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return
+
+    // 대화창 배경 페이드인
+    ; (this._dialogueBgObj as any).animate({ style: { opacity: 1 } }, 250, 'easeOut')
+
+    // 화자 이름: transition 없이 즉시 교체 + opacity 애니메이션
+    ; (this._speakerTextObj as any).attribute.text = speaker ?? ''
+    ; (this._speakerTextObj as any).animate({ style: { opacity: speaker ? 1 : 0 } }, 150, 'easeOut')
+
+    // 대사: transition(300ms)으로 부드럽게 전환
+    ; (this._dialogueTextObj as any).transition(text, 300)
+    ; (this._dialogueTextObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
+
+    // 선택지 숨기기
+    if (this._choicesEl) {
+      this._choicesEl.style.display = 'none'
+      this._choicesEl.innerHTML     = ''
+    }
   }
 
   private _showChoices(choices: { text: string; next?: string; goto?: string }[]): void {
-    if (!this._ui) return
+    if (!this._choicesEl) return
 
-    this._ui.container.style.display = 'none'
-    this._ui.choices.style.display   = 'flex'
-    this._ui.choices.innerHTML       = ''
-    this._inputMode = 'choice'
+    // 대화창 페이드아웃
+    if (this._dialogueBgObj)   (this._dialogueBgObj   as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
+    if (this._speakerTextObj)  (this._speakerTextObj  as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
+    if (this._dialogueTextObj) (this._dialogueTextObj as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
+
+    this._choicesEl.style.display = 'flex'
+    this._choicesEl.innerHTML     = ''
+    this._inputMode               = 'choice'
 
     choices.forEach((choice, i) => {
       const btn = document.createElement('button')
@@ -322,33 +351,36 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         'text-align:center',
       ].join(';')
       btn.addEventListener('mouseenter', () => {
-        btn.style.background   = 'rgba(80,80,180,0.9)'
-        btn.style.borderColor  = 'rgba(255,255,255,0.7)'
+        btn.style.background  = 'rgba(80,80,180,0.9)'
+        btn.style.borderColor = 'rgba(255,255,255,0.7)'
       })
       btn.addEventListener('mouseleave', () => {
-        btn.style.background   = 'rgba(30,30,60,0.85)'
-        btn.style.borderColor  = 'rgba(255,255,255,0.3)'
+        btn.style.background  = 'rgba(30,30,60,0.85)'
+        btn.style.borderColor = 'rgba(255,255,255,0.3)'
       })
       btn.addEventListener('click', (e) => {
         e.stopPropagation()
         if (this._currentScene instanceof DialogueScene) {
           const prevScene = this._currentScene
           this._currentScene.selectChoice(i)
-          // 씨이 바뀌었다면 loadScene이 이미 UI를 처리함 — 중복 숨기기 방지
+          // 씨이 바뀌었다면 loadScene이 이미 UI를 처리함
           if (this._currentScene === prevScene) {
             this._hideDialogueUI()
             this._syncUIState()
           }
         }
       })
-      this._ui!.choices.appendChild(btn)
+      this._choicesEl!.appendChild(btn)
     })
   }
 
   private _hideDialogueUI(): void {
-    if (!this._ui) return
-    this._ui.container.style.display = 'none'
-    this._ui.choices.style.display   = 'none'
-    this._ui.choices.innerHTML       = ''
+    if (this._dialogueBgObj)   (this._dialogueBgObj   as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
+    if (this._speakerTextObj)  (this._speakerTextObj  as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
+    if (this._dialogueTextObj) (this._dialogueTextObj as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
+    if (this._choicesEl) {
+      this._choicesEl.style.display = 'none'
+      this._choicesEl.innerHTML     = ''
+    }
   }
 }

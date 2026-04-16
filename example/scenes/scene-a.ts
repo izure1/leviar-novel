@@ -6,10 +6,10 @@ import { defineScene } from '../../src'
 export default defineScene(config, 'scene-a', [
 
   // ── 타이틀 오버레이 (add → 대기 → remove 배열)
-  { type: 'overlay', action: 'add',  text: '— Scene A: 캐릭터 & 이펙트 —', preset: 'title' },
+  { type: 'overlay', action: 'add', text: '— Scene A: 캐릭터 & 이펙트 —', preset: 'title' },
   [
     { type: 'overlay', action: 'remove', preset: 'title', duration: 800 },
-    { type: 'effect',  action: 'add',    effect: 'sakura',  rate: 8 },
+    { type: 'effect', action: 'add', effect: 'sakura', rate: 8 },
   ],
 
   // ── 대사
@@ -31,8 +31,8 @@ export default defineScene(config, 'scene-a', [
 
   // ── 카메라 리셋 + 이펙트 제거 배열
   [
-    { type: 'camera-zoom', preset: 'reset',  duration: 600 },
-    { type: 'camera-pan',  preset: 'center', duration: 600 },
+    { type: 'camera-zoom', preset: 'reset', duration: 600 },
+    { type: 'camera-pan', preset: 'center', duration: 600 },
   ],
   { type: 'effect', action: 'remove', effect: 'sakura', duration: 800 },
 
