@@ -1,0 +1,31 @@
+{
+  "name": "leviar-novel",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "izure <admin@izure.org>",
+  "repository": "https://github.com/izure1/leviar-novel",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example:build": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap",
+    "example:dev": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "leviar": "^1.0.2"
+  }
+}

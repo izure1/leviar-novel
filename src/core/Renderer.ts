@@ -1,0 +1,835 @@
+// =============================================================
+// Renderer.ts — Leviar World 렌더 어댑터
+// Visualnovel.ts의 렌더 메서드를 config-driven 구조로 이식한 파일입니다.
+// =============================================================
+
+import { World } from 'leviar'
+import type { LeviarObject, EasingType } from 'leviar'
+import type { NovelConfig, CharDefs, BgDefs } from '../types/config'
+import type {
+  MoodType, LightPreset, FlickerPreset, OverlayPreset,
+  EffectType, ZoomPreset, PanPreset, CameraEffectPreset,
+  BackgroundFitPreset, FadeColorPreset, FlashPreset, WipePreset,
+  CharacterPositionPreset,
+} from '../types/dialogue'
+
+// =============================================================
+// 내부 프리셋 룩업 테이블
+// =============================================================
+
+const Z_INDEX = {
+  BACKGROUND:           -1,
+  CHARACTER_NORMAL:     10,
+  CHARACTER_HIGHLIGHT:  100,
+  MOOD:                 100,
+  LIGHT:                200,
+  UI_BASE:              300,
+  OVERLAY_WHISPER:      400,
+  OVERLAY_CAPTION:      410,
+  OVERLAY_TITLE:        420,
+  CHARACTER_CUTIN:      500,
+  TRANSITION:           999,
+} as const
+
+const CHARACTER_X_RATIO: Record<string, number> = {
+  'far-left':  0.1,
+  'left':      0.25,
+  'center':    0.5,
+  'right':     0.75,
+  'far-right': 0.9,
+}
+
+const ZOOM_PRESETS: Record<ZoomPreset, { scale: number; duration: number }> = {
+  'close-up': { scale: 1.5, duration: 800 },
+  'medium':   { scale: 1.2, duration: 600 },
+  'wide':     { scale: 0.8, duration: 800 },
+  'reset':    { scale: 1.0, duration: 600 },
+}
+
+const PAN_PRESETS: Record<PanPreset, { x: number; y: number; duration: number }> = {
+  left:   { x: -200, y: 0,    duration: 1000 },
+  right:  { x:  200, y: 0,    duration: 1000 },
+  up:     { x: 0,    y:  200, duration: 1000 },
+  down:   { x: 0,    y: -200, duration: 1000 },
+  center: { x: 0,    y: 0,    duration: 1000 },
+}
+
+const CAMERA_EFFECT_PRESETS: Record<CameraEffectPreset, { intensity: number; duration: number }> = {
+  shake:     { intensity: 10, duration: 500 },
+  bounce:    { intensity: 15, duration: 600 },
+  wave:      { intensity: 20, duration: 1000 },
+  nod:       { intensity: 10, duration: 400 },
+  'shake-x': { intensity: 15, duration: 500 },
+  fall:      { intensity: 15, duration: 800 },
+}
+
+const FADE_PRESETS: Record<FadeColorPreset, { color: string; easing: EasingType }> = {
+  black: { color: 'rgba(0,0,0,1)',         easing: 'linear' },
+  white: { color: 'rgba(255,255,255,1)',   easing: 'linear' },
+  red:   { color: 'rgba(200,0,0,1)',       easing: 'easeIn' },
+  dream: { color: 'rgba(200,180,255,1)',   easing: 'easeInOut' },
+  sepia: { color: 'rgba(150,100,50,1)',    easing: 'easeIn' },
+}
+
+const FLASH_PRESETS: Record<FlashPreset, { color: string; duration: number }> = {
+  white:  { color: 'rgba(255,255,255,1)', duration: 300 },
+  red:    { color: 'rgba(255,0,0,1)',     duration: 300 },
+  yellow: { color: 'rgba(255,220,0,1)',   duration: 250 },
+}
+
+const WIPE_PRESETS: Record<WipePreset, { x: number; y: number }> = {
+  left:  { x: -1, y:  0 },
+  right: { x:  1, y:  0 },
+  up:    { x:  0, y:  1 },
+  down:  { x:  0, y: -1 },
+}
+
+const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string }> = {
+  day:       { color: 'rgba(255,230,180,0.1)', vignette: 'transparent 70%, rgba(255,200,100,0.15) 100%', blendMode: 'screen' },
+  night:     { color: 'rgba(10,15,60,0.5)',    vignette: 'transparent 50%, rgba(0,5,25,0.6) 100%',       blendMode: 'multiply' },
+  dawn:      { color: 'rgba(25,35,70,0.4)',    vignette: 'transparent 50%, rgba(65,122,164,0.6) 100%',   blendMode: 'multiply' },
+  sunset:    { color: 'rgba(255,120,50,0.25)', vignette: 'transparent 50%, rgba(255,100,50,0.4) 100%',   blendMode: 'screen' },
+  foggy:     { color: 'rgba(200,210,220,0.4)', vignette: 'rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%', blendMode: 'screen' },
+  sepia:     { color: 'rgba(160,110,50,0.3)',  vignette: 'transparent 60%, rgba(80,50,20,0.5) 100%',     blendMode: 'multiply' },
+  cold:      { color: 'rgba(80,130,220,0.25)', vignette: 'transparent 50%, rgba(20,40,100,0.4) 100%',    blendMode: 'hard-light' },
+  noir:      { color: 'rgba(0,0,0,0.1)',       vignette: 'transparent 50%, rgba(0,0,0,0.6) 100%',        blendMode: 'luminosity' },
+  horror:    { color: 'rgba(150,0,0,0.3)',     vignette: 'transparent 40%, rgba(0,0,0,0.7) 100%',        blendMode: 'multiply' },
+  flashback: { color: 'rgba(200,200,200,0.2)', vignette: 'transparent 60%, rgba(255,255,255,0.5) 100%',  blendMode: 'screen' },
+  dream:     { color: 'rgba(180,150,255,0.2)', vignette: 'transparent 60%, rgba(255,200,255,0.4) 100%',  blendMode: 'screen' },
+  danger:    { color: 'rgba(255,0,0,0.1)',     vignette: 'transparent 50%, rgba(200,0,0,0.5) 100%',      blendMode: 'color-burn' },
+  none:      { color: 'transparent' },
+}
+
+const LIGHT_PRESETS: Record<LightPreset, { color: string; opacity: number }> = {
+  spot:    { color: 'radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)', opacity: 0.6 },
+  ambient: { color: 'rgba(255,230,150,1)', opacity: 0.15 },
+  warm:    { color: 'rgba(255,160,50,1)',  opacity: 0.25 },
+  cold:    { color: 'rgba(100,160,255,1)', opacity: 0.2 },
+}
+
+const OVERLAY_PRESETS: Record<OverlayPreset, { fontSize: number; color: string; opacity: number; zIndex: number; y: 'top' | 'center' | 'bottom' }> = {
+  caption: { fontSize: 24, color: '#ffffff', opacity: 1,   zIndex: Z_INDEX.OVERLAY_CAPTION, y: 'bottom' },
+  title:   { fontSize: 48, color: '#ffffff', opacity: 1,   zIndex: Z_INDEX.OVERLAY_TITLE,   y: 'center' },
+  whisper: { fontSize: 18, color: '#cccccc', opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: 'bottom' },
+}
+
+const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
+  dust:      { attribute: { frictionAir: 0, gravityScale: 0.001 }, style: { width: 10,  height: 10,  blendMode: 'lighter' } },
+  rain:      { attribute: { gravityScale: 1 },                      style: { width: 3,   height: 6,   opacity: 0.3, blendMode: 'screen' } },
+  snow:      { attribute: { gravityScale: 0.01, frictionAir: 0 },   style: { width: 15,  height: 15,  blendMode: 'lighter' } },
+  sakura:    { attribute: { gravityScale: 0.02, frictionAir: 0 },   style: { width: 16,  height: 20,  opacity: 0.8 } },
+  sparkle:   { attribute: { gravityScale: 0.1 },                    style: { width: 16,  height: 16,  opacity: 0.8 } },
+  fog:       { attribute: { frictionAir: 0, gravityScale: 0.003 },  style: { width: 120, height: 120, blendMode: 'screen' } },
+  leaves:    { attribute: { gravityScale: 0.1, frictionAir: 0.05, strictPhysics: true }, style: { width: 20, height: 20, opacity: 0.9 } },
+  fireflies: { attribute: { gravityScale: -0.02, frictionAir: 0.05, strictPhysics: true }, style: { width: 8, height: 8, opacity: 0.8, blendMode: 'lighter' } },
+}
+
+const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
+  dust:      { impulse: 0.05,  lifespan: 10000, interval: 250, size: [[0.5,1],[0,0.5]],      opacity: [[0,0],[1,1],[0,0]], loop: true },
+  rain:      { impulse: 0,     lifespan: 3000,  interval: 40,  size: [[0.1,0.3],[0.1,0.3]],  opacity: [[1,1],[1,1]],       loop: true },
+  snow:      { impulse: 0.01,  lifespan: 10000, interval: 100, size: [[0.3,0.8],[0,0]],       opacity: [[1,1],[0,0]],       loop: true, angularImpulse: 0.001 },
+  sakura:    { impulse: 0.02,  lifespan: 6000,  interval: 300, size: [[0.5,0.8],[0.3,0.5]],  loop: true, angularImpulse: 0.001 },
+  sparkle:   { impulse: 0.02,  lifespan: 1500,  interval: 150, size: [[0.5,1],[0,0.1]],      loop: true },
+  fog:       { impulse: 0.01,  lifespan: 15000, interval: 800, size: [[2,2],[5,10]],          opacity: [[0,0],[0.1,0.2],[0,0]], loop: true, angularImpulse: 0.0001 },
+  leaves:    { impulse: 0.08,  lifespan: 7000,  interval: 350, size: [[0.8,1.2],[0.8,1.2]],  loop: true, angularImpulse: 0.05 },
+  fireflies: { impulse: 0.03,  lifespan: 5000,  interval: 300, size: [[0.5,1.5],[0,0.5]],   loop: true },
+}
+
+const DEFAULT_EFFECT_RATES: Partial<Record<EffectType, number>> = {
+  dust: 5, rain: 200, snow: 8, sakura: 8, sparkle: 10, fog: 4, leaves: 5, fireflies: 5,
+}
+
+// =============================================================
+// 렌더 상태 스냅샷 (씬 전환 시 이어받기)
+// =============================================================
+
+export interface RendererState {
+  backgroundKey:      string | null
+  backgroundParallax: boolean
+  moodType:           MoodType | null
+  moodIntensity:      number
+  activeEffects:      Set<EffectType>
+  activeLights:       Set<LightPreset>
+  characters:         Map<string, { position: string; imageKey: string }>
+}
+
+// =============================================================
+// RendererOption
+// =============================================================
+
+export interface RendererOption {
+  width:  number
+  height: number
+  depth:  number
+}
+
+// =============================================================
+// Renderer 클래스
+// =============================================================
+
+export class Renderer {
+  readonly world:    World
+  protected readonly config:  NovelConfig<any, any, any, any>
+  protected readonly width:   number
+  protected readonly height:  number
+  protected readonly depth:   number
+
+  private _objects:           Set<LeviarObject>             = new Set()
+  private _characters:        Map<string, LeviarObject>     = new Map()
+  private _effects:            Map<string, LeviarObject>     = new Map()
+  private _backgroundObj:     LeviarObject | null           = null
+  private _backgroundIsParallax: boolean                    = true
+  private _backgroundKey:     string | null                 = null
+  private _moodObj:           LeviarObject | null           = null
+  private _moodType:          MoodType | null               = null
+  private _moodIntensity:     number                        = 1
+  private _transitionObj:     LeviarObject | null           = null
+  private _overlayObjs:       Map<string, LeviarObject>     = new Map()
+  private _lightObjs:         Map<string, LeviarObject>     = new Map()
+  private _flickerObj:        LeviarObject | null           = null
+  private _characterStates:   Map<string, { position: string; imageKey: string }> = new Map()
+  private _activeEffects:     Set<EffectType>               = new Set()
+  private _activeLights:      Set<LightPreset>              = new Set()
+
+  constructor(world: World, config: NovelConfig<any, any, any, any>, option: RendererOption) {
+    this.world  = world
+    this.config = config
+    this.width  = option.width
+    this.height = option.height
+    this.depth  = option.depth
+
+    if (!this.world.camera) {
+      this.world.camera = (this.world as any).createCamera()
+    }
+    this.world.camera!.transform.position.z = 0
+  }
+
+  // ─── 내부 유틸 ──────────────────────────────────────────────
+
+  private get _characterPlaneLocalZ(): number {
+    const cam = this.world.camera
+    const focalLength = (cam as any)?.attribute?.focalLength ?? 100
+    return focalLength - (cam?.transform.position.z ?? 0)
+  }
+
+  private _resolvePositionX(position: string): number {
+    if (CHARACTER_X_RATIO[position] !== undefined) return CHARACTER_X_RATIO[position]
+    const m = position.match(/^(\d+)\/(\d+)$/)
+    if (m) {
+      const n = parseInt(m[1], 10)
+      const d = parseInt(m[2], 10)
+      if (d > 0) return n / (d + 1)
+    }
+    return 0.5
+  }
+
+  private _track<T extends LeviarObject>(obj: T): T {
+    this._objects.add(obj)
+    return obj
+  }
+
+  private _getTransitionRect(color: string): LeviarObject {
+    if (!this._transitionObj) {
+      const w = (this.world.canvas as any)?.width ?? this.width
+      const h = (this.world.canvas as any)?.height ?? this.height
+      const rect = this.world.createRectangle({
+        style: {
+          color, width: w * 2, height: h * 2,
+          opacity: 0, zIndex: Z_INDEX.TRANSITION, pointerEvents: false,
+        } as any,
+        transform: { position: { x: 0, y: 0, z: 10 } },
+      })
+      this.world.camera?.addChild(rect)
+      this._transitionObj = rect
+    } else {
+      (this._transitionObj as any).style.color = color
+      this._transitionObj.transform.position.x = 0
+      this._transitionObj.transform.position.y = 0
+    }
+    return this._transitionObj
+  }
+
+  // ─── 씬 전환 상태 스냅샷 / 복원 ────────────────────────────
+
+  captureState(): RendererState {
+    return {
+      backgroundKey:      this._backgroundKey,
+      backgroundParallax: this._backgroundIsParallax,
+      moodType:           this._moodType,
+      moodIntensity:      this._moodIntensity,
+      activeEffects:      new Set(this._activeEffects),
+      activeLights:       new Set(this._activeLights),
+      characters:         new Map(this._characterStates),
+    }
+  }
+
+  restoreState(state: RendererState): void {
+    if (state.backgroundKey) {
+      this.setBackground(state.backgroundKey, 'stretch', 0)
+    }
+    if (state.moodType && state.moodType !== 'none') {
+      this.setMood(state.moodType, state.moodIntensity, 0)
+    }
+    state.activeEffects.forEach(e => this.addEffect(e))
+    state.activeLights.forEach(l => this.addLight(l))
+    state.characters.forEach(({ position, imageKey }, name) => {
+      this.showCharacter(name, position, imageKey)
+    })
+  }
+
+  /** 모든 씬 오브젝트를 제거한다 */
+  clear(): void {
+    this._objects.forEach(obj => (obj as any).remove?.())
+    this._objects.clear()
+    this._characters.clear()
+    this._characterStates.clear()
+    this._effects.clear()
+    this._activeEffects.clear()
+    this._activeLights.clear()
+    this._backgroundObj = null
+    this._backgroundKey = null
+    if (this._moodObj) { (this._moodObj as any).remove?.(); this._moodObj = null }
+    this._moodType = null
+    this._overlayObjs.forEach(o => (o as any).remove?.())
+    this._overlayObjs.clear()
+    this._lightObjs.forEach(o => (o as any).remove?.())
+    this._lightObjs.clear()
+    this._flickerObj = null
+  }
+
+  // ─── 배경 ───────────────────────────────────────────────────
+
+  setBackground(
+    key:      string,
+    fit:      BackgroundFitPreset = 'stretch',
+    duration: number              = 1000,
+    isVideo:  boolean             = false,
+  ): void {
+    const bgDefs = this.config.backgrounds as BgDefs
+    const def    = bgDefs[key]
+    if (!def) return
+
+    const useParallax = def.parallax ?? true
+    this._backgroundKey = key
+
+    // 동일 패럴럭스 모드 → 크로스페이드
+    if (
+      this._backgroundObj && duration > 0 &&
+      this._backgroundIsParallax === useParallax &&
+      typeof (this._backgroundObj as any).transition === 'function'
+    ) {
+      ; (this._backgroundObj as any).transition(def.src, duration)
+      return
+    }
+
+    if (this._backgroundObj) {
+      (this._backgroundObj as any).remove?.()
+      this._objects.delete(this._backgroundObj)
+      this._backgroundObj = null
+    }
+
+    this._backgroundIsParallax = useParallax
+    const zPos  = this.depth
+    const cam   = this.world.camera as any
+    const ratio = cam && typeof cam.calcDepthRatio === 'function'
+      ? cam.calcDepthRatio(zPos, 1)
+      : 1
+
+    const maxCamX    = this.width  * 0.4
+    const maxCamY    = this.height * 0.5
+    const exactViewW = this.width  + maxCamX * 2
+    const exactViewH = this.height + maxCamY * 2
+
+    const bgOpts = {
+      attribute: { src: def.src },
+      style:     { width: exactViewW, height: exactViewH, zIndex: Z_INDEX.BACKGROUND } as any,
+      transform: {
+        position: { x: 0, y: 0, z: zPos },
+        scale:    { x: ratio, y: ratio, z: 1 },
+      },
+    }
+
+    const bg = isVideo
+      ? (() => { const v = this.world.createVideo(bgOpts as any); (v as any).play?.(); return v })()
+      : this.world.createImage(bgOpts as any)
+
+    if (!useParallax) this.world.camera?.addChild(bg as any)
+    if (duration > 0 && typeof (bg as any).fadeIn === 'function') (bg as any).fadeIn(duration)
+    this._backgroundObj = this._track(bg as any)
+  }
+
+  // ─── 무드 ───────────────────────────────────────────────────
+
+  setMood(mood: MoodType = 'none', intensity: number = 1, duration: number = 800): void {
+    if (this._moodObj) {
+      if ((this._moodObj as any)._currentMood === mood) {
+        duration > 0
+          ? (this._moodObj as any).animate({ style: { opacity: intensity } }, duration, 'easeInOutQuad')
+          : ((this._moodObj as any).style.opacity = intensity)
+        this._moodIntensity = intensity
+        return
+      }
+      const old = this._moodObj
+      if (duration > 0) {
+        (old as any).animate({ style: { opacity: 0 } }, duration, 'easeOut')
+          .on('end', () => { (old as any).remove?.(); this._objects.delete(old) })
+      } else {
+        (old as any).remove?.(); this._objects.delete(old)
+      }
+      this._moodObj = null
+    }
+    if (mood === 'none') { this._moodType = null; return }
+
+    this._moodType      = mood
+    this._moodIntensity = intensity
+
+    const { color, vignette, blendMode } = MOOD_PRESETS[mood]
+    const cam = this.world.camera as any
+    const focalLength = cam?.attribute?.focalLength ?? 100
+    const exactW = cam && typeof cam.calcDepthRatio === 'function'
+      ? cam.calcDepthRatio(focalLength, this.width) : this.width
+    const exactH = cam && typeof cam.calcDepthRatio === 'function'
+      ? cam.calcDepthRatio(focalLength, this.height) : this.height
+
+    const rect = this._track(this.world.createRectangle({
+      style: {
+        color, opacity: 0,
+        gradient: vignette, gradientType: 'circular',
+        width: exactW, height: exactH,
+        zIndex: Z_INDEX.MOOD,
+        pointerEvents: false,
+        blendMode: blendMode as any,
+      } as any,
+      transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ } },
+    }))
+    this.world.camera?.addChild(rect as any)
+    ; (rect as any)._currentMood = mood
+    this._moodObj = rect as any
+
+    duration > 0
+      ? (rect as any).animate({ style: { opacity: intensity } }, duration, 'easeInOutQuad')
+      : ((rect as any).style.opacity = intensity)
+  }
+
+  // ─── 이펙트 ─────────────────────────────────────────────────
+
+  addEffect(type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>): void {
+    const preset    = EFFECT_PARTICLE_PRESETS[type]
+    const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10
+
+    if (this._effects.has(type)) this.removeEffect(type)
+    this._activeEffects.add(type)
+
+    const clipName  = `${type}_rate_${finalRate}`
+    const particleZ = this.depth / 2
+
+    if (!(this.world as any).particleManager.get(clipName)) {
+      const clipBase   = EFFECT_CLIP_PRESETS[type]
+      const cam        = this.world.camera as any
+      const ratio      = cam && typeof cam.calcDepthRatio === 'function'
+        ? cam.calcDepthRatio(particleZ, 1) : 1
+      const maxPanX    = this.width  * 0.4
+      const maxPanY    = this.height * 0.5
+      const spanW      = (this.width  + maxPanX * 2) * ratio
+      const spanH      = (this.height + maxPanY * 2) * ratio
+
+      ; (this.world as any).particleManager.create({
+        name: clipName, src: type,
+        ...clipBase,
+        rate: finalRate,
+        spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
+      })
+    }
+
+    const particle = this._track(this.world.createParticle({
+      attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
+      style:     { ...preset.style, ...overrides?.style },
+      transform: { position: { x: 0, y: 0, z: particleZ }, ...overrides?.transform },
+    } as any))
+    this._effects.set(type, particle as any)
+    ; (particle as any).play?.()
+  }
+
+  removeEffect(type: EffectType, duration: number = 600): void {
+    const effect = this._effects.get(type)
+    this._activeEffects.delete(type)
+    if (effect) {
+      this._effects.delete(type)
+      if (duration > 0 && typeof (effect as any).fadeOut === 'function') {
+        (effect as any).fadeOut(duration)
+        setTimeout(() => { (effect as any).remove?.(); this._objects.delete(effect) }, duration)
+      } else {
+        (effect as any).remove?.(); this._objects.delete(effect)
+      }
+    }
+  }
+
+  // ─── 조명 ───────────────────────────────────────────────────
+
+  addLight(preset: LightPreset = 'ambient', overrides?: Record<string, any>): void {
+    const p   = LIGHT_PRESETS[preset]
+    const cam = this.world.camera as any
+    const focalLength = cam?.attribute?.focalLength ?? 100
+    const exactW = cam && typeof cam.calcDepthRatio === 'function'
+      ? cam.calcDepthRatio(focalLength, this.width) : this.width
+    const exactH = cam && typeof cam.calcDepthRatio === 'function'
+      ? cam.calcDepthRatio(focalLength, this.height) : this.height
+
+    if (this._lightObjs.has(preset)) this.removeLight(preset)
+    this._activeLights.add(preset)
+
+    const rect = this._track(this.world.createRectangle({
+      style: {
+        color: p.color, width: exactW, height: exactH,
+        opacity: p.opacity,
+        zIndex: Z_INDEX.LIGHT, pointerEvents: false, blendMode: 'screen',
+        ...overrides?.style,
+      } as any,
+      transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ }, ...overrides?.transform },
+    }))
+    this.world.camera?.addChild(rect as any)
+    this._lightObjs.set(preset, rect as any)
+  }
+
+  removeLight(preset: LightPreset, duration: number = 600): void {
+    const obj = this._lightObjs.get(preset)
+    this._activeLights.delete(preset)
+    if (obj) {
+      this._lightObjs.delete(preset)
+      if (duration > 0 && typeof (obj as any).fadeOut === 'function') {
+        (obj as any).fadeOut(duration)
+        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, duration)
+      } else {
+        (obj as any).remove?.(); this._objects.delete(obj)
+      }
+    }
+  }
+
+  setFlicker(lightPreset: LightPreset, flickerPreset: FlickerPreset = 'candle'): void {
+    const target = this._lightObjs.get(lightPreset)
+    if (!target) return
+
+    this._flickerObj = null
+    const baseOpacity = (target as any)._flickerBaseOpacity ?? (target as any).style?.opacity ?? 1
+    ; (target as any)._flickerBaseOpacity = baseOpacity
+
+    const configs: Record<FlickerPreset, { interval: number; range: [number, number] }> = {
+      candle:  { interval: 120, range: [0.6, 1.0] },
+      flicker: { interval: 80,  range: [0.3, 1.0] },
+      strobe:  { interval: 60,  range: [0.0, 1.0] },
+    }
+    const cfg = configs[flickerPreset]
+    this._flickerObj = target
+
+    const step = () => {
+      if (this._flickerObj !== target) {
+        (target as any).animate({ style: { opacity: baseOpacity } }, 300, 'easeInOutQuad')
+        return
+      }
+      const [min, max] = cfg.range
+      const next = baseOpacity * (min + Math.random() * (max - min))
+      ; (target as any).animate({ style: { opacity: next } }, cfg.interval, 'linear').on('end', step)
+    }
+    step()
+  }
+
+  // ─── 오버레이 ────────────────────────────────────────────────
+
+  addOverlay(text: string, preset: OverlayPreset = 'caption'): void {
+    const p = OVERLAY_PRESETS[preset]
+    if (this._overlayObjs.has(preset)) this.removeOverlay(preset)
+
+    const yMap: Record<string, number> = {
+      top:    this.height * 0.1,
+      center: this.height * 0.5,
+      bottom: this.height * 0.85,
+    }
+    const cam = this.world.camera as any
+    const pos = cam && typeof cam.canvasToLocal === 'function'
+      ? cam.canvasToLocal(this.width / 2, yMap[p.y])
+      : { x: 0, y: 0, z: 100 }
+
+    const textObj = this._track(this.world.createText({
+      attribute: { text } as any,
+      style: {
+        fontSize: p.fontSize, color: p.color, opacity: p.opacity,
+        zIndex: p.zIndex, pointerEvents: false,
+      } as any,
+      transform: { position: pos },
+    }))
+    this.world.camera?.addChild(textObj as any)
+    this._overlayObjs.set(preset, textObj as any)
+  }
+
+  removeOverlay(preset: OverlayPreset, duration: number = 600): void {
+    const obj = this._overlayObjs.get(preset)
+    if (obj) {
+      this._overlayObjs.delete(preset)
+      if (duration > 0 && typeof (obj as any).fadeOut === 'function') {
+        (obj as any).fadeOut(duration)
+        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, duration)
+      } else {
+        (obj as any).remove?.(); this._objects.delete(obj)
+      }
+    }
+  }
+
+  clearOverlay(duration: number = 400): void {
+    Array.from(this._overlayObjs.keys()).forEach(k => this.removeOverlay(k as OverlayPreset, duration))
+  }
+
+  // ─── 캐릭터 ─────────────────────────────────────────────────
+
+  showCharacter(name: string, position: CharacterPositionPreset = 'center', imageKey?: string): void {
+    const charDefs = this.config.characters as CharDefs
+    const def      = charDefs[name]
+    if (!def) return
+
+    const resolvedKey = imageKey ?? Object.keys(def)[0]
+    const imageDef    = def[resolvedKey]
+    if (!imageDef) return
+
+    const src  = imageDef.src ?? resolvedKey
+    const xPos = this.width * (this._resolvePositionX(position) - 0.5)
+    const zPos = (this.world.camera as any)?.attribute?.focalLength ?? 100
+
+    this._characterStates.set(name, { position, imageKey: resolvedKey })
+
+    const existing = this._characters.get(name)
+    if (existing) {
+      (existing as any).animate({ transform: { position: { x: xPos } } }, 400, 'easeInOutQuad')
+      if (imageKey) {
+        typeof (existing as any).transition === 'function'
+          ? (existing as any).transition(src, 300)
+          : ((existing as any).attribute && ((existing as any).attribute.src = src))
+      }
+      ; (existing as any)._currentImageKey = resolvedKey
+    } else {
+      const targetW = imageDef.width ?? 500
+      const img = this._track(this.world.createImage({
+        attribute: { src } as any,
+        style:     { width: targetW, zIndex: Z_INDEX.CHARACTER_NORMAL } as any,
+        transform: { position: { x: xPos, y: 0, z: zPos } },
+      }))
+      if (typeof (img as any).fadeIn === 'function') (img as any).fadeIn(400)
+      ; (img as any)._currentImageKey = resolvedKey
+      this._characters.set(name, img as any)
+    }
+  }
+
+  removeCharacter(name: string, duration: number = 600): void {
+    const obj = this._characters.get(name)
+    this._characterStates.delete(name)
+    if (obj) {
+      this._characters.delete(name)
+      if (duration > 0 && typeof (obj as any).fadeOut === 'function') {
+        (obj as any).fadeOut(duration)
+        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, duration)
+      } else {
+        (obj as any).remove?.(); this._objects.delete(obj)
+      }
+    }
+  }
+
+  focusCharacter(name: string, pointKey?: string, zoomPreset: ZoomPreset = 'close-up', duration: number = 800): void {
+    const target = this._characters.get(name)
+    if (!target) return
+
+    const charDefs     = this.config.characters as CharDefs
+    const def          = charDefs[name]
+    const activeImgKey = (target as any)._currentImageKey ?? Object.keys(def)[0]
+    const imageDef     = def[activeImgKey]
+    const fp           = (pointKey && imageDef?.points) ? imageDef.points[pointKey] : { x: 0.5, y: 0.5 }
+
+    const targetX = (target as any).transform?.position?.x ?? 0
+    const charW   = (target as any).style?.width ?? 500
+    const rendH   = (target as any).__renderedSize?.h
+    const charH   = (rendH && rendH > 0) ? rendH : charW * 2
+
+    const panX = targetX + charW  * (fp.x - 0.5)
+    const panY = charH   * (0.5 - fp.y)
+
+    this.panCamera('custom', duration, panX, panY)
+    this.zoomCamera(zoomPreset, duration)
+  }
+
+  highlightCharacter(name: string): void {
+    const target = this._characters.get(name)
+    if (!target || (target as any)._originalTransform) return
+
+    ; (target as any)._originalTransform = {
+      x:      target.transform.position.x,
+      y:      target.transform.position.y,
+      z:      target.transform.position.z,
+      zIndex: (target as any).style?.zIndex,
+    }
+    this.world.camera?.addChild(target as any)
+    ; (target as any).style.zIndex = Z_INDEX.CHARACTER_CUTIN
+  }
+
+  unhighlightCharacter(name: string): void {
+    const target = this._characters.get(name)
+    if (!target) return
+    const orig = (target as any)._originalTransform
+    if (!orig) return
+
+    this.world.camera?.removeChild(target as any)
+    target.transform.position.x = orig.x
+    target.transform.position.y = orig.y
+    target.transform.position.z = orig.z
+    ; (target as any).style.zIndex = orig.zIndex
+    delete (target as any)._originalTransform
+  }
+
+  // ─── 카메라 ─────────────────────────────────────────────────
+
+  zoomCamera(preset: ZoomPreset = 'reset', duration?: number, overrideScale?: number): void {
+    const cam = this.world.camera
+    if (!cam) return
+
+    const { scale, duration: pd } = ZOOM_PRESETS[preset]
+    const finalScale = overrideScale ?? scale
+    const finalDur   = duration ?? pd
+    const baseDist   = (cam as any).attribute?.focalLength ?? 100
+    const newZ       = baseDist - (baseDist / finalScale)
+
+    cam.animate({ transform: { position: { z: newZ } } } as any, finalDur, 'easeInOutQuad')
+
+    const localZ     = baseDist - newZ
+    const scaleAtDst = baseDist / (baseDist - newZ)
+    const exactW     = this.width  / scaleAtDst
+    const exactH     = this.height / scaleAtDst
+
+    if (this._moodObj) {
+      (this._moodObj as any).animate({
+        transform: { position: { z: localZ } },
+        style: { width: exactW, height: exactH },
+      }, finalDur, 'easeInOutQuad')
+    }
+    this._lightObjs.forEach(light => {
+      (light as any).animate({
+        transform: { position: { z: localZ } },
+        style: { width: exactW, height: exactH },
+      }, finalDur, 'easeInOutQuad')
+    })
+  }
+
+  panCamera(preset: PanPreset | 'custom', duration?: number, customX?: number, customY?: number): void {
+    const cam = this.world.camera
+    if (!cam) return
+
+    let x: number, y: number, dur: number
+    if (preset === 'custom') {
+      x = customX ?? 0; y = customY ?? 0; dur = duration ?? 800
+    } else {
+      const p = PAN_PRESETS[preset]
+      x = customX ?? p.x; y = customY ?? p.y; dur = duration ?? p.duration
+    }
+    cam.animate({ transform: { position: { x, y } } } as any, dur, 'easeInOutQuad')
+  }
+
+  cameraEffect(preset: CameraEffectPreset = 'shake', duration?: number, intensity?: number): void {
+    const cam = this.world.camera
+    if (!cam) return
+
+    const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset]
+    const fi = intensity ?? pi
+    const fd = duration  ?? pd
+    const bx = cam.transform.position.x
+    const by = cam.transform.position.y
+
+    if (preset === 'shake') {
+      const steps = Math.floor(fd / 50)
+      let i = 0
+      const run = () => {
+        if (i >= steps) { cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut'); return }
+        cam.animate({ transform: { position: { x: bx + (Math.random() - 0.5) * fi * 2, y: by + (Math.random() - 0.5) * fi * 2 } } } as any, 50, 'linear').on('end', run)
+        i++
+      }
+      run()
+    } else if (preset === 'bounce') {
+      const steps = Math.floor(fd / 100); let i = 0
+      const run = () => {
+        if (i >= steps) { cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut'); return }
+        cam.animate({ transform: { position: { y: by + (i % 2 === 0 ? fi : 0) } } } as any, 100, 'easeInOutQuad').on('end', run)
+        i++
+      }
+      run()
+    } else if (preset === 'wave') {
+      const steps = Math.floor(fd / 50); let i = 0
+      const run = () => {
+        if (i >= steps) { cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut'); return }
+        const t = (i / steps) * Math.PI * 4
+        cam.animate({ transform: { position: { x: bx + Math.sin(t) * fi, y: by + Math.cos(t) * fi * 0.5 } } } as any, 50, 'linear').on('end', run)
+        i++
+      }
+      run()
+    } else if (preset === 'nod') {
+      const steps = 4; let i = 0
+      const run = () => {
+        if (i >= steps) { cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut'); return }
+        cam.animate({ transform: { position: { y: by + (i % 2 === 0 ? -fi : 0) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
+        i++
+      }
+      run()
+    } else if (preset === 'shake-x') {
+      const steps = 4; let i = 0
+      const run = () => {
+        if (i >= steps) { cam.animate({ transform: { position: { x: bx } } } as any, 100, 'easeOut'); return }
+        cam.animate({ transform: { position: { x: bx + (i % 2 === 0 ? fi : -fi) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
+        i++
+      }
+      run()
+    } else if (preset === 'fall') {
+      cam.animate({ transform: { position: { y: by - fi * 3 }, rotation: { z: fi } } } as any, fd * 0.6, 'easeOutElastic')
+        .on('end', () => {
+          setTimeout(() => cam.animate({ transform: { position: { y: by }, rotation: { z: 0 } } } as any, fd * 0.4, 'easeInOutQuad'), 300)
+        })
+    }
+  }
+
+  // ─── 화면 전환 ──────────────────────────────────────────────
+
+  screenFade(dir: 'in' | 'out', preset: FadeColorPreset = 'black', duration: number = 600): void {
+    const { color, easing } = FADE_PRESETS[preset]
+    const rect = this._getTransitionRect(color)
+    ; (rect as any).animate({ style: { opacity: dir === 'out' ? 1 : 0 } }, duration, easing)
+  }
+
+  screenFlash(preset: FlashPreset = 'white'): void {
+    const { color, duration } = FLASH_PRESETS[preset]
+    const rect = this._getTransitionRect(color)
+    ; (rect as any).animate({ style: { opacity: 1 } }, duration / 2, 'easeOut')
+      .on('end', () => (rect as any).animate({ style: { opacity: 0 } }, duration / 2, 'easeIn'))
+  }
+
+  screenWipe(dir: 'in' | 'out', preset: WipePreset = 'left', duration: number = 800): void {
+    const rect = this._getTransitionRect('rgba(0,0,0,1)')
+    const w    = (this.world.canvas as any)?.width  ?? this.width
+    const h    = (this.world.canvas as any)?.height ?? this.height
+    const cam  = this.world.camera as any
+
+    if (cam) {
+      (rect as any).style.width  = cam.calcDepthRatio ? cam.calcDepthRatio(10, w) : w
+      (rect as any).style.height = cam.calcDepthRatio ? cam.calcDepthRatio(10, h) : h
+      rect.transform.position.z  = 10
+    }
+
+    const { x: dx, y: dy } = WIPE_PRESETS[preset]
+    if (dir === 'out') {
+      rect.transform.position.x  = dx * w * 2
+      rect.transform.position.y  = dy * h * 2
+      ; (rect as any).style.opacity = 1
+      ; (rect as any).animate({ transform: { position: { x: 0, y: 0 } } }, duration, 'easeInOutQuad')
+    } else {
+      rect.transform.position.x  = 0
+      rect.transform.position.y  = 0
+      ; (rect as any).style.opacity = 1
+      ; (rect as any).animate({ transform: { position: { x: dx * w * 2, y: dy * h * 2 } } }, duration, 'easeInOutQuad')
+        .on('end', () => { ; (rect as any).style.opacity = 0 })
+    }
+  }
+
+  fadeIn(duration: number = 800): void  { this.screenFade('in',  'black', duration) }
+  fadeOut(duration: number = 800): void { this.screenFade('out', 'black', duration) }
+}
