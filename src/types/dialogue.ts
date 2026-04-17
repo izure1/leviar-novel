@@ -262,7 +262,7 @@ export interface UICmd {
 
 // ─── 전체 DialogueEntry 유니온 ─────────────────────────────
 
-export type DialogueEntry<
+type _DialogueEntryUnion<
   TVars,
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
@@ -290,16 +290,19 @@ export type DialogueEntry<
   | ScreenWipeCmd
   | UICmd
 
-/**
- * DialogueStep: 단일 커맨드 또는 배열.
- * - 단일 커맨드: 실행 후 사용자 입력을 대기한다.
- * - 배열: 모든 커맨드를 동시에 실행하고 자동으로 다음 스텝으로 진행한다.
- */
+export type DialogueEntry<
+  TVars,
+  TScenes extends readonly string[],
+  TCharacters extends CharDefs,
+  TBackgrounds extends BgDefs,
+> = _DialogueEntryUnion<TVars, TScenes, TCharacters, TBackgrounds> & {
+  /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */
+  skip?: boolean
+}
+
 export type DialogueStep<
   TVars,
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
-> =
-  | DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds>
-  | DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds>[]
+> = DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds>

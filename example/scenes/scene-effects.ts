@@ -6,18 +6,14 @@ import { defineScene } from '../../src'
 export default defineScene(config, [
 
   // ── 공원으로 배경 전환
-  [
-    { type: 'background', name: 'bg-park', duration: 1000 },
-    { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 1000 },
-  ],
+  { type: 'background', name: 'bg-park', duration: 1000, skip: true },
+  { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 1000, skip: true },
   { type: 'dialogue', text: '[화면 효과 테스트] 공원으로 이동했습니다.' },
 
   // ── 비 이펙트 + night 무드
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 1200 },
-  [
-    { type: 'effect', action: 'add', effect: 'rain', rate: 120 },
-    { type: 'light',  action: 'add', preset: 'cold' },
-  ],
+  { type: 'effect', action: 'add', effect: 'rain', rate: 120, skip: true },
+  { type: 'light',  action: 'add', preset: 'cold', skip: true },
   { type: 'dialogue', text: 'rain 이펙트 + cold 조명 + night 무드.' },
 
   // ── 조명 플리커
@@ -38,11 +34,9 @@ export default defineScene(config, [
   { type: 'dialogue', text: 'screen-flash: white.' },
 
   // ── 이펙트/조명 제거 + day 복원
-  [
-    { type: 'effect', action: 'remove', effect: 'rain', duration: 600 },
-    { type: 'light',  action: 'remove', preset: 'cold',  duration: 600 },
-    { type: 'mood',   mood: 'day',   intensity: 0.5, duration: 1000 },
-  ],
+  { type: 'effect', action: 'remove', effect: 'rain', duration: 600, skip: true },
+  { type: 'light',  action: 'remove', preset: 'cold',  duration: 600, skip: true },
+  { type: 'mood',   mood: 'day',   intensity: 0.5, duration: 1000, skip: true },
   { type: 'dialogue', text: '이펙트 제거, day 무드 복원.' },
 
   // ── 와이프 전환

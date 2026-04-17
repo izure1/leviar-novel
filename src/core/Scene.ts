@@ -153,7 +153,7 @@ export class DialogueScene {
   private _buildLabelIndex(): void {
     const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     steps.forEach((step, i) => {
-      if (!Array.isArray(step) && (step as DialogueEntry<any, any, any, any>).type === 'label') {
+      if (step.type === 'label') {
         const cmd = step as { type: 'label'; name: string }
         this.labelIndex.set(cmd.name, i)
       }
@@ -193,15 +193,6 @@ export class DialogueScene {
 
     const step = steps[this.cursor]
 
-    // ── 배열 스텝: 동시 실행 + 자동 진행 ───────────────────
-    if (Array.isArray(step)) {
-      step.forEach(cmd => this._executeCmd(cmd))
-      this.cursor++
-      this._executeNext()
-      return
-    }
-
-    // ── 단일 스텝 ────────────────────────────────────────────
     const cmd = step as DialogueEntry<any, any, any, any>
 
     if (cmd.type === 'label') {
@@ -219,7 +210,12 @@ export class DialogueScene {
 
     if (cmd.type === 'choice') return
 
-    this._waitingInput = true
+    if (cmd.skip) {
+      this.cursor++
+      this._executeNext()
+    } else {
+      this._waitingInput = true
+    }
   }
 
   private _handleCondition(cmd: {
@@ -435,7 +431,7 @@ export class DialogueScene {
     if (this._ended) return null
     const steps   = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     const current = steps[this.cursor]
-    if (!Array.isArray(current) && (current as any)?.type === 'choice') {
+    if (current?.type === 'choice') {
       return current as any
     }
     return null
@@ -446,7 +442,7 @@ export class DialogueScene {
     if (this._ended) return null
     const steps   = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     const current = steps[this.cursor]
-    if (!Array.isArray(current) && (current as any)?.type === 'dialogue') {
+    if (current?.type === 'dialogue') {
       return current as any
     }
     return null
@@ -504,7 +500,7 @@ export class DialogueScene {
   private _redisplayCurrentStep(): void {
     const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     const step  = steps[this.cursor]
-    if (!step || Array.isArray(step)) return
+    if (!step) return
 
     const cmd = step as DialogueEntry<any, any, any, any>
     if (cmd.type === 'dialogue') {

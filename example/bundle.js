@@ -13760,7 +13760,7 @@ ${addLineNumbers(fragment)}`);
     _buildLabelIndex() {
       const steps = this.definition.dialogues;
       steps.forEach((step, i) => {
-        if (!Array.isArray(step) && step.type === "label") {
+        if (step.type === "label") {
           const cmd = step;
           this.labelIndex.set(cmd.name, i);
         }
@@ -13793,12 +13793,6 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       const step = steps[this.cursor];
-      if (Array.isArray(step)) {
-        step.forEach((cmd2) => this._executeCmd(cmd2));
-        this.cursor++;
-        this._executeNext();
-        return;
-      }
       const cmd = step;
       if (cmd.type === "label") {
         this.cursor++;
@@ -13811,7 +13805,12 @@ ${addLineNumbers(fragment)}`);
       }
       this._executeCmd(cmd);
       if (cmd.type === "choice") return;
-      this._waitingInput = true;
+      if (cmd.skip) {
+        this.cursor++;
+        this._executeNext();
+      } else {
+        this._waitingInput = true;
+      }
     }
     _handleCondition(cmd) {
       const result = evaluateCondition(cmd.if, this._vars);
@@ -13995,7 +13994,7 @@ ${addLineNumbers(fragment)}`);
       if (this._ended) return null;
       const steps = this.definition.dialogues;
       const current = steps[this.cursor];
-      if (!Array.isArray(current) && current?.type === "choice") {
+      if (current?.type === "choice") {
         return current;
       }
       return null;
@@ -14005,7 +14004,7 @@ ${addLineNumbers(fragment)}`);
       if (this._ended) return null;
       const steps = this.definition.dialogues;
       const current = steps[this.cursor];
-      if (!Array.isArray(current) && current?.type === "dialogue") {
+      if (current?.type === "dialogue") {
         return current;
       }
       return null;
@@ -14057,7 +14056,7 @@ ${addLineNumbers(fragment)}`);
     _redisplayCurrentStep() {
       const steps = this.definition.dialogues;
       const step = steps[this.cursor];
-      if (!step || Array.isArray(step)) return;
+      if (!step) return;
       const cmd = step;
       if (cmd.type === "dialogue") {
         this.callbacks.onDialogue(cmd.speaker, cmd.text);
@@ -14622,10 +14621,8 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "\uC870\uC6A9\uD55C \uBCF5\uB3C4... \uC624\uB298\uB3C4 \uC218\uC5C5\uC774 \uB05D\uB0AC\uB2E4." },
     { type: "dialogue", text: "\uADF8\uB54C, \uB204\uAD70\uAC00 \uB9D0\uC744 \uAC78\uC5B4\uC654\uB2E4." },
     // ── 캐릭터 등장 + 변수 설정 (배열 = 동시 + 자동 진행)
-    [
-      { type: "character", action: "show", name: "heroine", position: "center", image: "normal" },
-      { type: "var", name: "metHeroine", value: true }
-    ],
+    { type: "character", action: "show", name: "heroine", position: "center", image: "normal", skip: true },
+    { type: "var", name: "metHeroine", value: true, skip: true },
     // ── 대사 (이름창 즉시 갱신 테스트)
     { type: "dialogue", speaker: "heroine", text: "\uC800\uAE30... \uC548\uB155\uD558\uC138\uC694!" },
     { type: "dialogue", speaker: "heroine", text: "\uCC98\uC74C \uBCF4\uB294 \uC5BC\uAD74\uC774\uB124\uC694. \uC804\uD559 \uC624\uC168\uB098\uC694?" },
@@ -14643,36 +14640,26 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-a.ts
   var scene_a_default = defineScene(novel_config_default, [
     // ── 배경 전환 + 벚꽃 효과
-    [
-      { type: "background", name: "bg-library", duration: 800 },
-      { type: "mood", mood: "day", intensity: 0.5, duration: 800 }
-    ],
+    { type: "background", name: "bg-library", duration: 800, skip: true },
+    { type: "mood", mood: "day", intensity: 0.5, duration: 800, skip: true },
     // ── 타이틀 오버레이
     { type: "overlay", action: "add", text: "\u2014 \uB3C4\uC11C\uAD00 \u2014", preset: "title" },
-    [
-      { type: "overlay", action: "remove", preset: "title", duration: 800 },
-      { type: "effect", action: "add", effect: "sakura", rate: 6 }
-    ],
+    { type: "overlay", action: "remove", preset: "title", duration: 800, skip: true },
+    { type: "effect", action: "add", effect: "sakura", rate: 6, skip: true },
     // ── 대사
     { type: "dialogue", speaker: "heroine", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
     { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
     // ── 캐릭터 표정 변경 + 클로즈업
     { type: "character", action: "show", name: "heroine", image: "smile" },
-    [
-      { type: "character-focus", name: "heroine", point: "face", zoom: "close-up", duration: 800 },
-      { type: "dialogue", speaker: "heroine", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" }
-    ],
+    { type: "character-focus", name: "heroine", point: "face", zoom: "close-up", duration: 800, skip: true },
+    { type: "dialogue", speaker: "heroine", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" },
     // ── 하이라이트 (컷인)
-    [
-      { type: "character-highlight", name: "heroine", action: "on" },
-      { type: "dialogue", speaker: "heroine", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" }
-    ],
+    { type: "character-highlight", name: "heroine", action: "on", skip: true },
+    { type: "dialogue", speaker: "heroine", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
     { type: "character-highlight", name: "heroine", action: "off" },
     // ── 카메라 + 이펙트 리셋
-    [
-      { type: "camera-zoom", preset: "reset", duration: 600 },
-      { type: "camera-pan", preset: "center", duration: 600 }
-    ],
+    { type: "camera-zoom", preset: "reset", duration: 600, skip: true },
+    { type: "camera-pan", preset: "center", duration: 600, skip: true },
     { type: "effect", action: "remove", effect: "sakura", duration: 800 },
     // ── 다음 씬 선택
     { type: "dialogue", text: "\uB2E4\uC74C \uD14C\uC2A4\uD2B8\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4." },
@@ -14737,17 +14724,13 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-effects.ts
   var scene_effects_default = defineScene(novel_config_default, [
     // ── 공원으로 배경 전환
-    [
-      { type: "background", name: "bg-park", duration: 1e3 },
-      { type: "mood", mood: "sunset", intensity: 0.7, duration: 1e3 }
-    ],
+    { type: "background", name: "bg-park", duration: 1e3, skip: true },
+    { type: "mood", mood: "sunset", intensity: 0.7, duration: 1e3, skip: true },
     { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
     // ── 비 이펙트 + night 무드
     { type: "mood", mood: "night", intensity: 0.7, duration: 1200 },
-    [
-      { type: "effect", action: "add", effect: "rain", rate: 120 },
-      { type: "light", action: "add", preset: "cold" }
-    ],
+    { type: "effect", action: "add", effect: "rain", rate: 120, skip: true },
+    { type: "light", action: "add", preset: "cold", skip: true },
     { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
     // ── 조명 플리커
     { type: "flicker", light: "cold", flicker: "flicker" },
@@ -14763,11 +14746,9 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-flash", preset: "white" },
     { type: "dialogue", text: "screen-flash: white." },
     // ── 이펙트/조명 제거 + day 복원
-    [
-      { type: "effect", action: "remove", effect: "rain", duration: 600 },
-      { type: "light", action: "remove", preset: "cold", duration: 600 },
-      { type: "mood", mood: "day", intensity: 0.5, duration: 1e3 }
-    ],
+    { type: "effect", action: "remove", effect: "rain", duration: 600, skip: true },
+    { type: "light", action: "remove", preset: "cold", duration: 600, skip: true },
+    { type: "mood", mood: "day", intensity: 0.5, duration: 1e3, skip: true },
     { type: "dialogue", text: "\uC774\uD399\uD2B8 \uC81C\uAC70, day \uBB34\uB4DC \uBCF5\uC6D0." },
     // ── 와이프 전환
     { type: "screen-wipe", dir: "out", preset: "left", duration: 800 },

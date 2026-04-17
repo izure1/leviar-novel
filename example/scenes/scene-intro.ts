@@ -16,10 +16,8 @@ export default defineScene(config, [
   { type: 'dialogue', text: '그때, 누군가 말을 걸어왔다.' },
 
   // ── 캐릭터 등장 + 변수 설정 (배열 = 동시 + 자동 진행)
-  [
-    { type: 'character', action: 'show', name: 'heroine', position: 'center', image: 'normal' },
-    { type: 'var', name: 'metHeroine', value: true },
-  ],
+  { type: 'character', action: 'show', name: 'heroine', position: 'center', image: 'normal', skip: true },
+  { type: 'var', name: 'metHeroine', value: true, skip: true },
 
   // ── 대사 (이름창 즉시 갱신 테스트)
   { type: 'dialogue', speaker: 'heroine', text: '저기... 안녕하세요!' },
