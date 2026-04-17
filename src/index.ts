@@ -12,6 +12,11 @@ export type {
   BgDefs,
   NovelConfig,
   NovelOption,
+  // UI 스타일
+  UITextStyle,
+  UIBgStyle,
+  UIChoiceStyle,
+  NovelUIOption,
 } from './types/config'
 
 export type {
@@ -64,5 +69,6 @@ export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from 
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel }                        from './core/Novel'
+export type { SaveData }                from './core/Novel'
 export { Renderer }                     from './core/Renderer'
-export type { RendererOption, RendererState } from './core/Renderer'
+export type { RendererOption, RendererState, CameraState } from './core/Renderer'

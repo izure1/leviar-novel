@@ -1,6 +1,5 @@
 // =============================================================
 // Novel.ts — 전역 vars 관리 + 씬 로딩 오케스트레이터
-// World를 내부적으로 생성하고, 씬 전환 및 사용자 입력을 총괄합니다.
 // =============================================================
 
 import { World } from 'leviar'
@@ -11,7 +10,7 @@ import type { RendererState }          from './Renderer'
 import type { SceneDefinition }        from '../define/defineScene'
 export type { SceneDefinition }
 import type { ExploreSceneDefinition } from '../define/defineExploreScene'
-import type { NovelConfig, NovelOption } from '../types/config'
+import type { NovelConfig, NovelOption, NovelUIOption } from '../types/config'
 
 // =============================================================
 // 내부 타입
@@ -23,19 +22,59 @@ type AnySceneDef =
 
 type ActiveScene = DialogueScene | ExploreScene
 
-/** 현재 입력 모드 */
 type InputMode = 'dialogue' | 'choice' | 'none'
+
+/** novel.save()가 반환하는 세이브 데이터 */
+export interface SaveData {
+  /** 저장 시점의 씬 이름 */
+  sceneName:     string
+  /** 저장 시점의 dialogues 배열 인덱스 */
+  cursor:        number
+  /** 전역 변수 스냅샷 */
+  globalVars:    Record<string, any>
+  /** 지역 변수 스냅샷 */
+  localVars:     Record<string, any>
+  /** 렌더러 상태 (배경, 캐릭터, 카메라 등) 스냅샷 */
+  rendererState: RendererState
+}
+
+// ─── UI 기본값 ────────────────────────────────────────────────
+
+const UI_DEFAULT_BG: Record<string, any> = {
+  color: 'rgba(0,0,0,0.82)',
+}
+
+const UI_DEFAULT_SPEAKER: Record<string, any> = {
+  fontSize: 18, fontWeight: 'bold', color: '#ffe066',
+  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+  textAlign: 'left',
+}
+
+const UI_DEFAULT_DIALOGUE: Record<string, any> = {
+  fontSize: 20, color: '#ffffff', lineHeight: 1.6,
+  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+  textAlign: 'left',
+}
+
+const UI_DEFAULT_CHOICE = {
+  fontSize: 18, color: '#fff',
+  background: 'rgba(30,30,60,0.85)', borderColor: 'rgba(255,255,255,0.3)',
+  hoverBackground: 'rgba(80,80,180,0.9)', hoverBorderColor: 'rgba(255,255,255,0.7)',
+  borderRadius: 8, minWidth: 260,
+  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+}
 
 // =============================================================
 // Novel 클래스
 // =============================================================
 
 export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>> {
-  /** 전역 변수. 씨 전환에도 유지됩니다 */
+  /** 전역 변수. 씬 전환에도 유지됩니다 */
   readonly vars: TConfig['vars']
 
   private readonly _config:   TConfig
-  private readonly _option:   Required<NovelOption>
+  private readonly _option:   Required<Omit<NovelOption, 'ui'>>
+  private readonly _ui:       NovelUIOption
   private readonly _world:    World
   private readonly _renderer: Renderer
   private readonly _scenes:   Map<string, AnySceneDef> = new Map()
@@ -44,18 +83,20 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _currentSceneDef: AnySceneDef | null    = null
   private _inputMode:       InputMode              = 'none'
   private _inputBound:      (() => void) | null    = null
+  private _isSkipping:      boolean               = false
 
   /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
   private _dialogueBgObj:   any = null
-  /** 화자 이름 (Leviar Text, 카메라 자식) */
+  /** 화자 이름창 (Leviar Text, 카메라 자식) */
   private _speakerTextObj:  any = null
-  /** 대사 텍스트 (Leviar Text, 카메라 자식) */
+  /** 대사 텍스트창 (Leviar Text, 카메라 자식) */
   private _dialogueTextObj: any = null
-  /** 선택지 컨테이너 (HTML — 클릭 이벤트 처리) */
+  /** 선택지 컨테이너 (HTML) */
   private _choicesEl:       HTMLDivElement | null  = null
 
   constructor(config: TConfig, option: NovelOption) {
     this._config = config
+    this._ui     = option.ui ?? {}
 
     const canvas = option.canvas
     this._option = {
@@ -70,9 +111,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       width:  this._option.width,
       height: this._option.height,
       depth:  this._option.depth,
+      ui:     this._ui,
     })
 
-    // vars는 config의 복사본으로 초기화 (런타임에서 변경 가능)
     this.vars = { ...(config.vars as object) } as TConfig['vars']
 
     this._setupBuiltinUI()
@@ -82,28 +123,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   // ─── 에셋 로딩 ───────────────────────────────────────────────
 
-  /**
-   * 에셋을 로드합니다.
-   * ```ts
-   * await novel.load({
-   *   'girl_normal': './assets/girl_normal.png',
-   *   'bg_classroom': './assets/bg/classroom.png',
-   * })
-   * ```
-   */
   async load(assets: Record<string, string>): Promise<void> {
     await this._world.loader.load(assets)
   }
 
   // ─── 씬 등록 ─────────────────────────────────────────────────
 
-  /**
-   * 씬을 등록합니다. `start()` 전에 모든 씬을 등록해야 합니다.
-   * ```ts
-   * novel.register(sceneA)
-   * novel.register(sceneB)
-   * ```
-   */
   register(scene: AnySceneDef): this {
     this._scenes.set(scene.name as string, scene)
     return this
@@ -111,10 +136,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   // ─── 씬 시작/전환 ────────────────────────────────────────────
 
-  /**
-   * 지정한 씬으로 시작합니다.
-   * @param name config scenes 배열에 정의된 씬 이름
-   */
   start(name: TConfig['scenes'][number]): void {
     this.loadScene(name as string)
   }
@@ -122,28 +143,24 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   loadScene(name: string): void {
     const def = this._scenes.get(name)
     if (!def) {
-      console.error(`[leviar-novel] 씬 '${name}'이 등록되어 있지 않습니다. novel.register()로 먼저 등록하세요.`)
+      console.error(`[leviar-novel] 씬 '${name}'이 등록되어 있지 않습니다.`)
       return
     }
 
-    // 현재 씬의 렌더 상태 스냅샷
     const prevState: RendererState | null = this._currentScene
       ? this._renderer.captureState()
       : null
 
-    // 현재 씬 정리
     if (this._currentScene instanceof ExploreScene) {
       this._currentScene.cleanup()
     }
     this._currentScene = null
 
-    // 렌더러 초기화 후 상태 복원
     this._renderer.clear()
     if (prevState) {
       this._renderer.restoreState(prevState)
     }
 
-    // 새 씬 생성
     const callbacks = this._buildCallbacks()
     const scene = def.kind === 'dialogue'
       ? new DialogueScene(this._renderer, callbacks, def)
@@ -157,16 +174,128 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._syncUIState()
   }
 
+  // ─── 스킵 기능 ───────────────────────────────────────────────
+
+  /** 현재 스킵(빠른 감기) 중인지 여부 */
+  get isSkipping(): boolean { return this._isSkipping }
+
+  /** 빠른 감기를 시작합니다. 선택지 또는 씬 종료 시 자동 중지됩니다. */
+  skip(): void {
+    if (this._isSkipping) return
+    this._isSkipping = true
+    this._renderer.setSkipping(true)
+    this._tickSkip()
+  }
+
+  /** 빠른 감기를 중지합니다. */
+  stopSkip(): void {
+    this._isSkipping = false
+    this._renderer.setSkipping(false)
+  }
+
+  private _tickSkip(): void {
+    if (!this._isSkipping) return
+
+    // 씬 종료 또는 ExploreScene이면 중지
+    if (!this._currentScene || this._currentScene.isEnded) {
+      this.stopSkip()
+      return
+    }
+    if (!(this._currentScene instanceof DialogueScene)) {
+      this.stopSkip()
+      return
+    }
+
+    // 선택지 발생 시 중지
+    if (this._currentScene.getCurrentChoice()) {
+      this.stopSkip()
+      return
+    }
+
+    // 입력 대기 중이면 즉시 advance
+    if (this._currentScene.isWaitingInput) {
+      this._currentScene.advance()
+      this._syncUIState()
+    }
+
+    if (this._isSkipping) {
+      setTimeout(() => this._tickSkip(), 0)
+    }
+  }
+
+  // ─── 세이브 / 로드 ───────────────────────────────────────────
+
+  /**
+   * 현재 진행 상태를 SaveData로 반환합니다.
+   * 반환된 객체를 JSON.stringify() 하여 localStorage 등에 저장하세요.
+   * @throws 대화 씬이 진행 중이지 않을 때 오류 발생
+   */
+  save(): SaveData {
+    if (
+      !this._currentScene ||
+      !(this._currentScene instanceof DialogueScene) ||
+      !this._currentSceneDef
+    ) {
+      throw new Error('[leviar-novel] save()는 DialogueScene 진행 중에만 호출할 수 있습니다.')
+    }
+
+    return {
+      sceneName:     this._currentSceneDef.name as string,
+      cursor:        this._currentScene.getCursor(),
+      globalVars:    { ...this.vars as object },
+      localVars:     this._currentScene.getLocalVars(),
+      rendererState: this._renderer.captureState(),
+    }
+  }
+
+  /**
+   * SaveData로부터 진행 상태를 복원합니다.
+   * 렌더러 상태(배경/캐릭터/카메라)와 변수를 모두 복원한 뒤 cursor 위치에서 재개합니다.
+   */
+  loadSave(data: SaveData): void {
+    const def = this._scenes.get(data.sceneName)
+    if (!def || def.kind !== 'dialogue') {
+      console.error(`[leviar-novel] load() 실패: 씬 '${data.sceneName}'을 찾을 수 없습니다.`)
+      return
+    }
+
+    // 현재 씬 정리
+    if (this._currentScene instanceof ExploreScene) {
+      this._currentScene.cleanup()
+    }
+    this.stopSkip()
+
+    // 전역 변수 복원
+    Object.assign(this.vars as object, data.globalVars)
+
+    // 렌더러 초기화 + 상태 복원
+    this._renderer.clear()
+    this._renderer.restoreState(data.rendererState)
+
+    // 새 씬 인스턴스 생성 (start() 호출 없이)
+    const callbacks = this._buildCallbacks()
+    const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any,any,any,any,any>)
+
+    // 지역 변수 + cursor 복원
+    scene.restoreState(data.cursor, data.localVars)
+
+    this._currentScene    = scene
+    this._currentSceneDef = def
+    this._inputMode       = 'none'
+    this._syncUIState()
+  }
+
   // ─── 콜백 팩토리 ─────────────────────────────────────────────
 
   private _buildCallbacks(): SceneCallbacks {
     return {
-      getGlobalVars:  ()             => ({ ...this.vars as object }),
-      setGlobalVar:   (name, value)  => { (this.vars as any)[name] = value },
-      loadScene:      (name)         => { this.loadScene(name) },
-      captureRenderer: ()           => this._renderer.captureState(),
-      onDialogue:     (speaker, text) => { this._showDialogue(speaker, text) },
-      onChoice:       (choices)      => { this._showChoices(choices) },
+      getGlobalVars:   ()             => ({ ...this.vars as object }),
+      setGlobalVar:    (name, value)  => { (this.vars as any)[name] = value },
+      loadScene:       (name)         => { this.loadScene(name) },
+      captureRenderer: ()             => this._renderer.captureState(),
+      onDialogue:      (speaker, text) => { this._showDialogue(speaker, text) },
+      onChoice:        (choices)      => { this._showChoices(choices) },
+      isSkipping:      ()             => this._isSkipping,
     }
   }
 
@@ -188,12 +317,10 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._syncUIState()
   }
 
-  /** Scene 실행 후 현재 상태에 맞게 UI 갱신 */
   private _syncUIState(): void {
     if (!this._currentScene || this._currentScene.isEnded) {
       this._inputMode = 'none'
       this._hideDialogueUI()
-      // 씨 종료 후 nextScene 자동 이동
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
         const next = (this._currentSceneDef as SceneDefinition<any,any,any,any,any>).nextScene
         if (next) { this.loadScene(next); return }
@@ -202,14 +329,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     }
     if (!(this._currentScene instanceof DialogueScene)) return
 
-    // choice 모드 (isWaitingInput이 false이므로 먼저 확인)
     const choice = this._currentScene.getCurrentChoice()
     if (choice) {
       this._inputMode = 'choice'
       return
     }
 
-    // 배열 외 모든 단독 커맨드(렌더 커맨드 포함)에 대해 입력 대기
     if (this._currentScene.isWaitingInput) {
       this._inputMode = 'dialogue'
       return
@@ -218,7 +343,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._inputMode = 'none'
   }
 
-  // ─── 빌트인 대화 UI (Leviar 오브젝트 + HTML 선택지) ──────────────────
+  // ─── 빌트인 대화 UI ──────────────────────────────────────────
 
   private _setupBuiltinUI(): void {
     const cam = this._world.camera as any
@@ -226,59 +351,61 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const h   = this._option.height
     const focalLength = cam?.attribute?.focalLength ?? 100
 
-    // canvas 픽셀 좌표 → 카메라-로컬 3D 좌표
     const toLocal = (cx: number, cy: number) =>
       (cam && typeof cam.canvasToLocal === 'function')
         ? cam.canvasToLocal(cx, cy)
         : { x: cx - w / 2, y: -(cy - h / 2), z: focalLength }
 
-    const BOX_H  = h * 0.30
-    const BOX_CY = h - BOX_H / 2
+    // ── UI 설정 병합 (기본값 + 사용자 Leviar Style)
+    const bgCfg  = { ...UI_DEFAULT_BG,       ...(this._ui.dialogueBg ?? {}) } as any
+    const spkCfg = { ...UI_DEFAULT_SPEAKER,   ...(this._ui.speaker    ?? {}) } as any
+    const dlgCfg = { ...UI_DEFAULT_DIALOGUE,  ...(this._ui.dialogue   ?? {}) } as any
 
-    // ── 대화창 배경 (Rectangle)
+    // height 미지정 시 캔버스 높이의 28%
+    const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
+    const BOX_TOP_Y = h - BOX_H   // 박스 top-left의 canvas y
+
+    // ── 대화창 배경 (top-left 기준)
     const bgRect = this._world.createRectangle({
       style: {
-        color:         'rgba(0,0,0,0.82)',
-        width:         w,
+        ...bgCfg,
+        width:         bgCfg.width  ?? w,
         height:        BOX_H,
-        zIndex:        300,
+        zIndex:        bgCfg.zIndex ?? 300,
         opacity:       0,
         pointerEvents: false,
       } as any,
-      transform: { position: toLocal(w / 2, BOX_CY) },
+      transform: { position: toLocal(0, BOX_TOP_Y) },
     })
     this._world.camera?.addChild(bgRect as any)
     this._dialogueBgObj = bgRect
 
-    // ── 화자 이름 (Text)
+    // ── 화자 이름창 (박스 top에서 8px 패딩)
     const speakerText = this._world.createText({
       attribute: { text: '' } as any,
       style: {
-        fontSize:      18,
-        fontWeight:    'bold' as any,
-        color:         '#ffe066',
-        zIndex:        301,
+        ...spkCfg,
+        zIndex:        spkCfg.zIndex ?? 301,
         opacity:       0,
         pointerEvents: false,
       } as any,
-      transform: { position: toLocal(w * 0.05, h * 0.73) },
+      transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8) },
     })
     this._world.camera?.addChild(speakerText as any)
     this._speakerTextObj = speakerText
 
-    // ── 대사 텍스트 (Text)
+    // ── 대사 텍스트창 (이름창 아래 32px)
+    const spkH = (spkCfg.fontSize ?? 18) * 1.4  // 이름창 추정 높이
     const dialogueText = this._world.createText({
       attribute: { text: '' } as any,
       style: {
-        fontSize:      20,
-        color:         '#ffffff',
-        width:         w * 0.90,
-        lineHeight:    1.6 as any,
-        zIndex:        301,
+        ...dlgCfg,
+        width:         dlgCfg.width ?? w * 0.92,
+        zIndex:        dlgCfg.zIndex ?? 301,
         opacity:       0,
         pointerEvents: false,
       } as any,
-      transform: { position: toLocal(w * 0.05, h * 0.79) },
+      transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8 + spkH) },
     })
     this._world.camera?.addChild(dialogueText as any)
     this._dialogueTextObj = dialogueText
@@ -287,6 +414,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const canvas  = this._option.canvas
     const parent  = canvas.parentElement ?? document.body
     const choices = document.createElement('div')
+    const chCfg   = { ...UI_DEFAULT_CHOICE, ...(this._ui.choice ?? {}) }
     choices.style.cssText = [
       'position:absolute', 'top:0', 'left:0', 'right:0', 'bottom:0',
       'display:none',
@@ -294,7 +422,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       'gap:12px',
       'background:rgba(0,0,0,0.6)',
       'pointer-events:auto',
-      'font-family:"Noto Sans KR","Malgun Gothic",sans-serif',
+      `font-family:${chCfg.fontFamily}`,
     ].join(';')
     parent.style.position = 'relative'
     parent.appendChild(choices)
@@ -304,18 +432,28 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _showDialogue(speaker: string | undefined, text: string): void {
     if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return
 
+    const skipping = this._isSkipping
+
     // 대화창 배경 페이드인
-    ; (this._dialogueBgObj as any).animate({ style: { opacity: 1 } }, 250, 'easeOut')
+    if (!skipping) {
+      ; (this._dialogueBgObj as any).animate({ style: { opacity: 1 } }, 250, 'easeOut')
+    } else {
+      ; (this._dialogueBgObj as any).style.opacity = 1
+    }
 
-    // 화자 이름: transition 없이 즉시 교체 + opacity 애니메이션
+    // ── 이름창: 항상 즉시 교체 (transition 없음, 요구사항 1)
     ; (this._speakerTextObj as any).attribute.text = speaker ?? ''
-    ; (this._speakerTextObj as any).animate({ style: { opacity: speaker ? 1 : 0 } }, 150, 'easeOut')
+    ; (this._speakerTextObj as any).style.opacity  = speaker ? 1 : 0
 
-    // 대사: transition(300ms)으로 부드럽게 전환
-    ; (this._dialogueTextObj as any).transition(text, 300)
-    ; (this._dialogueTextObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
+    // ── 대사 텍스트: 스킵 중 즉시, 아니면 transition(300ms)
+    if (skipping) {
+      ; (this._dialogueTextObj as any).attribute.text = text
+      ; (this._dialogueTextObj as any).style.opacity  = 1
+    } else {
+      ; (this._dialogueTextObj as any).transition(text, 30)
+      ; (this._dialogueTextObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
+    }
 
-    // 선택지 숨기기
     if (this._choicesEl) {
       this._choicesEl.style.display = 'none'
       this._choicesEl.innerHTML     = ''
@@ -325,45 +463,45 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _showChoices(choices: { text: string; next?: string; goto?: string }[]): void {
     if (!this._choicesEl) return
 
-    // 대화창 페이드아웃
     if (this._dialogueBgObj)   (this._dialogueBgObj   as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
-    if (this._speakerTextObj)  (this._speakerTextObj  as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
+    if (this._speakerTextObj)  (this._speakerTextObj  as any).style.opacity = 0
     if (this._dialogueTextObj) (this._dialogueTextObj as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
 
     this._choicesEl.style.display = 'flex'
     this._choicesEl.innerHTML     = ''
     this._inputMode               = 'choice'
 
+    const chCfg = { ...UI_DEFAULTS.choice, ...(this._ui.choice ?? {}) }
+
     choices.forEach((choice, i) => {
       const btn = document.createElement('button')
       btn.textContent = choice.text
       btn.style.cssText = [
-        'padding:12px 32px',
-        'font-size:18px',
-        'font-family:inherit',
-        'color:#fff',
-        'background:rgba(30,30,60,0.85)',
-        'border:1.5px solid rgba(255,255,255,0.3)',
-        'border-radius:8px',
-        'cursor:pointer',
-        'transition:background 0.15s,border-color 0.15s',
-        'min-width:260px',
-        'text-align:center',
+        `padding:12px 32px`,
+        `font-size:${chCfg.fontSize}px`,
+        `font-family:${chCfg.fontFamily}`,
+        `color:${chCfg.color}`,
+        `background:${chCfg.background}`,
+        `border:1.5px solid ${chCfg.borderColor}`,
+        `border-radius:${chCfg.borderRadius}px`,
+        `cursor:pointer`,
+        `transition:background 0.15s,border-color 0.15s`,
+        `min-width:${chCfg.minWidth}px`,
+        `text-align:center`,
       ].join(';')
       btn.addEventListener('mouseenter', () => {
-        btn.style.background  = 'rgba(80,80,180,0.9)'
-        btn.style.borderColor = 'rgba(255,255,255,0.7)'
+        btn.style.background   = chCfg.hoverBackground
+        btn.style.borderColor  = chCfg.hoverBorderColor
       })
       btn.addEventListener('mouseleave', () => {
-        btn.style.background  = 'rgba(30,30,60,0.85)'
-        btn.style.borderColor = 'rgba(255,255,255,0.3)'
+        btn.style.background   = chCfg.background
+        btn.style.borderColor  = chCfg.borderColor
       })
       btn.addEventListener('click', (e) => {
         e.stopPropagation()
         if (this._currentScene instanceof DialogueScene) {
           const prevScene = this._currentScene
           this._currentScene.selectChoice(i)
-          // 씨이 바뀌었다면 loadScene이 이미 UI를 처리함
           if (this._currentScene === prevScene) {
             this._hideDialogueUI()
             this._syncUIState()
@@ -376,7 +514,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   private _hideDialogueUI(): void {
     if (this._dialogueBgObj)   (this._dialogueBgObj   as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
-    if (this._speakerTextObj)  (this._speakerTextObj  as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
+    if (this._speakerTextObj)  (this._speakerTextObj  as any).style.opacity = 0
     if (this._dialogueTextObj) (this._dialogueTextObj as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
     if (this._choicesEl) {
       this._choicesEl.style.display = 'none'

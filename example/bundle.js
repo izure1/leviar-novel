@@ -12991,6 +12991,7 @@ ${addLineNumbers(fragment)}`);
     width;
     height;
     depth;
+    _ui;
     _objects = /* @__PURE__ */ new Set();
     _characters = /* @__PURE__ */ new Map();
     _effects = /* @__PURE__ */ new Map();
@@ -13007,16 +13008,47 @@ ${addLineNumbers(fragment)}`);
     _characterStates = /* @__PURE__ */ new Map();
     _activeEffects = /* @__PURE__ */ new Set();
     _activeLights = /* @__PURE__ */ new Set();
+    /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
+    _isSkipping = false;
     constructor(world, config, option) {
       this.world = world;
       this.config = config;
       this.width = option.width;
       this.height = option.height;
       this.depth = option.depth;
+      this._ui = option.ui;
       if (!this.world.camera) {
         this.world.camera = this.world.createCamera();
       }
       this.world.camera.transform.position.z = 0;
+    }
+    // ─── 스킵 모드 ──────────────────────────────────────────────
+    setSkipping(flag) {
+      this._isSkipping = flag;
+    }
+    /**
+     * 스킵 중이면 0, 아니면 원래 duration 반환.
+     * animate 호출 시 반드시 이 메서드를 통해 duration을 결정합니다.
+     */
+    _dur(d) {
+      return this._isSkipping ? 0 : d;
+    }
+    /**
+     * duration이 0일 때 animate 대신 직접 속성을 적용합니다.
+     * animate 체이닝(.on('end'))이 필요한 경우 onEnd 콜백을 전달합니다.
+     */
+    _animate(obj, props, duration, easing = "linear", onEnd) {
+      const d = this._dur(duration);
+      if (d === 0) {
+        if (props.style) Object.assign(obj.style, props.style);
+        if (props.transform?.position) Object.assign(obj.transform.position, props.transform.position);
+        if (props.transform?.scale) Object.assign(obj.transform.scale, props.transform.scale);
+        if (props.transform?.rotation) Object.assign(obj.transform.rotation, props.transform.rotation);
+        onEnd?.();
+        return;
+      }
+      const anim = obj.animate(props, d, easing);
+      if (onEnd) anim.on("end", onEnd);
     }
     // ─── 내부 유틸 ──────────────────────────────────────────────
     get _characterPlaneLocalZ() {
@@ -13064,6 +13096,7 @@ ${addLineNumbers(fragment)}`);
     }
     // ─── 씬 전환 상태 스냅샷 / 복원 ────────────────────────────
     captureState() {
+      const cam = this.world.camera;
       return {
         backgroundKey: this._backgroundKey,
         backgroundParallax: this._backgroundIsParallax,
@@ -13071,7 +13104,12 @@ ${addLineNumbers(fragment)}`);
         moodIntensity: this._moodIntensity,
         activeEffects: new Set(this._activeEffects),
         activeLights: new Set(this._activeLights),
-        characters: new Map(this._characterStates)
+        characters: new Map(this._characterStates),
+        cameraState: {
+          x: cam?.transform.position.x ?? 0,
+          y: cam?.transform.position.y ?? 0,
+          z: cam?.transform.position.z ?? 0
+        }
       };
     }
     restoreState(state) {
@@ -13086,6 +13124,12 @@ ${addLineNumbers(fragment)}`);
       state.characters.forEach(({ position, imageKey }, name) => {
         this.showCharacter(name, position, imageKey);
       });
+      const cam = this.world.camera;
+      if (cam && state.cameraState) {
+        cam.transform.position.x = state.cameraState.x;
+        cam.transform.position.y = state.cameraState.y;
+        cam.transform.position.z = state.cameraState.z;
+      }
     }
     /** 모든 씬 오브젝트를 제거한다 */
     clear() {
@@ -13116,9 +13160,10 @@ ${addLineNumbers(fragment)}`);
       if (!def) return;
       const useParallax = def.parallax ?? true;
       this._backgroundKey = key;
-      if (this._backgroundObj && duration > 0 && this._backgroundIsParallax === useParallax && typeof this._backgroundObj.transition === "function") {
+      const dur = this._dur(duration);
+      if (this._backgroundObj && dur > 0 && this._backgroundIsParallax === useParallax && typeof this._backgroundObj.transition === "function") {
         ;
-        this._backgroundObj.transition(def.src, duration);
+        this._backgroundObj.transition(def.src, dur);
         return;
       }
       if (this._backgroundObj) {
@@ -13148,27 +13193,24 @@ ${addLineNumbers(fragment)}`);
         return v;
       })() : this.world.createImage(bgOpts);
       if (!useParallax) this.world.camera?.addChild(bg);
-      if (duration > 0 && typeof bg.fadeIn === "function") bg.fadeIn(duration);
+      if (dur > 0 && typeof bg.fadeIn === "function") bg.fadeIn(dur);
       this._backgroundObj = this._track(bg);
     }
     // ─── 무드 ───────────────────────────────────────────────────
     setMood(mood = "none", intensity = 1, duration = 800) {
+      const dur = this._dur(duration);
       if (this._moodObj) {
         if (this._moodObj._currentMood === mood) {
-          duration > 0 ? this._moodObj.animate({ style: { opacity: intensity } }, duration, "easeInOutQuad") : this._moodObj.style.opacity = intensity;
+          this._animate(this._moodObj, { style: { opacity: intensity } }, dur, "easeInOutQuad");
           this._moodIntensity = intensity;
           return;
         }
         const old = this._moodObj;
-        if (duration > 0) {
-          old.animate({ style: { opacity: 0 } }, duration, "easeOut").on("end", () => {
-            old.remove?.();
-            this._objects.delete(old);
-          });
-        } else {
+        this._animate(old, { style: { opacity: 0 } }, dur, "easeOut", () => {
+          ;
           old.remove?.();
           this._objects.delete(old);
-        }
+        });
         this._moodObj = null;
       }
       if (mood === "none") {
@@ -13199,7 +13241,7 @@ ${addLineNumbers(fragment)}`);
       this.world.camera?.addChild(rect);
       rect._currentMood = mood;
       this._moodObj = rect;
-      duration > 0 ? rect.animate({ style: { opacity: intensity } }, duration, "easeInOutQuad") : rect.style.opacity = intensity;
+      this._animate(rect, { style: { opacity: intensity } }, dur, "easeInOutQuad");
     }
     // ─── 이펙트 ─────────────────────────────────────────────────
     addEffect(type = "dust", rate, overrides) {
@@ -13320,7 +13362,18 @@ ${addLineNumbers(fragment)}`);
     }
     // ─── 오버레이 ────────────────────────────────────────────────
     addOverlay(text, preset = "caption") {
-      const p = OVERLAY_PRESETS[preset];
+      const defaults = OVERLAY_PRESETS[preset];
+      const uiOv = this._ui?.overlay?.[preset] ?? {};
+      const p = {
+        fontSize: uiOv.fontSize ?? defaults.fontSize,
+        color: uiOv.color ?? defaults.color,
+        opacity: uiOv.opacity ?? defaults.opacity,
+        zIndex: defaults.zIndex,
+        y: defaults.y,
+        fontWeight: uiOv.fontWeight,
+        fontFamily: uiOv.fontFamily,
+        lineHeight: uiOv.lineHeight
+      };
       if (this._overlayObjs.has(preset)) this.removeOverlay(preset);
       const yMap = {
         top: this.height * 0.1,
@@ -13333,6 +13386,9 @@ ${addLineNumbers(fragment)}`);
         attribute: { text },
         style: {
           fontSize: p.fontSize,
+          fontWeight: p.fontWeight,
+          fontFamily: p.fontFamily,
+          lineHeight: p.lineHeight,
           color: p.color,
           opacity: p.opacity,
           zIndex: p.zIndex,
@@ -13376,9 +13432,9 @@ ${addLineNumbers(fragment)}`);
       this._characterStates.set(name, { position, imageKey: resolvedKey });
       const existing = this._characters.get(name);
       if (existing) {
-        existing.animate({ transform: { position: { x: xPos } } }, 400, "easeInOutQuad");
+        this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(400), "easeInOutQuad");
         if (imageKey) {
-          typeof existing.transition === "function" ? existing.transition(src, 300) : existing.attribute && (existing.attribute.src = src);
+          this._dur(300) > 0 && typeof existing.transition === "function" ? existing.transition(src, this._dur(300)) : existing.attribute && (existing.attribute.src = src);
         }
         ;
         existing._currentImageKey = resolvedKey;
@@ -13389,7 +13445,13 @@ ${addLineNumbers(fragment)}`);
           style: { width: targetW, zIndex: Z_INDEX.CHARACTER_NORMAL },
           transform: { position: { x: xPos, y: 0, z: zPos } }
         }));
-        if (typeof img.fadeIn === "function") img.fadeIn(400);
+        const fadeDur = this._dur(400);
+        if (fadeDur > 0 && typeof img.fadeIn === "function") {
+          img.fadeIn(fadeDur);
+        } else {
+          img.style.opacity = 1;
+        }
+        ;
         img._currentImageKey = resolvedKey;
         this._characters.set(name, img);
       }
@@ -13399,12 +13461,13 @@ ${addLineNumbers(fragment)}`);
       this._characterStates.delete(name);
       if (obj) {
         this._characters.delete(name);
-        if (duration > 0 && typeof obj.fadeOut === "function") {
-          obj.fadeOut(duration);
+        const dur = this._dur(duration);
+        if (dur > 0 && typeof obj.fadeOut === "function") {
+          obj.fadeOut(dur);
           setTimeout(() => {
             obj.remove?.();
             this._objects.delete(obj);
-          }, duration);
+          }, dur);
         } else {
           obj.remove?.();
           this._objects.delete(obj);
@@ -13458,22 +13521,22 @@ ${addLineNumbers(fragment)}`);
       if (!cam) return;
       const { scale: scale2, duration: pd } = ZOOM_PRESETS[preset];
       const finalScale = overrideScale ?? scale2;
-      const finalDur = duration ?? pd;
+      const finalDur = this._dur(duration ?? pd);
       const baseDist = cam.attribute?.focalLength ?? 100;
       const newZ = baseDist - baseDist / finalScale;
-      cam.animate({ transform: { position: { z: newZ } } }, finalDur, "easeInOutQuad");
+      this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, "easeInOutQuad");
       const localZ = baseDist - newZ;
       const scaleAtDst = baseDist / (baseDist - newZ);
       const exactW = this.width / scaleAtDst;
       const exactH = this.height / scaleAtDst;
       if (this._moodObj) {
-        this._moodObj.animate({
+        this._animate(this._moodObj, {
           transform: { position: { z: localZ } },
           style: { width: exactW, height: exactH }
         }, finalDur, "easeInOutQuad");
       }
       this._lightObjs.forEach((light) => {
-        light.animate({
+        this._animate(light, {
           transform: { position: { z: localZ } },
           style: { width: exactW, height: exactH }
         }, finalDur, "easeInOutQuad");
@@ -13486,16 +13549,17 @@ ${addLineNumbers(fragment)}`);
       if (preset === "custom") {
         x = customX ?? 0;
         y = customY ?? 0;
-        dur = duration ?? 800;
+        dur = this._dur(duration ?? 800);
       } else {
         const p = PAN_PRESETS[preset];
         x = customX ?? p.x;
         y = customY ?? p.y;
-        dur = duration ?? p.duration;
+        dur = this._dur(duration ?? p.duration);
       }
-      cam.animate({ transform: { position: { x, y } } }, dur, "easeInOutQuad");
+      this._animate(cam, { transform: { position: { x, y } } }, dur, "easeInOutQuad");
     }
     cameraEffect(preset = "shake", duration, intensity) {
+      if (this._isSkipping) return;
       const cam = this.world.camera;
       if (!cam) return;
       const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset];
@@ -13932,7 +13996,6 @@ ${addLineNumbers(fragment)}`);
             cmd.duration ?? 800
           );
           break;
-        // ── UI ───────────────────────────────────────────────────
         case "ui":
           break;
         default:
@@ -13978,6 +14041,41 @@ ${addLineNumbers(fragment)}`);
       } else {
         this.cursor++;
         this._executeNext();
+      }
+    }
+    // ─── 세이브/로드용 메서드 ────────────────────────────────────
+    /** 현재 커서 위치 반환 (세이브용) */
+    getCursor() {
+      return this.cursor;
+    }
+    /** 현재 지역 변수 반환 (세이브용) */
+    getLocalVars() {
+      return { ...this.localVars };
+    }
+    /**
+     * 커서와 지역변수를 복원합니다 (로드용).
+     * start()를 호출하지 않고 직접 상태를 복원합니다.
+     */
+    restoreState(cursor, localVars) {
+      this.cursor = cursor;
+      this.localVars = { ...localVars };
+      this._ended = false;
+      this._redisplayCurrentStep();
+    }
+    /**
+     * 현재 cursor 위치의 step을 다시 표시합니다.
+     * 로드 후 화면에 현재 상태를 복원할 때 사용합니다.
+     */
+    _redisplayCurrentStep() {
+      const steps = this.definition.dialogues;
+      const step = steps[this.cursor];
+      if (!step || Array.isArray(step)) return;
+      const cmd = step;
+      if (cmd.type === "dialogue") {
+        this.callbacks.onDialogue(cmd.speaker, cmd.text);
+        this._waitingInput = true;
+      } else if (cmd.type === "choice") {
+        this.callbacks.onChoice(cmd.choices);
       }
     }
     get isEnded() {
@@ -14027,7 +14125,6 @@ ${addLineNumbers(fragment)}`);
       });
       this._clickHandlers = [];
     }
-    /** ExploreScene은 사용자 입력(advance)을 처리하지 않는다 */
     advance() {
     }
     get isEnded() {
@@ -14036,11 +14133,40 @@ ${addLineNumbers(fragment)}`);
   };
 
   // src/core/Novel.ts
+  var UI_DEFAULT_BG = {
+    color: "rgba(0,0,0,0.82)"
+  };
+  var UI_DEFAULT_SPEAKER = {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#ffe066",
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    textAlign: "left"
+  };
+  var UI_DEFAULT_DIALOGUE = {
+    fontSize: 20,
+    color: "#ffffff",
+    lineHeight: 1.6,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    textAlign: "left"
+  };
+  var UI_DEFAULT_CHOICE = {
+    fontSize: 18,
+    color: "#fff",
+    background: "rgba(30,30,60,0.85)",
+    borderColor: "rgba(255,255,255,0.3)",
+    hoverBackground: "rgba(80,80,180,0.9)",
+    hoverBorderColor: "rgba(255,255,255,0.7)",
+    borderRadius: 8,
+    minWidth: 260,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif'
+  };
   var Novel = class {
-    /** 전역 변수. 씨 전환에도 유지됩니다 */
+    /** 전역 변수. 씬 전환에도 유지됩니다 */
     vars;
     _config;
     _option;
+    _ui;
     _world;
     _renderer;
     _scenes = /* @__PURE__ */ new Map();
@@ -14048,16 +14174,18 @@ ${addLineNumbers(fragment)}`);
     _currentSceneDef = null;
     _inputMode = "none";
     _inputBound = null;
+    _isSkipping = false;
     /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
     _dialogueBgObj = null;
-    /** 화자 이름 (Leviar Text, 카메라 자식) */
+    /** 화자 이름창 (Leviar Text, 카메라 자식) */
     _speakerTextObj = null;
-    /** 대사 텍스트 (Leviar Text, 카메라 자식) */
+    /** 대사 텍스트창 (Leviar Text, 카메라 자식) */
     _dialogueTextObj = null;
-    /** 선택지 컨테이너 (HTML — 클릭 이벤트 처리) */
+    /** 선택지 컨테이너 (HTML) */
     _choicesEl = null;
     constructor(config, option) {
       this._config = config;
+      this._ui = option.ui ?? {};
       const canvas = option.canvas;
       this._option = {
         canvas,
@@ -14069,7 +14197,8 @@ ${addLineNumbers(fragment)}`);
       this._renderer = new Renderer3(this._world, config, {
         width: this._option.width,
         height: this._option.height,
-        depth: this._option.depth
+        depth: this._option.depth,
+        ui: this._ui
       });
       this.vars = { ...config.vars };
       this._setupBuiltinUI();
@@ -14077,42 +14206,22 @@ ${addLineNumbers(fragment)}`);
       this._world.start();
     }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
-    /**
-     * 에셋을 로드합니다.
-     * ```ts
-     * await novel.load({
-     *   'girl_normal': './assets/girl_normal.png',
-     *   'bg_classroom': './assets/bg/classroom.png',
-     * })
-     * ```
-     */
     async load(assets) {
       await this._world.loader.load(assets);
     }
     // ─── 씬 등록 ─────────────────────────────────────────────────
-    /**
-     * 씬을 등록합니다. `start()` 전에 모든 씬을 등록해야 합니다.
-     * ```ts
-     * novel.register(sceneA)
-     * novel.register(sceneB)
-     * ```
-     */
     register(scene) {
       this._scenes.set(scene.name, scene);
       return this;
     }
     // ─── 씬 시작/전환 ────────────────────────────────────────────
-    /**
-     * 지정한 씬으로 시작합니다.
-     * @param name config scenes 배열에 정의된 씬 이름
-     */
     start(name) {
       this.loadScene(name);
     }
     loadScene(name) {
       const def = this._scenes.get(name);
       if (!def) {
-        console.error(`[leviar-novel] \uC52C '${name}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. novel.register()\uB85C \uBA3C\uC800 \uB4F1\uB85D\uD558\uC138\uC694.`);
+        console.error(`[leviar-novel] \uC52C '${name}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
       const prevState = this._currentScene ? this._renderer.captureState() : null;
@@ -14133,6 +14242,88 @@ ${addLineNumbers(fragment)}`);
       scene.start();
       this._syncUIState();
     }
+    // ─── 스킵 기능 ───────────────────────────────────────────────
+    /** 현재 스킵(빠른 감기) 중인지 여부 */
+    get isSkipping() {
+      return this._isSkipping;
+    }
+    /** 빠른 감기를 시작합니다. 선택지 또는 씬 종료 시 자동 중지됩니다. */
+    skip() {
+      if (this._isSkipping) return;
+      this._isSkipping = true;
+      this._renderer.setSkipping(true);
+      this._tickSkip();
+    }
+    /** 빠른 감기를 중지합니다. */
+    stopSkip() {
+      this._isSkipping = false;
+      this._renderer.setSkipping(false);
+    }
+    _tickSkip() {
+      if (!this._isSkipping) return;
+      if (!this._currentScene || this._currentScene.isEnded) {
+        this.stopSkip();
+        return;
+      }
+      if (!(this._currentScene instanceof DialogueScene)) {
+        this.stopSkip();
+        return;
+      }
+      if (this._currentScene.getCurrentChoice()) {
+        this.stopSkip();
+        return;
+      }
+      if (this._currentScene.isWaitingInput) {
+        this._currentScene.advance();
+        this._syncUIState();
+      }
+      if (this._isSkipping) {
+        setTimeout(() => this._tickSkip(), 0);
+      }
+    }
+    // ─── 세이브 / 로드 ───────────────────────────────────────────
+    /**
+     * 현재 진행 상태를 SaveData로 반환합니다.
+     * 반환된 객체를 JSON.stringify() 하여 localStorage 등에 저장하세요.
+     * @throws 대화 씬이 진행 중이지 않을 때 오류 발생
+     */
+    save() {
+      if (!this._currentScene || !(this._currentScene instanceof DialogueScene) || !this._currentSceneDef) {
+        throw new Error("[leviar-novel] save()\uB294 DialogueScene \uC9C4\uD589 \uC911\uC5D0\uB9CC \uD638\uCD9C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
+      }
+      return {
+        sceneName: this._currentSceneDef.name,
+        cursor: this._currentScene.getCursor(),
+        globalVars: { ...this.vars },
+        localVars: this._currentScene.getLocalVars(),
+        rendererState: this._renderer.captureState()
+      };
+    }
+    /**
+     * SaveData로부터 진행 상태를 복원합니다.
+     * 렌더러 상태(배경/캐릭터/카메라)와 변수를 모두 복원한 뒤 cursor 위치에서 재개합니다.
+     */
+    loadSave(data) {
+      const def = this._scenes.get(data.sceneName);
+      if (!def || def.kind !== "dialogue") {
+        console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${data.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        return;
+      }
+      if (this._currentScene instanceof ExploreScene) {
+        this._currentScene.cleanup();
+      }
+      this.stopSkip();
+      Object.assign(this.vars, data.globalVars);
+      this._renderer.clear();
+      this._renderer.restoreState(data.rendererState);
+      const callbacks = this._buildCallbacks();
+      const scene = new DialogueScene(this._renderer, callbacks, def);
+      scene.restoreState(data.cursor, data.localVars);
+      this._currentScene = scene;
+      this._currentSceneDef = def;
+      this._inputMode = "none";
+      this._syncUIState();
+    }
     // ─── 콜백 팩토리 ─────────────────────────────────────────────
     _buildCallbacks() {
       return {
@@ -14149,7 +14340,8 @@ ${addLineNumbers(fragment)}`);
         },
         onChoice: (choices) => {
           this._showChoices(choices);
-        }
+        },
+        isSkipping: () => this._isSkipping
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
@@ -14167,7 +14359,6 @@ ${addLineNumbers(fragment)}`);
       this._currentScene.advance();
       this._syncUIState();
     }
-    /** Scene 실행 후 현재 상태에 맞게 UI 갱신 */
     _syncUIState() {
       if (!this._currentScene || this._currentScene.isEnded) {
         this._inputMode = "none";
@@ -14193,60 +14384,61 @@ ${addLineNumbers(fragment)}`);
       }
       this._inputMode = "none";
     }
-    // ─── 빌트인 대화 UI (Leviar 오브젝트 + HTML 선택지) ──────────────────
+    // ─── 빌트인 대화 UI ──────────────────────────────────────────
     _setupBuiltinUI() {
       const cam = this._world.camera;
       const w = this._option.width;
       const h = this._option.height;
       const focalLength = cam?.attribute?.focalLength ?? 100;
       const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: focalLength };
-      const BOX_H = h * 0.3;
-      const BOX_CY = h - BOX_H / 2;
+      const bgCfg = { ...UI_DEFAULT_BG, ...this._ui.dialogueBg ?? {} };
+      const spkCfg = { ...UI_DEFAULT_SPEAKER, ...this._ui.speaker ?? {} };
+      const dlgCfg = { ...UI_DEFAULT_DIALOGUE, ...this._ui.dialogue ?? {} };
+      const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
+      const BOX_TOP_Y = h - BOX_H;
       const bgRect = this._world.createRectangle({
         style: {
-          color: "rgba(0,0,0,0.82)",
-          width: w,
+          ...bgCfg,
+          width: bgCfg.width ?? w,
           height: BOX_H,
-          zIndex: 300,
+          zIndex: bgCfg.zIndex ?? 300,
           opacity: 0,
           pointerEvents: false
         },
-        transform: { position: toLocal(w / 2, BOX_CY) }
+        transform: { position: toLocal(0, BOX_TOP_Y) }
       });
       this._world.camera?.addChild(bgRect);
       this._dialogueBgObj = bgRect;
       const speakerText = this._world.createText({
         attribute: { text: "" },
         style: {
-          fontSize: 18,
-          fontWeight: "bold",
-          color: "#ffe066",
-          zIndex: 301,
+          ...spkCfg,
+          zIndex: spkCfg.zIndex ?? 301,
           opacity: 0,
           pointerEvents: false
         },
-        transform: { position: toLocal(w * 0.05, h * 0.73) }
+        transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8) }
       });
       this._world.camera?.addChild(speakerText);
       this._speakerTextObj = speakerText;
+      const spkH = (spkCfg.fontSize ?? 18) * 1.4;
       const dialogueText = this._world.createText({
         attribute: { text: "" },
         style: {
-          fontSize: 20,
-          color: "#ffffff",
-          width: w * 0.9,
-          lineHeight: 1.6,
-          zIndex: 301,
+          ...dlgCfg,
+          width: dlgCfg.width ?? w * 0.92,
+          zIndex: dlgCfg.zIndex ?? 301,
           opacity: 0,
           pointerEvents: false
         },
-        transform: { position: toLocal(w * 0.05, h * 0.79) }
+        transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8 + spkH) }
       });
       this._world.camera?.addChild(dialogueText);
       this._dialogueTextObj = dialogueText;
       const canvas = this._option.canvas;
       const parent = canvas.parentElement ?? document.body;
       const choices = document.createElement("div");
+      const chCfg = { ...UI_DEFAULT_CHOICE, ...this._ui.choice ?? {} };
       choices.style.cssText = [
         "position:absolute",
         "top:0",
@@ -14260,7 +14452,7 @@ ${addLineNumbers(fragment)}`);
         "gap:12px",
         "background:rgba(0,0,0,0.6)",
         "pointer-events:auto",
-        'font-family:"Noto Sans KR","Malgun Gothic",sans-serif'
+        `font-family:${chCfg.fontFamily}`
       ].join(";");
       parent.style.position = "relative";
       parent.appendChild(choices);
@@ -14268,11 +14460,26 @@ ${addLineNumbers(fragment)}`);
     }
     _showDialogue(speaker, text) {
       if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return;
-      this._dialogueBgObj.animate({ style: { opacity: 1 } }, 250, "easeOut");
+      const skipping = this._isSkipping;
+      if (!skipping) {
+        ;
+        this._dialogueBgObj.animate({ style: { opacity: 1 } }, 250, "easeOut");
+      } else {
+        ;
+        this._dialogueBgObj.style.opacity = 1;
+      }
+      ;
       this._speakerTextObj.attribute.text = speaker ?? "";
-      this._speakerTextObj.animate({ style: { opacity: speaker ? 1 : 0 } }, 150, "easeOut");
-      this._dialogueTextObj.transition(text, 300);
-      this._dialogueTextObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
+      this._speakerTextObj.style.opacity = speaker ? 1 : 0;
+      if (skipping) {
+        ;
+        this._dialogueTextObj.attribute.text = text;
+        this._dialogueTextObj.style.opacity = 1;
+      } else {
+        ;
+        this._dialogueTextObj.transition(text, 30);
+        this._dialogueTextObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
+      }
       if (this._choicesEl) {
         this._choicesEl.style.display = "none";
         this._choicesEl.innerHTML = "";
@@ -14281,34 +14488,35 @@ ${addLineNumbers(fragment)}`);
     _showChoices(choices) {
       if (!this._choicesEl) return;
       if (this._dialogueBgObj) this._dialogueBgObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
-      if (this._speakerTextObj) this._speakerTextObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
+      if (this._speakerTextObj) this._speakerTextObj.style.opacity = 0;
       if (this._dialogueTextObj) this._dialogueTextObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
       this._choicesEl.style.display = "flex";
       this._choicesEl.innerHTML = "";
       this._inputMode = "choice";
+      const chCfg = { ...UI_DEFAULTS.choice, ...this._ui.choice ?? {} };
       choices.forEach((choice, i) => {
         const btn = document.createElement("button");
         btn.textContent = choice.text;
         btn.style.cssText = [
-          "padding:12px 32px",
-          "font-size:18px",
-          "font-family:inherit",
-          "color:#fff",
-          "background:rgba(30,30,60,0.85)",
-          "border:1.5px solid rgba(255,255,255,0.3)",
-          "border-radius:8px",
-          "cursor:pointer",
-          "transition:background 0.15s,border-color 0.15s",
-          "min-width:260px",
-          "text-align:center"
+          `padding:12px 32px`,
+          `font-size:${chCfg.fontSize}px`,
+          `font-family:${chCfg.fontFamily}`,
+          `color:${chCfg.color}`,
+          `background:${chCfg.background}`,
+          `border:1.5px solid ${chCfg.borderColor}`,
+          `border-radius:${chCfg.borderRadius}px`,
+          `cursor:pointer`,
+          `transition:background 0.15s,border-color 0.15s`,
+          `min-width:${chCfg.minWidth}px`,
+          `text-align:center`
         ].join(";");
         btn.addEventListener("mouseenter", () => {
-          btn.style.background = "rgba(80,80,180,0.9)";
-          btn.style.borderColor = "rgba(255,255,255,0.7)";
+          btn.style.background = chCfg.hoverBackground;
+          btn.style.borderColor = chCfg.hoverBorderColor;
         });
         btn.addEventListener("mouseleave", () => {
-          btn.style.background = "rgba(30,30,60,0.85)";
-          btn.style.borderColor = "rgba(255,255,255,0.3)";
+          btn.style.background = chCfg.background;
+          btn.style.borderColor = chCfg.borderColor;
         });
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -14326,7 +14534,7 @@ ${addLineNumbers(fragment)}`);
     }
     _hideDialogueUI() {
       if (this._dialogueBgObj) this._dialogueBgObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
-      if (this._speakerTextObj) this._speakerTextObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
+      if (this._speakerTextObj) this._speakerTextObj.style.opacity = 0;
       if (this._dialogueTextObj) this._dialogueTextObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
       if (this._choicesEl) {
         this._choicesEl.style.display = "none";
@@ -14352,25 +14560,26 @@ ${addLineNumbers(fragment)}`);
     characters: {
       heroine: {
         normal: {
-          src: "char-normal",
-          width: 300,
+          src: "girl_normal",
+          width: 350,
           points: {
-            face: { x: 0.5, y: 0.2 },
+            face: { x: 0.5, y: 0.18 },
             chest: { x: 0.5, y: 0.45 }
           }
         },
-        happy: {
-          src: "char-happy",
-          width: 300,
+        smile: {
+          src: "girl_smile",
+          width: 350,
           points: {
-            face: { x: 0.5, y: 0.2 }
+            face: { x: 0.5, y: 0.18 }
           }
         }
       }
     },
     backgrounds: {
-      "bg-room": { src: "bg-room", parallax: true },
-      "bg-rooftop": { src: "bg-rooftop", parallax: false }
+      "bg-floor": { src: "bg_floor", parallax: true },
+      "bg-library": { src: "bg_library", parallax: true },
+      "bg-park": { src: "bg_park", parallax: false }
     }
   });
 
@@ -14378,74 +14587,72 @@ ${addLineNumbers(fragment)}`);
   var scene_intro_default = defineScene(novel_config_default, "scene-intro", [
     // ── 오프닝 전환
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-room", duration: 0 },
-    { type: "mood", mood: "day", intensity: 0.8 },
+    { type: "background", name: "bg-floor", duration: 0 },
+    { type: "mood", mood: "day", intensity: 0.6, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1200 },
-    // ── 나레이션 (speaker 없음)
-    { type: "dialogue", text: "\uC870\uC6A9\uD55C \uAD50\uC2E4... \uC624\uB298\uB3C4 \uC218\uC5C5\uC774 \uB05D\uB0AC\uB2E4." },
+    // ── 나레이션
+    { type: "dialogue", text: "\uC870\uC6A9\uD55C \uBCF5\uB3C4... \uC624\uB298\uB3C4 \uC218\uC5C5\uC774 \uB05D\uB0AC\uB2E4." },
     { type: "dialogue", text: "\uADF8\uB54C, \uB204\uAD70\uAC00 \uB9D0\uC744 \uAC78\uC5B4\uC654\uB2E4." },
-    // ── 캐릭터 등장 + 대사 동시 (배열 = 자동 진행)
+    // ── 캐릭터 등장 + 변수 설정 (배열 = 동시 + 자동 진행)
     [
       { type: "character", action: "show", name: "heroine", position: "center", image: "normal" },
       { type: "var", name: "metHeroine", value: true }
     ],
-    // ── 캐릭터 대사
+    // ── 대사 (이름창 즉시 갱신 테스트)
     { type: "dialogue", speaker: "heroine", text: "\uC800\uAE30... \uC548\uB155\uD558\uC138\uC694!" },
     { type: "dialogue", speaker: "heroine", text: "\uCC98\uC74C \uBCF4\uB294 \uC5BC\uAD74\uC774\uB124\uC694. \uC804\uD559 \uC624\uC168\uB098\uC694?" },
     { type: "dialogue", text: "\uC5B4\uB5BB\uAC8C \uB300\uB2F5\uD560\uAE4C..." },
-    // ── 선택지 (choice + var 테스트)
+    // ── 선택지 (choice + var)
     {
       type: "choice",
       choices: [
-        {
-          text: "\uCE5C\uC808\uD558\uAC8C \uB300\uB2F5\uD55C\uB2E4",
-          next: "scene-a",
-          var: { likeability: 20 }
-        },
-        {
-          text: "\uBB34\uC2DC\uD558\uACE0 \uC9C0\uB098\uCE5C\uB2E4",
-          next: "scene-a",
-          var: { likeability: -5 }
-        }
+        { text: "\uCE5C\uC808\uD558\uAC8C \uB300\uB2F5\uD55C\uB2E4", next: "scene-a", var: { likeability: 20 } },
+        { text: "\uBB34\uC2DC\uD558\uACE0 \uC9C0\uB098\uCE5C\uB2E4", next: "scene-a", var: { likeability: -5 } }
       ]
     }
   ]);
 
   // example/scenes/scene-a.ts
   var scene_a_default = defineScene(novel_config_default, "scene-a", [
-    // ── 타이틀 오버레이 (add → 대기 → remove 배열)
-    { type: "overlay", action: "add", text: "\u2014 Scene A: \uCE90\uB9AD\uD130 & \uC774\uD399\uD2B8 \u2014", preset: "title" },
+    // ── 배경 전환 + 벚꽃 효과
+    [
+      { type: "background", name: "bg-library", duration: 800 },
+      { type: "mood", mood: "day", intensity: 0.5, duration: 800 }
+    ],
+    // ── 타이틀 오버레이
+    { type: "overlay", action: "add", text: "\u2014 \uB3C4\uC11C\uAD00 \u2014", preset: "title" },
     [
       { type: "overlay", action: "remove", preset: "title", duration: 800 },
-      { type: "effect", action: "add", effect: "sakura", rate: 8 }
+      { type: "effect", action: "add", effect: "sakura", rate: 6 }
     ],
     // ── 대사
-    { type: "dialogue", speaker: "heroine", text: "\uBC9A\uAF43\uC774 \uAD50\uC2E4 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
-    // ── character-focus 클로즈업 + 대사 배열
+    { type: "dialogue", speaker: "heroine", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
+    { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
+    // ── 캐릭터 표정 변경 + 클로즈업
+    { type: "character", action: "show", name: "heroine", image: "smile" },
     [
       { type: "character-focus", name: "heroine", point: "face", zoom: "close-up", duration: 800 },
-      { type: "dialogue", speaker: "heroine", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC\uC785\uB2C8\uB2E4)" }
+      { type: "dialogue", speaker: "heroine", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" }
     ],
-    // ── 표정 변경 + highlight
-    { type: "character", action: "show", name: "heroine", image: "happy" },
+    // ── 하이라이트 (컷인)
     [
       { type: "character-highlight", name: "heroine", action: "on" },
-      { type: "dialogue", speaker: "heroine", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \uC0C1\uD0DC!)" }
+      { type: "dialogue", speaker: "heroine", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" }
     ],
     { type: "character-highlight", name: "heroine", action: "off" },
-    // ── 카메라 리셋 + 이펙트 제거 배열
+    // ── 카메라 + 이펙트 리셋
     [
       { type: "camera-zoom", preset: "reset", duration: 600 },
       { type: "camera-pan", preset: "center", duration: 600 }
     ],
     { type: "effect", action: "remove", effect: "sakura", duration: 800 },
-    // ── 씬 이동 선택
+    // ── 다음 씬 선택
     { type: "dialogue", text: "\uB2E4\uC74C \uD14C\uC2A4\uD2B8\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4." },
     {
       type: "choice",
       choices: [
         { text: "\uC870\uAC74 \uBD84\uAE30 \uD14C\uC2A4\uD2B8 \u2192", next: "scene-condition" },
-        { text: "\uCE74\uBA54\uB77C \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \u2192", next: "scene-effects" }
+        { text: "\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \u2192", next: "scene-effects" }
       ]
     }
   ]);
@@ -14476,7 +14683,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: "tries >= 1", goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
-    { type: "character", action: "show", name: "heroine", image: "happy" },
+    { type: "character", action: "show", name: "heroine", image: "smile" },
     { type: "dialogue", speaker: "heroine", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694!" },
     // ── or 조건 테스트
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
@@ -14501,25 +14708,25 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-effects.ts
   var scene_effects_default = defineScene(novel_config_default, "scene-effects", [
-    // ── 무드 전환
+    // ── 공원으로 배경 전환
+    [
+      { type: "background", name: "bg-park", duration: 1e3 },
+      { type: "mood", mood: "sunset", intensity: 0.7, duration: 1e3 }
+    ],
+    { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
+    // ── 비 이펙트 + night 무드
     { type: "mood", mood: "night", intensity: 0.7, duration: 1200 },
-    { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] night \uBB34\uB4DC\uB85C \uC804\uD658\uD588\uC2B5\uB2C8\uB2E4." },
-    // ── 비 이펙트 + 조명
     [
       { type: "effect", action: "add", effect: "rain", rate: 120 },
       { type: "light", action: "add", preset: "cold" }
     ],
-    { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 \uCD94\uAC00." },
+    { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
     // ── 조명 플리커
     { type: "flicker", light: "cold", flicker: "flicker" },
     { type: "dialogue", text: "flicker(\uAE5C\uBE61\uC784) \uC801\uC6A9." },
-    // ── 카메라 효과
+    // ── 카메라 흔들림
     { type: "camera-effect", preset: "shake", duration: 500 },
     { type: "dialogue", text: "camera-effect: shake." },
-    { type: "camera-effect", preset: "bounce", duration: 600 },
-    { type: "dialogue", text: "camera-effect: bounce." },
-    { type: "camera-effect", preset: "wave", duration: 1e3 },
-    { type: "dialogue", text: "camera-effect: wave." },
     // ── 카메라 줌
     { type: "camera-zoom", preset: "close-up", duration: 600 },
     { type: "dialogue", text: "camera-zoom: close-up." },
@@ -14527,13 +14734,13 @@ ${addLineNumbers(fragment)}`);
     // ── 스크린 플래시
     { type: "screen-flash", preset: "white" },
     { type: "dialogue", text: "screen-flash: white." },
-    // ── 이펙트/조명 제거 + 무드 복원 배열
+    // ── 이펙트/조명 제거 + day 복원
     [
       { type: "effect", action: "remove", effect: "rain", duration: 600 },
       { type: "light", action: "remove", preset: "cold", duration: 600 },
-      { type: "mood", mood: "day", intensity: 0.6, duration: 1e3 }
+      { type: "mood", mood: "day", intensity: 0.5, duration: 1e3 }
     ],
-    { type: "dialogue", text: "\uC774\uD399\uD2B8/\uC870\uBA85 \uC81C\uAC70, day \uBB34\uB4DC\uB85C \uBCF5\uC6D0." },
+    { type: "dialogue", text: "\uC774\uD399\uD2B8 \uC81C\uAC70, day \uBB34\uB4DC \uBCF5\uC6D0." },
     // ── 와이프 전환
     { type: "screen-wipe", dir: "out", preset: "left", duration: 800 },
     { type: "screen-wipe", dir: "in", preset: "right", duration: 800 },
@@ -14546,8 +14753,12 @@ ${addLineNumbers(fragment)}`);
     { type: "camera-pan", preset: "right", duration: 800 },
     { type: "dialogue", text: "camera-pan: right." },
     { type: "camera-pan", preset: "center", duration: 800 },
-    // ── 탐색 씬으로 이동
-    { type: "dialogue", text: "\uBAA8\uB4E0 \uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \uC644\uB8CC! \uD0D0\uC0C9 \uC52C\uC73C\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4." },
+    // ── fog 이펙트
+    { type: "effect", action: "add", effect: "fog", rate: 3 },
+    { type: "dialogue", text: "fog \uC774\uD399\uD2B8 \uCD94\uAC00." },
+    { type: "effect", action: "remove", effect: "fog", duration: 800 },
+    // ── 완료
+    { type: "dialogue", text: "\uBAA8\uB4E0 \uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \uC644\uB8CC!" },
     {
       type: "choice",
       choices: [
@@ -14559,12 +14770,12 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/explore-map.ts
   var explore_map_default = defineExploreScene(novel_config_default, "explore-map", {
-    background: "bg-rooftop",
+    background: "bg-park",
     objects: [
       {
         name: "door-to-intro",
         position: { x: 180, y: 300 },
-        src: "door",
+        src: "obj-door",
         next: "scene-intro",
         width: 90,
         height: 160
@@ -14572,7 +14783,7 @@ ${addLineNumbers(fragment)}`);
       {
         name: "window-to-effects",
         position: { x: 520, y: 280 },
-        src: "window-obj",
+        src: "obj-window",
         next: "scene-effects",
         width: 110,
         height: 130
@@ -14584,98 +14795,8 @@ ${addLineNumbers(fragment)}`);
   var svg = (body, w, h) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
     `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
   )}`;
-  var CHARS = {
-    // ── 히로인 (일반)
-    "char-normal": svg(`
-    <rect x="75" y="220" width="150" height="400" fill="#7799ff" rx="15"/>
-    <ellipse cx="150" cy="145" rx="88" ry="100" fill="#ffddc9"/>
-    <ellipse cx="150" cy="65"  rx="93" ry="63"  fill="#6633aa"/>
-    <ellipse cx="112" cy="145" rx="17" ry="21"  fill="#3366dd"/>
-    <ellipse cx="188" cy="145" rx="17" ry="21"  fill="#3366dd"/>
-    <ellipse cx="112" cy="143" rx="9"  ry="12"  fill="#11224f"/>
-    <ellipse cx="188" cy="143" rx="9"  ry="12"  fill="#11224f"/>
-    <circle  cx="116" cy="138" r="4"            fill="#ffffff"/>
-    <circle  cx="192" cy="138" r="4"            fill="#ffffff"/>
-    <path d="M 125 183 Q 150 193 175 183" stroke="#cc6677" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M 108 218 L 150 248 L 192 218" stroke="#ffffff" stroke-width="5" fill="none" stroke-linecap="round"/>
-  `, 300, 600),
-    // ── 히로인 (기쁨)
-    "char-happy": svg(`
-    <rect x="75" y="220" width="150" height="400" fill="#ff7799" rx="15"/>
-    <ellipse cx="150" cy="145" rx="88" ry="100" fill="#ffddc9"/>
-    <ellipse cx="150" cy="65"  rx="93" ry="63"  fill="#cc3388"/>
-    <ellipse cx="112" cy="142" rx="18" ry="16"  fill="#cc3366"/>
-    <ellipse cx="188" cy="142" rx="18" ry="16"  fill="#cc3366"/>
-    <ellipse cx="112" cy="140" rx="10" ry="9"   fill="#11224f"/>
-    <ellipse cx="188" cy="140" rx="10" ry="9"   fill="#11224f"/>
-    <circle  cx="116" cy="135" r="4"            fill="#ffffff"/>
-    <circle  cx="192" cy="135" r="4"            fill="#ffffff"/>
-    <ellipse cx="96"  cy="165" rx="22" ry="10"  fill="#ffaaaa" opacity="0.6"/>
-    <ellipse cx="204" cy="165" rx="22" ry="10"  fill="#ffaaaa" opacity="0.6"/>
-    <path d="M 120 180 Q 150 204 180 180" stroke="#cc3355" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M 108 218 L 150 248 L 192 218" stroke="#ffffff" stroke-width="5" fill="none" stroke-linecap="round"/>
-  `, 300, 600)
-  };
-  var BG = {
-    // ── 교실 배경
-    "bg-room": svg(`
-    <rect width="800" height="600" fill="#e8dcc8"/>
-    <rect width="800" height="260" fill="#cce0ee"/>
-    <rect y="460" width="800" height="140" fill="#b8a890"/>
-    <rect x="80"  y="35"  width="400" height="145" fill="#2d6048" rx="4"/>
-    <text x="280" y="118" text-anchor="middle" fill="#a0c090" font-size="22" font-family="serif">\uCE60\uD310</text>
-    <rect x="570" y="55"  width="190" height="230" fill="#88ccff" stroke="#bbb" stroke-width="4" rx="4"/>
-    <line x1="665" y1="55" x2="665" y2="285" stroke="#bbb" stroke-width="2"/>
-    <line x1="570" y1="170" x2="760" y2="170" stroke="#bbb" stroke-width="2"/>
-    <rect y="448" width="800" height="18" fill="#998877"/>
-    <line x1="0" y1="510" x2="800" y2="510" stroke="#c8b89a" stroke-width="3"/>
-    <line x1="0" y1="545" x2="800" y2="545" stroke="#c8b89a" stroke-width="2"/>
-    <rect x="20"  y="440" width="120" height="50" fill="#ccbbaa" rx="4"/>
-    <rect x="200" y="440" width="120" height="50" fill="#ccbbaa" rx="4"/>
-    <rect x="500" y="440" width="120" height="50" fill="#ccbbaa" rx="4"/>
-    <rect x="660" y="440" width="120" height="50" fill="#ccbbaa" rx="4"/>
-  `, 800, 600),
-    // ── 옥상 배경
-    "bg-rooftop": svg(`
-    <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stop-color="#667ecc"/>
-        <stop offset="100%" stop-color="#c8d8ff"/>
-      </linearGradient>
-    </defs>
-    <rect width="800" height="420" fill="url(#sky)"/>
-    <ellipse cx="130" cy="110" rx="80" ry="50" fill="#fff" opacity="0.75"/>
-    <ellipse cx="660" cy="85"  rx="100" ry="60" fill="#fff" opacity="0.65"/>
-    <rect x="45"  y="310" width="55"  height="110" fill="#556677"/>
-    <rect x="155" y="270" width="75"  height="150" fill="#445566"/>
-    <rect x="600" y="295" width="65"  height="125" fill="#556677"/>
-    <rect x="705" y="325" width="55"  height="95"  fill="#445566"/>
-    <rect y="400" width="800" height="22" fill="#bbbccc"/>
-    <rect y="420" width="800" height="180" fill="#80808f"/>
-    <rect x="0"   y="395" width="800" height="28" fill="#aaaabc" rx="4"/>
-    <line x1="0" y1="420" x2="800" y2="420" stroke="#ccc" stroke-width="2" stroke-dasharray="6,10"/>
-  `, 800, 600)
-  };
-  var EFFECTS = {
-    "dust": svg(`<circle cx="5" cy="5" r="4" fill="#ffd080"/>`, 10, 10),
-    "sakura": svg(`
-    <ellipse cx="10" cy="10" rx="9" ry="5" fill="#ffb3c8" transform="rotate(40,10,10)"/>
-    <ellipse cx="10" cy="10" rx="9" ry="5" fill="#ffd0dc" transform="rotate(-40,10,10)"/>
-    <circle  cx="10" cy="10" r="2" fill="#ffeeaa"/>
-  `, 20, 20),
-    "rain": svg(`<rect width="3" height="12" fill="#99ccff" opacity="0.7"/>`, 3, 12),
-    "snow": svg(`
-    <circle cx="7.5" cy="7.5" r="6" fill="#ddeeff"/>
-    <line x1="7.5" y1="1" x2="7.5" y2="14" stroke="#aac" stroke-width="1.5"/>
-    <line x1="1" y1="7.5" x2="14" y2="7.5" stroke="#aac" stroke-width="1.5"/>
-  `, 15, 15),
-    "fog": svg(`<ellipse cx="60" cy="40" rx="58" ry="38" fill="rgba(200,210,220,0.25)"/>`, 120, 80),
-    "sparkle": svg(`<polygon points="8,1 10,6 15,6 11,9 13,14 8,11 3,14 5,9 1,6 6,6" fill="#ffee44"/>`, 16, 16),
-    "leaves": svg(`<ellipse cx="10" cy="12" rx="8" ry="5" fill="#55aa44" transform="rotate(-30,10,10)"/>`, 20, 20),
-    "fireflies": svg(`<circle cx="4" cy="4" r="3" fill="#aaff44"/>`, 8, 8)
-  };
   var OBJECTS = {
-    "door": svg(`
+    "obj-door": svg(`
     <rect width="90" height="160" fill="#8B4513" rx="6"/>
     <rect x="8" y="8" width="74" height="144" fill="#A0522D" rx="4"/>
     <rect x="8" y="8" width="74" height="68"  fill="#9b4f28" rx="4"/>
@@ -14683,21 +14804,64 @@ ${addLineNumbers(fragment)}`);
     <line x1="12" y1="80" x2="78" y2="80" stroke="#7a3a10" stroke-width="2"/>
     <text x="45" y="130" text-anchor="middle" fill="#ffd0a0" font-size="11" font-family="sans-serif">\uCC98\uC74C\uC73C\uB85C</text>
   `, 90, 160),
-    "window-obj": svg(`
+    "obj-window": svg(`
     <rect width="110" height="130" fill="#aaa" rx="4"/>
     <rect x="5" y="5" width="100" height="120" fill="#99ccff" rx="3"/>
     <line x1="55" y1="5"  x2="55" y2="125" stroke="#aaa" stroke-width="5"/>
-    <line x1="5"  y1="65" x2="105" y2="65" stroke="#aaa" stroke-width="5"/>
+    <line x1="5"  y1="65" x2="105" y2="65"  stroke="#aaa" stroke-width="5"/>
     <text x="55" y="115" text-anchor="middle" fill="#336" font-size="11" font-family="sans-serif">\uD6A8\uACFC \uC52C</text>
   `, 110, 130)
   };
+  function serializeSave(data) {
+    return JSON.stringify({
+      ...data,
+      rendererState: {
+        ...data.rendererState,
+        activeEffects: [...data.rendererState.activeEffects],
+        activeLights: [...data.rendererState.activeLights],
+        characters: Object.fromEntries(data.rendererState.characters)
+      }
+    });
+  }
+  function deserializeSave(json) {
+    const raw = JSON.parse(json);
+    return {
+      ...raw,
+      rendererState: {
+        ...raw.rendererState,
+        activeEffects: new Set(raw.rendererState.activeEffects),
+        activeLights: new Set(raw.rendererState.activeLights),
+        characters: new Map(Object.entries(raw.rendererState.characters))
+      }
+    };
+  }
+  function showToast(msg, type = "success") {
+    const el = document.getElementById("toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `toast toast-${type} show`;
+    setTimeout(() => el.classList.remove("show"), 2200);
+  }
   async function main() {
     const canvas = document.getElementById("canvas");
     const novel = new Novel(novel_config_default, {
       canvas,
       width: 800,
       height: 600,
-      depth: 500
+      depth: 500,
+      ui: {
+        dialogueBg: { color: "rgba(8,8,20,0.88)", height: 168 },
+        speaker: { fontSize: 17, fontWeight: "bold", color: "#ffd966" },
+        dialogue: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 },
+        choice: {
+          background: "rgba(20,20,50,0.90)",
+          borderColor: "rgba(255,255,255,0.25)",
+          hoverBackground: "rgba(80,60,180,0.92)",
+          hoverBorderColor: "rgba(200,180,255,0.8)",
+          borderRadius: 10,
+          minWidth: 280
+        }
+      }
     });
     novel.register(scene_intro_default);
     novel.register(scene_a_default);
@@ -14705,12 +14869,68 @@ ${addLineNumbers(fragment)}`);
     novel.register(scene_effects_default);
     novel.register(explore_map_default);
     await novel.load({
-      ...CHARS,
-      ...BG,
-      ...EFFECTS,
+      // 배경
+      bg_floor: "./assets/bg_floor.png",
+      bg_library: "./assets/bg_library.png",
+      bg_park: "./assets/bg_park.png",
+      // 캐릭터
+      girl_normal: "./assets/girl_normal.png",
+      girl_smile: "./assets/girl_smile.png",
+      // 파티클 (에셋 키 = effect type)
+      dust: "./assets/particle_dust.png",
+      rain: "./assets/particle_rain.png",
+      snow: "./assets/particle_snow.png",
+      sakura: "./assets/particle_sakura.png",
+      fog: "./assets/particle_fog.png",
+      // 클릭 오브젝트 (SVG 인라인)
       ...OBJECTS
     });
     novel.start("scene-intro");
+    const btnSkip = document.getElementById("btn-skip");
+    const btnSave = document.getElementById("btn-save");
+    const btnLoad = document.getElementById("btn-load");
+    btnSkip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (novel.isSkipping) {
+        novel.stopSkip();
+      } else {
+        novel.skip();
+      }
+    });
+    setInterval(() => {
+      if (novel.isSkipping) {
+        btnSkip.textContent = "\u23F9 \uC911\uC9C0";
+        btnSkip.classList.add("active");
+      } else {
+        btnSkip.textContent = "\u23E9 Skip";
+        btnSkip.classList.remove("active");
+      }
+    }, 300);
+    btnSave.addEventListener("click", (e) => {
+      e.stopPropagation();
+      try {
+        const data = novel.save();
+        localStorage.setItem("leviar-novel-save", serializeSave(data));
+        showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
+      } catch {
+        showToast("\u26A0 \uC800\uC7A5 \uC2E4\uD328: \uB300\uD654 \uC52C\uC5D0\uC11C\uB9CC \uAC00\uB2A5", "error");
+      }
+    });
+    btnLoad.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const raw = localStorage.getItem("leviar-novel-save");
+      if (!raw) {
+        showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
+        return;
+      }
+      try {
+        const data = deserializeSave(raw);
+        novel.loadSave(data);
+        showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
+      } catch {
+        showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
+      }
+    });
   }
   main().catch(console.error);
 })();

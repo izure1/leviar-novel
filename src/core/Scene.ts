@@ -27,7 +27,6 @@ function evaluateCondition(expr: string, vars: Record<string, any>): boolean {
   const trimmed = expr.trim()
 
   // or 분기 (낮은 우선순위)
-  // 'a or b' → split on first 'or' (단어 경계 필요)
   const orParts = splitByLogicalOp(trimmed, ['or', '||'])
   if (orParts.length > 1) {
     return orParts.some(part => evaluateCondition(part, vars))
@@ -39,14 +38,12 @@ function evaluateCondition(expr: string, vars: Record<string, any>): boolean {
     return andParts.every(part => evaluateCondition(part, vars))
   }
 
-  // 단일 조건 평가
   return evaluateAtom(trimmed, vars)
 }
 
 /** or / and / && / || 로 분리 (단어 경계 처리) */
 function splitByLogicalOp(expr: string, ops: string[]): string[] {
   for (const op of ops) {
-    // 단어 구분자가 있는 경우에만 분리
     const escaped = op.replace(/[|&]/g, '\\$&')
     const re = new RegExp(`\\s+${escaped}\\s+`, 'i')
     const parts = expr.split(re)
@@ -55,9 +52,8 @@ function splitByLogicalOp(expr: string, ops: string[]): string[] {
   return [expr]
 }
 
-/** 단일 비교 표현식 평가 (ex: 'likeability >= 10', 'metCharacterA') */
+/** 단일 비교 표현식 평가 */
 function evaluateAtom(expr: string, vars: Record<string, any>): boolean {
-  // 비교 연산자 순서 중요: 긴 것부터 (>= before >)
   const OPS = ['===', '!==', '>=', '<=', '!=', '==', '>', '<', '='] as const
 
   for (const op of OPS) {
@@ -83,23 +79,19 @@ function evaluateAtom(expr: string, vars: Record<string, any>): boolean {
     }
   }
 
-  // 연산자 없음 → truthy 체크
   return Boolean(resolveValue(expr.trim(), vars))
 }
 
-/** 변수명 또는 숫자/문자열 리터럴을 변수 맵에서 resolve */
 function resolveValue(token: string, vars: Record<string, any>): any {
   if (token in vars) return vars[token]
   return parseRhs(token)
 }
 
-/** RHS 문자열을 JS 값으로 파싱 */
 function parseRhs(raw: string): any {
   if (raw === 'true')  return true
   if (raw === 'false') return false
   if (raw === 'null')  return null
   if (!isNaN(Number(raw))) return Number(raw)
-  // 따옴표 제거
   if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
     return raw.slice(1, -1)
   }
@@ -117,6 +109,8 @@ export interface SceneCallbacks {
   captureRenderer():                                                  RendererState
   onDialogue(speaker: string | undefined, text: string):              void
   onChoice(choices: { text: string; next?: string; goto?: string }[]): void
+  /** 현재 스킵 모드 여부 */
+  isSkipping():                                                       boolean
 }
 
 // =============================================================
@@ -126,7 +120,7 @@ export interface SceneCallbacks {
 export class DialogueScene {
   private readonly renderer:   Renderer
   private readonly callbacks:  SceneCallbacks
-  private readonly definition: SceneDefinition<any, any, any, any, any>
+  readonly definition: SceneDefinition<any, any, any, any, any>
 
   /** 지역 변수. 씬 시작 시 localVars 초깃값으로 초기화 */
   private localVars: Record<string, any>
@@ -153,7 +147,6 @@ export class DialogueScene {
     this.definition = definition
     this.localVars  = { ...(definition.localVars ?? {}) }
 
-    // label 인덱싱: 씬 시작 전 전체 순회
     this._buildLabelIndex()
   }
 
@@ -194,7 +187,6 @@ export class DialogueScene {
 
     const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     if (this.cursor >= steps.length) {
-      // 씬 종료 (더 이상 step 없음)
       this._ended = true
       return
     }
@@ -212,7 +204,6 @@ export class DialogueScene {
     // ── 단일 스텝 ────────────────────────────────────────────
     const cmd = step as DialogueEntry<any, any, any, any>
 
-    // 흐름 제어 커맨드: 실행 후 커서 이동 (입력 대기 없음)
     if (cmd.type === 'label') {
       this.cursor++
       this._executeNext()
@@ -224,10 +215,8 @@ export class DialogueScene {
       return
     }
 
-    // 기타 모든 커맨드: 실행 후 입력 대기
     this._executeCmd(cmd)
 
-    // choice는 내부에서 씬 전환 또는 goto를 처리하므로 advance를 막는다
     if (cmd.type === 'choice') return
 
     this._waitingInput = true
@@ -250,13 +239,11 @@ export class DialogueScene {
         this._ended = true
         this.callbacks.loadScene(cmd.next)
       } else {
-        // 조건 충족이지만 이동 없음 → 다음 스텝으로
         this.cursor++
         this._executeNext()
       }
     } else {
       if (cmd.else) {
-        // else는 label 이름을 먼저, 없으면 씬 이름으로 처리
         if (this.labelIndex.has(cmd.else)) {
           this._jumpToLabel(cmd.else)
         } else {
@@ -435,9 +422,7 @@ export class DialogueScene {
         )
         break
 
-      // ── UI ───────────────────────────────────────────────────
       case 'ui':
-        // 추후 Novel UI 오브젝트 show/hide 연동
         break
 
       default:
@@ -475,14 +460,12 @@ export class DialogueScene {
     const selected = choice.choices[index]
     if (!selected) return
 
-    // 변수 적용
     if (selected.var) {
       for (const [key, value] of Object.entries(selected.var)) {
         this.callbacks.setGlobalVar(key, value)
       }
     }
 
-    // 씬 이동 또는 label jump
     if (selected.next) {
       this._ended = true
       this.callbacks.loadScene(selected.next)
@@ -494,7 +477,45 @@ export class DialogueScene {
     }
   }
 
-  get isEnded(): boolean { return this._ended }
+  // ─── 세이브/로드용 메서드 ────────────────────────────────────
+
+  /** 현재 커서 위치 반환 (세이브용) */
+  getCursor(): number { return this.cursor }
+
+  /** 현재 지역 변수 반환 (세이브용) */
+  getLocalVars(): Record<string, any> { return { ...this.localVars } }
+
+  /**
+   * 커서와 지역변수를 복원합니다 (로드용).
+   * start()를 호출하지 않고 직접 상태를 복원합니다.
+   */
+  restoreState(cursor: number, localVars: Record<string, any>): void {
+    this.cursor     = cursor
+    this.localVars  = { ...localVars }
+    this._ended     = false
+    // cursor 위치의 대화/선택지를 재표시
+    this._redisplayCurrentStep()
+  }
+
+  /**
+   * 현재 cursor 위치의 step을 다시 표시합니다.
+   * 로드 후 화면에 현재 상태를 복원할 때 사용합니다.
+   */
+  private _redisplayCurrentStep(): void {
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const step  = steps[this.cursor]
+    if (!step || Array.isArray(step)) return
+
+    const cmd = step as DialogueEntry<any, any, any, any>
+    if (cmd.type === 'dialogue') {
+      this.callbacks.onDialogue(cmd.speaker as string | undefined, cmd.text)
+      this._waitingInput = true
+    } else if (cmd.type === 'choice') {
+      this.callbacks.onChoice(cmd.choices)
+    }
+  }
+
+  get isEnded(): boolean        { return this._ended }
   get isWaitingInput(): boolean { return this._waitingInput }
 }
 
@@ -552,7 +573,6 @@ export class ExploreScene {
     this._clickHandlers = []
   }
 
-  /** ExploreScene은 사용자 입력(advance)을 처리하지 않는다 */
   advance(): void { /* no-op */ }
 
   get isEnded(): boolean { return this._ended }

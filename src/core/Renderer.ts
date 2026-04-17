@@ -5,7 +5,7 @@
 
 import { World } from 'leviar'
 import type { LeviarObject, EasingType } from 'leviar'
-import type { NovelConfig, CharDefs, BgDefs } from '../types/config'
+import type { NovelConfig, CharDefs, BgDefs, NovelUIOption } from '../types/config'
 import type {
   MoodType, LightPreset, FlickerPreset, OverlayPreset,
   EffectType, ZoomPreset, PanPreset, CameraEffectPreset,
@@ -143,6 +143,13 @@ const DEFAULT_EFFECT_RATES: Partial<Record<EffectType, number>> = {
 // 렌더 상태 스냅샷 (씬 전환 시 이어받기)
 // =============================================================
 
+/** 세이브/복원용 카메라 상태 */
+export interface CameraState {
+  x: number
+  y: number
+  z: number
+}
+
 export interface RendererState {
   backgroundKey:      string | null
   backgroundParallax: boolean
@@ -151,6 +158,8 @@ export interface RendererState {
   activeEffects:      Set<EffectType>
   activeLights:       Set<LightPreset>
   characters:         Map<string, { position: string; imageKey: string }>
+  /** 카메라 위치/줌 상태 */
+  cameraState:        CameraState
 }
 
 // =============================================================
@@ -161,6 +170,8 @@ export interface RendererOption {
   width:  number
   height: number
   depth:  number
+  /** UI 스타일 커스터마이징 */
+  ui?:    NovelUIOption
 }
 
 // =============================================================
@@ -173,23 +184,26 @@ export class Renderer {
   protected readonly width:   number
   protected readonly height:  number
   protected readonly depth:   number
+  protected readonly _ui:     NovelUIOption | undefined
 
-  private _objects:           Set<LeviarObject>             = new Set()
-  private _characters:        Map<string, LeviarObject>     = new Map()
-  private _effects:            Map<string, LeviarObject>     = new Map()
-  private _backgroundObj:     LeviarObject | null           = null
-  private _backgroundIsParallax: boolean                    = true
-  private _backgroundKey:     string | null                 = null
-  private _moodObj:           LeviarObject | null           = null
-  private _moodType:          MoodType | null               = null
-  private _moodIntensity:     number                        = 1
-  private _transitionObj:     LeviarObject | null           = null
-  private _overlayObjs:       Map<string, LeviarObject>     = new Map()
-  private _lightObjs:         Map<string, LeviarObject>     = new Map()
-  private _flickerObj:        LeviarObject | null           = null
-  private _characterStates:   Map<string, { position: string; imageKey: string }> = new Map()
-  private _activeEffects:     Set<EffectType>               = new Set()
-  private _activeLights:      Set<LightPreset>              = new Set()
+  private _objects:              Set<LeviarObject>             = new Set()
+  private _characters:           Map<string, LeviarObject>     = new Map()
+  private _effects:              Map<string, LeviarObject>     = new Map()
+  private _backgroundObj:        LeviarObject | null           = null
+  private _backgroundIsParallax: boolean                       = true
+  private _backgroundKey:        string | null                 = null
+  private _moodObj:              LeviarObject | null           = null
+  private _moodType:             MoodType | null               = null
+  private _moodIntensity:        number                        = 1
+  private _transitionObj:        LeviarObject | null           = null
+  private _overlayObjs:          Map<string, LeviarObject>     = new Map()
+  private _lightObjs:            Map<string, LeviarObject>     = new Map()
+  private _flickerObj:           LeviarObject | null           = null
+  private _characterStates:      Map<string, { position: string; imageKey: string }> = new Map()
+  private _activeEffects:        Set<EffectType>               = new Set()
+  private _activeLights:         Set<LightPreset>              = new Set()
+  /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
+  private _isSkipping:           boolean                       = false
 
   constructor(world: World, config: NovelConfig<any, any, any, any>, option: RendererOption) {
     this.world  = world
@@ -197,11 +211,46 @@ export class Renderer {
     this.width  = option.width
     this.height = option.height
     this.depth  = option.depth
+    this._ui    = option.ui
 
     if (!this.world.camera) {
       this.world.camera = (this.world as any).createCamera()
     }
     this.world.camera!.transform.position.z = 0
+  }
+
+  // ─── 스킵 모드 ──────────────────────────────────────────────
+
+  setSkipping(flag: boolean): void { this._isSkipping = flag }
+
+  /**
+   * 스킵 중이면 0, 아니면 원래 duration 반환.
+   * animate 호출 시 반드시 이 메서드를 통해 duration을 결정합니다.
+   */
+  private _dur(d: number): number { return this._isSkipping ? 0 : d }
+
+  /**
+   * duration이 0일 때 animate 대신 직접 속성을 적용합니다.
+   * animate 체이닝(.on('end'))이 필요한 경우 onEnd 콜백을 전달합니다.
+   */
+  private _animate(
+    obj:      any,
+    props:    any,
+    duration: number,
+    easing:   EasingType = 'linear',
+    onEnd?:   () => void,
+  ): void {
+    const d = this._dur(duration)
+    if (d === 0) {
+      if (props.style)     Object.assign(obj.style,             props.style)
+      if (props.transform?.position) Object.assign(obj.transform.position, props.transform.position)
+      if (props.transform?.scale)    Object.assign(obj.transform.scale,    props.transform.scale)
+      if (props.transform?.rotation) Object.assign(obj.transform.rotation, props.transform.rotation)
+      onEnd?.()
+      return
+    }
+    const anim = (obj as any).animate(props, d, easing)
+    if (onEnd) anim.on('end', onEnd)
   }
 
   // ─── 내부 유틸 ──────────────────────────────────────────────
@@ -252,6 +301,7 @@ export class Renderer {
   // ─── 씬 전환 상태 스냅샷 / 복원 ────────────────────────────
 
   captureState(): RendererState {
+    const cam = this.world.camera
     return {
       backgroundKey:      this._backgroundKey,
       backgroundParallax: this._backgroundIsParallax,
@@ -260,6 +310,11 @@ export class Renderer {
       activeEffects:      new Set(this._activeEffects),
       activeLights:       new Set(this._activeLights),
       characters:         new Map(this._characterStates),
+      cameraState: {
+        x: cam?.transform.position.x ?? 0,
+        y: cam?.transform.position.y ?? 0,
+        z: cam?.transform.position.z ?? 0,
+      },
     }
   }
 
@@ -275,6 +330,13 @@ export class Renderer {
     state.characters.forEach(({ position, imageKey }, name) => {
       this.showCharacter(name, position, imageKey)
     })
+    // 카메라 위치/줌 즉시 복원
+    const cam = this.world.camera
+    if (cam && state.cameraState) {
+      cam.transform.position.x = state.cameraState.x
+      cam.transform.position.y = state.cameraState.y
+      cam.transform.position.z = state.cameraState.z
+    }
   }
 
   /** 모든 씬 오브젝트를 제거한다 */
@@ -311,14 +373,15 @@ export class Renderer {
 
     const useParallax = def.parallax ?? true
     this._backgroundKey = key
+    const dur = this._dur(duration)
 
-    // 동일 패럴럭스 모드 → 크로스페이드
+    // 동일 패럴낙스 모드 → 크로스페이드
     if (
-      this._backgroundObj && duration > 0 &&
+      this._backgroundObj && dur > 0 &&
       this._backgroundIsParallax === useParallax &&
       typeof (this._backgroundObj as any).transition === 'function'
     ) {
-      ; (this._backgroundObj as any).transition(def.src, duration)
+      ; (this._backgroundObj as any).transition(def.src, dur)
       return
     }
 
@@ -354,28 +417,24 @@ export class Renderer {
       : this.world.createImage(bgOpts as any)
 
     if (!useParallax) this.world.camera?.addChild(bg as any)
-    if (duration > 0 && typeof (bg as any).fadeIn === 'function') (bg as any).fadeIn(duration)
+    if (dur > 0 && typeof (bg as any).fadeIn === 'function') (bg as any).fadeIn(dur)
     this._backgroundObj = this._track(bg as any)
   }
 
   // ─── 무드 ───────────────────────────────────────────────────
 
   setMood(mood: MoodType = 'none', intensity: number = 1, duration: number = 800): void {
+    const dur = this._dur(duration)
     if (this._moodObj) {
       if ((this._moodObj as any)._currentMood === mood) {
-        duration > 0
-          ? (this._moodObj as any).animate({ style: { opacity: intensity } }, duration, 'easeInOutQuad')
-          : ((this._moodObj as any).style.opacity = intensity)
+        this._animate(this._moodObj, { style: { opacity: intensity } }, dur, 'easeInOutQuad')
         this._moodIntensity = intensity
         return
       }
       const old = this._moodObj
-      if (duration > 0) {
-        (old as any).animate({ style: { opacity: 0 } }, duration, 'easeOut')
-          .on('end', () => { (old as any).remove?.(); this._objects.delete(old) })
-      } else {
-        (old as any).remove?.(); this._objects.delete(old)
-      }
+      this._animate(old, { style: { opacity: 0 } }, dur, 'easeOut', () => {
+        ; (old as any).remove?.(); this._objects.delete(old)
+      })
       this._moodObj = null
     }
     if (mood === 'none') { this._moodType = null; return }
@@ -406,9 +465,7 @@ export class Renderer {
     ; (rect as any)._currentMood = mood
     this._moodObj = rect as any
 
-    duration > 0
-      ? (rect as any).animate({ style: { opacity: intensity } }, duration, 'easeInOutQuad')
-      : ((rect as any).style.opacity = intensity)
+    this._animate(rect, { style: { opacity: intensity } }, dur, 'easeInOutQuad')
   }
 
   // ─── 이펙트 ─────────────────────────────────────────────────
@@ -536,7 +593,19 @@ export class Renderer {
   // ─── 오버레이 ────────────────────────────────────────────────
 
   addOverlay(text: string, preset: OverlayPreset = 'caption'): void {
-    const p = OVERLAY_PRESETS[preset]
+    const defaults = OVERLAY_PRESETS[preset]
+    // NovelUIOption.overlay 설정으로 오버라이드
+    const uiOv = this._ui?.overlay?.[preset] ?? {}
+    const p = {
+      fontSize:  uiOv.fontSize  ?? defaults.fontSize,
+      color:     uiOv.color     ?? defaults.color,
+      opacity:   uiOv.opacity   ?? defaults.opacity,
+      zIndex:    defaults.zIndex,
+      y:         defaults.y,
+      fontWeight: (uiOv as any).fontWeight,
+      fontFamily: (uiOv as any).fontFamily,
+      lineHeight: (uiOv as any).lineHeight,
+    }
     if (this._overlayObjs.has(preset)) this.removeOverlay(preset)
 
     const yMap: Record<string, number> = {
@@ -552,8 +621,14 @@ export class Renderer {
     const textObj = this._track(this.world.createText({
       attribute: { text } as any,
       style: {
-        fontSize: p.fontSize, color: p.color, opacity: p.opacity,
-        zIndex: p.zIndex, pointerEvents: false,
+        fontSize:   p.fontSize,
+        fontWeight: p.fontWeight,
+        fontFamily: p.fontFamily,
+        lineHeight: p.lineHeight,
+        color:      p.color,
+        opacity:    p.opacity,
+        zIndex:     p.zIndex,
+        pointerEvents: false,
       } as any,
       transform: { position: pos },
     }))
@@ -597,10 +672,10 @@ export class Renderer {
 
     const existing = this._characters.get(name)
     if (existing) {
-      (existing as any).animate({ transform: { position: { x: xPos } } }, 400, 'easeInOutQuad')
+      this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(400), 'easeInOutQuad')
       if (imageKey) {
-        typeof (existing as any).transition === 'function'
-          ? (existing as any).transition(src, 300)
+        this._dur(300) > 0 && typeof (existing as any).transition === 'function'
+          ? (existing as any).transition(src, this._dur(300))
           : ((existing as any).attribute && ((existing as any).attribute.src = src))
       }
       ; (existing as any)._currentImageKey = resolvedKey
@@ -611,7 +686,12 @@ export class Renderer {
         style:     { width: targetW, zIndex: Z_INDEX.CHARACTER_NORMAL } as any,
         transform: { position: { x: xPos, y: 0, z: zPos } },
       }))
-      if (typeof (img as any).fadeIn === 'function') (img as any).fadeIn(400)
+      const fadeDur = this._dur(400)
+      if (fadeDur > 0 && typeof (img as any).fadeIn === 'function') {
+        (img as any).fadeIn(fadeDur)
+      } else {
+        (img as any).style.opacity = 1
+      }
       ; (img as any)._currentImageKey = resolvedKey
       this._characters.set(name, img as any)
     }
@@ -622,9 +702,10 @@ export class Renderer {
     this._characterStates.delete(name)
     if (obj) {
       this._characters.delete(name)
-      if (duration > 0 && typeof (obj as any).fadeOut === 'function') {
-        (obj as any).fadeOut(duration)
-        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, duration)
+      const dur = this._dur(duration)
+      if (dur > 0 && typeof (obj as any).fadeOut === 'function') {
+        (obj as any).fadeOut(dur)
+        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, dur)
       } else {
         (obj as any).remove?.(); this._objects.delete(obj)
       }
@@ -689,11 +770,11 @@ export class Renderer {
 
     const { scale, duration: pd } = ZOOM_PRESETS[preset]
     const finalScale = overrideScale ?? scale
-    const finalDur   = duration ?? pd
+    const finalDur   = this._dur(duration ?? pd)
     const baseDist   = (cam as any).attribute?.focalLength ?? 100
     const newZ       = baseDist - (baseDist / finalScale)
 
-    cam.animate({ transform: { position: { z: newZ } } } as any, finalDur, 'easeInOutQuad')
+    this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, 'easeInOutQuad')
 
     const localZ     = baseDist - newZ
     const scaleAtDst = baseDist / (baseDist - newZ)
@@ -701,13 +782,13 @@ export class Renderer {
     const exactH     = this.height / scaleAtDst
 
     if (this._moodObj) {
-      (this._moodObj as any).animate({
+      this._animate(this._moodObj, {
         transform: { position: { z: localZ } },
         style: { width: exactW, height: exactH },
       }, finalDur, 'easeInOutQuad')
     }
     this._lightObjs.forEach(light => {
-      (light as any).animate({
+      this._animate(light, {
         transform: { position: { z: localZ } },
         style: { width: exactW, height: exactH },
       }, finalDur, 'easeInOutQuad')
@@ -720,15 +801,17 @@ export class Renderer {
 
     let x: number, y: number, dur: number
     if (preset === 'custom') {
-      x = customX ?? 0; y = customY ?? 0; dur = duration ?? 800
+      x = customX ?? 0; y = customY ?? 0; dur = this._dur(duration ?? 800)
     } else {
       const p = PAN_PRESETS[preset]
-      x = customX ?? p.x; y = customY ?? p.y; dur = duration ?? p.duration
+      x = customX ?? p.x; y = customY ?? p.y; dur = this._dur(duration ?? p.duration)
     }
-    cam.animate({ transform: { position: { x, y } } } as any, dur, 'easeInOutQuad')
+    this._animate(cam, { transform: { position: { x, y } } }, dur, 'easeInOutQuad')
   }
 
   cameraEffect(preset: CameraEffectPreset = 'shake', duration?: number, intensity?: number): void {
+    // 스킵 중에는 원래 위치로 즉시 복원
+    if (this._isSkipping) return
     const cam = this.world.camera
     if (!cam) return
 

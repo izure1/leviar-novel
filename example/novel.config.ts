@@ -17,24 +17,25 @@ export default defineNovelConfig({
   characters: {
     heroine: {
       normal: {
-        src: 'char-normal',
-        width: 300,
+        src: 'girl_normal',
+        width: 350,
         points: {
-          face:  { x: 0.5, y: 0.20 },
+          face:  { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 },
         },
       },
-      happy: {
-        src: 'char-happy',
-        width: 300,
+      smile: {
+        src: 'girl_smile',
+        width: 350,
         points: {
-          face: { x: 0.5, y: 0.20 },
+          face: { x: 0.5, y: 0.18 },
         },
       },
     },
   },
   backgrounds: {
-    'bg-room':    { src: 'bg-room',    parallax: true  },
-    'bg-rooftop': { src: 'bg-rooftop', parallax: false },
+    'bg-floor':   { src: 'bg_floor',   parallax: true  },
+    'bg-library': { src: 'bg_library', parallax: true  },
+    'bg-park':    { src: 'bg_park',    parallax: false },
   },
 })
