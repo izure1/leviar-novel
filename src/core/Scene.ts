@@ -128,6 +128,9 @@ export class DialogueScene {
   /** 현재 커서 (dialogues 배열 인덱스) */
   private cursor: number = 0
 
+  /** text 배열의 현재 표시 인덱스 */
+  private textSubIndex: number = 0
+
   /** label name → 인덱스 맵 */
   private labelIndex: Map<string, number> = new Map()
 
@@ -168,6 +171,7 @@ export class DialogueScene {
   /** 씬 실행 시작 */
   start(): void {
     this.cursor = 0
+    this.textSubIndex = 0
     this._executeNext()
   }
 
@@ -177,8 +181,22 @@ export class DialogueScene {
    */
   advance(): void {
     if (!this._waitingInput || this._ended) return
+
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const step = steps[this.cursor] as DialogueEntry<any, any, any, any>
+
+    if (step.type === 'dialogue' && Array.isArray(step.text)) {
+      if (this.textSubIndex < step.text.length - 1) {
+        this.textSubIndex++
+        const txt = step.text[this.textSubIndex]
+        this.callbacks.onDialogue(step.speaker as string | undefined, txt)
+        return
+      }
+    }
+
     this._waitingInput = false
     this.cursor++
+    this.textSubIndex = 0
     this._executeNext()
   }
 
@@ -197,6 +215,7 @@ export class DialogueScene {
 
     if (cmd.type === 'label') {
       this.cursor++
+      this.textSubIndex = 0
       this._executeNext()
       return
     }
@@ -212,6 +231,7 @@ export class DialogueScene {
 
     if (cmd.skip) {
       this.cursor++
+      this.textSubIndex = 0
       this._executeNext()
     } else {
       this._waitingInput = true
@@ -236,6 +256,7 @@ export class DialogueScene {
         this.callbacks.loadScene(cmd.next)
       } else {
         this.cursor++
+        this.textSubIndex = 0
         this._executeNext()
       }
     } else {
@@ -251,6 +272,7 @@ export class DialogueScene {
         this.callbacks.loadScene(cmd['else-next'])
       } else {
         this.cursor++
+        this.textSubIndex = 0
         this._executeNext()
       }
     }
@@ -261,10 +283,12 @@ export class DialogueScene {
     if (idx === undefined) {
       console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`)
       this.cursor++
+      this.textSubIndex = 0
       this._executeNext()
       return
     }
     this.cursor = idx
+    this.textSubIndex = 0
     this._executeNext()
   }
 
@@ -274,9 +298,11 @@ export class DialogueScene {
 
     switch (cmd.type) {
       // ── 스토리 흐름 ─────────────────────────────────────────
-      case 'dialogue':
-        this.callbacks.onDialogue(cmd.speaker as string | undefined, cmd.text)
+      case 'dialogue': {
+        const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
+        this.callbacks.onDialogue(cmd.speaker as string | undefined, txt)
         break
+      }
 
       case 'var': {
         const isLocal = cmd.scope === 'local' || (cmd.name in this.localVars)
@@ -443,7 +469,8 @@ export class DialogueScene {
     const steps   = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
-      return current as any
+      const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text
+      return { ...current, text: txt } as any
     }
     return null
   }
@@ -469,6 +496,7 @@ export class DialogueScene {
       this._jumpToLabel(selected.goto)
     } else {
       this.cursor++
+      this.textSubIndex = 0
       this._executeNext()
     }
   }
@@ -478,6 +506,9 @@ export class DialogueScene {
   /** 현재 커서 위치 반환 (세이브용) */
   getCursor(): number { return this.cursor }
 
+  /** 현재 text 서브 인덱스 반환 (세이브용) */
+  getTextSubIndex(): number { return this.textSubIndex }
+
   /** 현재 지역 변수 반환 (세이브용) */
   getLocalVars(): Record<string, any> { return { ...this.localVars } }
 
@@ -485,10 +516,11 @@ export class DialogueScene {
    * 커서와 지역변수를 복원합니다 (로드용).
    * start()를 호출하지 않고 직접 상태를 복원합니다.
    */
-  restoreState(cursor: number, localVars: Record<string, any>): void {
-    this.cursor     = cursor
-    this.localVars  = { ...localVars }
-    this._ended     = false
+  restoreState(cursor: number, localVars: Record<string, any>, textSubIndex: number = 0): void {
+    this.cursor       = cursor
+    this.textSubIndex = textSubIndex
+    this.localVars    = { ...localVars }
+    this._ended       = false
     // cursor 위치의 대화/선택지를 재표시
     this._redisplayCurrentStep()
   }
@@ -504,7 +536,8 @@ export class DialogueScene {
 
     const cmd = step as DialogueEntry<any, any, any, any>
     if (cmd.type === 'dialogue') {
-      this.callbacks.onDialogue(cmd.speaker as string | undefined, cmd.text)
+      const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
+      this.callbacks.onDialogue(cmd.speaker as string | undefined, txt)
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
       this.callbacks.onChoice(cmd.choices)

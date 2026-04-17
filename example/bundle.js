@@ -13744,6 +13744,8 @@ ${addLineNumbers(fragment)}`);
     localVars;
     /** 현재 커서 (dialogues 배열 인덱스) */
     cursor = 0;
+    /** text 배열의 현재 표시 인덱스 */
+    textSubIndex = 0;
     /** label name → 인덱스 맵 */
     labelIndex = /* @__PURE__ */ new Map();
     /** 사용자 입력 대기 중 여부 */
@@ -13773,6 +13775,7 @@ ${addLineNumbers(fragment)}`);
     /** 씬 실행 시작 */
     start() {
       this.cursor = 0;
+      this.textSubIndex = 0;
       this._executeNext();
     }
     /**
@@ -13781,8 +13784,19 @@ ${addLineNumbers(fragment)}`);
      */
     advance() {
       if (!this._waitingInput || this._ended) return;
+      const steps = this.definition.dialogues;
+      const step = steps[this.cursor];
+      if (step.type === "dialogue" && Array.isArray(step.text)) {
+        if (this.textSubIndex < step.text.length - 1) {
+          this.textSubIndex++;
+          const txt = step.text[this.textSubIndex];
+          this.callbacks.onDialogue(step.speaker, txt);
+          return;
+        }
+      }
       this._waitingInput = false;
       this.cursor++;
+      this.textSubIndex = 0;
       this._executeNext();
     }
     _executeNext() {
@@ -13796,6 +13810,7 @@ ${addLineNumbers(fragment)}`);
       const cmd = step;
       if (cmd.type === "label") {
         this.cursor++;
+        this.textSubIndex = 0;
         this._executeNext();
         return;
       }
@@ -13807,6 +13822,7 @@ ${addLineNumbers(fragment)}`);
       if (cmd.type === "choice") return;
       if (cmd.skip) {
         this.cursor++;
+        this.textSubIndex = 0;
         this._executeNext();
       } else {
         this._waitingInput = true;
@@ -13822,6 +13838,7 @@ ${addLineNumbers(fragment)}`);
           this.callbacks.loadScene(cmd.next);
         } else {
           this.cursor++;
+          this.textSubIndex = 0;
           this._executeNext();
         }
       } else {
@@ -13837,6 +13854,7 @@ ${addLineNumbers(fragment)}`);
           this.callbacks.loadScene(cmd["else-next"]);
         } else {
           this.cursor++;
+          this.textSubIndex = 0;
           this._executeNext();
         }
       }
@@ -13846,10 +13864,12 @@ ${addLineNumbers(fragment)}`);
       if (idx === void 0) {
         console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`);
         this.cursor++;
+        this.textSubIndex = 0;
         this._executeNext();
         return;
       }
       this.cursor = idx;
+      this.textSubIndex = 0;
       this._executeNext();
     }
     /** 단일 커맨드를 Renderer 메서드에 매핑하여 실행 */
@@ -13857,9 +13877,11 @@ ${addLineNumbers(fragment)}`);
       const r = this.renderer;
       switch (cmd.type) {
         // ── 스토리 흐름 ─────────────────────────────────────────
-        case "dialogue":
-          this.callbacks.onDialogue(cmd.speaker, cmd.text);
+        case "dialogue": {
+          const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
+          this.callbacks.onDialogue(cmd.speaker, txt);
           break;
+        }
         case "var": {
           const isLocal = cmd.scope === "local" || cmd.name in this.localVars;
           if (isLocal) {
@@ -14005,7 +14027,8 @@ ${addLineNumbers(fragment)}`);
       const steps = this.definition.dialogues;
       const current = steps[this.cursor];
       if (current?.type === "dialogue") {
-        return current;
+        const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text;
+        return { ...current, text: txt };
       }
       return null;
     }
@@ -14027,6 +14050,7 @@ ${addLineNumbers(fragment)}`);
         this._jumpToLabel(selected.goto);
       } else {
         this.cursor++;
+        this.textSubIndex = 0;
         this._executeNext();
       }
     }
@@ -14034,6 +14058,10 @@ ${addLineNumbers(fragment)}`);
     /** 현재 커서 위치 반환 (세이브용) */
     getCursor() {
       return this.cursor;
+    }
+    /** 현재 text 서브 인덱스 반환 (세이브용) */
+    getTextSubIndex() {
+      return this.textSubIndex;
     }
     /** 현재 지역 변수 반환 (세이브용) */
     getLocalVars() {
@@ -14043,8 +14071,9 @@ ${addLineNumbers(fragment)}`);
      * 커서와 지역변수를 복원합니다 (로드용).
      * start()를 호출하지 않고 직접 상태를 복원합니다.
      */
-    restoreState(cursor, localVars) {
+    restoreState(cursor, localVars, textSubIndex = 0) {
       this.cursor = cursor;
+      this.textSubIndex = textSubIndex;
       this.localVars = { ...localVars };
       this._ended = false;
       this._redisplayCurrentStep();
@@ -14059,7 +14088,8 @@ ${addLineNumbers(fragment)}`);
       if (!step) return;
       const cmd = step;
       if (cmd.type === "dialogue") {
-        this.callbacks.onDialogue(cmd.speaker, cmd.text);
+        const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
+        this.callbacks.onDialogue(cmd.speaker, txt);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
         this.callbacks.onChoice(cmd.choices);
@@ -14291,6 +14321,7 @@ ${addLineNumbers(fragment)}`);
       return {
         sceneName: this._currentSceneDef.name,
         cursor: this._currentScene.getCursor(),
+        textSubIndex: this._currentScene.getTextSubIndex(),
         globalVars: { ...this.vars },
         localVars: this._currentScene.getLocalVars(),
         rendererState: this._renderer.captureState()
@@ -14315,7 +14346,7 @@ ${addLineNumbers(fragment)}`);
       this._renderer.restoreState(data.rendererState);
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      scene.restoreState(data.cursor, data.localVars);
+      scene.restoreState(data.cursor, data.localVars, data.textSubIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
@@ -14581,8 +14612,8 @@ ${addLineNumbers(fragment)}`);
       "bg-park": { src: "bg_park", parallax: false }
     },
     ui: {
-      dialogueBg: { color: "rgba(8,8,20,0.88)", height: 168 },
-      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 5, borderColor: "rgba(255,255,255,0.25)" },
+      dialogueBg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
+      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 2, borderColor: "rgb(255,255,255)" },
       dialogue: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 },
       choice: {
         background: "rgba(20,20,50,0.90)",
@@ -14727,6 +14758,13 @@ ${addLineNumbers(fragment)}`);
     { type: "background", name: "bg-park", duration: 1e3, skip: true },
     { type: "mood", mood: "sunset", intensity: 0.7, duration: 1e3, skip: true },
     { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
+    // ── 배열 텍스트 테스트 (Syntax Sugar)
+    { type: "dialogue", text: [
+      "\uBC30\uC5F4 \uD14D\uC2A4\uD2B8 \uD14C\uC2A4\uD2B8\uC785\uB2C8\uB2E4.",
+      "\uC5EC\uB7EC \uAC1C\uC758 \uB300\uC0AC\uB97C \uC791\uC131\uD560 \uB54C,",
+      "\uC774\uCC98\uB7FC \uBC30\uC5F4\uB85C \uBB36\uC5B4 \uC791\uC131\uD558\uBA74",
+      "\uAC01\uAC01 \uAC1C\uBCC4\uC801\uC778 \uB300\uC0AC\uB85C \uCC98\uB9AC\uB429\uB2C8\uB2E4."
+    ] },
     // ── 비 이펙트 + night 무드
     { type: "mood", mood: "night", intensity: 0.7, duration: 1200 },
     { type: "effect", action: "add", effect: "rain", rate: 120, skip: true },

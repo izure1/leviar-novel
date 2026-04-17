@@ -30,6 +30,8 @@ export interface SaveData {
   sceneName:     string
   /** 저장 시점의 dialogues 배열 인덱스 */
   cursor:        number
+  /** dialogues 요소가 text 배열일 경우, 서브 인덱스 */
+  textSubIndex?: number
   /** 전역 변수 스냅샷 */
   globalVars:    Record<string, any>
   /** 지역 변수 스냅샷 */
@@ -258,6 +260,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     return {
       sceneName:     this._currentSceneDef.name as string,
       cursor:        this._currentScene.getCursor(),
+      textSubIndex:  this._currentScene.getTextSubIndex(),
       globalVars:    { ...this.vars as object },
       localVars:     this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
@@ -293,7 +296,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any,any,any,any,any>)
 
     // 지역 변수 + cursor 복원
-    scene.restoreState(data.cursor, data.localVars)
+    scene.restoreState(data.cursor, data.localVars, data.textSubIndex)
 
     this._currentScene    = scene
     this._currentSceneDef = def

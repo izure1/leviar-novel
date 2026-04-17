@@ -39,8 +39,8 @@ export default defineNovelConfig({
     'bg-park': { src: 'bg_park', parallax: false },
   },
   ui: {
-    dialogueBg: { color: 'rgba(8,8,20,0.88)', height: 168 },
-    speaker: { fontSize: 27, fontWeight: 'bold', color: '#ffd966', borderWidth: 5, borderColor: 'rgba(255,255,255,0.25)' },
+    dialogueBg: { color: '#00000000', gradientType: 'linear', gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%', height: 168 },
+    speaker: { fontSize: 27, fontWeight: 'bold', color: '#ffd966', borderWidth: 2, borderColor: 'rgb(255,255,255)' },
     dialogue: { fontSize: 18, color: '#f0f0f0', lineHeight: 1.65 },
     choice: {
       background: 'rgba(20,20,50,0.90)',

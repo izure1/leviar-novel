@@ -35,7 +35,7 @@ export interface DialogueCmd<TCharacters extends CharDefs> {
   type: 'dialogue'
   /** config characters 키. 생략 시 나레이션으로 처리 */
   speaker?: keyof TCharacters & string
-  text: string
+  text: string | string[]
 }
 
 /** 선택지를 표시하고 분기한다 */

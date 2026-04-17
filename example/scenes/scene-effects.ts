@@ -10,6 +10,14 @@ export default defineScene(config, [
   { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 1000, skip: true },
   { type: 'dialogue', text: '[화면 효과 테스트] 공원으로 이동했습니다.' },
 
+  // ── 배열 텍스트 테스트 (Syntax Sugar)
+  { type: 'dialogue', text: [
+    '배열 텍스트 테스트입니다.',
+    '여러 개의 대사를 작성할 때,',
+    '이처럼 배열로 묶어 작성하면',
+    '각각 개별적인 대사로 처리됩니다.'
+  ]},
+
   // ── 비 이펙트 + night 무드
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 1200 },
   { type: 'effect', action: 'add', effect: 'rain', rate: 120, skip: true },
