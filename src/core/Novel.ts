@@ -363,9 +363,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
     // height 미지정 시 캔버스 높이의 28%
     const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
-    const BOX_TOP_Y = h - BOX_H   // 박스 top-left의 canvas y
+    const BOX_CY = h - (BOX_H / 2)   // 박스 중앙 y
 
-    // ── 대화창 배경 (top-left 기준)
+    // ── 대화창 배경 (center 기준)
     const bgRect = this._world.createRectangle({
       style: {
         ...bgCfg,
@@ -375,37 +375,39 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         opacity:       0,
         pointerEvents: false,
       } as any,
-      transform: { position: toLocal(0, BOX_TOP_Y) },
+      transform: { position: toLocal(w / 2, BOX_CY) },
     })
     this._world.camera?.addChild(bgRect as any)
     this._dialogueBgObj = bgRect
 
-    // ── 화자 이름창 (박스 top에서 8px 패딩)
+    // ── 화자 이름창 (좌측 정렬)
+    const spkY = h - BOX_H + 24
     const speakerText = this._world.createText({
       attribute: { text: '' } as any,
       style: {
         ...spkCfg,
+        width:         w * 0.90,
         zIndex:        spkCfg.zIndex ?? 301,
         opacity:       0,
         pointerEvents: false,
       } as any,
-      transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8) },
+      transform: { position: toLocal(w / 2, spkY) },
     })
     this._world.camera?.addChild(speakerText as any)
     this._speakerTextObj = speakerText
 
-    // ── 대사 텍스트창 (이름창 아래 32px)
-    const spkH = (spkCfg.fontSize ?? 18) * 1.4  // 이름창 추정 높이
+    // ── 대사 텍스트창 (이름창 아래)
+    const spkH = (spkCfg.fontSize ?? 18) * 1.5
     const dialogueText = this._world.createText({
       attribute: { text: '' } as any,
       style: {
         ...dlgCfg,
-        width:         dlgCfg.width ?? w * 0.92,
+        width:         dlgCfg.width ?? w * 0.90,
         zIndex:        dlgCfg.zIndex ?? 301,
         opacity:       0,
         pointerEvents: false,
       } as any,
-      transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8 + spkH) },
+      transform: { position: toLocal(w / 2, spkY + spkH + 8) },
     })
     this._world.camera?.addChild(dialogueText as any)
     this._dialogueTextObj = dialogueText
@@ -471,7 +473,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._choicesEl.innerHTML     = ''
     this._inputMode               = 'choice'
 
-    const chCfg = { ...UI_DEFAULTS.choice, ...(this._ui.choice ?? {}) }
+    const chCfg = { ...UI_DEFAULT_CHOICE, ...(this._ui.choice ?? {}) }
 
     choices.forEach((choice, i) => {
       const btn = document.createElement('button')

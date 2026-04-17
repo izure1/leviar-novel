@@ -14395,7 +14395,7 @@ ${addLineNumbers(fragment)}`);
       const spkCfg = { ...UI_DEFAULT_SPEAKER, ...this._ui.speaker ?? {} };
       const dlgCfg = { ...UI_DEFAULT_DIALOGUE, ...this._ui.dialogue ?? {} };
       const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
-      const BOX_TOP_Y = h - BOX_H;
+      const BOX_CY = h - BOX_H / 2;
       const bgRect = this._world.createRectangle({
         style: {
           ...bgCfg,
@@ -14405,33 +14405,35 @@ ${addLineNumbers(fragment)}`);
           opacity: 0,
           pointerEvents: false
         },
-        transform: { position: toLocal(0, BOX_TOP_Y) }
+        transform: { position: toLocal(w / 2, BOX_CY) }
       });
       this._world.camera?.addChild(bgRect);
       this._dialogueBgObj = bgRect;
+      const spkY = h - BOX_H + 24;
       const speakerText = this._world.createText({
         attribute: { text: "" },
         style: {
           ...spkCfg,
+          width: w * 0.9,
           zIndex: spkCfg.zIndex ?? 301,
           opacity: 0,
           pointerEvents: false
         },
-        transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8) }
+        transform: { position: toLocal(w / 2, spkY) }
       });
       this._world.camera?.addChild(speakerText);
       this._speakerTextObj = speakerText;
-      const spkH = (spkCfg.fontSize ?? 18) * 1.4;
+      const spkH = (spkCfg.fontSize ?? 18) * 1.5;
       const dialogueText = this._world.createText({
         attribute: { text: "" },
         style: {
           ...dlgCfg,
-          width: dlgCfg.width ?? w * 0.92,
+          width: dlgCfg.width ?? w * 0.9,
           zIndex: dlgCfg.zIndex ?? 301,
           opacity: 0,
           pointerEvents: false
         },
-        transform: { position: toLocal(w * 0.04, BOX_TOP_Y + 8 + spkH) }
+        transform: { position: toLocal(w / 2, spkY + spkH + 8) }
       });
       this._world.camera?.addChild(dialogueText);
       this._dialogueTextObj = dialogueText;
@@ -14493,7 +14495,7 @@ ${addLineNumbers(fragment)}`);
       this._choicesEl.style.display = "flex";
       this._choicesEl.innerHTML = "";
       this._inputMode = "choice";
-      const chCfg = { ...UI_DEFAULTS.choice, ...this._ui.choice ?? {} };
+      const chCfg = { ...UI_DEFAULT_CHOICE, ...this._ui.choice ?? {} };
       choices.forEach((choice, i) => {
         const btn = document.createElement("button");
         btn.textContent = choice.text;
