@@ -73,7 +73,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   readonly vars: TConfig['vars']
 
   private readonly _config:   TConfig
-  private readonly _option:   Required<Omit<NovelOption, 'ui'>>
+  private readonly _option:   { canvas: HTMLCanvasElement; width: number; height: number; depth: number }
   private readonly _ui:       NovelUIOption
   private readonly _world:    World
   private readonly _renderer: Renderer
@@ -94,9 +94,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   /** 선택지 컨테이너 (HTML) */
   private _choicesEl:       HTMLDivElement | null  = null
 
-  constructor(config: TConfig, option: NovelOption) {
+  constructor(
+    config: TConfig,
+    option: NovelOption & { scenes: Record<TConfig['scenes'][number], AnySceneDef> }
+  ) {
     this._config = config
-    this._ui     = option.ui ?? {}
+    this._ui     = config.ui ?? {}
 
     const canvas = option.canvas
     this._option = {
@@ -119,11 +122,24 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._setupBuiltinUI()
     this._setupInput()
     this._world.start()
+
+    // ── option.scenes 딕셔너리에서 씬 등록
+    for (const [name, scene] of Object.entries(option.scenes) as [string, AnySceneDef][]) {
+      scene.name = name
+      this._scenes.set(name, scene)
+    }
   }
 
   // ─── 에셋 로딩 ───────────────────────────────────────────────
 
-  async load(assets: Record<string, string>): Promise<void> {
+  async load(): Promise<void> {
+    if (this._config.assets) {
+      await this._world.loader.load(this._config.assets)
+    }
+  }
+
+  /** config.assets 외 추가 에셋을 로드합니다 (SVG 인라인 등 런타임 생성 에셋). */
+  async loadAssets(assets: Record<string, string>): Promise<void> {
     await this._world.loader.load(assets)
   }
 

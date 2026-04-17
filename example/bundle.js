@@ -6,20 +6,9 @@
   }
 
   // src/define/defineScene.ts
-  function defineScene(config, name, dialogues, options) {
-    if (options?.localVars) {
-      const globalKeys = new Set(Object.keys(config.vars));
-      for (const key of Object.keys(options.localVars)) {
-        if (globalKeys.has(key)) {
-          throw new Error(
-            `[leviar-novel] defineScene '${String(name)}': \uC9C0\uC5ED\uBCC0\uC218 '${key}'\uB294 \uC804\uC5ED\uBCC0\uC218\uC640 \uC774\uB984\uC774 \uC911\uBCF5\uB429\uB2C8\uB2E4.`
-          );
-        }
-      }
-    }
+  function defineScene(config, dialogues, options) {
     return {
       kind: "dialogue",
-      name,
       dialogues,
       localVars: options?.localVars,
       nextScene: options?.next
@@ -27,10 +16,9 @@
   }
 
   // src/define/defineExploreScene.ts
-  function defineExploreScene(config, name, options) {
+  function defineExploreScene(config, options) {
     return {
       kind: "explore",
-      name,
       options
     };
   }
@@ -14185,7 +14173,7 @@ ${addLineNumbers(fragment)}`);
     _choicesEl = null;
     constructor(config, option) {
       this._config = config;
-      this._ui = option.ui ?? {};
+      this._ui = config.ui ?? {};
       const canvas = option.canvas;
       this._option = {
         canvas,
@@ -14204,9 +14192,19 @@ ${addLineNumbers(fragment)}`);
       this._setupBuiltinUI();
       this._setupInput();
       this._world.start();
+      for (const [name, scene] of Object.entries(option.scenes)) {
+        scene.name = name;
+        this._scenes.set(name, scene);
+      }
     }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
-    async load(assets) {
+    async load() {
+      if (this._config.assets) {
+        await this._world.loader.load(this._config.assets);
+      }
+    }
+    /** config.assets 외 추가 에셋을 로드합니다 (SVG 인라인 등 런타임 생성 에셋). */
+    async loadAssets(assets) {
       await this._world.loader.load(assets);
     }
     // ─── 씬 등록 ─────────────────────────────────────────────────
@@ -14582,11 +14580,39 @@ ${addLineNumbers(fragment)}`);
       "bg-floor": { src: "bg_floor", parallax: true },
       "bg-library": { src: "bg_library", parallax: true },
       "bg-park": { src: "bg_park", parallax: false }
+    },
+    ui: {
+      dialogueBg: { color: "rgba(8,8,20,0.88)", height: 168 },
+      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 5, borderColor: "rgba(255,255,255,0.25)" },
+      dialogue: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 },
+      choice: {
+        background: "rgba(20,20,50,0.90)",
+        borderColor: "rgba(255,255,255,0.25)",
+        hoverBackground: "rgba(80,60,180,0.92)",
+        hoverBorderColor: "rgba(200,180,255,0.8)",
+        borderRadius: 10,
+        minWidth: 280
+      }
+    },
+    assets: {
+      // 배경
+      bg_floor: "./assets/bg_floor.png",
+      bg_library: "./assets/bg_library.png",
+      bg_park: "./assets/bg_park.png",
+      // 캐릭터
+      girl_normal: "./assets/girl_normal.png",
+      girl_smile: "./assets/girl_smile.png",
+      // 파티클
+      dust: "./assets/particle_dust.png",
+      rain: "./assets/particle_rain.png",
+      snow: "./assets/particle_snow.png",
+      sakura: "./assets/particle_sakura.png",
+      fog: "./assets/particle_fog.png"
     }
   });
 
   // example/scenes/scene-intro.ts
-  var scene_intro_default = defineScene(novel_config_default, "scene-intro", [
+  var scene_intro_default = defineScene(novel_config_default, [
     // ── 오프닝 전환
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-floor", duration: 0 },
@@ -14615,7 +14641,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-a.ts
-  var scene_a_default = defineScene(novel_config_default, "scene-a", [
+  var scene_a_default = defineScene(novel_config_default, [
     // ── 배경 전환 + 벚꽃 효과
     [
       { type: "background", name: "bg-library", duration: 800 },
@@ -14660,7 +14686,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-condition.ts
-  var scene_condition_default = defineScene(novel_config_default, "scene-condition", [
+  var scene_condition_default = defineScene(novel_config_default, [
     // ── 지역변수 초기화
     { type: "var", name: "tries", value: 0, scope: "local" },
     // ── 나레이션
@@ -14709,7 +14735,7 @@ ${addLineNumbers(fragment)}`);
   ], { localVars: { tries: 0 } });
 
   // example/scenes/scene-effects.ts
-  var scene_effects_default = defineScene(novel_config_default, "scene-effects", [
+  var scene_effects_default = defineScene(novel_config_default, [
     // ── 공원으로 배경 전환
     [
       { type: "background", name: "bg-park", duration: 1e3 },
@@ -14771,7 +14797,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/explore-map.ts
-  var explore_map_default = defineExploreScene(novel_config_default, "explore-map", {
+  var explore_map_default = defineExploreScene(novel_config_default, {
     background: "bg-park",
     objects: [
       {
@@ -14851,42 +14877,16 @@ ${addLineNumbers(fragment)}`);
       width: 800,
       height: 600,
       depth: 500,
-      ui: {
-        dialogueBg: { color: "rgba(8,8,20,0.88)", height: 168 },
-        speaker: { fontSize: 17, fontWeight: "bold", color: "#ffd966" },
-        dialogue: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 },
-        choice: {
-          background: "rgba(20,20,50,0.90)",
-          borderColor: "rgba(255,255,255,0.25)",
-          hoverBackground: "rgba(80,60,180,0.92)",
-          hoverBorderColor: "rgba(200,180,255,0.8)",
-          borderRadius: 10,
-          minWidth: 280
-        }
+      scenes: {
+        "scene-intro": scene_intro_default,
+        "scene-a": scene_a_default,
+        "scene-condition": scene_condition_default,
+        "scene-effects": scene_effects_default,
+        "explore-map": explore_map_default
       }
     });
-    novel.register(scene_intro_default);
-    novel.register(scene_a_default);
-    novel.register(scene_condition_default);
-    novel.register(scene_effects_default);
-    novel.register(explore_map_default);
-    await novel.load({
-      // 배경
-      bg_floor: "./assets/bg_floor.png",
-      bg_library: "./assets/bg_library.png",
-      bg_park: "./assets/bg_park.png",
-      // 캐릭터
-      girl_normal: "./assets/girl_normal.png",
-      girl_smile: "./assets/girl_smile.png",
-      // 파티클 (에셋 키 = effect type)
-      dust: "./assets/particle_dust.png",
-      rain: "./assets/particle_rain.png",
-      snow: "./assets/particle_snow.png",
-      sakura: "./assets/particle_sakura.png",
-      fog: "./assets/particle_fog.png",
-      // 클릭 오브젝트 (SVG 인라인)
-      ...OBJECTS
-    });
+    await novel.load();
+    await novel.loadAssets(OBJECTS);
     novel.start("scene-intro");
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");

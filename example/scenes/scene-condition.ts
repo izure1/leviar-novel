@@ -3,7 +3,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, 'scene-condition', [
+export default defineScene(config, [
 
   // ── 지역변수 초기화
   { type: 'var', name: 'tries', value: 0, scope: 'local' },

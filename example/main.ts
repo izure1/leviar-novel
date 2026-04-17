@@ -1,7 +1,8 @@
 // example/main.ts — 기능 테스트 진입점
 import { Novel } from '../src'
 import type { SaveData } from '../src'
-import config       from './novel.config'
+import config from './novel.config'
+
 import sceneIntro   from './scenes/scene-intro'
 import sceneA       from './scenes/scene-a'
 import sceneCond    from './scenes/scene-condition'
@@ -89,46 +90,20 @@ async function main() {
     width:  800,
     height: 600,
     depth:  500,
-    ui: {
-      dialogueBg: { color: 'rgba(8,8,20,0.88)', height: 168 },
-      speaker:    { fontSize: 17, fontWeight: 'bold', color: '#ffd966' },
-      dialogue:   { fontSize: 18, color: '#f0f0f0', lineHeight: 1.65 },
-      choice: {
-        background:       'rgba(20,20,50,0.90)',
-        borderColor:      'rgba(255,255,255,0.25)',
-        hoverBackground:  'rgba(80,60,180,0.92)',
-        hoverBorderColor: 'rgba(200,180,255,0.8)',
-        borderRadius:     10,
-        minWidth:         280,
-      },
+    scenes: {
+      'scene-intro':     sceneIntro,
+      'scene-a':         sceneA,
+      'scene-condition': sceneCond,
+      'scene-effects':   sceneEffects,
+      'explore-map':     exploreMap,
     },
   })
 
-  // ── 씬 등록
-  novel.register(sceneIntro)
-  novel.register(sceneA)
-  novel.register(sceneCond)
-  novel.register(sceneEffects)
-  novel.register(exploreMap)
+  // ── 에셋 로드 (경로는 novel.config.ts의 assets에서 관리)
+  await novel.load()
 
-  // ── 에셋 로드
-  await novel.load({
-    // 배경
-    bg_floor:   './assets/bg_floor.png',
-    bg_library: './assets/bg_library.png',
-    bg_park:    './assets/bg_park.png',
-    // 캐릭터
-    girl_normal: './assets/girl_normal.png',
-    girl_smile:  './assets/girl_smile.png',
-    // 파티클 (에셋 키 = effect type)
-    dust:   './assets/particle_dust.png',
-    rain:   './assets/particle_rain.png',
-    snow:   './assets/particle_snow.png',
-    sakura: './assets/particle_sakura.png',
-    fog:    './assets/particle_fog.png',
-    // 클릭 오브젝트 (SVG 인라인)
-    ...OBJECTS,
-  })
+  // ── SVG 오브젝트는 런타임에만 생성되므로 직접 추가 로드
+  await novel.loadAssets(OBJECTS)
 
   // ── 시작
   novel.start('scene-intro')

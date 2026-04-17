@@ -3,7 +3,7 @@
 import config from '../novel.config'
 import { defineExploreScene } from '../../src'
 
-export default defineExploreScene(config, 'explore-map', {
+export default defineExploreScene(config, {
   background: 'bg-park',
   objects: [
     {

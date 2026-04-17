@@ -37,7 +37,7 @@ export interface ExploreSceneDefinition<
   TBackgrounds extends BgDefs,
 > {
   readonly kind:    'explore'
-  readonly name:    TScenes[number]
+  name?:            string
   readonly options: ExploreSceneOptions<TScenes, TBackgrounds>
 }
 
@@ -50,7 +50,7 @@ export interface ExploreSceneDefinition<
  * import config from './novel.config'
  * import { defineExploreScene } from 'leviar-novel'
  *
- * export default defineExploreScene(config, 'explore-map', {
+ * export default defineExploreScene(config, {
  *   background: 'bg-rooftop',
  *   objects: [
  *     {
@@ -67,12 +67,10 @@ export function defineExploreScene<
   TConfig extends NovelConfig<any, readonly string[], any, any>,
 >(
   config:  TConfig,
-  name:    TConfig['scenes'][number],
   options: ExploreSceneOptions<TConfig['scenes'], TConfig['backgrounds']>
 ): ExploreSceneDefinition<TConfig['scenes'], TConfig['backgrounds']> {
   return {
     kind: 'explore',
-    name,
     options,
   }
 }

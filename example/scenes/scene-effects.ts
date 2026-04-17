@@ -3,7 +3,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, 'scene-effects', [
+export default defineScene(config, [
 
   // ── 공원으로 배경 전환
   [

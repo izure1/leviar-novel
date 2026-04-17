@@ -14,10 +14,10 @@ export interface SceneDefinition<
   TLocalVars extends Record<string, any> = Record<never, never>,
 > {
   readonly kind:       'dialogue'
-  readonly name:       TScenes[number]
+  name?:               string
   readonly dialogues:  DialogueStep<TVars, TScenes, TCharacters, TBackgrounds>[]
   readonly localVars?: TLocalVars
-  /** 쓰 종료 시 자동으로 이동할 다음 씨 이름 */
+  /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
   readonly nextScene?: string
 }
 
@@ -34,7 +34,7 @@ export interface SceneDefinition<
  * import config from './novel.config'
  * import { defineScene } from 'leviar-novel'
  *
- * export default defineScene(config, 'scene-a', [
+ * export default defineScene(config, [
  *   { type: 'background', name: 'bg-classroom' },
  *   { type: 'dialogue', speaker: 'characterA', text: '안녕!' },
  * ])
@@ -42,7 +42,7 @@ export interface SceneDefinition<
  *
  * @example 지역변수 사용
  * ```ts
- * export default defineScene(config, 'scene-a', [
+ * export default defineScene(config, [
  *   { type: 'var', name: 'tries', value: 0, scope: 'local' },
  * ], { localVars: { tries: 0 } })
  * ```
@@ -52,7 +52,6 @@ export function defineScene<
   TLocalVars extends Record<string, any> = Record<never, never>,
 >(
   config:    TConfig,
-  name:      TConfig['scenes'][number],
   dialogues: DialogueStep<
     TConfig['vars'],
     TConfig['scenes'],
@@ -61,7 +60,7 @@ export function defineScene<
   >[],
   options?: {
     localVars?: TLocalVars
-    /** 씨 종료 시 자동으로 이동할 다음 씨 이름 */
+    /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
     next?: TConfig['scenes'][number]
   }
 ): SceneDefinition<
@@ -71,22 +70,8 @@ export function defineScene<
   TConfig['backgrounds'],
   TLocalVars
 > {
-  // 런타임: 전역변수와 지역변수 이름 중복 검사
-  if (options?.localVars) {
-    const globalKeys = new Set(Object.keys(config.vars))
-    for (const key of Object.keys(options.localVars)) {
-      if (globalKeys.has(key)) {
-        throw new Error(
-          `[leviar-novel] defineScene '${String(name)}': ` +
-          `지역변수 '${key}'는 전역변수와 이름이 중복됩니다.`
-        )
-      }
-    }
-  }
-
   return {
     kind:      'dialogue',
-    name,
     dialogues,
     localVars:  options?.localVars,
     nextScene:  options?.next as string | undefined,

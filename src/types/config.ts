@@ -94,6 +94,10 @@ export interface NovelConfig<
   scenes:      TScenes
   characters:  TCharacters
   backgrounds: TBackgrounds
+  /** UI 스타일 커스터마이징. 미지정 필드는 기본값 사용 */
+  ui?:         NovelUIOption
+  /** 에셋 키 → 경로 매핑. novel.load() 시 자동 로드 */
+  assets?:     Record<string, string>
 }
 
 /** Novel 초기화 옵션 */
@@ -106,6 +110,4 @@ export interface NovelOption {
   height?: number
   /** 씬 깊이 (px). 기본값: 500 */
   depth?:  number
-  /** UI 스타일 커스터마이징. 미지정 필드는 기본값 사용 */
-  ui?:     NovelUIOption
 }

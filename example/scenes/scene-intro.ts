@@ -3,7 +3,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, 'scene-intro', [
+export default defineScene(config, [
 
   // ── 오프닝 전환
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },

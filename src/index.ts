@@ -13,8 +13,6 @@ export type {
   NovelConfig,
   NovelOption,
   // UI 스타일
-  UITextStyle,
-  UIBgStyle,
   UIChoiceStyle,
   NovelUIOption,
 } from './types/config'
