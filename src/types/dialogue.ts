@@ -166,6 +166,8 @@ export interface CharacterShowCmd<TCharacters extends CharDefs, TName extends ke
   name: TName
   position?: CharacterPositionPreset
   image?: keyof TCharacters[TName] & string
+  /** 트랜지션 시간(ms) */
+  duration?: number
 }
 
 /** 캐릭터를 퇴장시킨다 */

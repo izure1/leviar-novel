@@ -3,6 +3,7 @@
 // =============================================================
 
 import type { Style } from 'leviar'
+import type { DialogueEntry } from './dialogue'
 
 /** 단일 캐릭터 이미지 변형 정의 */
 export interface CharImageDef {
@@ -98,7 +99,26 @@ export interface NovelConfig<
   ui?:         NovelUIOption
   /** 에셋 키 → 경로 매핑. novel.load() 시 자동 로드 */
   assets?:     Record<string, string>
+  /** 기본값 폴백 설정. 위에서부터 우선순위가 높습니다. */
+  fallback?:   FallbackRule<TVars, TScenes, TCharacters, TBackgrounds>[]
 }
+
+/** 커맨드 기본값 폴백 룰 */
+export type FallbackRule<
+  TVars,
+  TScenes extends readonly string[],
+  TCharacters extends CharDefs,
+  TBackgrounds extends BgDefs,
+> = DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds> extends infer E
+  ? E extends any
+    ? {
+        /** 매칭할 조건. (예: { type: 'character', action: 'show' }) */
+        match: Partial<E>
+        /** 적용할 기본값. */
+        defaults: Partial<E>
+      }
+    : never
+  : never;
 
 /** Novel 초기화 옵션 */
 export interface NovelOption {

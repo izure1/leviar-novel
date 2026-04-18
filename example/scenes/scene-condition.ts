@@ -18,7 +18,7 @@ export default defineScene(config, [
   // ── 복합 조건: likeability >= 10 and metHeroine
   {
     type: 'condition',
-    if: 'likeability >= 10 and metHeroine',
+    if: 'likeability >= 10',
     goto: 'branch-good',
     else: 'branch-bad',
   },

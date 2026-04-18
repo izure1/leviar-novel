@@ -292,9 +292,37 @@ export class DialogueScene {
     this._executeNext()
   }
 
+  private _isFallbackMatch(cmd: any, match: Record<string, any>): boolean {
+    if (!cmd || typeof cmd !== 'object') return false
+    for (const key in match) {
+      if (cmd[key] !== match[key]) return false
+    }
+    return true
+  }
+
   /** 단일 커맨드를 Renderer 메서드에 매핑하여 실행 */
-  private _executeCmd(cmd: DialogueEntry<any, any, any, any>): void {
+  private _executeCmd(originalCmd: DialogueEntry<any, any, any, any>): void {
     const r = this.renderer
+    let cmd = originalCmd
+
+    // Fallback 적용
+    const fallbacks = r.config.fallback
+    if (fallbacks && fallbacks.length > 0) {
+      const defaultsToApply: Record<string, any> = {}
+      for (let i = fallbacks.length - 1; i >= 0; i--) {
+        const rule = fallbacks[i]
+        if (this._isFallbackMatch(originalCmd, rule.match)) {
+          Object.assign(defaultsToApply, rule.defaults)
+        }
+      }
+      
+      cmd = { ...defaultsToApply } as any
+      for (const key in originalCmd) {
+        if ((originalCmd as any)[key] !== undefined) {
+          (cmd as any)[key] = (originalCmd as any)[key]
+        }
+      }
+    }
 
     switch (cmd.type) {
       // ── 스토리 흐름 ─────────────────────────────────────────
@@ -377,7 +405,7 @@ export class DialogueScene {
       // ── 캐릭터 ───────────────────────────────────────────────
       case 'character':
         if (cmd.action === 'show') {
-          r.showCharacter(cmd.name as string, cmd.position, cmd.image as string | undefined)
+          r.showCharacter(cmd.name as string, cmd.position, cmd.image as string | undefined, cmd.duration)
         } else {
           r.removeCharacter(cmd.name as string, cmd.duration)
         }

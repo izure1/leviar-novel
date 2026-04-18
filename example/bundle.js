@@ -13407,7 +13407,7 @@ ${addLineNumbers(fragment)}`);
       Array.from(this._overlayObjs.keys()).forEach((k) => this.removeOverlay(k, duration));
     }
     // ─── 캐릭터 ─────────────────────────────────────────────────
-    showCharacter(name, position = "center", imageKey) {
+    showCharacter(name, position = "center", imageKey, duration) {
       const charDefs = this.config.characters;
       const def = charDefs[name];
       if (!def) return;
@@ -13420,9 +13420,9 @@ ${addLineNumbers(fragment)}`);
       this._characterStates.set(name, { position, imageKey: resolvedKey });
       const existing = this._characters.get(name);
       if (existing) {
-        this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(400), "easeInOutQuad");
+        this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(duration ?? 400), "easeInOutQuad");
         if (imageKey) {
-          this._dur(300) > 0 && typeof existing.transition === "function" ? existing.transition(src, this._dur(300)) : existing.attribute && (existing.attribute.src = src);
+          this._dur(duration ?? 300) > 0 && typeof existing.transition === "function" ? existing.transition(src, this._dur(duration ?? 300)) : existing.attribute && (existing.attribute.src = src);
         }
         ;
         existing._currentImageKey = resolvedKey;
@@ -13433,7 +13433,7 @@ ${addLineNumbers(fragment)}`);
           style: { width: targetW, zIndex: Z_INDEX.CHARACTER_NORMAL },
           transform: { position: { x: xPos, y: 0, z: zPos } }
         }));
-        const fadeDur = this._dur(400);
+        const fadeDur = this._dur(duration ?? 400);
         if (fadeDur > 0 && typeof img.fadeIn === "function") {
           img.fadeIn(fadeDur);
         } else {
@@ -13872,9 +13872,33 @@ ${addLineNumbers(fragment)}`);
       this.textSubIndex = 0;
       this._executeNext();
     }
+    _isFallbackMatch(cmd, match) {
+      if (!cmd || typeof cmd !== "object") return false;
+      for (const key in match) {
+        if (cmd[key] !== match[key]) return false;
+      }
+      return true;
+    }
     /** 단일 커맨드를 Renderer 메서드에 매핑하여 실행 */
-    _executeCmd(cmd) {
+    _executeCmd(originalCmd) {
       const r = this.renderer;
+      let cmd = originalCmd;
+      const fallbacks = r.config.fallback;
+      if (fallbacks && fallbacks.length > 0) {
+        const defaultsToApply = {};
+        for (let i = fallbacks.length - 1; i >= 0; i--) {
+          const rule = fallbacks[i];
+          if (this._isFallbackMatch(originalCmd, rule.match)) {
+            Object.assign(defaultsToApply, rule.defaults);
+          }
+        }
+        cmd = { ...defaultsToApply };
+        for (const key in originalCmd) {
+          if (originalCmd[key] !== void 0) {
+            cmd[key] = originalCmd[key];
+          }
+        }
+      }
       switch (cmd.type) {
         // ── 스토리 흐름 ─────────────────────────────────────────
         case "dialogue": {
@@ -13947,7 +13971,7 @@ ${addLineNumbers(fragment)}`);
         // ── 캐릭터 ───────────────────────────────────────────────
         case "character":
           if (cmd.action === "show") {
-            r.showCharacter(cmd.name, cmd.position, cmd.image);
+            r.showCharacter(cmd.name, cmd.position, cmd.image, cmd.duration);
           } else {
             r.removeCharacter(cmd.name, cmd.duration);
           }
@@ -14638,7 +14662,17 @@ ${addLineNumbers(fragment)}`);
       snow: "./assets/particle_snow.png",
       sakura: "./assets/particle_sakura.png",
       fog: "./assets/particle_fog.png"
-    }
+    },
+    fallback: [
+      {
+        match: { type: "character", action: "show" },
+        defaults: { duration: 100 }
+      },
+      {
+        match: { type: "character", action: "remove" },
+        defaults: {}
+      }
+    ]
   });
 
   // example/scenes/scene-intro.ts
@@ -14813,7 +14847,7 @@ ${addLineNumbers(fragment)}`);
     // ── 복합 조건: likeability >= 10 and metHeroine
     {
       type: "condition",
-      if: "likeability >= 10 and metHeroine",
+      if: "likeability >= 10",
       goto: "branch-good",
       else: "branch-bad"
     },

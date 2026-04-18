@@ -180,7 +180,7 @@ export interface RendererOption {
 
 export class Renderer {
   readonly world: World
-  protected readonly config: NovelConfig<any, any, any, any>
+  public readonly config: NovelConfig<any, any, any, any>
   protected readonly width: number
   protected readonly height: number
   protected readonly depth: number
@@ -655,7 +655,7 @@ export class Renderer {
 
   // ─── 캐릭터 ─────────────────────────────────────────────────
 
-  showCharacter(name: string, position: CharacterPositionPreset = 'center', imageKey?: string): void {
+  showCharacter(name: string, position: CharacterPositionPreset = 'center', imageKey?: string, duration?: number): void {
     const charDefs = this.config.characters as CharDefs
     const def = charDefs[name]
     if (!def) return
@@ -672,10 +672,10 @@ export class Renderer {
 
     const existing = this._characters.get(name)
     if (existing) {
-      this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(400), 'easeInOutQuad')
+      this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(duration ?? 400), 'easeInOutQuad')
       if (imageKey) {
-        this._dur(300) > 0 && typeof (existing as any).transition === 'function'
-          ? (existing as any).transition(src, this._dur(300))
+        this._dur(duration ?? 300) > 0 && typeof (existing as any).transition === 'function'
+          ? (existing as any).transition(src, this._dur(duration ?? 300))
           : ((existing as any).attribute && ((existing as any).attribute.src = src))
       }
       ; (existing as any)._currentImageKey = resolvedKey
@@ -686,7 +686,7 @@ export class Renderer {
         style: { width: targetW, zIndex: Z_INDEX.CHARACTER_NORMAL } as any,
         transform: { position: { x: xPos, y: 0, z: zPos } },
       }))
-      const fadeDur = this._dur(400)
+      const fadeDur = this._dur(duration ?? 400)
       if (fadeDur > 0 && typeof (img as any).fadeIn === 'function') {
         (img as any).fadeIn(fadeDur)
       } else {

@@ -66,4 +66,13 @@ export default defineNovelConfig({
     sakura: './assets/particle_sakura.png',
     fog: './assets/particle_fog.png',
   },
+  fallback: [
+    {
+      match: { type: 'character', action: 'show' },
+      defaults: { duration: 100 },
+    },
+    {
+      match: { type: 'character', 'action': 'remove' },
+    }
+  ],
 })
