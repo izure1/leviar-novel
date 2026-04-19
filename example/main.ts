@@ -165,6 +165,18 @@ async function main() {
       showToast('⚠ 불러오기 실패', 'error')
     }
   })
+
+  // ── 다음으로 진행 (클릭 & 스페이스바)
+  window.addEventListener('click', () => {
+    novel.next()
+  })
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault() // 스페이스바 기본 동작(스크롤 등) 방지
+      novel.next()
+    }
+  })
 }
 
 main().catch(console.error)

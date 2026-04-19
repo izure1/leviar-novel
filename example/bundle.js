@@ -14301,7 +14301,6 @@ ${addLineNumbers(fragment)}`);
     _currentScene = null;
     _currentSceneDef = null;
     _inputMode = "none";
-    _inputBound = null;
     _isSkipping = false;
     /** 텍스트 타이핑(transition) 진행 중 여부 */
     _isTextTyping = false;
@@ -14336,7 +14335,6 @@ ${addLineNumbers(fragment)}`);
       });
       this.vars = { ...config.vars };
       this._setupBuiltinUI();
-      this._setupInput();
       this._world.start();
       for (const [name, scene] of Object.entries(option.scenes)) {
         scene.name = name;
@@ -14490,15 +14488,13 @@ ${addLineNumbers(fragment)}`);
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
-    _setupInput() {
-      const handler = () => this._handleInput();
-      this._inputBound = handler;
-      document.addEventListener("click", handler);
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") handler();
-      });
-    }
-    _handleInput() {
+    /**
+     * 대화를 한 단계 진행합니다.
+     * - 텍스트 타이핑 중이면 즉시 완성
+     * - 대기 중이면 다음 대사/단계로 이동
+     * main.ts 등 외부에서 click/keydown 이벤트에 연결하여 사용합니다.
+     */
+    next() {
       if (this._inputMode !== "dialogue") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
       if (this._isTextTyping) {
@@ -14757,7 +14753,7 @@ ${addLineNumbers(fragment)}`);
     backgrounds: {
       "bg-floor": { src: "bg_floor", parallax: true },
       "bg-library": { src: "bg_library", parallax: true },
-      "bg-park": { src: "bg_park", parallax: false }
+      "bg-park": { src: "bg_park", parallax: true }
     },
     ui: {
       dialogueBg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
@@ -15106,12 +15102,15 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "sunset", intensity: 0.7, duration: 1e3, skip: true },
     { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
     // ── 배열 텍스트 테스트 (Syntax Sugar)
-    { type: "dialogue", text: [
-      "\uBC30\uC5F4 \uD14D\uC2A4\uD2B8 \uD14C\uC2A4\uD2B8\uC785\uB2C8\uB2E4.",
-      "\uC5EC\uB7EC \uAC1C\uC758 \uB300\uC0AC\uB97C \uC791\uC131\uD560 \uB54C,",
-      "\uC774\uCC98\uB7FC \uBC30\uC5F4\uB85C \uBB36\uC5B4 \uC791\uC131\uD558\uBA74",
-      "\uAC01\uAC01 \uAC1C\uBCC4\uC801\uC778 \uB300\uC0AC\uB85C \uCC98\uB9AC\uB429\uB2C8\uB2E4."
-    ] },
+    {
+      type: "dialogue",
+      text: [
+        "\uBC30\uC5F4 \uD14D\uC2A4\uD2B8 \uD14C\uC2A4\uD2B8\uC785\uB2C8\uB2E4.",
+        "\uC5EC\uB7EC \uAC1C\uC758 \uB300\uC0AC\uB97C \uC791\uC131\uD560 \uB54C,",
+        "\uC774\uCC98\uB7FC \uBC30\uC5F4\uB85C \uBB36\uC5B4 \uC791\uC131\uD558\uBA74",
+        "\uAC01\uAC01 \uAC1C\uBCC4\uC801\uC778 \uB300\uC0AC\uB85C \uCC98\uB9AC\uB429\uB2C8\uB2E4."
+      ]
+    },
     // ── 비 이펙트 + night 무드
     { type: "mood", mood: "night", intensity: 0.7, duration: 1200 },
     { type: "effect", action: "add", effect: "rain", rate: 120, skip: true },
@@ -15297,6 +15296,15 @@ ${addLineNumbers(fragment)}`);
         showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
       } catch {
         showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
+      }
+    });
+    window.addEventListener("click", () => {
+      novel.next();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        novel.next();
       }
     });
   }

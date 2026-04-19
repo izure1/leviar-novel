@@ -84,7 +84,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _currentScene:    ActiveScene | null    = null
   private _currentSceneDef: AnySceneDef | null    = null
   private _inputMode:       InputMode              = 'none'
-  private _inputBound:      (() => void) | null    = null
   private _isSkipping:      boolean               = false
   /** 텍스트 타이핑(transition) 진행 중 여부 */
   private _isTextTyping:    boolean               = false
@@ -128,7 +127,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this.vars = { ...(config.vars as object) } as TConfig['vars']
 
     this._setupBuiltinUI()
-    this._setupInput()
     this._world.start()
 
     // ── option.scenes 딕셔너리에서 씬 등록
@@ -326,16 +324,13 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   // ─── 사용자 입력 ─────────────────────────────────────────────
 
-  private _setupInput(): void {
-    const handler = () => this._handleInput()
-    this._inputBound = handler
-    document.addEventListener('click',   handler)
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') handler()
-    })
-  }
-
-  private _handleInput(): void {
+  /**
+   * 대화를 한 단계 진행합니다.
+   * - 텍스트 타이핑 중이면 즉시 완성
+   * - 대기 중이면 다음 대사/단계로 이동
+   * main.ts 등 외부에서 click/keydown 이벤트에 연결하여 사용합니다.
+   */
+  next(): void {
     if (this._inputMode !== 'dialogue') return
     if (!this._currentScene || this._currentScene.isEnded) return
 

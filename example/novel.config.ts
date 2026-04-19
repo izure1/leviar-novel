@@ -36,7 +36,7 @@ export default defineNovelConfig({
   backgrounds: {
     'bg-floor': { src: 'bg_floor', parallax: true },
     'bg-library': { src: 'bg_library', parallax: true },
-    'bg-park': { src: 'bg_park', parallax: false },
+    'bg-park': { src: 'bg_park', parallax: true },
   },
   ui: {
     dialogueBg: { color: '#00000000', gradientType: 'linear', gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%', height: 168 },
