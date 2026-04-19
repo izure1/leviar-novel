@@ -17,7 +17,7 @@ export type OverlayPreset = 'caption' | 'title' | 'whisper'
 export type EffectType   = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
 export type ZoomPreset   = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
 export type PanPreset    = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit'
-export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall'
+export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall' | 'reset'
 export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
 export type FadeColorPreset = 'black' | 'white' | 'red' | 'dream' | 'sepia' | 'inherit'
 export type FlashPreset  = 'white' | 'red' | 'yellow' | 'inherit'
@@ -235,6 +235,8 @@ export interface CameraEffectCmd {
   preset: CameraEffectPreset
   duration?: number
   intensity?: number
+  /** 지정된 횟수만큼 반복. 음수일 경우 무한반복. 기본값은 1 */
+  repeat?: number
 }
 
 // ─── 화면 전환 커맨드 ────────────────────────────────────────

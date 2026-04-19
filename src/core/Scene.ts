@@ -450,6 +450,7 @@ export class DialogueScene {
           cmd.preset as CameraEffectPreset,
           cmd.duration,
           cmd.intensity,
+          cmd.repeat,
         )
         break
 

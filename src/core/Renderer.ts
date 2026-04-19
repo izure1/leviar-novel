@@ -54,7 +54,7 @@ const PAN_PRESETS: Record<Exclude<PanPreset, 'inherit'>, { x: number; y: number;
   center: { x: 0, y: 0, duration: 1000 },
 }
 
-const CAMERA_EFFECT_PRESETS: Record<CameraEffectPreset, { intensity: number; duration: number }> = {
+const CAMERA_EFFECT_PRESETS: Record<Exclude<CameraEffectPreset, 'reset'>, { intensity: number; duration: number }> = {
   shake: { intensity: 10, duration: 500 },
   bounce: { intensity: 15, duration: 600 },
   wave: { intensity: 20, duration: 1000 },
@@ -213,6 +213,7 @@ export class Renderer {
   private _activeCamPanTarget: { x: number; y: number } | null = null
   private _activeCamZoomAnim: Animation | null = null
   private _activeCamZoomTarget: { z: number } | null = null
+  private _activeCamEffectStop: (() => void) | null = null
 
   // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
   private _lastBackgroundFit: Exclude<BackgroundFitPreset, 'inherit'> = 'stretch'
@@ -880,23 +881,46 @@ export class Renderer {
     })
   }
 
-  cameraEffect(preset: CameraEffectPreset = 'shake', duration?: number, intensity?: number): void {
+  cameraEffect(preset: CameraEffectPreset = 'shake', duration?: number, intensity?: number, repeat: number = 1): void {
     // 스킵 중에는 원래 위치로 즉시 복원
     if (this._isSkipping) return
     const cam = this.world.camera
     if (!cam) return
 
-    const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset]
+    if (this._activeCamEffectStop) {
+      this._activeCamEffectStop()
+      this._activeCamEffectStop = null
+    }
+
+    if (preset === 'reset') return
+
+    const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset as Exclude<CameraEffectPreset, 'reset'>]
     const fi = intensity ?? pi
     const fd = duration ?? pd
     const bx = cam.transform.position.x
     const by = cam.transform.position.y
 
+    let stopped = false
+    this._activeCamEffectStop = () => {
+      stopped = true
+      cam.animate({ transform: { position: { x: bx, y: by }, rotation: { z: 0 } } } as any, 100, 'easeOut')
+    }
+
+    let remainingRepeat = repeat
+
     if (preset === 'shake') {
       const steps = Math.floor(fd / 50)
       let i = 0
       const run = () => {
-        if (i >= steps) { cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut'); return }
+        if (stopped) return
+        if (i >= steps) {
+          if (remainingRepeat < 0 || --remainingRepeat > 0) {
+            i = 0; run(); return
+          }
+          this._activeCamEffectStop = null
+          cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut')
+          return
+        }
         cam.animate({ transform: { position: { x: bx + (Math.random() - 0.5) * fi * 2, y: by + (Math.random() - 0.5) * fi * 2 } } } as any, 50, 'linear').on('end', run)
         i++
       }
@@ -904,7 +928,15 @@ export class Renderer {
     } else if (preset === 'bounce') {
       const steps = Math.floor(fd / 100); let i = 0
       const run = () => {
-        if (i >= steps) { cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut'); return }
+        if (stopped) return
+        if (i >= steps) {
+          if (remainingRepeat < 0 || --remainingRepeat > 0) {
+            i = 0; run(); return
+          }
+          this._activeCamEffectStop = null
+          cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut')
+          return
+        }
         cam.animate({ transform: { position: { y: by + (i % 2 === 0 ? fi : 0) } } } as any, 100, 'easeInOutQuad').on('end', run)
         i++
       }
@@ -912,7 +944,15 @@ export class Renderer {
     } else if (preset === 'wave') {
       const steps = Math.floor(fd / 50); let i = 0
       const run = () => {
-        if (i >= steps) { cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut'); return }
+        if (stopped) return
+        if (i >= steps) {
+          if (remainingRepeat < 0 || --remainingRepeat > 0) {
+            i = 0; run(); return
+          }
+          this._activeCamEffectStop = null
+          cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut')
+          return
+        }
         const t = (i / steps) * Math.PI * 4
         cam.animate({ transform: { position: { x: bx + Math.sin(t) * fi, y: by + Math.cos(t) * fi * 0.5 } } } as any, 50, 'linear').on('end', run)
         i++
@@ -921,7 +961,15 @@ export class Renderer {
     } else if (preset === 'nod') {
       const steps = 4; let i = 0
       const run = () => {
-        if (i >= steps) { cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut'); return }
+        if (stopped) return
+        if (i >= steps) {
+          if (remainingRepeat < 0 || --remainingRepeat > 0) {
+            i = 0; run(); return
+          }
+          this._activeCamEffectStop = null
+          cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut')
+          return
+        }
         cam.animate({ transform: { position: { y: by + (i % 2 === 0 ? -fi : 0) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
         i++
       }
@@ -929,16 +977,40 @@ export class Renderer {
     } else if (preset === 'shake-x') {
       const steps = 4; let i = 0
       const run = () => {
-        if (i >= steps) { cam.animate({ transform: { position: { x: bx } } } as any, 100, 'easeOut'); return }
+        if (stopped) return
+        if (i >= steps) {
+          if (remainingRepeat < 0 || --remainingRepeat > 0) {
+            i = 0; run(); return
+          }
+          this._activeCamEffectStop = null
+          cam.animate({ transform: { position: { x: bx } } } as any, 100, 'easeOut')
+          return
+        }
         cam.animate({ transform: { position: { x: bx + (i % 2 === 0 ? fi : -fi) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
         i++
       }
       run()
     } else if (preset === 'fall') {
-      cam.animate({ transform: { position: { y: by - fi * 3 }, rotation: { z: fi } } } as any, fd * 0.6, 'easeOutElastic')
-        .on('end', () => {
-          setTimeout(() => cam.animate({ transform: { position: { y: by }, rotation: { z: 0 } } } as any, fd * 0.4, 'easeInOutQuad'), 300)
-        })
+      const run = () => {
+        if (stopped) return
+        cam.animate({ transform: { position: { y: by - fi * 3 }, rotation: { z: fi } } } as any, fd * 0.6, 'easeOutElastic')
+          .on('end', () => {
+            if (stopped) return
+            setTimeout(() => {
+              if (stopped) return
+              cam.animate({ transform: { position: { y: by }, rotation: { z: 0 } } } as any, fd * 0.4, 'easeInOutQuad')
+                .on('end', () => {
+                  if (stopped) return
+                  if (remainingRepeat < 0 || --remainingRepeat > 0) {
+                    run()
+                  } else {
+                    this._activeCamEffectStop = null
+                  }
+                })
+            }, 300)
+          })
+      }
+      run()
     }
   }
 

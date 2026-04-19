@@ -31,7 +31,7 @@ export default defineScene(config, [
   { type: 'dialogue', text: 'flicker(깜빡임) 적용.' },
 
   // ── 카메라 흔들림
-  { type: 'camera-effect', preset: 'shake', duration: 500 },
+  { type: 'camera-effect', preset: 'shake', duration: 500, repeat: 100 },
   { type: 'dialogue', text: 'camera-effect: shake.' },
 
   // ── 카메라 줌

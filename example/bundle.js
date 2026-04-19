@@ -13016,6 +13016,7 @@ ${addLineNumbers(fragment)}`);
     _activeCamPanTarget = null;
     _activeCamZoomAnim = null;
     _activeCamZoomTarget = null;
+    _activeCamEffectStop = null;
     // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
     _lastBackgroundFit = "stretch";
     _lastZoomPreset = "reset";
@@ -13613,20 +13614,38 @@ ${addLineNumbers(fragment)}`);
         this._activeCamPanTarget = null;
       });
     }
-    cameraEffect(preset = "shake", duration, intensity) {
+    cameraEffect(preset = "shake", duration, intensity, repeat = 1) {
       if (this._isSkipping) return;
       const cam = this.world.camera;
       if (!cam) return;
+      if (this._activeCamEffectStop) {
+        this._activeCamEffectStop();
+        this._activeCamEffectStop = null;
+      }
+      if (preset === "reset") return;
       const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset];
       const fi = intensity ?? pi;
       const fd = duration ?? pd;
       const bx = cam.transform.position.x;
       const by = cam.transform.position.y;
+      let stopped = false;
+      this._activeCamEffectStop = () => {
+        stopped = true;
+        cam.animate({ transform: { position: { x: bx, y: by }, rotation: { z: 0 } } }, 100, "easeOut");
+      };
+      let remainingRepeat = repeat;
       if (preset === "shake") {
         const steps = Math.floor(fd / 50);
         let i = 0;
         const run = () => {
+          if (stopped) return;
           if (i >= steps) {
+            if (remainingRepeat < 0 || --remainingRepeat > 0) {
+              i = 0;
+              run();
+              return;
+            }
+            this._activeCamEffectStop = null;
             cam.animate({ transform: { position: { x: bx, y: by } } }, 100, "easeOut");
             return;
           }
@@ -13638,7 +13657,14 @@ ${addLineNumbers(fragment)}`);
         const steps = Math.floor(fd / 100);
         let i = 0;
         const run = () => {
+          if (stopped) return;
           if (i >= steps) {
+            if (remainingRepeat < 0 || --remainingRepeat > 0) {
+              i = 0;
+              run();
+              return;
+            }
+            this._activeCamEffectStop = null;
             cam.animate({ transform: { position: { y: by } } }, 100, "easeOut");
             return;
           }
@@ -13650,7 +13676,14 @@ ${addLineNumbers(fragment)}`);
         const steps = Math.floor(fd / 50);
         let i = 0;
         const run = () => {
+          if (stopped) return;
           if (i >= steps) {
+            if (remainingRepeat < 0 || --remainingRepeat > 0) {
+              i = 0;
+              run();
+              return;
+            }
+            this._activeCamEffectStop = null;
             cam.animate({ transform: { position: { x: bx, y: by } } }, 100, "easeOut");
             return;
           }
@@ -13663,7 +13696,14 @@ ${addLineNumbers(fragment)}`);
         const steps = 4;
         let i = 0;
         const run = () => {
+          if (stopped) return;
           if (i >= steps) {
+            if (remainingRepeat < 0 || --remainingRepeat > 0) {
+              i = 0;
+              run();
+              return;
+            }
+            this._activeCamEffectStop = null;
             cam.animate({ transform: { position: { y: by } } }, 100, "easeOut");
             return;
           }
@@ -13675,7 +13715,14 @@ ${addLineNumbers(fragment)}`);
         const steps = 4;
         let i = 0;
         const run = () => {
+          if (stopped) return;
           if (i >= steps) {
+            if (remainingRepeat < 0 || --remainingRepeat > 0) {
+              i = 0;
+              run();
+              return;
+            }
+            this._activeCamEffectStop = null;
             cam.animate({ transform: { position: { x: bx } } }, 100, "easeOut");
             return;
           }
@@ -13684,9 +13731,24 @@ ${addLineNumbers(fragment)}`);
         };
         run();
       } else if (preset === "fall") {
-        cam.animate({ transform: { position: { y: by - fi * 3 }, rotation: { z: fi } } }, fd * 0.6, "easeOutElastic").on("end", () => {
-          setTimeout(() => cam.animate({ transform: { position: { y: by }, rotation: { z: 0 } } }, fd * 0.4, "easeInOutQuad"), 300);
-        });
+        const run = () => {
+          if (stopped) return;
+          cam.animate({ transform: { position: { y: by - fi * 3 }, rotation: { z: fi } } }, fd * 0.6, "easeOutElastic").on("end", () => {
+            if (stopped) return;
+            setTimeout(() => {
+              if (stopped) return;
+              cam.animate({ transform: { position: { y: by }, rotation: { z: 0 } } }, fd * 0.4, "easeInOutQuad").on("end", () => {
+                if (stopped) return;
+                if (remainingRepeat < 0 || --remainingRepeat > 0) {
+                  run();
+                } else {
+                  this._activeCamEffectStop = null;
+                }
+              });
+            }, 300);
+          });
+        };
+        run();
       }
     }
     // ─── 화면 전환 ──────────────────────────────────────────────
@@ -14083,7 +14145,8 @@ ${addLineNumbers(fragment)}`);
           r.cameraEffect(
             cmd.preset,
             cmd.duration,
-            cmd.intensity
+            cmd.intensity,
+            cmd.repeat
           );
           break;
         // ── 화면 전환 ────────────────────────────────────────────
@@ -15120,7 +15183,7 @@ ${addLineNumbers(fragment)}`);
     { type: "flicker", light: "cold", flicker: "flicker" },
     { type: "dialogue", text: "flicker(\uAE5C\uBE61\uC784) \uC801\uC6A9." },
     // ── 카메라 흔들림
-    { type: "camera-effect", preset: "shake", duration: 500 },
+    { type: "camera-effect", preset: "shake", duration: 500, repeat: 100 },
     { type: "dialogue", text: "camera-effect: shake." },
     // ── 카메라 줌
     { type: "camera-zoom", preset: "close-up", duration: 600 },
