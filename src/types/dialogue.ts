@@ -104,17 +104,15 @@ export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string
   /** 명령어 타입. 항상 'condition'입니다. */
   type: 'condition'
   /**
-   * 평가할 조건식 문자열입니다.
-   * - 전역변수 참조: `'likeability >= 10'` (접두사 없음)
-   * - 지역변수 참조: `'_tries >= 1'` (`_` 접두사)
-   * - 불리언 체크: `'metCharacterA'` 또는 `'_visited'`
-   * - 복합: `'likeability >= 10 and _tries >= 1'`
-   * - 지원 연산자: `=`, `==`, `===`, `!=`, `>`, `>=`, `<`, `<=`, `and`, `or`, `&&`, `||`
-   *
-   * 전역변수: {@link TVars} 키 (접두사 없음)
-   * 지역변수: {@link TLocalVars} 키 (`_` 접두사 포함)
+   * 평가할 조건식 함수입니다.
+   * `vars` 인자를 통해 전역변수와 지역변수(`_` 접두사)를 구조 분해 할당하여 사용할 수 있습니다.
+   * 
+   * @example
+   * ```ts
+   * if: ({ likeability, _tries }) => likeability >= 10 && _tries >= 1
+   * ```
    */
-  if: keyof TVars & string | keyof TLocalVars & string | (string & {})
+  if: (vars: TVars & TLocalVars) => boolean
   /** 조건 충족 시(true) 이동할 씬 이름입니다. */
   next?: TScenes[number]
   /** 조건 충족 시(true) 이동할 현재 씬 내의 라벨 이름입니다. */
@@ -147,26 +145,32 @@ export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string
  */
 export type VarCmd<TVars, TLocalVars> =
   | {
-    /** 명령어 타입. 항상 'var'입니다. */
     type: 'var'
-    /**
-     * 설정할 **전역변수**의 이름입니다. (`_` 접두사 없음)
-     * config.vars에 정의된 키로 자동완성됩니다.
-     */
+    /** 설정할 **전역변수**의 이름입니다. (`_` 접두사 없음) */
     name: keyof TVars & string
-    /** 변수에 설정할 값입니다. */
-    value: any
+    /** 변수에 설정할 고정 값입니다. */
+    value: TVars[keyof TVars]
   }
   | {
-    /** 명령어 타입. 항상 'var'입니다. */
     type: 'var'
-    /**
-     * 설정할 **씬 지역변수**의 이름입니다. (`_` 접두사 필수)
-     * defineScene 두 번째 인자로 전달한 지역변수 키로 자동완성됩니다.
-     */
+    /** 설정할 **전역변수**의 이름입니다. (`_` 접두사 없음) */
+    name: keyof TVars & string
+    /** 전역변수·지역변수를 구조 분해 받아 새 값을 반환하는 함수입니다. */
+    value: (vars: TVars & TLocalVars) => TVars[keyof TVars]
+  }
+  | {
+    type: 'var'
+    /** 설정할 **씬 지역변수**의 이름입니다. (`_` 접두사 필수) */
     name: keyof TLocalVars & string
-    /** 변수에 설정할 값입니다. */
-    value: any
+    /** 변수에 설정할 고정 값입니다. */
+    value: TLocalVars[keyof TLocalVars]
+  }
+  | {
+    type: 'var'
+    /** 설정할 **씬 지역변수**의 이름입니다. (`_` 접두사 필수) */
+    name: keyof TLocalVars & string
+    /** 전역변수·지역변수를 구조 분해 받아 새 값을 반환하는 함수입니다. */
+    value: (vars: TVars & TLocalVars) => TLocalVars[keyof TLocalVars]
   }
 
 /** 

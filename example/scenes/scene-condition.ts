@@ -15,7 +15,7 @@ export default defineScene(config, { _tries: 0 }, [
   // ── 복합 조건: likeability >= 10
   {
     type: 'condition',
-    if: 'likeability >= 10',
+    if: ({ likeability }) => likeability >= 10,
     goto: 'branch-good',
     else: 'branch-bad',
   },
@@ -27,7 +27,7 @@ export default defineScene(config, { _tries: 0 }, [
   { type: 'var', name: 'likeability', value: 20 },
   { type: 'var', name: '_tries', value: 1 },
   // 강제 수정 후 재확인
-  { type: 'condition', if: '_tries >= 1', goto: 'cond-check' },
+  { type: 'condition', if: ({ _tries }) => _tries >= 1, goto: 'cond-check' },
 
   // ── 좋은 분기
   { type: 'label', name: 'branch-good' },
@@ -38,7 +38,7 @@ export default defineScene(config, { _tries: 0 }, [
   { type: 'dialogue', text: '[or 조건 테스트] likeability >= 50 or endingReached' },
   {
     type: 'condition',
-    if: 'likeability >= 50 or endingReached',
+    if: ({ likeability, endingReached }) => likeability >= 50 || endingReached,
     goto: 'skip-normal',
   },
   { type: 'dialogue', speaker: '아리시에로', text: '(조건이 거짓 — 50 미만이고 엔딩 미다못함)' },

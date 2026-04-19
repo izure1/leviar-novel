@@ -13,89 +13,8 @@ import type {
 } from '../types/dialogue'
 
 // =============================================================
-// condition.if 파서
+// condition.if 파서 (제거됨 - 함수 기반으로 대체)
 // =============================================================
-
-/**
- * 조건식 문자열을 평가합니다.
- * - 지원 연산자: `=`, `==`, `===`, `!=`, `!==`, `>`, `>=`, `<`, `<=`
- * - 복합 연산자: `and`, `&&`, `or`, `||`
- * - 단독 변수: truthy 체크 (ex: `'metCharacterA'`)
- */
-function evaluateCondition(expr: string, vars: Record<string, any>): boolean {
-  const trimmed = expr.trim()
-
-  // or 분기 (낮은 우선순위)
-  const orParts = splitByLogicalOp(trimmed, ['or', '||'])
-  if (orParts.length > 1) {
-    return orParts.some(part => evaluateCondition(part, vars))
-  }
-
-  // and 분기 (높은 우선순위)
-  const andParts = splitByLogicalOp(trimmed, ['and', '&&'])
-  if (andParts.length > 1) {
-    return andParts.every(part => evaluateCondition(part, vars))
-  }
-
-  return evaluateAtom(trimmed, vars)
-}
-
-/** or / and / && / || 로 분리 (단어 경계 처리) */
-function splitByLogicalOp(expr: string, ops: string[]): string[] {
-  for (const op of ops) {
-    const escaped = op.replace(/[|&]/g, '\\$&')
-    const re = new RegExp(`\\s+${escaped}\\s+`, 'i')
-    const parts = expr.split(re)
-    if (parts.length > 1) return parts.map(p => p.trim())
-  }
-  return [expr]
-}
-
-/** 단일 비교 표현식 평가 */
-function evaluateAtom(expr: string, vars: Record<string, any>): boolean {
-  const OPS = ['===', '!==', '>=', '<=', '!=', '==', '>', '<', '='] as const
-
-  for (const op of OPS) {
-    const idx = expr.indexOf(op)
-    if (idx === -1) continue
-
-    const lhs = expr.slice(0, idx).trim()
-    const rhs = expr.slice(idx + op.length).trim()
-
-    const lhsVal = resolveValue(lhs, vars)
-    const rhsVal = parseRhs(rhs)
-
-    switch (op) {
-      case '===': return lhsVal === rhsVal
-      case '!==': return lhsVal !== rhsVal
-      case '>=': return Number(lhsVal) >= Number(rhsVal)
-      case '<=': return Number(lhsVal) <= Number(rhsVal)
-      case '!=': return lhsVal != rhsVal   // eslint-disable-line eqeqeq
-      case '==': return lhsVal == rhsVal   // eslint-disable-line eqeqeq
-      case '>': return Number(lhsVal) > Number(rhsVal)
-      case '<': return Number(lhsVal) < Number(rhsVal)
-      case '=': return lhsVal == rhsVal   // eslint-disable-line eqeqeq
-    }
-  }
-
-  return Boolean(resolveValue(expr.trim(), vars))
-}
-
-function resolveValue(token: string, vars: Record<string, any>): any {
-  if (token in vars) return vars[token]
-  return parseRhs(token)
-}
-
-function parseRhs(raw: string): any {
-  if (raw === 'true') return true
-  if (raw === 'false') return false
-  if (raw === 'null') return null
-  if (!isNaN(Number(raw))) return Number(raw)
-  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
-    return raw.slice(1, -1)
-  }
-  return raw
-}
 
 // =============================================================
 // Scene 콜백 인터페이스 (Novel 과의 통신)
@@ -241,13 +160,13 @@ export class DialogueScene {
 
   private _handleCondition(cmd: {
     type: 'condition'
-    if: string
+    if: (vars: any) => boolean
     next?: string
     goto?: string
     else?: string
     'else-next'?: string
   }): void {
-    const result = evaluateCondition(cmd.if, this._vars)
+    const result = cmd.if(this._vars)
 
     if (result) {
       if (cmd.goto) {
@@ -338,11 +257,17 @@ export class DialogueScene {
 
       case 'var': {
         const nameStr = cmd.name as string
+        let val = cmd.value
+        
+        if (typeof val === 'function') {
+          val = val(this._vars)
+        }
+
         if (nameStr.startsWith('_')) {
           // _ 접두사 = 지역변수. localVars에 키 그대로 저장
-          this.localVars[nameStr] = cmd.value
+          this.localVars[nameStr] = val
         } else {
-          this.callbacks.setGlobalVar(nameStr, cmd.value)
+          this.callbacks.setGlobalVar(nameStr, val)
         }
         break
       }

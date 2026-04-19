@@ -13871,75 +13871,6 @@ ${addLineNumbers(fragment)}`);
   };
 
   // src/core/Scene.ts
-  function evaluateCondition(expr, vars) {
-    const trimmed = expr.trim();
-    const orParts = splitByLogicalOp(trimmed, ["or", "||"]);
-    if (orParts.length > 1) {
-      return orParts.some((part) => evaluateCondition(part, vars));
-    }
-    const andParts = splitByLogicalOp(trimmed, ["and", "&&"]);
-    if (andParts.length > 1) {
-      return andParts.every((part) => evaluateCondition(part, vars));
-    }
-    return evaluateAtom(trimmed, vars);
-  }
-  function splitByLogicalOp(expr, ops) {
-    for (const op of ops) {
-      const escaped = op.replace(/[|&]/g, "\\$&");
-      const re = new RegExp(`\\s+${escaped}\\s+`, "i");
-      const parts = expr.split(re);
-      if (parts.length > 1) return parts.map((p) => p.trim());
-    }
-    return [expr];
-  }
-  function evaluateAtom(expr, vars) {
-    const OPS = ["===", "!==", ">=", "<=", "!=", "==", ">", "<", "="];
-    for (const op of OPS) {
-      const idx = expr.indexOf(op);
-      if (idx === -1) continue;
-      const lhs = expr.slice(0, idx).trim();
-      const rhs = expr.slice(idx + op.length).trim();
-      const lhsVal = resolveValue(lhs, vars);
-      const rhsVal = parseRhs(rhs);
-      switch (op) {
-        case "===":
-          return lhsVal === rhsVal;
-        case "!==":
-          return lhsVal !== rhsVal;
-        case ">=":
-          return Number(lhsVal) >= Number(rhsVal);
-        case "<=":
-          return Number(lhsVal) <= Number(rhsVal);
-        case "!=":
-          return lhsVal != rhsVal;
-        // eslint-disable-line eqeqeq
-        case "==":
-          return lhsVal == rhsVal;
-        // eslint-disable-line eqeqeq
-        case ">":
-          return Number(lhsVal) > Number(rhsVal);
-        case "<":
-          return Number(lhsVal) < Number(rhsVal);
-        case "=":
-          return lhsVal == rhsVal;
-      }
-    }
-    return Boolean(resolveValue(expr.trim(), vars));
-  }
-  function resolveValue(token, vars) {
-    if (token in vars) return vars[token];
-    return parseRhs(token);
-  }
-  function parseRhs(raw) {
-    if (raw === "true") return true;
-    if (raw === "false") return false;
-    if (raw === "null") return null;
-    if (!isNaN(Number(raw))) return Number(raw);
-    if (raw.startsWith('"') && raw.endsWith('"') || raw.startsWith("'") && raw.endsWith("'")) {
-      return raw.slice(1, -1);
-    }
-    return raw;
-  }
   var DialogueScene = class {
     renderer;
     callbacks;
@@ -14033,7 +13964,7 @@ ${addLineNumbers(fragment)}`);
       }
     }
     _handleCondition(cmd) {
-      const result = evaluateCondition(cmd.if, this._vars);
+      const result = cmd.if(this._vars);
       if (result) {
         if (cmd.goto) {
           this._jumpToLabel(cmd.goto);
@@ -14114,10 +14045,14 @@ ${addLineNumbers(fragment)}`);
         }
         case "var": {
           const nameStr = cmd.name;
+          let val = cmd.value;
+          if (typeof val === "function") {
+            val = val(this._vars);
+          }
           if (nameStr.startsWith("_")) {
-            this.localVars[nameStr] = cmd.value;
+            this.localVars[nameStr] = val;
           } else {
-            this.callbacks.setGlobalVar(nameStr, cmd.value);
+            this.callbacks.setGlobalVar(nameStr, val);
           }
           break;
         }
@@ -15212,7 +15147,7 @@ ${addLineNumbers(fragment)}`);
     // ── 복합 조건: likeability >= 10
     {
       type: "condition",
-      if: "likeability >= 10",
+      if: ({ likeability }) => likeability >= 10,
       goto: "branch-good",
       else: "branch-bad"
     },
@@ -15223,7 +15158,7 @@ ${addLineNumbers(fragment)}`);
     { type: "var", name: "likeability", value: 20 },
     { type: "var", name: "_tries", value: 1 },
     // 강제 수정 후 재확인
-    { type: "condition", if: "_tries >= 1", goto: "cond-check" },
+    { type: "condition", if: ({ _tries }) => _tries >= 1, goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
@@ -15232,7 +15167,7 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
     {
       type: "condition",
-      if: "likeability >= 50 or endingReached",
+      if: ({ likeability, endingReached }) => likeability >= 50 || endingReached,
       goto: "skip-normal"
     },
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
