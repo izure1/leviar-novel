@@ -7,7 +7,7 @@ export default defineScene(config, [
 
   // ── 공원으로 배경 전환
   { type: 'background', name: 'bg-park', duration: 1000, skip: true },
-  { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 1000, skip: true },
+  { type: 'mood', action: 'add', mood: 'sunset', intensity: 0.7, duration: 1000, skip: true },
   { type: 'dialogue', text: '[화면 효과 테스트] 공원으로 이동했습니다.' },
 
   // ── 배열 텍스트 테스트 (Syntax Sugar)
@@ -20,15 +20,11 @@ export default defineScene(config, [
     ]
   },
 
-  // ── 비 이펙트 + night 무드
-  { type: 'mood', mood: 'night', intensity: 0.7, duration: 1200 },
-  { type: 'effect', action: 'add', effect: 'rain', rate: 120, skip: true },
-  { type: 'mood', action: 'add', mood: 'cold', skip: true },
+  // ── 비 이펙트 + night 무드 + 플리커
+  // { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
+  // { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
+  { type: 'effect', action: 'add', effect: 'rain', src: 'rain', rate: 1200, skip: true },
   { type: 'dialogue', text: 'rain 이펙트 + cold 조명 + night 무드.' },
-
-  // ── 조명 플리커
-  { type: 'flicker', mood: 'cold', flicker: 'flicker' },
-  { type: 'dialogue', text: 'flicker(깜빡임) 적용.' },
 
   // ── 카메라 흔들림
   { type: 'camera-effect', preset: 'shake', duration: 500, repeat: 100 },
@@ -46,7 +42,7 @@ export default defineScene(config, [
   // ── 이펙트/조명 제거 + day 복원
   { type: 'effect', action: 'remove', effect: 'rain', duration: 600, skip: true },
   { type: 'mood', action: 'remove', mood: 'cold', duration: 600, skip: true },
-  { type: 'mood', mood: 'day', intensity: 0.5, duration: 1000, skip: true },
+  { type: 'mood', action: 'add', mood: 'day', intensity: 0.5, duration: 1000, skip: true },
   { type: 'dialogue', text: '이펙트 제거, day 무드 복원.' },
 
   // ── 와이프 전환
@@ -65,7 +61,7 @@ export default defineScene(config, [
   { type: 'camera-pan', preset: 'center', duration: 800 },
 
   // ── fog 이펙트
-  { type: 'effect', action: 'add', effect: 'fog', rate: 3 },
+  { type: 'effect', action: 'add', effect: 'fog', src: 'fog', rate: 20 },
   { type: 'dialogue', text: 'fog 이펙트 추가.' },
   { type: 'effect', action: 'remove', effect: 'fog', duration: 800 },
 

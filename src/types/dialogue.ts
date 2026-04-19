@@ -14,14 +14,14 @@ export type MoodType =
 
 export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
 export type OverlayPreset = 'caption' | 'title' | 'whisper'
-export type EffectType   = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
-export type ZoomPreset   = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
-export type PanPreset    = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit'
+export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
+export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
+export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit'
 export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall' | 'reset'
 export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
 export type FadeColorPreset = 'black' | 'white' | 'red' | 'dream' | 'sepia' | 'inherit'
-export type FlashPreset  = 'white' | 'red' | 'yellow' | 'inherit'
-export type WipePreset   = 'left' | 'right' | 'up' | 'down' | 'inherit'
+export type FlashPreset = 'white' | 'red' | 'yellow' | 'inherit'
+export type WipePreset = 'left' | 'right' | 'up' | 'down' | 'inherit'
 
 /** 캐릭터 위치: 프리셋 또는 'n/m' 분수 형식. 'inherit' = 현재 위치 유지 */
 export type CharacterPositionPreset =
@@ -112,33 +112,46 @@ export interface BackgroundCmd<TBackgrounds extends BgDefs> {
 }
 
 /** 화면 분위기 오버레이(무드, 조명)를 추가하거나 제거한다 */
-export interface MoodCmd {
-  type: 'mood'
-  action?: 'add' | 'remove'
-  mood: MoodType
-  /** 불투명도 (0~1). 기본값: 1 (추가 시) */
-  intensity?: number
-  /** 전환 시간(ms). 기본값: 800 */
-  duration?: number
-}
+export type MoodCmd =
+  | {
+      type: 'mood'
+      action: 'remove'
+      mood: MoodType
+      /** 전환 시간(ms). 기본값: 800 */
+      duration?: number
+    }
+  | {
+      type: 'mood'
+      action?: 'add'
+      mood: MoodType
+      /** 불투명도 (0~1). 기본값: 1 (추가 시) */
+      intensity?: number
+      /** 전환 시간(ms). 기본값: 800 */
+      duration?: number
+      /** 깜빡임 효과 적용 여부 */
+      flicker?: FlickerPreset
+    }
 
 /** 파티클 이펙트를 추가하거나 제거한다 */
-export interface EffectCmd {
-  type: 'effect'
-  action: 'add' | 'remove'
-  effect: EffectType
-  /** 파티클 생성 속도. action: 'add' 일 때만 유효 */
-  rate?: number
-  /** 제거 시 페이드아웃 시간(ms). action: 'remove' 일 때만 유효 */
-  duration?: number
-}
+export type EffectCmd<TAssets extends Record<string, string> = Record<string, string>> =
+  | {
+      type: 'effect'
+      action: 'add'
+      effect: EffectType
+      /** 에셋 키 (novel.config.ts의 assets에 정의된 키) */
+      src: keyof TAssets & string
+      /** 파티클 생성 속도. */
+      rate?: number
+    }
+  | {
+      type: 'effect'
+      action: 'remove'
+      effect: EffectType
+      /** 제거 시 페이드아웃 시간(ms). */
+      duration?: number
+    }
 
-/** 조명/무드에 깜빡임 효과를 적용한다 */
-export interface FlickerCmd {
-  type: 'flicker'
-  mood: MoodType
-  flicker: FlickerPreset
-}
+
 
 /** 텍스트 오버레이를 추가, 제거, 전체 제거한다 */
 export interface OverlayCmd {
@@ -189,8 +202,8 @@ export type CharacterCmd<TCharacters extends CharDefs> =
  */
 type PointsOf<TCharacters extends CharDefs, TName extends keyof TCharacters> = {
   [IK in keyof TCharacters[TName]]: TCharacters[TName][IK] extends { points?: infer P }
-    ? P extends Record<string, any> ? keyof P & string : never
-    : never
+  ? P extends Record<string, any> ? keyof P & string : never
+  : never
 }[keyof TCharacters[TName]]
 
 /** 카메라를 캐릭터에 포커스한다 */
@@ -290,6 +303,7 @@ type _DialogueEntryUnion<
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
+  TAssets extends Record<string, string> = Record<string, string>,
 > =
   | DialogueCmd<TCharacters>
   | ChoiceCmd<TVars, TScenes>
@@ -298,8 +312,7 @@ type _DialogueEntryUnion<
   | LabelCmd
   | BackgroundCmd<TBackgrounds>
   | MoodCmd
-  | EffectCmd
-  | FlickerCmd
+  | EffectCmd<TAssets>
   | OverlayCmd
   | CharacterCmd<TCharacters>
   | { [K in keyof TCharacters & string]: CharacterFocusCmd<TCharacters, K> }[keyof TCharacters & string]
@@ -318,7 +331,8 @@ export type DialogueEntry<
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
-> = _DialogueEntryUnion<TVars, TScenes, TCharacters, TBackgrounds> & {
+  TAssets extends Record<string, string> = Record<string, string>,
+> = _DialogueEntryUnion<TVars, TScenes, TCharacters, TBackgrounds, TAssets> & {
   /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */
   skip?: boolean
 }
@@ -328,7 +342,8 @@ export type DialogueStep<
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
-> = DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds>
+  TAssets extends Record<string, string> = Record<string, string>,
+> = DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds, TAssets>
 
 // ─── Fallback 룰 ─────────────────────────────────────────────
 
@@ -352,10 +367,10 @@ export type DialogueStep<
  * ]
  * ```
  */
-type _AnyCmd = _DialogueEntryUnion<any, readonly string[], any, any>
+type _AnyCmd = _DialogueEntryUnion<any, readonly string[], any, any, any>
 
 export type FallbackRule = _AnyCmd extends infer E
   ? E extends { type: infer Type }
-    ? { type: Type } & Partial<Omit<E, 'type' | 'skip'>> & { defaults?: Partial<Omit<E, 'skip'>> }
-    : never
+  ? { type: Type } & Partial<Omit<E, 'type' | 'skip'>> & { defaults?: Partial<Omit<E, 'skip'>> }
+  : never
   : never

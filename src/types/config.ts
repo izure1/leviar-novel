@@ -90,6 +90,7 @@ export interface NovelConfig<
   TScenes      extends readonly string[],
   TCharacters  extends CharDefs,
   TBackgrounds extends BgDefs,
+  TAssets      extends Record<string, string> = Record<string, string>,
 > {
   vars:        TVars
   scenes:      TScenes
@@ -98,7 +99,7 @@ export interface NovelConfig<
   /** UI 스타일 커스터마이징. 미지정 필드는 기본값 사용 */
   ui?:         NovelUIOption
   /** 에셋 키 → 경로 매핑. novel.load() 시 자동 로드 */
-  assets?:     Record<string, string>
+  assets?:     TAssets
   /** 기본값 폴백 설정. 위에서부터 우선순위가 높습니다. */
   fallback?:   FallbackRule[]
 }

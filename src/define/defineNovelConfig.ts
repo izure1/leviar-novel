@@ -2,7 +2,7 @@
 // defineNovelConfig.ts — Novel config 헬퍼 함수
 // =============================================================
 
-import type { CharDefs, BgDefs, NovelConfig } from '../types/config'
+import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRule } from '../types/config'
 
 /**
  * Novel config를 정의합니다. 제네릭으로 리터럴 타입을 보존하여
@@ -29,8 +29,17 @@ export function defineNovelConfig<
   TScenes      extends readonly string[],
   TCharacters  extends CharDefs,
   TBackgrounds extends BgDefs,
+  TAssets      extends Record<string, string>,
 >(
-  config: NovelConfig<TVars, TScenes, TCharacters, TBackgrounds>
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds> {
-  return config
+  config: {
+    vars: TVars
+    scenes: TScenes
+    characters: TCharacters
+    backgrounds: TBackgrounds
+    ui?: NovelUIOption
+    assets?: TAssets
+    fallback?: FallbackRule[]
+  }
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets> {
+  return config as NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets>
 }

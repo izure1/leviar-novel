@@ -7,7 +7,7 @@ export default defineScene(config, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.3, duration: 0 },
-  { type: 'effect', action: 'add', effect: 'dust', rate: 15, skip: true },
+  { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 15, skip: true },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 3000 },
 
   {
@@ -138,9 +138,9 @@ export default defineScene(config, [
 
   // ─── 4. 노을의 시간 ───
   { type: 'control', action: 'disable', duration: 5000, skip: true },
-  { type: 'mood', mood: 'sepia', intensity: 0.85, duration: 5000, skip: true },
+  { type: 'mood', action: 'add', mood: 'sunset', intensity: 0.85, duration: 5000, skip: true },
   { type: 'mood', action: 'add', mood: 'ambient', duration: 3000, skip: true },
-  { type: 'effect', action: 'add', effect: 'sakura', rate: 15, skip: true },
+  { type: 'effect', action: 'add', effect: 'sakura', src: 'sakura', rate: 15, skip: true },
   {
     type: 'dialogue',
     text: [

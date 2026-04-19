@@ -12,7 +12,7 @@ export default defineScene(config, [
   // ── 타이틀 오버레이
   { type: 'overlay', action: 'add', text: '— 도서관 —', preset: 'title' },
   { type: 'overlay', action: 'remove', preset: 'title', duration: 800, skip: true },
-  { type: 'effect', action: 'add', effect: 'sakura', rate: 6, skip: true },
+  { type: 'effect', action: 'add', effect: 'sakura', src: 'sakura', rate: 6, skip: true },
 
   // ── 대사
   { type: 'dialogue', speaker: '아리시에로', text: '벚꽃 잎사귀가 도서관 안까지 들어왔네요!' },

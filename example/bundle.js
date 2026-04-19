@@ -13002,7 +13002,7 @@ ${addLineNumbers(fragment)}`);
     _flickerObj = null;
     _flickerState = null;
     _characterStates = /* @__PURE__ */ new Map();
-    _activeEffects = /* @__PURE__ */ new Set();
+    _activeEffects = /* @__PURE__ */ new Map();
     /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
     _isSkipping = false;
     // ─── 카메라 애니메이션 추적 (중단/snap 처리용) ──────────────
@@ -13140,7 +13140,7 @@ ${addLineNumbers(fragment)}`);
         backgroundKey: this._backgroundKey,
         backgroundParallax: this._backgroundIsParallax,
         activeMoods: activeMoodsArr,
-        activeEffects: Array.from(this._activeEffects),
+        activeEffects: Array.from(this._activeEffects.entries()).map(([type, data]) => ({ type, ...data })),
         characters: Object.fromEntries(this._characterStates),
         cameraState: {
           x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
@@ -13164,7 +13164,13 @@ ${addLineNumbers(fragment)}`);
       if (state.activeMoods) {
         state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0));
       }
-      state.activeEffects.forEach((e) => this.addEffect(e));
+      state.activeEffects.forEach((e) => {
+        if (typeof e === "string") {
+          this.addEffect(e);
+        } else {
+          this.addEffect(e.type, e.rate, e.overrides, e.srcKey);
+        }
+      });
       if (state.characters) {
         Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
           this.showCharacter(name, position, imageKey);
@@ -13278,7 +13284,11 @@ ${addLineNumbers(fragment)}`);
       const dur = this._dur(duration);
       const existing = this._moodObjs.get(mood);
       if (existing) {
-        this._animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+        if (this._flickerState && this._flickerState.mood === mood) {
+          existing._flickerBaseOpacity = finalIntensity;
+        } else {
+          this._animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+        }
         this._activeMoods.set(mood, finalIntensity);
         return;
       }
@@ -13334,12 +13344,10 @@ ${addLineNumbers(fragment)}`);
       moods.forEach((m) => this.removeMood(m, duration));
     }
     // ─── 이펙트 ─────────────────────────────────────────────────
-    addEffect(type = "dust", rate, overrides) {
+    addEffect(type = "dust", rate, overrides, srcKey) {
       const preset = EFFECT_PARTICLE_PRESETS[type];
       const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
-      if (this._effects.has(type)) this.removeEffect(type);
-      this._activeEffects.add(type);
-      const clipName = `${type}_rate_${finalRate}`;
+      const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
       const particleZ = this.depth / 2;
       if (!this.world.particleManager.get(clipName)) {
         const clipBase = EFFECT_CLIP_PRESETS[type];
@@ -13351,7 +13359,7 @@ ${addLineNumbers(fragment)}`);
         const spanH = (this.height + maxPanY * 2) * ratio;
         this.world.particleManager.create({
           name: clipName,
-          src: type,
+          src: srcKey ?? type,
           ...clipBase,
           rate: finalRate,
           spawnX: spanW,
@@ -13359,6 +13367,17 @@ ${addLineNumbers(fragment)}`);
           spawnZ: particleZ
         });
       }
+      const existing = this._effects.get(type);
+      if (existing) {
+        if (rate !== void 0 || srcKey !== void 0) {
+          existing.attribute.src = clipName;
+        }
+        if (overrides?.style) {
+          Object.assign(existing.style, overrides.style);
+        }
+        return;
+      }
+      this._activeEffects.set(type, { rate, overrides, srcKey });
       const particle = this._track(this.world.createParticle({
         attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
         style: { ...preset.style, ...overrides?.style },
@@ -13389,7 +13408,8 @@ ${addLineNumbers(fragment)}`);
       const target = this._moodObjs.get(mood);
       if (!target) return;
       this._flickerObj = null;
-      const baseOpacity = target._flickerBaseOpacity ?? target.style?.opacity ?? 1;
+      const finalIntensity = this._activeMoods.get(mood) ?? 1;
+      const baseOpacity = finalIntensity;
       target._flickerBaseOpacity = baseOpacity;
       const configs = {
         candle: { interval: 120, range: [0.6, 1] },
@@ -14097,22 +14117,18 @@ ${addLineNumbers(fragment)}`);
               cmd.intensity,
               cmd.duration ?? 800
             );
+            if (cmd.flicker) {
+              r.setFlicker(cmd.mood, cmd.flicker);
+            }
           }
           break;
         // ── 이펙트 ───────────────────────────────────────────────
         case "effect":
           if (cmd.action === "add") {
-            r.addEffect(cmd.effect, cmd.rate);
+            r.addEffect(cmd.effect, cmd.rate, void 0, cmd.src);
           } else {
             r.removeEffect(cmd.effect, cmd.duration);
           }
-          break;
-        // ── 플리커 ───────────────────────────────────────────────
-        case "flicker":
-          r.setFlicker(
-            cmd.mood,
-            cmd.flicker
-          );
           break;
         // ── 오버레이 ─────────────────────────────────────────────
         case "overlay":
@@ -14897,7 +14913,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.3, duration: 0 },
-    { type: "effect", action: "add", effect: "dust", rate: 15, skip: true },
+    { type: "effect", action: "add", effect: "dust", src: "dust", rate: 15, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 3e3 },
     {
       type: "dialogue",
@@ -15018,9 +15034,9 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "\uC5BC\uAD74\uC774 \uD654\uB048\uAC70\uB838\uB2E4. \uCC3D\uD53C\uD574\uC11C \uACE0\uAC1C\uB97C \uC219\uC600\uB2E4." },
     // ─── 4. 노을의 시간 ───
     { type: "control", action: "disable", duration: 5e3, skip: true },
-    { type: "mood", mood: "sepia", intensity: 0.85, duration: 5e3, skip: true },
+    { type: "mood", action: "add", mood: "sunset", intensity: 0.85, duration: 5e3, skip: true },
     { type: "mood", action: "add", mood: "ambient", duration: 3e3, skip: true },
-    { type: "effect", action: "add", effect: "sakura", rate: 15, skip: true },
+    { type: "effect", action: "add", effect: "sakura", src: "sakura", rate: 15, skip: true },
     {
       type: "dialogue",
       text: [
@@ -15119,7 +15135,7 @@ ${addLineNumbers(fragment)}`);
     // ── 타이틀 오버레이
     { type: "overlay", action: "add", text: "\u2014 \uB3C4\uC11C\uAD00 \u2014", preset: "title" },
     { type: "overlay", action: "remove", preset: "title", duration: 800, skip: true },
-    { type: "effect", action: "add", effect: "sakura", rate: 6, skip: true },
+    { type: "effect", action: "add", effect: "sakura", src: "sakura", rate: 6, skip: true },
     // ── 대사
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
     { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
@@ -15200,7 +15216,7 @@ ${addLineNumbers(fragment)}`);
   var scene_effects_default = defineScene(novel_config_default, [
     // ── 공원으로 배경 전환
     { type: "background", name: "bg-park", duration: 1e3, skip: true },
-    { type: "mood", mood: "sunset", intensity: 0.7, duration: 1e3, skip: true },
+    { type: "mood", action: "add", mood: "sunset", intensity: 0.7, duration: 1e3, skip: true },
     { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
     // ── 배열 텍스트 테스트 (Syntax Sugar)
     {
@@ -15212,14 +15228,11 @@ ${addLineNumbers(fragment)}`);
         "\uAC01\uAC01 \uAC1C\uBCC4\uC801\uC778 \uB300\uC0AC\uB85C \uCC98\uB9AC\uB429\uB2C8\uB2E4."
       ]
     },
-    // ── 비 이펙트 + night 무드
-    { type: "mood", mood: "night", intensity: 0.7, duration: 1200 },
-    { type: "effect", action: "add", effect: "rain", rate: 120, skip: true },
-    { type: "mood", action: "add", mood: "cold", skip: true },
+    // ── 비 이펙트 + night 무드 + 플리커
+    // { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
+    // { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
+    { type: "effect", action: "add", effect: "rain", src: "rain", rate: 1200, skip: true },
     { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
-    // ── 조명 플리커
-    { type: "flicker", mood: "cold", flicker: "flicker" },
-    { type: "dialogue", text: "flicker(\uAE5C\uBE61\uC784) \uC801\uC6A9." },
     // ── 카메라 흔들림
     { type: "camera-effect", preset: "shake", duration: 500, repeat: 100 },
     { type: "dialogue", text: "camera-effect: shake." },
@@ -15233,7 +15246,7 @@ ${addLineNumbers(fragment)}`);
     // ── 이펙트/조명 제거 + day 복원
     { type: "effect", action: "remove", effect: "rain", duration: 600, skip: true },
     { type: "mood", action: "remove", mood: "cold", duration: 600, skip: true },
-    { type: "mood", mood: "day", intensity: 0.5, duration: 1e3, skip: true },
+    { type: "mood", action: "add", mood: "day", intensity: 0.5, duration: 1e3, skip: true },
     { type: "dialogue", text: "\uC774\uD399\uD2B8 \uC81C\uAC70, day \uBB34\uB4DC \uBCF5\uC6D0." },
     // ── 와이프 전환
     { type: "screen-wipe", dir: "out", preset: "left", duration: 800 },
@@ -15248,7 +15261,7 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "camera-pan: right." },
     { type: "camera-pan", preset: "center", duration: 800 },
     // ── fog 이펙트
-    { type: "effect", action: "add", effect: "fog", rate: 3 },
+    { type: "effect", action: "add", effect: "fog", src: "fog", rate: 20 },
     { type: "dialogue", text: "fog \uC774\uD399\uD2B8 \uCD94\uAC00." },
     { type: "effect", action: "remove", effect: "fog", duration: 800 },
     // ── 완료

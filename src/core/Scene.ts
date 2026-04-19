@@ -370,24 +370,19 @@ export class DialogueScene {
             cmd.intensity,
             cmd.duration ?? 800,
           )
+          if (cmd.flicker) {
+            r.setFlicker(cmd.mood as MoodType, cmd.flicker as FlickerPreset)
+          }
         }
         break
 
       // ── 이펙트 ───────────────────────────────────────────────
       case 'effect':
         if (cmd.action === 'add') {
-          r.addEffect(cmd.effect as EffectType, cmd.rate)
+          r.addEffect(cmd.effect as EffectType, cmd.rate, undefined, (cmd as any).src)
         } else {
           r.removeEffect(cmd.effect as EffectType, cmd.duration)
         }
-        break
-
-      // ── 플리커 ───────────────────────────────────────────────
-      case 'flicker':
-        r.setFlicker(
-          cmd.mood as MoodType,
-          cmd.flicker as FlickerPreset,
-        )
         break
 
       // ── 오버레이 ─────────────────────────────────────────────

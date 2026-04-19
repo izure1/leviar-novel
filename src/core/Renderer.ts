@@ -150,7 +150,7 @@ export interface RendererState {
   backgroundKey: string | null
   backgroundParallax: boolean
   activeMoods: Array<{ mood: MoodType; intensity: number }>
-  activeEffects: EffectType[]
+  activeEffects: Array<{ type: EffectType; rate?: number; overrides?: Record<string, any>; srcKey?: string }>
   characters: Record<string, { position: string; imageKey: string }>
   /** 카메라 위치/줌 상태 */
   cameraState: CameraState
@@ -195,7 +195,7 @@ export class Renderer {
   private _flickerObj: LeviarObject | null = null
   private _flickerState: { mood: MoodType; preset: FlickerPreset } | null = null
   private _characterStates: Map<string, { position: string; imageKey: string }> = new Map()
-  private _activeEffects: Set<EffectType> = new Set()
+  private _activeEffects: Map<EffectType, { rate?: number; overrides?: Record<string, any>; srcKey?: string }> = new Map()
   /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
   private _isSkipping: boolean = false
 
@@ -351,7 +351,7 @@ export class Renderer {
       backgroundKey: this._backgroundKey,
       backgroundParallax: this._backgroundIsParallax,
       activeMoods: activeMoodsArr,
-      activeEffects: Array.from(this._activeEffects),
+      activeEffects: Array.from(this._activeEffects.entries()).map(([type, data]) => ({ type, ...data })),
       characters: Object.fromEntries(this._characterStates),
       cameraState: {
         x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
@@ -380,7 +380,13 @@ export class Renderer {
       state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0))
     }
     
-    state.activeEffects.forEach(e => this.addEffect(e))
+    state.activeEffects.forEach((e: any) => {
+      if (typeof e === 'string') {
+        this.addEffect(e as EffectType)
+      } else {
+        this.addEffect(e.type as EffectType, e.rate, e.overrides, e.srcKey)
+      }
+    })
     if (state.characters) {
       Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
         this.showCharacter(name, position, imageKey)
@@ -514,7 +520,11 @@ export class Renderer {
 
     const existing = this._moodObjs.get(mood)
     if (existing) {
-      this._animate(existing, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+      if (this._flickerState && this._flickerState.mood === mood) {
+        (existing as any)._flickerBaseOpacity = finalIntensity
+      } else {
+        this._animate(existing, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+      }
       this._activeMoods.set(mood, finalIntensity)
       return
     }
@@ -574,14 +584,10 @@ export class Renderer {
 
   // ─── 이펙트 ─────────────────────────────────────────────────
 
-  addEffect(type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>): void {
+  addEffect(type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>, srcKey?: string): void {
     const preset = EFFECT_PARTICLE_PRESETS[type]
     const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10
-
-    if (this._effects.has(type)) this.removeEffect(type)
-    this._activeEffects.add(type)
-
-    const clipName = `${type}_rate_${finalRate}`
+    const clipName = `${type}_rate_${finalRate}_${srcKey ?? 'default'}`
     const particleZ = this.depth / 2
 
     if (!(this.world as any).particleManager.get(clipName)) {
@@ -595,12 +601,25 @@ export class Renderer {
       const spanH = (this.height + maxPanY * 2) * ratio
 
         ; (this.world as any).particleManager.create({
-          name: clipName, src: type,
+          name: clipName, src: srcKey ?? type,
           ...clipBase,
           rate: finalRate,
           spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
         })
     }
+
+    const existing = this._effects.get(type)
+    if (existing) {
+      if (rate !== undefined || srcKey !== undefined) {
+        (existing as any).attribute.src = clipName
+      }
+      if (overrides?.style) {
+        Object.assign((existing as any).style, overrides.style)
+      }
+      return
+    }
+
+    this._activeEffects.set(type, { rate, overrides, srcKey })
 
     const particle = this._track(this.world.createParticle({
       attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
@@ -632,7 +651,8 @@ export class Renderer {
     if (!target) return
 
     this._flickerObj = null
-    const baseOpacity = (target as any)._flickerBaseOpacity ?? (target as any).style?.opacity ?? 1
+    const finalIntensity = this._activeMoods.get(mood) ?? 1
+    const baseOpacity = finalIntensity
       ; (target as any)._flickerBaseOpacity = baseOpacity
 
     const configs: Record<FlickerPreset, { interval: number; range: [number, number] }> = {

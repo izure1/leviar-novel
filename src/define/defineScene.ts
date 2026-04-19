@@ -11,11 +11,12 @@ export interface SceneDefinition<
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
+  TAssets extends Record<string, string> = Record<string, string>,
   TLocalVars extends Record<string, any> = Record<never, never>,
 > {
-  readonly kind:       'dialogue'
-  name?:               string
-  readonly dialogues:  DialogueStep<TVars, TScenes, TCharacters, TBackgrounds>[]
+  readonly kind: 'dialogue'
+  name?: string
+  readonly dialogues: DialogueStep<TVars, TScenes, TCharacters, TBackgrounds, TAssets>[]
   readonly localVars?: TLocalVars
   /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
   readonly nextScene?: string
@@ -48,15 +49,16 @@ export interface SceneDefinition<
  * ```
  */
 export function defineScene<
-  TConfig    extends NovelConfig<any, readonly string[], any, any>,
+  TConfig extends NovelConfig<any, readonly string[], any, any, any>,
   TLocalVars extends Record<string, any> = Record<never, never>,
 >(
-  config:    TConfig,
+  config: TConfig,
   dialogues: DialogueStep<
     TConfig['vars'],
     TConfig['scenes'],
     TConfig['characters'],
-    TConfig['backgrounds']
+    TConfig['backgrounds'],
+    [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>
   >[],
   options?: {
     localVars?: TLocalVars
@@ -68,12 +70,13 @@ export function defineScene<
   TConfig['scenes'],
   TConfig['characters'],
   TConfig['backgrounds'],
+  [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>,
   TLocalVars
 > {
   return {
-    kind:      'dialogue',
+    kind: 'dialogue',
     dialogues,
-    localVars:  options?.localVars,
-    nextScene:  options?.next as string | undefined,
+    localVars: options?.localVars,
+    nextScene: options?.next as string | undefined,
   }
 }

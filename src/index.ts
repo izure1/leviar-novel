@@ -41,7 +41,6 @@ export type {
   BackgroundCmd,
   MoodCmd,
   EffectCmd,
-  FlickerCmd,
   OverlayCmd,
   CharacterCmd,
   CharacterFocusCmd,
