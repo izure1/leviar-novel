@@ -67,12 +67,8 @@ export default defineNovelConfig({
     fog: './assets/particle_fog.png',
   },
   fallback: [
-    {
-      match: { type: 'character', action: 'show' },
-      defaults: { duration: 100 },
-    },
-    {
-      match: { type: 'character', 'action': 'remove' },
-    }
+    { type: 'character', action: 'show', defaults: { duration: 300 } },
+    { type: 'character', action: 'remove', defaults: { duration: 1000 } },
+    { type: 'dialogue', defaults: { speed: 60 } }
   ],
 })

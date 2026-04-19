@@ -11,7 +11,6 @@ import type {
   ZoomPreset, PanPreset, CameraEffectPreset,
   BackgroundFitPreset, FadeColorPreset, FlashPreset, WipePreset,
 } from '../types/dialogue'
-import type { CharDefs, BgDefs } from '../types/config'
 
 // =============================================================
 // condition.if 파서
@@ -69,13 +68,13 @@ function evaluateAtom(expr: string, vars: Record<string, any>): boolean {
     switch (op) {
       case '===': return lhsVal === rhsVal
       case '!==': return lhsVal !== rhsVal
-      case '>=':  return Number(lhsVal) >= Number(rhsVal)
-      case '<=':  return Number(lhsVal) <= Number(rhsVal)
-      case '!=':  return lhsVal != rhsVal   // eslint-disable-line eqeqeq
-      case '==':  return lhsVal == rhsVal   // eslint-disable-line eqeqeq
-      case '>':   return Number(lhsVal) >  Number(rhsVal)
-      case '<':   return Number(lhsVal) <  Number(rhsVal)
-      case '=':   return lhsVal == rhsVal   // eslint-disable-line eqeqeq
+      case '>=': return Number(lhsVal) >= Number(rhsVal)
+      case '<=': return Number(lhsVal) <= Number(rhsVal)
+      case '!=': return lhsVal != rhsVal   // eslint-disable-line eqeqeq
+      case '==': return lhsVal == rhsVal   // eslint-disable-line eqeqeq
+      case '>': return Number(lhsVal) > Number(rhsVal)
+      case '<': return Number(lhsVal) < Number(rhsVal)
+      case '=': return lhsVal == rhsVal   // eslint-disable-line eqeqeq
     }
   }
 
@@ -88,9 +87,9 @@ function resolveValue(token: string, vars: Record<string, any>): any {
 }
 
 function parseRhs(raw: string): any {
-  if (raw === 'true')  return true
+  if (raw === 'true') return true
   if (raw === 'false') return false
-  if (raw === 'null')  return null
+  if (raw === 'null') return null
   if (!isNaN(Number(raw))) return Number(raw)
   if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
     return raw.slice(1, -1)
@@ -103,14 +102,14 @@ function parseRhs(raw: string): any {
 // =============================================================
 
 export interface SceneCallbacks {
-  getGlobalVars():                                                    Record<string, any>
-  setGlobalVar(name: string, value: any):                             void
-  loadScene(name: string):                                            void
-  captureRenderer():                                                  RendererState
-  onDialogue(speaker: string | undefined, text: string):              void
+  getGlobalVars(): Record<string, any>
+  setGlobalVar(name: string, value: any): void
+  loadScene(name: string): void
+  captureRenderer(): RendererState
+  onDialogue(speaker: string | undefined, text: string, speed?: number): void
   onChoice(choices: { text: string; next?: string; goto?: string }[]): void
   /** 현재 스킵 모드 여부 */
-  isSkipping():                                                       boolean
+  isSkipping(): boolean
 }
 
 // =============================================================
@@ -118,8 +117,8 @@ export interface SceneCallbacks {
 // =============================================================
 
 export class DialogueScene {
-  private readonly renderer:   Renderer
-  private readonly callbacks:  SceneCallbacks
+  private readonly renderer: Renderer
+  private readonly callbacks: SceneCallbacks
   readonly definition: SceneDefinition<any, any, any, any, any>
 
   /** 지역 변수. 씬 시작 시 localVars 초깃값으로 초기화 */
@@ -141,14 +140,14 @@ export class DialogueScene {
   private _ended: boolean = false
 
   constructor(
-    renderer:   Renderer,
-    callbacks:  SceneCallbacks,
+    renderer: Renderer,
+    callbacks: SceneCallbacks,
     definition: SceneDefinition<any, any, any, any, any>
   ) {
-    this.renderer   = renderer
-    this.callbacks  = callbacks
+    this.renderer = renderer
+    this.callbacks = callbacks
     this.definition = definition
-    this.localVars  = { ...(definition.localVars ?? {}) }
+    this.localVars = { ...(definition.localVars ?? {}) }
 
     this._buildLabelIndex()
   }
@@ -189,7 +188,7 @@ export class DialogueScene {
       if (this.textSubIndex < step.text.length - 1) {
         this.textSubIndex++
         const txt = step.text[this.textSubIndex]
-        this.callbacks.onDialogue(step.speaker as string | undefined, txt)
+        this.callbacks.onDialogue(step.speaker as string | undefined, txt, step.speed)
         return
       }
     }
@@ -292,10 +291,12 @@ export class DialogueScene {
     this._executeNext()
   }
 
-  private _isFallbackMatch(cmd: any, match: Record<string, any>): boolean {
+  private _isFallbackMatch(cmd: any, rule: any): boolean {
     if (!cmd || typeof cmd !== 'object') return false
-    for (const key in match) {
-      if (cmd[key] !== match[key]) return false
+    for (const key in rule) {
+      if (key === 'defaults') continue
+      const ruleVal = rule[key]
+      if (ruleVal !== undefined && cmd[key] !== ruleVal) return false
     }
     return true
   }
@@ -305,17 +306,18 @@ export class DialogueScene {
     const r = this.renderer
     let cmd = originalCmd
 
-    // Fallback 적용
+    // Fallback 적용: 역순서로 순회하여 앞에 있는 규칙이 담은 것을 나중에 덮어쓰기 방지
     const fallbacks = r.config.fallback
     if (fallbacks && fallbacks.length > 0) {
       const defaultsToApply: Record<string, any> = {}
       for (let i = fallbacks.length - 1; i >= 0; i--) {
-        const rule = fallbacks[i]
-        if (this._isFallbackMatch(originalCmd, rule.match)) {
+        const rule = fallbacks[i] as any
+        if (this._isFallbackMatch(originalCmd, rule)) {
           Object.assign(defaultsToApply, rule.defaults)
         }
       }
-      
+
+      // defaults를 불마없고 원본 커맨드가 명시한 값이 우선
       cmd = { ...defaultsToApply } as any
       for (const key in originalCmd) {
         if ((originalCmd as any)[key] !== undefined) {
@@ -328,7 +330,7 @@ export class DialogueScene {
       // ── 스토리 흐름 ─────────────────────────────────────────
       case 'dialogue': {
         const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
-        this.callbacks.onDialogue(cmd.speaker as string | undefined, txt)
+        this.callbacks.onDialogue(cmd.speaker as string | undefined, txt, cmd.speed)
         break
       }
 
@@ -350,7 +352,7 @@ export class DialogueScene {
       case 'background':
         r.setBackground(
           cmd.name,
-          cmd.fit  as BackgroundFitPreset ?? 'stretch',
+          cmd.fit as BackgroundFitPreset ?? 'stretch',
           cmd.duration ?? 1000,
           cmd.isVideo ?? false,
         )
@@ -359,9 +361,9 @@ export class DialogueScene {
       // ── 무드 ─────────────────────────────────────────────────
       case 'mood':
         r.setMood(
-          cmd.mood      as MoodType,
+          cmd.mood as MoodType,
           cmd.intensity ?? 1,
-          cmd.duration  ?? 800,
+          cmd.duration ?? 800,
         )
         break
 
@@ -386,8 +388,8 @@ export class DialogueScene {
       // ── 플리커 ───────────────────────────────────────────────
       case 'flicker':
         r.setFlicker(
-          cmd.light     as LightPreset,
-          cmd.flicker   as FlickerPreset,
+          cmd.light as LightPreset,
+          cmd.flicker as FlickerPreset,
         )
         break
 
@@ -431,21 +433,21 @@ export class DialogueScene {
       // ── 카메라 ───────────────────────────────────────────────
       case 'camera-zoom':
         r.zoomCamera(
-          cmd.preset   as ZoomPreset,
+          cmd.preset as ZoomPreset,
           cmd.duration,
         )
         break
 
       case 'camera-pan':
         r.panCamera(
-          cmd.preset   as PanPreset,
+          cmd.preset as PanPreset,
           cmd.duration,
         )
         break
 
       case 'camera-effect':
         r.cameraEffect(
-          cmd.preset   as CameraEffectPreset,
+          cmd.preset as CameraEffectPreset,
           cmd.duration,
           cmd.intensity,
         )
@@ -483,7 +485,7 @@ export class DialogueScene {
   /** 현재 대기 중인 choice 커맨드를 반환 */
   getCurrentChoice(): { type: 'choice'; choices: any[] } | null {
     if (this._ended) return null
-    const steps   = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'choice') {
       return current as any
@@ -494,7 +496,7 @@ export class DialogueScene {
   /** 현재 대기 중인 dialogue 커맨드를 반환 */
   getCurrentDialogue(): { type: 'dialogue'; speaker?: string; text: string } | null {
     if (this._ended) return null
-    const steps   = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
       const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text
@@ -545,10 +547,10 @@ export class DialogueScene {
    * start()를 호출하지 않고 직접 상태를 복원합니다.
    */
   restoreState(cursor: number, localVars: Record<string, any>, textSubIndex: number = 0): void {
-    this.cursor       = cursor
+    this.cursor = cursor
     this.textSubIndex = textSubIndex
-    this.localVars    = { ...localVars }
-    this._ended       = false
+    this.localVars = { ...localVars }
+    this._ended = false
     // cursor 위치의 대화/선택지를 재표시
     this._redisplayCurrentStep()
   }
@@ -559,20 +561,20 @@ export class DialogueScene {
    */
   private _redisplayCurrentStep(): void {
     const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
-    const step  = steps[this.cursor]
+    const step = steps[this.cursor]
     if (!step) return
 
     const cmd = step as DialogueEntry<any, any, any, any>
     if (cmd.type === 'dialogue') {
       const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
-      this.callbacks.onDialogue(cmd.speaker as string | undefined, txt)
+      this.callbacks.onDialogue(cmd.speaker as string | undefined, txt, cmd.speed)
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
       this.callbacks.onChoice(cmd.choices)
     }
   }
 
-  get isEnded(): boolean        { return this._ended }
+  get isEnded(): boolean { return this._ended }
   get isWaitingInput(): boolean { return this._waitingInput }
 }
 
@@ -581,19 +583,19 @@ export class DialogueScene {
 // =============================================================
 
 export class ExploreScene {
-  private readonly renderer:   Renderer
-  private readonly callbacks:  SceneCallbacks
+  private readonly renderer: Renderer
+  private readonly callbacks: SceneCallbacks
   private readonly definition: ExploreSceneDefinition<any, any>
-  private _clickHandlers:      Array<{ obj: any; handler: () => void }> = []
-  private _ended:              boolean = false
+  private _clickHandlers: Array<{ obj: any; handler: () => void }> = []
+  private _ended: boolean = false
 
   constructor(
-    renderer:   Renderer,
-    callbacks:  SceneCallbacks,
+    renderer: Renderer,
+    callbacks: SceneCallbacks,
     definition: ExploreSceneDefinition<any, any>
   ) {
-    this.renderer   = renderer
-    this.callbacks  = callbacks
+    this.renderer = renderer
+    this.callbacks = callbacks
     this.definition = definition
   }
 
@@ -606,10 +608,22 @@ export class ExploreScene {
   private _spawnObjects(objects: ExploreObject<any>[]): void {
     objects.forEach(objDef => {
       const world = this.renderer.world
-      const img   = world.createImage({
-        attribute: { src: objDef.src } as any,
-        style:     { width: objDef.width ?? 100, height: objDef.height ?? 100, zIndex: 10 } as any,
-        transform: { position: { x: objDef.position.x - (this.renderer as any).width / 2, y: objDef.position.y - (this.renderer as any).height / 2, z: 0 } },
+      const img = world.createImage({
+        attribute: {
+          src: objDef.src
+        } as any,
+        style: {
+          width: objDef.width ?? 100,
+          height: objDef.height ?? 100,
+          zIndex: 10,
+        } as any,
+        transform: {
+          position: {
+            x: objDef.position.x - (this.renderer as any).width / 2,
+            y: objDef.position.y - (this.renderer as any).height / 2,
+            z: 0
+          }
+        },
       })
 
       const handler = () => {

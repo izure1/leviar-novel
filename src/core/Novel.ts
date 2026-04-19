@@ -312,7 +312,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       setGlobalVar:    (name, value)  => { (this.vars as any)[name] = value },
       loadScene:       (name)         => { this.loadScene(name) },
       captureRenderer: ()             => this._renderer.captureState(),
-      onDialogue:      (speaker, text) => { this._showDialogue(speaker, text) },
+      onDialogue:      (speaker, text, speed) => { this._showDialogue(speaker, text, speed) },
       onChoice:        (choices)      => { this._showChoices(choices) },
       isSkipping:      ()             => this._isSkipping,
     }
@@ -450,7 +450,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._choicesEl = choices
   }
 
-  private _showDialogue(speaker: string | undefined, text: string): void {
+  private _showDialogue(speaker: string | undefined, text: string, speed?: number): void {
     if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return
 
     const skipping = this._isSkipping
@@ -471,7 +471,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       ; (this._dialogueTextObj as any).attribute.text = text
       ; (this._dialogueTextObj as any).style.opacity  = 1
     } else {
-      ; (this._dialogueTextObj as any).transition(text, 30)
+      const spd = speed ?? 30
+      ; (this._dialogueTextObj as any).transition(text, spd)
       ; (this._dialogueTextObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
     }
 

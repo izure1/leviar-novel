@@ -13790,7 +13790,7 @@ ${addLineNumbers(fragment)}`);
         if (this.textSubIndex < step.text.length - 1) {
           this.textSubIndex++;
           const txt = step.text[this.textSubIndex];
-          this.callbacks.onDialogue(step.speaker, txt);
+          this.callbacks.onDialogue(step.speaker, txt, step.speed);
           return;
         }
       }
@@ -13872,10 +13872,12 @@ ${addLineNumbers(fragment)}`);
       this.textSubIndex = 0;
       this._executeNext();
     }
-    _isFallbackMatch(cmd, match) {
+    _isFallbackMatch(cmd, rule) {
       if (!cmd || typeof cmd !== "object") return false;
-      for (const key in match) {
-        if (cmd[key] !== match[key]) return false;
+      for (const key in rule) {
+        if (key === "defaults") continue;
+        const ruleVal = rule[key];
+        if (ruleVal !== void 0 && cmd[key] !== ruleVal) return false;
       }
       return true;
     }
@@ -13888,7 +13890,7 @@ ${addLineNumbers(fragment)}`);
         const defaultsToApply = {};
         for (let i = fallbacks.length - 1; i >= 0; i--) {
           const rule = fallbacks[i];
-          if (this._isFallbackMatch(originalCmd, rule.match)) {
+          if (this._isFallbackMatch(originalCmd, rule)) {
             Object.assign(defaultsToApply, rule.defaults);
           }
         }
@@ -13903,7 +13905,7 @@ ${addLineNumbers(fragment)}`);
         // ── 스토리 흐름 ─────────────────────────────────────────
         case "dialogue": {
           const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
-          this.callbacks.onDialogue(cmd.speaker, txt);
+          this.callbacks.onDialogue(cmd.speaker, txt, cmd.speed);
           break;
         }
         case "var": {
@@ -14113,7 +14115,7 @@ ${addLineNumbers(fragment)}`);
       const cmd = step;
       if (cmd.type === "dialogue") {
         const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
-        this.callbacks.onDialogue(cmd.speaker, txt);
+        this.callbacks.onDialogue(cmd.speaker, txt, cmd.speed);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
         this.callbacks.onChoice(cmd.choices);
@@ -14146,9 +14148,21 @@ ${addLineNumbers(fragment)}`);
       objects.forEach((objDef) => {
         const world = this.renderer.world;
         const img = world.createImage({
-          attribute: { src: objDef.src },
-          style: { width: objDef.width ?? 100, height: objDef.height ?? 100, zIndex: 10 },
-          transform: { position: { x: objDef.position.x - this.renderer.width / 2, y: objDef.position.y - this.renderer.height / 2, z: 0 } }
+          attribute: {
+            src: objDef.src
+          },
+          style: {
+            width: objDef.width ?? 100,
+            height: objDef.height ?? 100,
+            zIndex: 10
+          },
+          transform: {
+            position: {
+              x: objDef.position.x - this.renderer.width / 2,
+              y: objDef.position.y - this.renderer.height / 2,
+              z: 0
+            }
+          }
         });
         const handler = () => {
           if (this._ended) return;
@@ -14387,8 +14401,8 @@ ${addLineNumbers(fragment)}`);
           this.loadScene(name);
         },
         captureRenderer: () => this._renderer.captureState(),
-        onDialogue: (speaker, text) => {
-          this._showDialogue(speaker, text);
+        onDialogue: (speaker, text, speed) => {
+          this._showDialogue(speaker, text, speed);
         },
         onChoice: (choices) => {
           this._showChoices(choices);
@@ -14512,7 +14526,7 @@ ${addLineNumbers(fragment)}`);
       parent.appendChild(choices);
       this._choicesEl = choices;
     }
-    _showDialogue(speaker, text) {
+    _showDialogue(speaker, text, speed) {
       if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return;
       const skipping = this._isSkipping;
       if (!skipping) {
@@ -14530,8 +14544,8 @@ ${addLineNumbers(fragment)}`);
         this._dialogueTextObj.attribute.text = text;
         this._dialogueTextObj.style.opacity = 1;
       } else {
-        ;
-        this._dialogueTextObj.transition(text, 30);
+        const spd = speed ?? 30;
+        this._dialogueTextObj.transition(text, spd);
         this._dialogueTextObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
       }
       if (this._choicesEl) {
@@ -14664,14 +14678,9 @@ ${addLineNumbers(fragment)}`);
       fog: "./assets/particle_fog.png"
     },
     fallback: [
-      {
-        match: { type: "character", action: "show" },
-        defaults: { duration: 100 }
-      },
-      {
-        match: { type: "character", action: "remove" },
-        defaults: {}
-      }
+      { type: "character", action: "show", defaults: { duration: 300 } },
+      { type: "character", action: "remove", defaults: { duration: 1e3 } },
+      { type: "dialogue", defaults: { speed: 60 } }
     ]
   });
 

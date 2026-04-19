@@ -12,6 +12,7 @@ export type {
   BgDefs,
   NovelConfig,
   NovelOption,
+  FallbackRule,
   // UI 스타일
   UIChoiceStyle,
   NovelUIOption,
@@ -59,14 +60,14 @@ export type {
 } from './types/dialogue'
 
 // ─── define 헬퍼 함수 ────────────────────────────────────────
-export { defineNovelConfig }            from './define/defineNovelConfig'
-export { defineScene }                  from './define/defineScene'
-export { defineExploreScene }           from './define/defineExploreScene'
-export type { SceneDefinition }         from './define/defineScene'
+export { defineNovelConfig } from './define/defineNovelConfig'
+export { defineScene } from './define/defineScene'
+export { defineExploreScene } from './define/defineExploreScene'
+export type { SceneDefinition } from './define/defineScene'
 export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
-export { Novel }                        from './core/Novel'
-export type { SaveData }                from './core/Novel'
-export { Renderer }                     from './core/Renderer'
+export { Novel } from './core/Novel'
+export type { SaveData } from './core/Novel'
+export { Renderer } from './core/Renderer'
 export type { RendererOption, RendererState, CameraState } from './core/Renderer'

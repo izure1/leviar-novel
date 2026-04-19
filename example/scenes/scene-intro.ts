@@ -25,7 +25,7 @@ export default defineScene(config, [
   // ─── 2. 예기치 못한 조우 ───
   { type: 'camera-pan', preset: 'right', duration: 2500 },
   { type: 'dialogue', text: '서가 너머, 창가 자리에 누군가 앉아 있었다.' },
-  
+
   { type: 'character', action: 'show', name: 'heroine', position: 'center', image: 'normal', duration: 1500 },
   { type: 'dialogue', text: '하얀 셔츠 위로 쏟아지는 노란 햇살.' },
   { type: 'dialogue', text: '그녀는 마치 그림 속에서 막 걸어 나온 것만 같은 비현실적인 분위기를 풍겼다.' },

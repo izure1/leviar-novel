@@ -36,6 +36,8 @@ export interface DialogueCmd<TCharacters extends CharDefs> {
   /** config characters 키. 생략 시 나레이션으로 처리 */
   speaker?: keyof TCharacters & string
   text: string | string[]
+  /** 텍스트 출력 속도 (ms). 기본값: 설정된 속도 또는 30 */
+  speed?: number
 }
 
 /** 선택지를 표시하고 분기한다 */
@@ -308,3 +310,33 @@ export type DialogueStep<
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
 > = DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds>
+
+// ─── Fallback 룰 ─────────────────────────────────────────────
+
+/**
+ * novel.config `fallback` 배열의 항목 타입.
+ *
+ * `type` 필드가 discriminant 역할을 합니다.
+ * `type` 및 기타 커맨드 필드는 **매칭 조건**이 되고,
+ * `defaults` 필드에 채워 넣을 기본값을 지정합니다.
+ *
+ * 구체적인 규칙(필드가 많은 것)을 배열 앞에, 범용 규칙을 뒤에 두세요.
+ * (위에 있을수록 우선순위가 높습니다.)
+ *
+ * @example
+ * ```ts
+ * fallback: [
+ *   { type: 'character', action: 'show', position: 'left', defaults: { duration: 800 } },
+ *   { type: 'character', action: 'show',                   defaults: { duration: 1000, image: 'normal' } },
+ *   { type: 'character', action: 'remove',                 defaults: { duration: 800 } },
+ *   { type: 'background',                                  defaults: { duration: 1000 } },
+ * ]
+ * ```
+ */
+type _AnyCmd = _DialogueEntryUnion<any, readonly string[], any, any>
+
+export type FallbackRule = _AnyCmd extends infer E
+  ? E extends { type: infer Type }
+    ? { type: Type } & Partial<Omit<E, 'type' | 'skip'>> & { defaults?: Partial<Omit<E, 'skip'>> }
+    : never
+  : never
