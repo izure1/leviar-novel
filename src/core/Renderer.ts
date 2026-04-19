@@ -404,7 +404,7 @@ export class Renderer {
     })
     if (state.characters) {
       Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
-        this.showCharacter(name, position, imageKey)
+        this.showCharacter(name, position, imageKey, 0)
       })
     }
     // 카메라 위치/줌 즉시 복원

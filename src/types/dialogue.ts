@@ -100,17 +100,21 @@ export interface ChoiceCmd<TVars, TScenes extends readonly string[]> {
  * }
  * ```
  */
-export interface ConditionCmd<TVars, TScenes extends readonly string[]> {
+export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string[]> {
   /** 명령어 타입. 항상 'condition'입니다. */
   type: 'condition'
   /**
    * 평가할 조건식 문자열입니다.
-   * - 단순 비교: `'likeability >= 10'`
-   * - 불리언 체크: `'metCharacterA'`
-   * - 복합: `'likeability >= 10 and metCharacterA'`
+   * - 전역변수 참조: `'likeability >= 10'` (접두사 없음)
+   * - 지역변수 참조: `'_tries >= 1'` (`_` 접두사)
+   * - 불리언 체크: `'metCharacterA'` 또는 `'_visited'`
+   * - 복합: `'likeability >= 10 and _tries >= 1'`
    * - 지원 연산자: `=`, `==`, `===`, `!=`, `>`, `>=`, `<`, `<=`, `and`, `or`, `&&`, `||`
+   *
+   * 전역변수: {@link TVars} 키 (접두사 없음)
+   * 지역변수: {@link TLocalVars} 키 (`_` 접두사 포함)
    */
-  if: string
+  if: keyof TVars & string | keyof TLocalVars & string | (string & {})
   /** 조건 충족 시(true) 이동할 씬 이름입니다. */
   next?: TScenes[number]
   /** 조건 충족 시(true) 이동할 현재 씬 내의 라벨 이름입니다. */
@@ -129,26 +133,41 @@ export interface ConditionCmd<TVars, TScenes extends readonly string[]> {
 
 /** 
  * 변수 값을 설정한다 
+ *
+ * - 이름에 `_` 접두사를 붙이면 **씬 지역변수**로 처리됩니다.
+ * - 접두사가 없으면 **게임 전역변수**로 처리됩니다.
  * 
  * @example
  * ```ts
- * { type: 'var', name: 'score', value: 100, scope: 'global' }
+ * // 전역변수 설정
+ * { type: 'var', name: 'score', value: 100 }
+ * // 지역변수 설정 (_ 접두사)
+ * { type: 'var', name: '_tries', value: 0 }
  * ```
  */
-export interface VarCmd<TVars> {
-  /** 명령어 타입. 항상 'var'입니다. */
-  type: 'var'
-  /** 값을 변경할 변수의 이름입니다. (전역 변수 키 또는 지역 변수 이름) */
-  name: keyof TVars | (string & {})
-  /** 변수에 설정할 값입니다. */
-  value: any
-  /**
-   * 변수가 유지되는 범위(Scope)입니다.
-   * - 'global': Novel 인스턴스 전체 라이프사이클 동안 유지됩니다 (기본값).
-   * - 'local': 현재 씬(Scene)에서만 유효하며, 씬이 전환될 때 초기화됩니다.
-   */
-  scope?: 'global' | 'local'
-}
+export type VarCmd<TVars, TLocalVars> =
+  | {
+    /** 명령어 타입. 항상 'var'입니다. */
+    type: 'var'
+    /**
+     * 설정할 **전역변수**의 이름입니다. (`_` 접두사 없음)
+     * config.vars에 정의된 키로 자동완성됩니다.
+     */
+    name: keyof TVars & string
+    /** 변수에 설정할 값입니다. */
+    value: any
+  }
+  | {
+    /** 명령어 타입. 항상 'var'입니다. */
+    type: 'var'
+    /**
+     * 설정할 **씬 지역변수**의 이름입니다. (`_` 접두사 필수)
+     * defineScene 두 번째 인자로 전달한 지역변수 키로 자동완성됩니다.
+     */
+    name: keyof TLocalVars & string
+    /** 변수에 설정할 값입니다. */
+    value: any
+  }
 
 /** 
  * 루프 또는 goto 이동을 위한 마커 
@@ -471,6 +490,7 @@ export interface ControlCmd {
 
 type _DialogueEntryUnion<
   TVars,
+  TLocalVars,
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
@@ -478,8 +498,8 @@ type _DialogueEntryUnion<
 > =
   | DialogueCmd<TCharacters>
   | ChoiceCmd<TVars, TScenes>
-  | ConditionCmd<TVars, TScenes>
-  | VarCmd<TVars>
+  | ConditionCmd<TVars, TLocalVars, TScenes>
+  | VarCmd<TVars, TLocalVars>
   | LabelCmd
   | BackgroundCmd<TBackgrounds>
   | MoodCmd
@@ -499,22 +519,24 @@ type _DialogueEntryUnion<
 
 export type DialogueEntry<
   TVars,
+  TLocalVars,
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
-> = _DialogueEntryUnion<TVars, TScenes, TCharacters, TBackgrounds, TAssets> & {
+> = _DialogueEntryUnion<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets> & {
   /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */
   skip?: boolean
 }
 
 export type DialogueStep<
   TVars,
+  TLocalVars,
   TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
-> = DialogueEntry<TVars, TScenes, TCharacters, TBackgrounds, TAssets>
+> = DialogueEntry<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets>
 
 // ─── Fallback 룰 ─────────────────────────────────────────────
 
@@ -538,7 +560,7 @@ export type DialogueStep<
  * ]
  * ```
  */
-type _AnyCmd = _DialogueEntryUnion<any, readonly string[], any, any, any>
+type _AnyCmd = _DialogueEntryUnion<any, any, readonly string[], any, any, any>
 
 export type FallbackRule = _AnyCmd extends infer E
   ? E extends { type: infer Type }

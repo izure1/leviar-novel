@@ -3,10 +3,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, [
-
-  // ── 지역변수 초기화
-  { type: 'var', name: 'tries', value: 0, scope: 'local' },
+export default defineScene(config, { _tries: 0 }, [
 
   // ── 나레이션
   { type: 'dialogue', text: `[조건 분기 테스트]` },
@@ -15,7 +12,7 @@ export default defineScene(config, [
   // ── label: cond-check
   { type: 'label', name: 'cond-check' },
 
-  // ── 복합 조건: likeability >= 10 and metHeroine
+  // ── 복합 조건: likeability >= 10
   {
     type: 'condition',
     if: 'likeability >= 10',
@@ -28,9 +25,9 @@ export default defineScene(config, [
   { type: 'dialogue', speaker: '아리시에로', text: '...왜 이런 대우를 받는 건지 모르겠어요.' },
   { type: 'dialogue', text: '(호감도를 20으로 강제 설정합니다.)' },
   { type: 'var', name: 'likeability', value: 20 },
-  { type: 'var', name: 'tries', value: 1, scope: 'local' },
+  { type: 'var', name: '_tries', value: 1 },
   // 강제 수정 후 재확인
-  { type: 'condition', if: 'tries >= 1', goto: 'cond-check' },
+  { type: 'condition', if: '_tries >= 1', goto: 'cond-check' },
 
   // ── 좋은 분기
   { type: 'label', name: 'branch-good' },
@@ -48,8 +45,8 @@ export default defineScene(config, [
   { type: 'label', name: 'skip-normal' },
 
   // ── 지역변수 최종 표시
-  { type: 'dialogue', text: `[지역변수] tries = 재시도 횟수. 전역변수 likeability = 현재 호감도.` },
-  { type: 'dialogue', text: '씬 이동 후 tries는 초기화되지만 likeability는 유지됩니다.' },
+  { type: 'dialogue', text: `[지역변수] _tries = 재시도 횟수. 전역변수 likeability = 현재 호감도.` },
+  { type: 'dialogue', text: '씬 이동 후 _tries는 초기화되지만 likeability는 유지됩니다.' },
   {
     type: 'choice',
     choices: [
@@ -58,4 +55,4 @@ export default defineScene(config, [
     ],
   },
 
-], { localVars: { tries: 0 } })
+])

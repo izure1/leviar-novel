@@ -12,11 +12,11 @@ export interface SceneDefinition<
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
-  TLocalVars extends Record<string, any> = Record<never, never>,
+  TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
 > {
   readonly kind: 'dialogue'
   name?: string
-  readonly dialogues: DialogueStep<TVars, TScenes, TCharacters, TBackgrounds, TAssets>[]
+  readonly dialogues: DialogueStep<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets>[]
   readonly localVars?: TLocalVars
   /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
   readonly nextScene?: string
@@ -25,43 +25,43 @@ export interface SceneDefinition<
 /**
  * DialogueScene을 정의합니다.
  *
- * - 사용자는 `dialogues` 배열 내부만 편집합니다.
- * - `config`를 첫 인자로 받아 캐릭터/배경/씬/변수 이름의 타입 힌트를 제공합니다.
- * - 씬 지역변수는 `options.localVars`에 초깃값을 설정합니다.
- *   씬 전환 시 초기화되며, 전역변수와 이름이 중복될 수 없습니다.
+ * - 두 번째 인자로 씬 **지역변수** 초깃값 객체를 전달합니다.
+ *   키 이름에 `_` 접두사를 **반드시** 붙여야 합니다. (ex: `{ _tries: 0 }`)
+ *   `_` 접두사가 없는 키를 전달하면 타입 에러가 발생합니다.
+ * - 지역변수가 없는 씬은 `{}` 를 전달합니다.
+ * - 씬 전환 시 지역변수는 초기화됩니다.
  *
- * @example
+ * @example 지역변수 없음
  * ```ts
- * import config from './novel.config'
- * import { defineScene } from 'leviar-novel'
- *
- * export default defineScene(config, [
+ * export default defineScene(config, {}, [
  *   { type: 'background', name: 'bg-classroom' },
  *   { type: 'dialogue', speaker: 'characterA', text: '안녕!' },
  * ])
  * ```
  *
- * @example 지역변수 사용
+ * @example 지역변수 사용 (_ 접두사 필수)
  * ```ts
- * export default defineScene(config, [
- *   { type: 'var', name: 'tries', value: 0, scope: 'local' },
- * ], { localVars: { tries: 0 } })
+ * export default defineScene(config, { _tries: 0 }, [
+ *   { type: 'var', name: '_tries', value: 0 },
+ *   { type: 'condition', if: '_tries >= 3', goto: 'end' },
+ * ], { next: 'scene-b' })
  * ```
  */
 export function defineScene<
   TConfig extends NovelConfig<any, readonly string[], any, any, any>,
-  TLocalVars extends Record<string, any> = Record<never, never>,
+  TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
 >(
   config: TConfig,
+  localVars: TLocalVars,
   dialogues: DialogueStep<
     TConfig['vars'],
+    TLocalVars,
     TConfig['scenes'],
     TConfig['characters'],
     TConfig['backgrounds'],
     [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>
   >[],
   options?: {
-    localVars?: TLocalVars
     /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
     next?: TConfig['scenes'][number]
   }
@@ -75,8 +75,8 @@ export function defineScene<
 > {
   return {
     kind: 'dialogue',
-    dialogues,
-    localVars: options?.localVars,
+    dialogues: dialogues as any,
+    localVars: localVars,
     nextScene: options?.next as string | undefined,
   }
 }

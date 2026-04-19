@@ -6,11 +6,11 @@
   }
 
   // src/define/defineScene.ts
-  function defineScene(config, dialogues, options) {
+  function defineScene(config, localVars, dialogues, options) {
     return {
       kind: "dialogue",
       dialogues,
-      localVars: options?.localVars,
+      localVars,
       nextScene: options?.next
     };
   }
@@ -13185,7 +13185,7 @@ ${addLineNumbers(fragment)}`);
       });
       if (state.characters) {
         Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
-          this.showCharacter(name, position, imageKey);
+          this.showCharacter(name, position, imageKey, 0);
         });
       }
       const cam = this.world.camera;
@@ -13972,7 +13972,7 @@ ${addLineNumbers(fragment)}`);
         }
       });
     }
-    /** 통합 변수 맵 (지역 우선) */
+    /** 통합 변수 맵. 지역변수 키에 `_` 포함되어 있으므로 직접 spread */
     get _vars() {
       return { ...this.callbacks.getGlobalVars(), ...this.localVars };
     }
@@ -14113,11 +14113,11 @@ ${addLineNumbers(fragment)}`);
           break;
         }
         case "var": {
-          const isLocal = cmd.scope === "local" || cmd.name in this.localVars;
-          if (isLocal) {
-            this.localVars[cmd.name] = cmd.value;
+          const nameStr = cmd.name;
+          if (nameStr.startsWith("_")) {
+            this.localVars[nameStr] = cmd.value;
           } else {
-            this.callbacks.setGlobalVar(cmd.name, cmd.value);
+            this.callbacks.setGlobalVar(nameStr, cmd.value);
           }
           break;
         }
@@ -14947,7 +14947,7 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/scenes/scene-intro.ts
-  var scene_intro_default = defineScene(novel_config_default, [
+  var scene_intro_default = defineScene(novel_config_default, {}, [
     // ─── 1. 적막한 도서관의 오후 ───
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
@@ -15167,7 +15167,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-a.ts
-  var scene_a_default = defineScene(novel_config_default, [
+  var scene_a_default = defineScene(novel_config_default, {}, [
     // ── 배경 전환 + 벚꽃 효과
     { type: "background", name: "bg-library", duration: 800, skip: true },
     { type: "mood", mood: "day", intensity: 0.5, duration: 800, skip: true },
@@ -15203,15 +15203,13 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-condition.ts
-  var scene_condition_default = defineScene(novel_config_default, [
-    // ── 지역변수 초기화
-    { type: "var", name: "tries", value: 0, scope: "local" },
+  var scene_condition_default = defineScene(novel_config_default, { _tries: 0 }, [
     // ── 나레이션
     { type: "dialogue", text: `[\uC870\uAC74 \uBD84\uAE30 \uD14C\uC2A4\uD2B8]` },
     { type: "dialogue", text: `\uD604\uC7AC \uD638\uAC10\uB3C4\uC640 \uB9CC\uB0A8 \uC5EC\uBD80\uB85C \uBD84\uAE30\uD569\uB2C8\uB2E4.` },
     // ── label: cond-check
     { type: "label", name: "cond-check" },
-    // ── 복합 조건: likeability >= 10 and metHeroine
+    // ── 복합 조건: likeability >= 10
     {
       type: "condition",
       if: "likeability >= 10",
@@ -15223,9 +15221,9 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
     { type: "dialogue", text: "(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4.)" },
     { type: "var", name: "likeability", value: 20 },
-    { type: "var", name: "tries", value: 1, scope: "local" },
+    { type: "var", name: "_tries", value: 1 },
     // 강제 수정 후 재확인
-    { type: "condition", if: "tries >= 1", goto: "cond-check" },
+    { type: "condition", if: "_tries >= 1", goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
@@ -15240,8 +15238,8 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
     { type: "label", name: "skip-normal" },
     // ── 지역변수 최종 표시
-    { type: "dialogue", text: `[\uC9C0\uC5ED\uBCC0\uC218] tries = \uC7AC\uC2DC\uB3C4 \uD69F\uC218. \uC804\uC5ED\uBCC0\uC218 likeability = \uD604\uC7AC \uD638\uAC10\uB3C4.` },
-    { type: "dialogue", text: "\uC52C \uC774\uB3D9 \uD6C4 tries\uB294 \uCD08\uAE30\uD654\uB418\uC9C0\uB9CC likeability\uB294 \uC720\uC9C0\uB429\uB2C8\uB2E4." },
+    { type: "dialogue", text: `[\uC9C0\uC5ED\uBCC0\uC218] _tries = \uC7AC\uC2DC\uB3C4 \uD69F\uC218. \uC804\uC5ED\uBCC0\uC218 likeability = \uD604\uC7AC \uD638\uAC10\uB3C4.` },
+    { type: "dialogue", text: "\uC52C \uC774\uB3D9 \uD6C4 _tries\uB294 \uCD08\uAE30\uD654\uB418\uC9C0\uB9CC likeability\uB294 \uC720\uC9C0\uB429\uB2C8\uB2E4." },
     {
       type: "choice",
       choices: [
@@ -15249,10 +15247,10 @@ ${addLineNumbers(fragment)}`);
         { text: "\uCC98\uC74C\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30", next: "scene-intro" }
       ]
     }
-  ], { localVars: { tries: 0 } });
+  ]);
 
   // example/scenes/scene-effects.ts
-  var scene_effects_default = defineScene(novel_config_default, [
+  var scene_effects_default = defineScene(novel_config_default, {}, [
     // ── 공원으로 배경 전환
     { type: "background", name: "bg-park", duration: 1e3, skip: true },
     { type: "effect", action: "add", effect: "rain", src: "rain", rate: 500, skip: true },

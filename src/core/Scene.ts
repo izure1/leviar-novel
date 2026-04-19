@@ -155,7 +155,7 @@ export class DialogueScene {
   }
 
   private _buildLabelIndex(): void {
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
     steps.forEach((step, i) => {
       if (step.type === 'label') {
         const cmd = step as { type: 'label'; name: string }
@@ -164,7 +164,7 @@ export class DialogueScene {
     })
   }
 
-  /** 통합 변수 맵 (지역 우선) */
+  /** 통합 변수 맵. 지역변수 키에 `_` 포함되어 있으므로 직접 spread */
   private get _vars(): Record<string, any> {
     return { ...this.callbacks.getGlobalVars(), ...this.localVars }
   }
@@ -183,8 +183,8 @@ export class DialogueScene {
   advance(): void {
     if (!this._waitingInput || this._ended) return
 
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
-    const step = steps[this.cursor] as DialogueEntry<any, any, any, any>
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
+    const step = steps[this.cursor] as DialogueEntry<any, any, any, any, any, any>
 
     if (step.type === 'dialogue' && Array.isArray(step.text)) {
       if (this.textSubIndex < step.text.length - 1) {
@@ -204,7 +204,7 @@ export class DialogueScene {
   private _executeNext(): void {
     if (this._ended) return
 
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
     if (this.cursor >= steps.length) {
       this._ended = true
       return
@@ -212,7 +212,7 @@ export class DialogueScene {
 
     const step = steps[this.cursor]
 
-    const cmd = step as DialogueEntry<any, any, any, any>
+    const cmd = step as DialogueEntry<any, any, any, any, any, any>
 
     if (cmd.type === 'label') {
       this.cursor++
@@ -304,7 +304,7 @@ export class DialogueScene {
   }
 
   /** 단일 커맨드를 Renderer 메서드에 매핑하여 실행 */
-  private _executeCmd(originalCmd: DialogueEntry<any, any, any, any>): void {
+  private _executeCmd(originalCmd: DialogueEntry<any, any, any, any, any, any>): void {
     const r = this.renderer
     let cmd = originalCmd
 
@@ -337,11 +337,12 @@ export class DialogueScene {
       }
 
       case 'var': {
-        const isLocal = cmd.scope === 'local' || (cmd.name in this.localVars)
-        if (isLocal) {
-          this.localVars[cmd.name as string] = cmd.value
+        const nameStr = cmd.name as string
+        if (nameStr.startsWith('_')) {
+          // _ 접두사 = 지역변수. localVars에 키 그대로 저장
+          this.localVars[nameStr] = cmd.value
         } else {
-          this.callbacks.setGlobalVar(cmd.name as string, cmd.value)
+          this.callbacks.setGlobalVar(nameStr, cmd.value)
         }
         break
       }
@@ -492,7 +493,7 @@ export class DialogueScene {
   /** 현재 대기 중인 choice 커맨드를 반환 */
   getCurrentChoice(): { type: 'choice'; choices: any[] } | null {
     if (this._ended) return null
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'choice') {
       return current as any
@@ -503,7 +504,7 @@ export class DialogueScene {
   /** 현재 대기 중인 dialogue 커맨드를 반환 */
   getCurrentDialogue(): { type: 'dialogue'; speaker?: string; text: string } | null {
     if (this._ended) return null
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
       const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text
@@ -567,11 +568,11 @@ export class DialogueScene {
    * 로드 후 화면에 현재 상태를 복원할 때 사용합니다.
    */
   private _redisplayCurrentStep(): void {
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
     const step = steps[this.cursor]
     if (!step) return
 
-    const cmd = step as DialogueEntry<any, any, any, any>
+    const cmd = step as DialogueEntry<any, any, any, any, any, any>
     if (cmd.type === 'dialogue') {
       const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
       this.callbacks.onDialogue(cmd.speaker as string | undefined, txt, cmd.speed)
