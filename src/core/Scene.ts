@@ -110,6 +110,8 @@ export interface SceneCallbacks {
   onChoice(choices: { text: string; next?: string; goto?: string }[]): void
   /** 현재 스킵 모드 여부 */
   isSkipping(): boolean
+  /** 지정된 시간(ms) 동안 사용자 입력을 무시합니다 */
+  disableInput(duration: number): void
 }
 
 // =============================================================
@@ -484,6 +486,12 @@ export class DialogueScene {
         break
 
       case 'ui':
+        break
+
+      case 'control':
+        if (cmd.action === 'disable' && typeof cmd.duration === 'number') {
+          this.callbacks.disableInput(cmd.duration)
+        }
         break
 
       default:

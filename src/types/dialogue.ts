@@ -282,6 +282,15 @@ export interface UICmd {
   duration?: number
 }
 
+// ─── 입력 제어 커맨드 ───────────────────────────────────────
+
+/** 사용자의 입력을 제어한다 (예: 일정 시간 동안 진행 무시) */
+export interface ControlCmd {
+  type: 'control'
+  action: 'disable'
+  duration: number
+}
+
 // ─── 전체 DialogueEntry 유니온 ─────────────────────────────
 
 type _DialogueEntryUnion<
@@ -311,6 +320,7 @@ type _DialogueEntryUnion<
   | ScreenFlashCmd
   | ScreenWipeCmd
   | UICmd
+  | ControlCmd
 
 export type DialogueEntry<
   TVars,

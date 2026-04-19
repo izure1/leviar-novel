@@ -91,6 +91,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _currentTypingText: string              = ''
   /** 현재 실행 중인 TextTransition 객체 */
   private _activeTextTransition: any              = null
+  /** 사용자 입력 무시 만료 시간 (ms) */
+  private _inputDisabledUntil: number             = 0
 
   /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
   private _dialogueBgObj:   any = null
@@ -319,6 +321,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       onDialogue:      (speaker, text, speed) => { this._showDialogue(speaker, text, speed) },
       onChoice:        (choices)      => { this._showChoices(choices) },
       isSkipping:      ()             => this._isSkipping,
+      disableInput:    (duration)     => { this._inputDisabledUntil = Date.now() + duration },
     }
   }
 
@@ -331,6 +334,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    * main.ts 등 외부에서 click/keydown 이벤트에 연결하여 사용합니다.
    */
   next(): void {
+    if (Date.now() < this._inputDisabledUntil) return
     if (this._inputMode !== 'dialogue') return
     if (!this._currentScene || this._currentScene.isEnded) return
 

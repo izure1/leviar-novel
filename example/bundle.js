@@ -14225,6 +14225,11 @@ ${addLineNumbers(fragment)}`);
           break;
         case "ui":
           break;
+        case "control":
+          if (cmd.action === "disable" && typeof cmd.duration === "number") {
+            this.callbacks.disableInput(cmd.duration);
+          }
+          break;
         default:
           console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, cmd.type);
       }
@@ -14427,6 +14432,8 @@ ${addLineNumbers(fragment)}`);
     _currentTypingText = "";
     /** 현재 실행 중인 TextTransition 객체 */
     _activeTextTransition = null;
+    /** 사용자 입력 무시 만료 시간 (ms) */
+    _inputDisabledUntil = 0;
     /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
     _dialogueBgObj = null;
     /** 화자 이름창 (Leviar Text, 카메라 자식) */
@@ -14603,7 +14610,10 @@ ${addLineNumbers(fragment)}`);
         onChoice: (choices) => {
           this._showChoices(choices);
         },
-        isSkipping: () => this._isSkipping
+        isSkipping: () => this._isSkipping,
+        disableInput: (duration) => {
+          this._inputDisabledUntil = Date.now() + duration;
+        }
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
@@ -14614,6 +14624,7 @@ ${addLineNumbers(fragment)}`);
      * main.ts 등 외부에서 click/keydown 이벤트에 연결하여 사용합니다.
      */
     next() {
+      if (Date.now() < this._inputDisabledUntil) return;
       if (this._inputMode !== "dialogue") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
       if (this._isTextTyping) {
@@ -15035,8 +15046,9 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC88B\uC740 \uC774\uB984\uC774\uB124\uC694. \uB530\uB73B\uD55C \uBE5B\uC774 \uB290\uAEF4\uC9C0\uB294 \uC774\uB984\uC774\uC5D0\uC694." },
     { type: "dialogue", text: "\uC5BC\uAD74\uC774 \uD654\uB048\uAC70\uB838\uB2E4. \uCC3D\uD53C\uD574\uC11C \uACE0\uAC1C\uB97C \uC219\uC600\uB2E4." },
     // ─── 4. 노을의 시간 ───
-    { type: "mood", mood: "sunset", intensity: 0.85, duration: 5e3 },
-    { type: "light", action: "add", preset: "warm", duration: 3e3 },
+    { type: "control", action: "disable", duration: 5e3, skip: true },
+    // { type: 'mood', mood: 'sunset', intensity: 0.85, duration: 5000, skip: true },
+    { type: "light", action: "add", preset: "spot", duration: 3e3, skip: true },
     { type: "effect", action: "add", effect: "sakura", rate: 15, skip: true },
     {
       type: "dialogue",

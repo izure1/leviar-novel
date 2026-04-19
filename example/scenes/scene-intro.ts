@@ -137,8 +137,9 @@ export default defineScene(config, [
   { type: 'dialogue', text: '얼굴이 화끈거렸다. 창피해서 고개를 숙였다.' },
 
   // ─── 4. 노을의 시간 ───
-  { type: 'mood', mood: 'sunset', intensity: 0.85, duration: 5000 },
-  { type: 'light', action: 'add', preset: 'warm', duration: 3000 },
+  { type: 'control', action: 'disable', duration: 5000, skip: true },
+  // { type: 'mood', mood: 'sunset', intensity: 0.85, duration: 5000, skip: true },
+  { type: 'light', action: 'add', preset: 'spot', duration: 3000, skip: true },
   { type: 'effect', action: 'add', effect: 'sakura', rate: 15, skip: true },
   {
     type: 'dialogue',
