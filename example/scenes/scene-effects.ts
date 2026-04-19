@@ -7,7 +7,8 @@ export default defineScene(config, [
 
   // ── 공원으로 배경 전환
   { type: 'background', name: 'bg-park', duration: 1000, skip: true },
-  { type: 'mood', action: 'add', mood: 'sunset', intensity: 0.7, duration: 1000, skip: true },
+  { type: 'effect', action: 'add', effect: 'rain', src: 'rain', rate: 500, skip: true },
+  { type: 'mood', mood: 'night', intensity: 0.7, duration: 1000, skip: true },
   { type: 'dialogue', text: '[화면 효과 테스트] 공원으로 이동했습니다.' },
 
   // ── 배열 텍스트 테스트 (Syntax Sugar)
@@ -23,7 +24,6 @@ export default defineScene(config, [
   // ── 비 이펙트 + night 무드 + 플리커
   // { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
   // { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
-  { type: 'effect', action: 'add', effect: 'rain', src: 'rain', rate: 1200, skip: true },
   { type: 'dialogue', text: 'rain 이펙트 + cold 조명 + night 무드.' },
 
   // ── 카메라 흔들림

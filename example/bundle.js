@@ -12954,7 +12954,7 @@ ${addLineNumbers(fragment)}`);
   };
   var EFFECT_PARTICLE_PRESETS = {
     dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
-    rain: { attribute: { gravityScale: 1 }, style: { width: 3, height: 6, opacity: 0.3, blendMode: "screen" } },
+    rain: { attribute: { gravityScale: 1 }, style: { width: 30, height: 60, opacity: 1, blendMode: "screen" } },
     snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: "lighter" } },
     sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
     sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
@@ -15216,7 +15216,8 @@ ${addLineNumbers(fragment)}`);
   var scene_effects_default = defineScene(novel_config_default, [
     // ── 공원으로 배경 전환
     { type: "background", name: "bg-park", duration: 1e3, skip: true },
-    { type: "mood", action: "add", mood: "sunset", intensity: 0.7, duration: 1e3, skip: true },
+    { type: "effect", action: "add", effect: "rain", src: "rain", rate: 500, skip: true },
+    { type: "mood", mood: "night", intensity: 0.7, duration: 1e3, skip: true },
     { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
     // ── 배열 텍스트 테스트 (Syntax Sugar)
     {
@@ -15231,7 +15232,6 @@ ${addLineNumbers(fragment)}`);
     // ── 비 이펙트 + night 무드 + 플리커
     // { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
     // { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
-    { type: "effect", action: "add", effect: "rain", src: "rain", rate: 1200, skip: true },
     { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
     // ── 카메라 흔들림
     { type: "camera-effect", preset: "shake", duration: 500, repeat: 100 },

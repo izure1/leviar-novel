@@ -111,7 +111,7 @@ const OVERLAY_PRESETS: Record<OverlayPreset, { fontSize: number; color: string; 
 
 const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
   dust: { attribute: { frictionAir: 0, gravityScale: 0.001 }, style: { width: 10, height: 10, blendMode: 'lighter' } },
-  rain: { attribute: { gravityScale: 1 }, style: { width: 3, height: 6, opacity: 0.3, blendMode: 'screen' } },
+  rain: { attribute: { gravityScale: 1 }, style: { width: 30, height: 60, opacity: 1, blendMode: 'screen' } },
   snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: 'lighter' } },
   sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
   sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
@@ -366,7 +366,7 @@ export class Renderer {
     if (state.backgroundKey) {
       this.setBackground(state.backgroundKey, 'stretch', 0)
     }
-    
+
     // 하위 호환성 (과거 세이브 데이터)
     const oldState = state as any
     if (oldState.moodType && oldState.moodType !== 'none') {
@@ -375,11 +375,11 @@ export class Renderer {
     if (oldState.activeLights) {
       oldState.activeLights.forEach((l: any) => this.addMood(l, undefined, 0))
     }
-    
+
     if (state.activeMoods) {
       state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0))
     }
-    
+
     state.activeEffects.forEach((e: any) => {
       if (typeof e === 'string') {
         this.addEffect(e as EffectType)
