@@ -15,17 +15,17 @@ export type LightPreset  = 'spot' | 'ambient' | 'warm' | 'cold'
 export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
 export type OverlayPreset = 'caption' | 'title' | 'whisper'
 export type EffectType   = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
-export type ZoomPreset   = 'close-up' | 'medium' | 'wide' | 'reset'
-export type PanPreset    = 'left' | 'right' | 'up' | 'down' | 'center'
+export type ZoomPreset   = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
+export type PanPreset    = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit'
 export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall'
-export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover'
-export type FadeColorPreset = 'black' | 'white' | 'red' | 'dream' | 'sepia'
-export type FlashPreset  = 'white' | 'red' | 'yellow'
-export type WipePreset   = 'left' | 'right' | 'up' | 'down'
+export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
+export type FadeColorPreset = 'black' | 'white' | 'red' | 'dream' | 'sepia' | 'inherit'
+export type FlashPreset  = 'white' | 'red' | 'yellow' | 'inherit'
+export type WipePreset   = 'left' | 'right' | 'up' | 'down' | 'inherit'
 
-/** 캐릭터 위치: 프리셋 또는 'n/m' 분수 형식 */
+/** 캐릭터 위치: 프리셋 또는 'n/m' 분수 형식. 'inherit' = 현재 위치 유지 */
 export type CharacterPositionPreset =
-  | 'far-left' | 'left' | 'center' | 'right' | 'far-right'
+  | 'far-left' | 'left' | 'center' | 'right' | 'far-right' | 'inherit'
   | (string & {})
 
 // ─── 스토리 흐름 커맨드 ───────────────────────────────────────
@@ -185,21 +185,31 @@ export type CharacterCmd<TCharacters extends CharDefs> =
   | { [K in keyof TCharacters & string]: CharacterShowCmd<TCharacters, K> }[keyof TCharacters & string]
   | CharacterRemoveCmd<TCharacters>
 
+/**
+ * TName 캐릭터의 모든 이미지에 걸친 points 키 합집합을 추출한다.
+ * 예: { normal: { points: { face, chest } }, smile: { points: { face } } } → 'face' | 'chest'
+ */
+type PointsOf<TCharacters extends CharDefs, TName extends keyof TCharacters> = {
+  [IK in keyof TCharacters[TName]]: TCharacters[TName][IK] extends { points?: infer P }
+    ? P extends Record<string, any> ? keyof P & string : never
+    : never
+}[keyof TCharacters[TName]]
+
 /** 카메라를 캐릭터에 포커스한다 */
-export interface CharacterFocusCmd<TCharacters extends CharDefs> {
+export interface CharacterFocusCmd<TCharacters extends CharDefs, TName extends keyof TCharacters & string = keyof TCharacters & string> {
   type: 'character-focus'
-  name: keyof TCharacters & string
-  /** characters[name][image].points 키 */
-  point?: string
+  name: TName
+  /** characters[name][*].points 키. novel.config에서 정의된 값으로 자동완성됩니다. */
+  point?: PointsOf<TCharacters, TName> | (string & {})
   zoom?: ZoomPreset
   /** 기본값: 800 */
   duration?: number
 }
 
 /** 캐릭터를 컷인(전면) 레이어로 올리거나 복원한다 */
-export interface CharacterHighlightCmd<TCharacters extends CharDefs> {
+export interface CharacterHighlightCmd<TCharacters extends CharDefs, TName extends keyof TCharacters & string = keyof TCharacters & string> {
   type: 'character-highlight'
-  name: keyof TCharacters & string
+  name: TName
   action: 'on' | 'off'
 }
 
@@ -284,8 +294,8 @@ type _DialogueEntryUnion<
   | FlickerCmd
   | OverlayCmd
   | CharacterCmd<TCharacters>
-  | CharacterFocusCmd<TCharacters>
-  | CharacterHighlightCmd<TCharacters>
+  | { [K in keyof TCharacters & string]: CharacterFocusCmd<TCharacters, K> }[keyof TCharacters & string]
+  | { [K in keyof TCharacters & string]: CharacterHighlightCmd<TCharacters, K> }[keyof TCharacters & string]
   | CameraZoomCmd
   | CameraPanCmd
   | CameraEffectCmd

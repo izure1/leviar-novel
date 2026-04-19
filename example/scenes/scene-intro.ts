@@ -31,7 +31,8 @@ export default defineScene(config, [
   { type: 'camera-pan', preset: 'right', duration: 2500 },
   { type: 'dialogue', text: '서가 너머, 창가 자리에 누군가 앉아 있었다.' },
 
-  { type: 'character', action: 'show', name: '아리시에로', position: 'right', image: 'normal', duration: 1500 },
+  { type: 'character', action: 'show', name: '아리시에로', position: 'right', image: 'normal', duration: 1500, skip: true },
+  { type: 'character-focus', name: '아리시에로', point: 'face' },
   {
     type: 'dialogue',
     text: [
@@ -63,9 +64,8 @@ export default defineScene(config, [
   },
 
   { type: 'dialogue', speaker: '아리시에로', text: '사랑은 말이야, 결국 상실을 견디기 위한 연습일지도 몰라.' },
-  { type: 'dialogue', text: '그녀가 혼잣말처럼 중얼거렸다. 낮은 목소리가 공기를 진동시켰다.' },
-  { type: 'camera-effect', preset: 'shake', duration: 400 },
-  { type: 'dialogue', text: '나는 나도 모르게 헉 하고 숨을 들이켰다.' },
+  { type: 'camera-effect', preset: 'shake', duration: 400, skip: true },
+  { type: 'dialogue', text: '그녀가 혼잣말처럼 중얼거렸다. 낮은 목소리가 공기를 진동시켰다.\n나는 나도 모르게 헉 하고 숨을 들이켰다.' },
 
   { type: 'character', action: 'show', name: '아리시에로', image: 'smile', duration: 800 },
   {

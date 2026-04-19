@@ -352,7 +352,7 @@ export class DialogueScene {
       case 'background':
         r.setBackground(
           cmd.name,
-          cmd.fit as BackgroundFitPreset ?? 'stretch',
+          (cmd.fit ?? 'inherit') as BackgroundFitPreset,
           cmd.duration ?? 1000,
           cmd.isVideo ?? false,
         )
@@ -417,7 +417,7 @@ export class DialogueScene {
         r.focusCharacter(
           cmd.name as string,
           cmd.point,
-          (cmd.zoom ?? 'close-up') as ZoomPreset,
+          (cmd.zoom ?? 'inherit') as ZoomPreset,
           cmd.duration ?? 800,
         )
         break
@@ -457,19 +457,19 @@ export class DialogueScene {
       case 'screen-fade':
         r.screenFade(
           cmd.dir,
-          (cmd.preset ?? 'black') as FadeColorPreset,
+          (cmd.preset ?? 'inherit') as FadeColorPreset,
           cmd.duration ?? 600,
         )
         break
 
       case 'screen-flash':
-        r.screenFlash((cmd.preset ?? 'white') as FlashPreset)
+        r.screenFlash((cmd.preset ?? 'inherit') as FlashPreset)
         break
 
       case 'screen-wipe':
         r.screenWipe(
           cmd.dir,
-          (cmd.preset ?? 'left') as WipePreset,
+          (cmd.preset ?? 'inherit') as WipePreset,
           cmd.duration ?? 800,
         )
         break

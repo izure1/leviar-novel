@@ -39,14 +39,14 @@ const CHARACTER_X_RATIO: Record<string, number> = {
   'far-right': 0.9,
 }
 
-const ZOOM_PRESETS: Record<ZoomPreset, { scale: number; duration: number }> = {
+const ZOOM_PRESETS: Record<Exclude<ZoomPreset, 'inherit'>, { scale: number; duration: number }> = {
   'close-up': { scale: 1.5, duration: 800 },
   'medium': { scale: 1.2, duration: 600 },
   'wide': { scale: 0.8, duration: 800 },
   'reset': { scale: 1.0, duration: 600 },
 }
 
-const PAN_PRESETS: Record<PanPreset, { x: number; y: number; duration: number }> = {
+const PAN_PRESETS: Record<Exclude<PanPreset, 'inherit'>, { x: number; y: number; duration: number }> = {
   left: { x: -200, y: 0, duration: 1000 },
   right: { x: 200, y: 0, duration: 1000 },
   up: { x: 0, y: 200, duration: 1000 },
@@ -63,7 +63,7 @@ const CAMERA_EFFECT_PRESETS: Record<CameraEffectPreset, { intensity: number; dur
   fall: { intensity: 15, duration: 800 },
 }
 
-const FADE_PRESETS: Record<FadeColorPreset, { color: string; easing: EasingType }> = {
+const FADE_PRESETS: Record<Exclude<FadeColorPreset, 'inherit'>, { color: string; easing: EasingType }> = {
   black: { color: 'rgba(0,0,0,1)', easing: 'linear' },
   white: { color: 'rgba(255,255,255,1)', easing: 'linear' },
   red: { color: 'rgba(200,0,0,1)', easing: 'easeIn' },
@@ -71,13 +71,13 @@ const FADE_PRESETS: Record<FadeColorPreset, { color: string; easing: EasingType 
   sepia: { color: 'rgba(150,100,50,1)', easing: 'easeIn' },
 }
 
-const FLASH_PRESETS: Record<FlashPreset, { color: string; duration: number }> = {
+const FLASH_PRESETS: Record<Exclude<FlashPreset, 'inherit'>, { color: string; duration: number }> = {
   white: { color: 'rgba(255,255,255,1)', duration: 300 },
   red: { color: 'rgba(255,0,0,1)', duration: 300 },
   yellow: { color: 'rgba(255,220,0,1)', duration: 250 },
 }
 
-const WIPE_PRESETS: Record<WipePreset, { x: number; y: number }> = {
+const WIPE_PRESETS: Record<Exclude<WipePreset, 'inherit'>, { x: number; y: number }> = {
   left: { x: -1, y: 0 },
   right: { x: 1, y: 0 },
   up: { x: 0, y: 1 },
@@ -204,6 +204,14 @@ export class Renderer {
   private _activeLights: Set<LightPreset> = new Set()
   /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
   private _isSkipping: boolean = false
+
+  // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
+  private _lastBackgroundFit: Exclude<BackgroundFitPreset, 'inherit'> = 'stretch'
+  private _lastZoomPreset: Exclude<ZoomPreset, 'inherit'> = 'reset'
+  private _lastPanPreset: Exclude<PanPreset, 'inherit'> = 'center'
+  private _lastFadePreset: Exclude<FadeColorPreset, 'inherit'> = 'black'
+  private _lastFlashPreset: Exclude<FlashPreset, 'inherit'> = 'white'
+  private _lastWipePreset: Exclude<WipePreset, 'inherit'> = 'left'
 
   constructor(world: World, config: NovelConfig<any, any, any, any>, option: RendererOption) {
     this.world = world
@@ -363,10 +371,12 @@ export class Renderer {
 
   setBackground(
     key: string,
-    fit: BackgroundFitPreset = 'stretch',
+    fit: BackgroundFitPreset = 'inherit',
     duration: number = 1000,
     isVideo: boolean = false,
   ): void {
+    const resolvedFit = fit === 'inherit' ? this._lastBackgroundFit : fit
+    this._lastBackgroundFit = resolvedFit
     const bgDefs = this.config.backgrounds as BgDefs
     const def = bgDefs[key]
     if (!def) return
@@ -655,7 +665,7 @@ export class Renderer {
 
   // ─── 캐릭터 ─────────────────────────────────────────────────
 
-  showCharacter(name: string, position: CharacterPositionPreset = 'center', imageKey?: string, duration?: number): void {
+  showCharacter(name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number): void {
     const charDefs = this.config.characters as CharDefs
     const def = charDefs[name]
     if (!def) return
@@ -664,11 +674,17 @@ export class Renderer {
     const imageDef = def[resolvedKey]
     if (!imageDef) return
 
+    // 'inherit' 또는 미지정 → 기존 _characterStates 위치 상속. 신규 캐릭터면 'center' fallback
+    const existingState = this._characterStates.get(name)
+    const resolvedPosition = (!position || position === 'inherit')
+      ? (existingState?.position ?? 'center')
+      : position
+
     const src = imageDef.src ?? resolvedKey
-    const xPos = this.width * (this._resolvePositionX(position) - 0.5)
+    const xPos = this.width * (this._resolvePositionX(resolvedPosition) - 0.5)
     const zPos = (this.world.camera as any)?.attribute?.focalLength ?? 100
 
-    this._characterStates.set(name, { position, imageKey: resolvedKey })
+    this._characterStates.set(name, { position: resolvedPosition, imageKey: resolvedKey })
 
     const existing = this._characters.get(name)
     if (existing) {
@@ -764,11 +780,13 @@ export class Renderer {
 
   // ─── 카메라 ─────────────────────────────────────────────────
 
-  zoomCamera(preset: ZoomPreset = 'reset', duration?: number, overrideScale?: number): void {
+  zoomCamera(preset: ZoomPreset = 'inherit', duration?: number, overrideScale?: number): void {
     const cam = this.world.camera
     if (!cam) return
 
-    const { scale, duration: pd } = ZOOM_PRESETS[preset]
+    const resolvedPreset = preset === 'inherit' ? this._lastZoomPreset : preset
+    this._lastZoomPreset = resolvedPreset
+    const { scale, duration: pd } = ZOOM_PRESETS[resolvedPreset]
     const finalScale = overrideScale ?? scale
     const finalDur = this._dur(duration ?? pd)
     const baseDist = (cam as any).attribute?.focalLength ?? 100
@@ -799,10 +817,14 @@ export class Renderer {
     const cam = this.world.camera
     if (!cam) return
 
+    // 'inherit' → 현재 카메라 위치 유지 (no-op)
+    if (preset === 'inherit') return
+
     let x: number, y: number, dur: number
     if (preset === 'custom') {
       x = customX ?? 0; y = customY ?? 0; dur = this._dur(duration ?? 800)
     } else {
+      this._lastPanPreset = preset
       const p = PAN_PRESETS[preset]
       x = customX ?? p.x; y = customY ?? p.y; dur = this._dur(duration ?? p.duration)
     }
@@ -873,20 +895,26 @@ export class Renderer {
 
   // ─── 화면 전환 ──────────────────────────────────────────────
 
-  screenFade(dir: 'in' | 'out', preset: FadeColorPreset = 'black', duration: number = 600): void {
-    const { color, easing } = FADE_PRESETS[preset]
+  screenFade(dir: 'in' | 'out', preset: FadeColorPreset = 'inherit', duration: number = 600): void {
+    const resolvedPreset = preset === 'inherit' ? this._lastFadePreset : preset
+    this._lastFadePreset = resolvedPreset
+    const { color, easing } = FADE_PRESETS[resolvedPreset]
     const rect = this._getTransitionRect(color)
       ; (rect as any).animate({ style: { opacity: dir === 'out' ? 1 : 0 } }, duration, easing)
   }
 
-  screenFlash(preset: FlashPreset = 'white'): void {
-    const { color, duration } = FLASH_PRESETS[preset]
+  screenFlash(preset: FlashPreset = 'inherit'): void {
+    const resolvedPreset = preset === 'inherit' ? this._lastFlashPreset : preset
+    this._lastFlashPreset = resolvedPreset
+    const { color, duration } = FLASH_PRESETS[resolvedPreset]
     const rect = this._getTransitionRect(color)
       ; (rect as any).animate({ style: { opacity: 1 } }, duration / 2, 'easeOut')
         .on('end', () => (rect as any).animate({ style: { opacity: 0 } }, duration / 2, 'easeIn'))
   }
 
-  screenWipe(dir: 'in' | 'out', preset: WipePreset = 'left', duration: number = 800): void {
+  screenWipe(dir: 'in' | 'out', preset: WipePreset = 'inherit', duration: number = 800): void {
+    const resolvedPreset = preset === 'inherit' ? this._lastWipePreset : preset
+    this._lastWipePreset = resolvedPreset
     const rect = this._getTransitionRect('rgba(0,0,0,1)')
     const w = (this.world.canvas as any)?.width ?? this.width
     const h = (this.world.canvas as any)?.height ?? this.height
@@ -898,7 +926,7 @@ export class Renderer {
       rect.transform.position.z = 10
     }
 
-    const { x: dx, y: dy } = WIPE_PRESETS[preset]
+    const { x: dx, y: dy } = WIPE_PRESETS[resolvedPreset]
     if (dir === 'out') {
       rect.transform.position.x = dx * w * 2
       rect.transform.position.y = dy * h * 2

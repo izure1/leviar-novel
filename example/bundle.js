@@ -13010,6 +13010,13 @@ ${addLineNumbers(fragment)}`);
     _activeLights = /* @__PURE__ */ new Set();
     /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
     _isSkipping = false;
+    // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
+    _lastBackgroundFit = "stretch";
+    _lastZoomPreset = "reset";
+    _lastPanPreset = "center";
+    _lastFadePreset = "black";
+    _lastFlashPreset = "white";
+    _lastWipePreset = "left";
     constructor(world, config, option) {
       this.world = world;
       this.config = config;
@@ -13154,7 +13161,9 @@ ${addLineNumbers(fragment)}`);
       this._flickerObj = null;
     }
     // ─── 배경 ───────────────────────────────────────────────────
-    setBackground(key, fit = "stretch", duration = 1e3, isVideo = false) {
+    setBackground(key, fit = "inherit", duration = 1e3, isVideo = false) {
+      const resolvedFit = fit === "inherit" ? this._lastBackgroundFit : fit;
+      this._lastBackgroundFit = resolvedFit;
       const bgDefs = this.config.backgrounds;
       const def = bgDefs[key];
       if (!def) return;
@@ -13419,17 +13428,19 @@ ${addLineNumbers(fragment)}`);
       Array.from(this._overlayObjs.keys()).forEach((k) => this.removeOverlay(k, duration));
     }
     // ─── 캐릭터 ─────────────────────────────────────────────────
-    showCharacter(name, position = "center", imageKey, duration) {
+    showCharacter(name, position, imageKey, duration) {
       const charDefs = this.config.characters;
       const def = charDefs[name];
       if (!def) return;
       const resolvedKey = imageKey ?? Object.keys(def)[0];
       const imageDef = def[resolvedKey];
       if (!imageDef) return;
+      const existingState = this._characterStates.get(name);
+      const resolvedPosition = !position || position === "inherit" ? existingState?.position ?? "center" : position;
       const src = imageDef.src ?? resolvedKey;
-      const xPos = this.width * (this._resolvePositionX(position) - 0.5);
+      const xPos = this.width * (this._resolvePositionX(resolvedPosition) - 0.5);
       const zPos = this.world.camera?.attribute?.focalLength ?? 100;
-      this._characterStates.set(name, { position, imageKey: resolvedKey });
+      this._characterStates.set(name, { position: resolvedPosition, imageKey: resolvedKey });
       const existing = this._characters.get(name);
       if (existing) {
         this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(duration ?? 400), "easeInOutQuad");
@@ -13516,10 +13527,12 @@ ${addLineNumbers(fragment)}`);
       delete target._originalTransform;
     }
     // ─── 카메라 ─────────────────────────────────────────────────
-    zoomCamera(preset = "reset", duration, overrideScale) {
+    zoomCamera(preset = "inherit", duration, overrideScale) {
       const cam = this.world.camera;
       if (!cam) return;
-      const { scale: scale2, duration: pd } = ZOOM_PRESETS[preset];
+      const resolvedPreset = preset === "inherit" ? this._lastZoomPreset : preset;
+      this._lastZoomPreset = resolvedPreset;
+      const { scale: scale2, duration: pd } = ZOOM_PRESETS[resolvedPreset];
       const finalScale = overrideScale ?? scale2;
       const finalDur = this._dur(duration ?? pd);
       const baseDist = cam.attribute?.focalLength ?? 100;
@@ -13545,12 +13558,14 @@ ${addLineNumbers(fragment)}`);
     panCamera(preset, duration, customX, customY) {
       const cam = this.world.camera;
       if (!cam) return;
+      if (preset === "inherit") return;
       let x, y, dur;
       if (preset === "custom") {
         x = customX ?? 0;
         y = customY ?? 0;
         dur = this._dur(duration ?? 800);
       } else {
+        this._lastPanPreset = preset;
         const p = PAN_PRESETS[preset];
         x = customX ?? p.x;
         y = customY ?? p.y;
@@ -13635,17 +13650,23 @@ ${addLineNumbers(fragment)}`);
       }
     }
     // ─── 화면 전환 ──────────────────────────────────────────────
-    screenFade(dir, preset = "black", duration = 600) {
-      const { color, easing } = FADE_PRESETS[preset];
+    screenFade(dir, preset = "inherit", duration = 600) {
+      const resolvedPreset = preset === "inherit" ? this._lastFadePreset : preset;
+      this._lastFadePreset = resolvedPreset;
+      const { color, easing } = FADE_PRESETS[resolvedPreset];
       const rect = this._getTransitionRect(color);
       rect.animate({ style: { opacity: dir === "out" ? 1 : 0 } }, duration, easing);
     }
-    screenFlash(preset = "white") {
-      const { color, duration } = FLASH_PRESETS[preset];
+    screenFlash(preset = "inherit") {
+      const resolvedPreset = preset === "inherit" ? this._lastFlashPreset : preset;
+      this._lastFlashPreset = resolvedPreset;
+      const { color, duration } = FLASH_PRESETS[resolvedPreset];
       const rect = this._getTransitionRect(color);
       rect.animate({ style: { opacity: 1 } }, duration / 2, "easeOut").on("end", () => rect.animate({ style: { opacity: 0 } }, duration / 2, "easeIn"));
     }
-    screenWipe(dir, preset = "left", duration = 800) {
+    screenWipe(dir, preset = "inherit", duration = 800) {
+      const resolvedPreset = preset === "inherit" ? this._lastWipePreset : preset;
+      this._lastWipePreset = resolvedPreset;
       const rect = this._getTransitionRect("rgba(0,0,0,1)");
       const w = this.world.canvas?.width ?? this.width;
       const h = this.world.canvas?.height ?? this.height;
@@ -13654,7 +13675,7 @@ ${addLineNumbers(fragment)}`);
         rect.style.width = cam.calcDepthRatio ? cam.calcDepthRatio(10, w) : w(rect).style.height = cam.calcDepthRatio ? cam.calcDepthRatio(10, h) : h;
         rect.transform.position.z = 10;
       }
-      const { x: dx, y: dy } = WIPE_PRESETS[preset];
+      const { x: dx, y: dy } = WIPE_PRESETS[resolvedPreset];
       if (dir === "out") {
         rect.transform.position.x = dx * w * 2;
         rect.transform.position.y = dy * h * 2;
@@ -13936,7 +13957,7 @@ ${addLineNumbers(fragment)}`);
         case "background":
           r.setBackground(
             cmd.name,
-            cmd.fit ?? "stretch",
+            cmd.fit ?? "inherit",
             cmd.duration ?? 1e3,
             cmd.isVideo ?? false
           );
@@ -13994,7 +14015,7 @@ ${addLineNumbers(fragment)}`);
           r.focusCharacter(
             cmd.name,
             cmd.point,
-            cmd.zoom ?? "close-up",
+            cmd.zoom ?? "inherit",
             cmd.duration ?? 800
           );
           break;
@@ -14029,17 +14050,17 @@ ${addLineNumbers(fragment)}`);
         case "screen-fade":
           r.screenFade(
             cmd.dir,
-            cmd.preset ?? "black",
+            cmd.preset ?? "inherit",
             cmd.duration ?? 600
           );
           break;
         case "screen-flash":
-          r.screenFlash(cmd.preset ?? "white");
+          r.screenFlash(cmd.preset ?? "inherit");
           break;
         case "screen-wipe":
           r.screenWipe(
             cmd.dir,
-            cmd.preset ?? "left",
+            cmd.preset ?? "inherit",
             cmd.duration ?? 800
           );
           break;
@@ -14760,7 +14781,8 @@ ${addLineNumbers(fragment)}`);
     // ─── 2. 예기치 못한 조우 ───
     { type: "camera-pan", preset: "right", duration: 2500 },
     { type: "dialogue", text: "\uC11C\uAC00 \uB108\uBA38, \uCC3D\uAC00 \uC790\uB9AC\uC5D0 \uB204\uAD70\uAC00 \uC549\uC544 \uC788\uC5C8\uB2E4." },
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500 },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500, skip: true },
+    { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face" },
     {
       type: "dialogue",
       text: [
@@ -14790,9 +14812,8 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC0AC\uB791\uC740 \uB9D0\uC774\uC57C, \uACB0\uAD6D \uC0C1\uC2E4\uC744 \uACAC\uB514\uAE30 \uC704\uD55C \uC5F0\uC2B5\uC77C\uC9C0\uB3C4 \uBAB0\uB77C." },
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uD63C\uC7A3\uB9D0\uCC98\uB7FC \uC911\uC5BC\uAC70\uB838\uB2E4. \uB0AE\uC740 \uBAA9\uC18C\uB9AC\uAC00 \uACF5\uAE30\uB97C \uC9C4\uB3D9\uC2DC\uCF30\uB2E4." },
-    { type: "camera-effect", preset: "shake", duration: 400 },
-    { type: "dialogue", text: "\uB098\uB294 \uB098\uB3C4 \uBAA8\uB974\uAC8C \uD5C9 \uD558\uACE0 \uC228\uC744 \uB4E4\uC774\uCF30\uB2E4." },
+    { type: "camera-effect", preset: "shake", duration: 400, skip: true },
+    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uD63C\uC7A3\uB9D0\uCC98\uB7FC \uC911\uC5BC\uAC70\uB838\uB2E4. \uB0AE\uC740 \uBAA9\uC18C\uB9AC\uAC00 \uACF5\uAE30\uB97C \uC9C4\uB3D9\uC2DC\uCF30\uB2E4.\n\uB098\uB294 \uB098\uB3C4 \uBAA8\uB974\uAC8C \uD5C9 \uD558\uACE0 \uC228\uC744 \uB4E4\uC774\uCF30\uB2E4." },
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile", duration: 800 },
     {
       type: "dialogue",
@@ -14963,16 +14984,16 @@ ${addLineNumbers(fragment)}`);
     { type: "overlay", action: "remove", preset: "title", duration: 800, skip: true },
     { type: "effect", action: "add", effect: "sakura", rate: 6, skip: true },
     // ── 대사
-    { type: "dialogue", speaker: "heroine", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
     { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
     // ── 캐릭터 표정 변경 + 클로즈업
-    { type: "character", action: "show", name: "heroine", image: "smile" },
-    { type: "character-focus", name: "heroine", point: "face", zoom: "close-up", duration: 800, skip: true },
-    { type: "dialogue", speaker: "heroine", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
+    { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face", zoom: "close-up", duration: 800, skip: true },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" },
     // ── 하이라이트 (컷인)
-    { type: "character-highlight", name: "heroine", action: "on", skip: true },
-    { type: "dialogue", speaker: "heroine", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
-    { type: "character-highlight", name: "heroine", action: "off" },
+    { type: "character-highlight", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "on", skip: true },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
+    { type: "character-highlight", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "off" },
     // ── 카메라 + 이펙트 리셋
     { type: "camera-zoom", preset: "reset", duration: 600, skip: true },
     { type: "camera-pan", preset: "center", duration: 600, skip: true },
