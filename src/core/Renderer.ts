@@ -150,8 +150,8 @@ export interface RendererState {
   backgroundKey: string | null
   backgroundParallax: boolean
   activeMoods: Array<{ mood: MoodType; intensity: number }>
-  activeEffects: Set<EffectType>
-  characters: Map<string, { position: string; imageKey: string }>
+  activeEffects: EffectType[]
+  characters: Record<string, { position: string; imageKey: string }>
   /** 카메라 위치/줌 상태 */
   cameraState: CameraState
   /** 플리커 상태 (null = 비활성) */
@@ -351,8 +351,8 @@ export class Renderer {
       backgroundKey: this._backgroundKey,
       backgroundParallax: this._backgroundIsParallax,
       activeMoods: activeMoodsArr,
-      activeEffects: new Set(this._activeEffects),
-      characters: new Map(this._characterStates),
+      activeEffects: Array.from(this._activeEffects),
+      characters: Object.fromEntries(this._characterStates),
       cameraState: {
         x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
         y: this._camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
@@ -381,9 +381,11 @@ export class Renderer {
     }
     
     state.activeEffects.forEach(e => this.addEffect(e))
-    state.characters.forEach(({ position, imageKey }, name) => {
-      this.showCharacter(name, position, imageKey)
-    })
+    if (state.characters) {
+      Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
+        this.showCharacter(name, position, imageKey)
+      })
+    }
     // 카메라 위치/줌 즉시 복원
     const cam = this.world.camera
     if (cam && state.cameraState) {

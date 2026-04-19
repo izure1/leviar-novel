@@ -38,33 +38,6 @@ const OBJECTS: Record<string, string> = {
 }
 
 // =============================================================
-// SaveData 직렬화 헬퍼 (Set/Map은 JSON에서 직렬화 불가)
-// =============================================================
-
-function serializeSave(data: SaveData): string {
-  return JSON.stringify({
-    ...data,
-    rendererState: {
-      ...data.rendererState,
-      activeEffects: [...data.rendererState.activeEffects],
-      characters:    Object.fromEntries(data.rendererState.characters),
-    },
-  })
-}
-
-function deserializeSave(json: string): SaveData {
-  const raw = JSON.parse(json)
-  return {
-    ...raw,
-    rendererState: {
-      ...raw.rendererState,
-      activeEffects: new Set<any>(raw.rendererState.activeEffects),
-      characters:    new Map<string, any>(Object.entries(raw.rendererState.characters)),
-    },
-  }
-}
-
-// =============================================================
 // Toast 알림
 // =============================================================
 
@@ -140,7 +113,7 @@ async function main() {
     e.stopPropagation()
     try {
       const data = novel.save()
-      localStorage.setItem('leviar-novel-save', serializeSave(data))
+      localStorage.setItem('leviar-novel-save', JSON.stringify(data))
       showToast('💾 저장 완료!', 'success')
     } catch {
       showToast('⚠ 저장 실패: 대화 씬에서만 가능', 'error')
@@ -156,7 +129,7 @@ async function main() {
       return
     }
     try {
-      const data = deserializeSave(raw)
+      const data = JSON.parse(raw)
       novel.loadSave(data)
       showToast('📂 불러오기 완료!', 'success')
     } catch {

@@ -13140,8 +13140,8 @@ ${addLineNumbers(fragment)}`);
         backgroundKey: this._backgroundKey,
         backgroundParallax: this._backgroundIsParallax,
         activeMoods: activeMoodsArr,
-        activeEffects: new Set(this._activeEffects),
-        characters: new Map(this._characterStates),
+        activeEffects: Array.from(this._activeEffects),
+        characters: Object.fromEntries(this._characterStates),
         cameraState: {
           x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
           y: this._camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
@@ -13165,9 +13165,11 @@ ${addLineNumbers(fragment)}`);
         state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0));
       }
       state.activeEffects.forEach((e) => this.addEffect(e));
-      state.characters.forEach(({ position, imageKey }, name) => {
-        this.showCharacter(name, position, imageKey);
-      });
+      if (state.characters) {
+        Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
+          this.showCharacter(name, position, imageKey);
+        });
+      }
       const cam = this.world.camera;
       if (cam && state.cameraState) {
         if (this._camBaseObj) {
@@ -15304,27 +15306,6 @@ ${addLineNumbers(fragment)}`);
     <text x="55" y="115" text-anchor="middle" fill="#336" font-size="11" font-family="sans-serif">\uD6A8\uACFC \uC52C</text>
   `, 110, 130)
   };
-  function serializeSave(data) {
-    return JSON.stringify({
-      ...data,
-      rendererState: {
-        ...data.rendererState,
-        activeEffects: [...data.rendererState.activeEffects],
-        characters: Object.fromEntries(data.rendererState.characters)
-      }
-    });
-  }
-  function deserializeSave(json) {
-    const raw = JSON.parse(json);
-    return {
-      ...raw,
-      rendererState: {
-        ...raw.rendererState,
-        activeEffects: new Set(raw.rendererState.activeEffects),
-        characters: new Map(Object.entries(raw.rendererState.characters))
-      }
-    };
-  }
   function showToast(msg, type = "success") {
     const el = document.getElementById("toast");
     if (!el) return;
@@ -15374,7 +15355,7 @@ ${addLineNumbers(fragment)}`);
       e.stopPropagation();
       try {
         const data = novel.save();
-        localStorage.setItem("leviar-novel-save", serializeSave(data));
+        localStorage.setItem("leviar-novel-save", JSON.stringify(data));
         showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
       } catch {
         showToast("\u26A0 \uC800\uC7A5 \uC2E4\uD328: \uB300\uD654 \uC52C\uC5D0\uC11C\uB9CC \uAC00\uB2A5", "error");
@@ -15388,7 +15369,7 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       try {
-        const data = deserializeSave(raw);
+        const data = JSON.parse(raw);
         novel.loadSave(data);
         showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
       } catch {
