@@ -215,6 +215,11 @@ export class Renderer {
   private _activeCamZoomTarget: { z: number } | null = null
   private _activeCamEffectStop: (() => void) | null = null
 
+  // ─── 카메라 변환 합성용 ─────────────────────────────────────
+  private _camBaseObj: LeviarObject | null = null
+  private _camOffsetObj: LeviarObject | null = null
+  private _camSyncRafId: number | null = null
+
   // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
   private _lastBackgroundFit: Exclude<BackgroundFitPreset, 'inherit'> = 'stretch'
   private _lastZoomPreset: Exclude<ZoomPreset, 'inherit'> = 'reset'
@@ -235,6 +240,35 @@ export class Renderer {
       this.world.camera = (this.world as any).createCamera()
     }
     this.world.camera!.transform.position.z = 0
+
+    this._initCameraSync()
+  }
+
+  private _initCameraSync(): void {
+    this._camBaseObj = this.world.createRectangle({
+      style: { width: 0, height: 0, opacity: 0, pointerEvents: false } as any,
+      transform: { position: { x: 0, y: 0, z: 0 } }
+    })
+    this._camOffsetObj = this.world.createRectangle({
+      style: { width: 0, height: 0, opacity: 0, pointerEvents: false } as any,
+      transform: { position: { x: 0, y: 0, z: 0 }, rotation: { z: 0 } }
+    })
+    // Dummy 객체도 틱 업데이트를 받도록 카메라에 추가
+    this.world.camera?.addChild(this._camBaseObj as any)
+    this.world.camera?.addChild(this._camOffsetObj as any)
+
+    const syncLoop = () => {
+      if (this.world.camera && this._camBaseObj && this._camOffsetObj) {
+        this.world.camera.transform.position.x = this._camBaseObj.transform.position.x + this._camOffsetObj.transform.position.x
+        this.world.camera.transform.position.y = this._camBaseObj.transform.position.y + this._camOffsetObj.transform.position.y
+        this.world.camera.transform.position.z = this._camBaseObj.transform.position.z + this._camOffsetObj.transform.position.z
+        if (this.world.camera.transform.rotation && this._camOffsetObj.transform.rotation) {
+          this.world.camera.transform.rotation.z = this._camOffsetObj.transform.rotation.z
+        }
+      }
+      this._camSyncRafId = requestAnimationFrame(syncLoop)
+    }
+    this._camSyncRafId = requestAnimationFrame(syncLoop)
   }
 
   // ─── 스킵 모드 ──────────────────────────────────────────────
@@ -330,9 +364,9 @@ export class Renderer {
       activeLights: new Set(this._activeLights),
       characters: new Map(this._characterStates),
       cameraState: {
-        x: cam?.transform.position.x ?? 0,
-        y: cam?.transform.position.y ?? 0,
-        z: cam?.transform.position.z ?? 0,
+        x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
+        y: this._camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
+        z: this._camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0,
       },
       flicker: this._flickerState ? { ...this._flickerState } : null,
     }
@@ -353,6 +387,17 @@ export class Renderer {
     // 카메라 위치/줌 즉시 복원
     const cam = this.world.camera
     if (cam && state.cameraState) {
+      if (this._camBaseObj) {
+        this._camBaseObj.transform.position.x = state.cameraState.x
+        this._camBaseObj.transform.position.y = state.cameraState.y
+        this._camBaseObj.transform.position.z = state.cameraState.z
+      }
+      if (this._camOffsetObj) {
+        this._camOffsetObj.transform.position.x = 0
+        this._camOffsetObj.transform.position.y = 0
+        this._camOffsetObj.transform.position.z = 0
+        if (this._camOffsetObj.transform.rotation) this._camOffsetObj.transform.rotation.z = 0
+      }
       cam.transform.position.x = state.cameraState.x
       cam.transform.position.y = state.cameraState.y
       cam.transform.position.z = state.cameraState.z
@@ -382,6 +427,12 @@ export class Renderer {
     this._lightObjs.clear()
     this._flickerObj = null
     this._flickerState = null
+    if (this._camOffsetObj) {
+      this._camOffsetObj.transform.position.x = 0
+      this._camOffsetObj.transform.position.y = 0
+      this._camOffsetObj.transform.position.z = 0
+      if (this._camOffsetObj.transform.rotation) this._camOffsetObj.transform.rotation.z = 0
+    }
   }
 
   // ─── 배경 ───────────────────────────────────────────────────
@@ -800,14 +851,14 @@ export class Renderer {
 
   zoomCamera(preset: ZoomPreset = 'inherit', duration?: number, overrideScale?: number): void {
     const cam = this.world.camera
-    if (!cam) return
+    if (!cam || !this._camBaseObj) return
 
     // 기존 zoom anim 중단 → 목표값으로 즉시 snap
     if (this._activeCamZoomAnim) {
       this._activeCamZoomAnim.stop()
       this._activeCamZoomAnim = null
       if (this._activeCamZoomTarget) {
-        cam.transform.position.z = this._activeCamZoomTarget.z
+        this._camBaseObj.transform.position.z = this._activeCamZoomTarget.z
         this._activeCamZoomTarget = null
       }
     }
@@ -821,7 +872,7 @@ export class Renderer {
     const newZ = baseDist - (baseDist / finalScale)
 
     this._activeCamZoomTarget = { z: newZ }
-    this._activeCamZoomAnim = this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, 'easeInOutQuad')
+    this._activeCamZoomAnim = this._animate(this._camBaseObj, { transform: { position: { z: newZ } } }, finalDur, 'easeInOutQuad')
     this._activeCamZoomAnim?.on('end', () => {
       this._activeCamZoomAnim = null
       this._activeCamZoomTarget = null
@@ -848,7 +899,7 @@ export class Renderer {
 
   panCamera(preset: PanPreset | 'custom', duration?: number, customX?: number, customY?: number): void {
     const cam = this.world.camera
-    if (!cam) return
+    if (!cam || !this._camBaseObj) return
 
     // 'inherit' → 현재 카메라 위치 유지 (no-op)
     if (preset === 'inherit') return
@@ -858,8 +909,8 @@ export class Renderer {
       this._activeCamPanAnim.stop()
       this._activeCamPanAnim = null
       if (this._activeCamPanTarget) {
-        cam.transform.position.x = this._activeCamPanTarget.x
-        cam.transform.position.y = this._activeCamPanTarget.y
+        this._camBaseObj.transform.position.x = this._activeCamPanTarget.x
+        this._camBaseObj.transform.position.y = this._activeCamPanTarget.y
         this._activeCamPanTarget = null
       }
     }
@@ -874,7 +925,7 @@ export class Renderer {
     }
 
     this._activeCamPanTarget = { x, y }
-    this._activeCamPanAnim = this._animate(cam, { transform: { position: { x, y } } }, dur, 'easeInOutQuad')
+    this._activeCamPanAnim = this._animate(this._camBaseObj, { transform: { position: { x, y } } }, dur, 'easeInOutQuad')
     this._activeCamPanAnim?.on('end', () => {
       this._activeCamPanAnim = null
       this._activeCamPanTarget = null
@@ -885,25 +936,27 @@ export class Renderer {
     // 스킵 중에는 원래 위치로 즉시 복원
     if (this._isSkipping) return
     const cam = this.world.camera
-    if (!cam) return
+    if (!cam || !this._camOffsetObj) return
 
     if (this._activeCamEffectStop) {
       this._activeCamEffectStop()
       this._activeCamEffectStop = null
     }
 
-    if (preset === 'reset') return
+    if (preset === 'reset') {
+      this._camOffsetObj.animate({ transform: { position: { x: 0, y: 0 }, rotation: { z: 0 } } } as any, 100, 'easeOut')
+      return
+    }
 
     const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset as Exclude<CameraEffectPreset, 'reset'>]
     const fi = intensity ?? pi
     const fd = duration ?? pd
-    const bx = cam.transform.position.x
-    const by = cam.transform.position.y
+    const offsetObj = this._camOffsetObj
 
     let stopped = false
     this._activeCamEffectStop = () => {
       stopped = true
-      cam.animate({ transform: { position: { x: bx, y: by }, rotation: { z: 0 } } } as any, 100, 'easeOut')
+      offsetObj.animate({ transform: { position: { x: 0, y: 0 }, rotation: { z: 0 } } } as any, 100, 'easeOut')
     }
 
     let remainingRepeat = repeat
@@ -918,10 +971,10 @@ export class Renderer {
             i = 0; run(); return
           }
           this._activeCamEffectStop = null
-          cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut')
+          offsetObj.animate({ transform: { position: { x: 0, y: 0 } } } as any, 100, 'easeOut')
           return
         }
-        cam.animate({ transform: { position: { x: bx + (Math.random() - 0.5) * fi * 2, y: by + (Math.random() - 0.5) * fi * 2 } } } as any, 50, 'linear').on('end', run)
+        offsetObj.animate({ transform: { position: { x: (Math.random() - 0.5) * fi * 2, y: (Math.random() - 0.5) * fi * 2 } } } as any, 50, 'linear').on('end', run)
         i++
       }
       run()
@@ -934,10 +987,10 @@ export class Renderer {
             i = 0; run(); return
           }
           this._activeCamEffectStop = null
-          cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut')
+          offsetObj.animate({ transform: { position: { y: 0 } } } as any, 100, 'easeOut')
           return
         }
-        cam.animate({ transform: { position: { y: by + (i % 2 === 0 ? fi : 0) } } } as any, 100, 'easeInOutQuad').on('end', run)
+        offsetObj.animate({ transform: { position: { y: (i % 2 === 0 ? fi : 0) } } } as any, 100, 'easeInOutQuad').on('end', run)
         i++
       }
       run()
@@ -950,11 +1003,11 @@ export class Renderer {
             i = 0; run(); return
           }
           this._activeCamEffectStop = null
-          cam.animate({ transform: { position: { x: bx, y: by } } } as any, 100, 'easeOut')
+          offsetObj.animate({ transform: { position: { x: 0, y: 0 } } } as any, 100, 'easeOut')
           return
         }
         const t = (i / steps) * Math.PI * 4
-        cam.animate({ transform: { position: { x: bx + Math.sin(t) * fi, y: by + Math.cos(t) * fi * 0.5 } } } as any, 50, 'linear').on('end', run)
+        offsetObj.animate({ transform: { position: { x: Math.sin(t) * fi, y: Math.cos(t) * fi * 0.5 } } } as any, 50, 'linear').on('end', run)
         i++
       }
       run()
@@ -967,10 +1020,10 @@ export class Renderer {
             i = 0; run(); return
           }
           this._activeCamEffectStop = null
-          cam.animate({ transform: { position: { y: by } } } as any, 100, 'easeOut')
+          offsetObj.animate({ transform: { position: { y: 0 } } } as any, 100, 'easeOut')
           return
         }
-        cam.animate({ transform: { position: { y: by + (i % 2 === 0 ? -fi : 0) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
+        offsetObj.animate({ transform: { position: { y: (i % 2 === 0 ? -fi : 0) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
         i++
       }
       run()
@@ -983,22 +1036,22 @@ export class Renderer {
             i = 0; run(); return
           }
           this._activeCamEffectStop = null
-          cam.animate({ transform: { position: { x: bx } } } as any, 100, 'easeOut')
+          offsetObj.animate({ transform: { position: { x: 0 } } } as any, 100, 'easeOut')
           return
         }
-        cam.animate({ transform: { position: { x: bx + (i % 2 === 0 ? fi : -fi) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
+        offsetObj.animate({ transform: { position: { x: (i % 2 === 0 ? fi : -fi) } } } as any, fd / steps, 'easeInOutQuad').on('end', run)
         i++
       }
       run()
     } else if (preset === 'fall') {
       const run = () => {
         if (stopped) return
-        cam.animate({ transform: { position: { y: by - fi * 3 }, rotation: { z: fi } } } as any, fd * 0.6, 'easeOutElastic')
+        offsetObj.animate({ transform: { position: { y: -fi * 3 }, rotation: { z: fi } } } as any, fd * 0.6, 'easeOutElastic')
           .on('end', () => {
             if (stopped) return
             setTimeout(() => {
               if (stopped) return
-              cam.animate({ transform: { position: { y: by }, rotation: { z: 0 } } } as any, fd * 0.4, 'easeInOutQuad')
+              offsetObj.animate({ transform: { position: { y: 0 }, rotation: { z: 0 } } } as any, fd * 0.4, 'easeInOutQuad')
                 .on('end', () => {
                   if (stopped) return
                   if (remainingRepeat < 0 || --remainingRepeat > 0) {
