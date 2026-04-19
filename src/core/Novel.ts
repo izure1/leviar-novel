@@ -86,6 +86,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _inputMode:       InputMode              = 'none'
   private _inputBound:      (() => void) | null    = null
   private _isSkipping:      boolean               = false
+  /** 텍스트 타이핑(transition) 진행 중 여부 */
+  private _isTextTyping:    boolean               = false
+  /** 현재 출력 중인 전체 대사 텍스트 (즉시 완성에 사용) */
+  private _currentTypingText: string              = ''
+  /** 현재 실행 중인 TextTransition 객체 */
+  private _activeTextTransition: any              = null
 
   /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
   private _dialogueBgObj:   any = null
@@ -332,8 +338,31 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _handleInput(): void {
     if (this._inputMode !== 'dialogue') return
     if (!this._currentScene || this._currentScene.isEnded) return
+
+    // 타이핑 중이면 즉시 완성 (advance 하지 않음)
+    if (this._isTextTyping) {
+      this._completeTyping()
+      return
+    }
+
     this._currentScene.advance()
     this._syncUIState()
+  }
+
+  /** transition 중단 후 현재 전체 텍스트를 즉시 표시합니다 */
+  private _completeTyping(): void {
+    this._isTextTyping = false
+    if (!this._dialogueTextObj) return
+    
+    // transition 객체의 stop 호출
+    if (this._activeTextTransition && typeof this._activeTextTransition.stop === 'function') {
+      this._activeTextTransition.stop()
+      this._activeTextTransition = null
+    }
+
+    // 전체 텍스트를 직접 지정
+    ; (this._dialogueTextObj as any).attribute.text = this._currentTypingText
+    ; (this._dialogueTextObj as any).style.opacity  = 1
   }
 
   private _syncUIState(): void {
@@ -462,18 +491,34 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       ; (this._dialogueBgObj as any).style.opacity = 1
     }
 
-    // ── 이름창: 항상 즉시 교체 (transition 없음, 요구사항 1)
+    // ── 이름창: 항상 즉시 교체 (transition 없음)
     ; (this._speakerTextObj as any).attribute.text = speaker ?? ''
     ; (this._speakerTextObj as any).style.opacity  = speaker ? 1 : 0
 
-    // ── 대사 텍스트: 스킵 중 즉시, 아니면 transition(300ms)
+    // ── 대사 텍스트: 스킵 중 즉시, 아니면 transition(타이핑 효과)
     if (skipping) {
+      this._isTextTyping = false
+      this._currentTypingText = text
+      if (this._activeTextTransition) {
+        this._activeTextTransition.stop?.()
+        this._activeTextTransition = null
+      }
       ; (this._dialogueTextObj as any).attribute.text = text
       ; (this._dialogueTextObj as any).style.opacity  = 1
     } else {
       const spd = speed ?? 30
-      ; (this._dialogueTextObj as any).transition(text, spd)
+      this._isTextTyping = true
+      this._currentTypingText = text
+      const anim = (this._dialogueTextObj as any).transition(text, spd)
+      this._activeTextTransition = anim
       ; (this._dialogueTextObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
+      // transition 완료 시 타이핑 플래그 해제
+      if (anim && typeof anim.on === 'function') {
+        anim.on('end', () => { 
+          this._isTextTyping = false 
+          this._activeTextTransition = null
+        })
+      }
     }
 
     if (this._choicesEl) {

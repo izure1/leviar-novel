@@ -15,7 +15,7 @@ export default defineNovelConfig({
     'explore-map',
   ] as const,
   characters: {
-    heroine: {
+    '아리시에로': {
       normal: {
         src: 'girl_normal',
         width: 350,

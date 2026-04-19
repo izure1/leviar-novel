@@ -8421,6 +8421,8 @@ ${addLineNumbers(fragment)}`);
   }
   var BaseTransition = class extends EventEmitter {
     _anim = null;
+    _onUpdate = null;
+    _onComplete = null;
     target;
     constructor(target) {
       super();
@@ -8428,6 +8430,8 @@ ${addLineNumbers(fragment)}`);
     }
     _startTransition(durationMs, easing, onUpdate, onComplete) {
       if (this._anim) this._anim.stop();
+      this._onUpdate = onUpdate;
+      this._onComplete = onComplete;
       this.emit("start");
       this._anim = new Animation({ progress: 1 });
       this._anim.start((state) => {
@@ -8436,6 +8440,8 @@ ${addLineNumbers(fragment)}`);
       }, durationMs, easing || "linear");
       this._anim.on("end", () => {
         this._anim = null;
+        this._onUpdate = null;
+        this._onComplete = null;
         onComplete();
         this.emit("end");
       });
@@ -8444,7 +8450,13 @@ ${addLineNumbers(fragment)}`);
       if (this._anim) {
         this._anim.stop();
         this._anim = null;
-        this.emit("stop");
+        const onUpdate = this._onUpdate;
+        const onComplete = this._onComplete;
+        this._onUpdate = null;
+        this._onComplete = null;
+        onUpdate?.(1);
+        onComplete?.();
+        this.emit("end");
       }
       return this;
     }
@@ -14230,6 +14242,12 @@ ${addLineNumbers(fragment)}`);
     _inputMode = "none";
     _inputBound = null;
     _isSkipping = false;
+    /** 텍스트 타이핑(transition) 진행 중 여부 */
+    _isTextTyping = false;
+    /** 현재 출력 중인 전체 대사 텍스트 (즉시 완성에 사용) */
+    _currentTypingText = "";
+    /** 현재 실행 중인 TextTransition 객체 */
+    _activeTextTransition = null;
     /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
     _dialogueBgObj = null;
     /** 화자 이름창 (Leviar Text, 카메라 자식) */
@@ -14422,8 +14440,24 @@ ${addLineNumbers(fragment)}`);
     _handleInput() {
       if (this._inputMode !== "dialogue") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
+      if (this._isTextTyping) {
+        this._completeTyping();
+        return;
+      }
       this._currentScene.advance();
       this._syncUIState();
+    }
+    /** transition 중단 후 현재 전체 텍스트를 즉시 표시합니다 */
+    _completeTyping() {
+      this._isTextTyping = false;
+      if (!this._dialogueTextObj) return;
+      if (this._activeTextTransition && typeof this._activeTextTransition.stop === "function") {
+        this._activeTextTransition.stop();
+        this._activeTextTransition = null;
+      }
+      ;
+      this._dialogueTextObj.attribute.text = this._currentTypingText;
+      this._dialogueTextObj.style.opacity = 1;
     }
     _syncUIState() {
       if (!this._currentScene || this._currentScene.isEnded) {
@@ -14540,13 +14574,28 @@ ${addLineNumbers(fragment)}`);
       this._speakerTextObj.attribute.text = speaker ?? "";
       this._speakerTextObj.style.opacity = speaker ? 1 : 0;
       if (skipping) {
+        this._isTextTyping = false;
+        this._currentTypingText = text;
+        if (this._activeTextTransition) {
+          this._activeTextTransition.stop?.();
+          this._activeTextTransition = null;
+        }
         ;
         this._dialogueTextObj.attribute.text = text;
         this._dialogueTextObj.style.opacity = 1;
       } else {
         const spd = speed ?? 30;
-        this._dialogueTextObj.transition(text, spd);
+        this._isTextTyping = true;
+        this._currentTypingText = text;
+        const anim = this._dialogueTextObj.transition(text, spd);
+        this._activeTextTransition = anim;
         this._dialogueTextObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
+        if (anim && typeof anim.on === "function") {
+          anim.on("end", () => {
+            this._isTextTyping = false;
+            this._activeTextTransition = null;
+          });
+        }
       }
       if (this._choicesEl) {
         this._choicesEl.style.display = "none";
@@ -14626,7 +14675,7 @@ ${addLineNumbers(fragment)}`);
       "explore-map"
     ],
     characters: {
-      heroine: {
+      "\uC544\uB9AC\uC2DC\uC5D0\uB85C": {
         normal: {
           src: "girl_normal",
           width: 350,
@@ -14692,97 +14741,187 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "day", intensity: 0.3, duration: 0 },
     { type: "effect", action: "add", effect: "dust", rate: 15, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 3e3 },
-    { type: "dialogue", text: "\uC624\uB798\uB41C \uC885\uC774 \uB0C4\uC0C8\uB294 \uC5B8\uC81C\uB098 \uB9C8\uC74C\uC744 \uCC28\uBD84\uD558\uAC8C \uB9CC\uB4E0\uB2E4." },
-    { type: "dialogue", text: "\uB0A1\uC740 \uAC00\uC8FD \uD45C\uC9C0\uAC00 \uD48D\uAE30\uB294 \uCFF0\uCFF0\uD55C \uD5A5\uAE30, \uADF8\uB9AC\uACE0 \uC815\uC801." },
-    { type: "dialogue", text: "\uD559\uAD50 \uB3C4\uC11C\uAD00\uC758 \uAC00\uC7A5 \uAE4A\uC219\uD55C \uACF3\uC740 \uB098\uC758 \uC720\uC77C\uD55C \uC548\uC2DD\uCC98\uC600\uB2E4." },
-    { type: "dialogue", text: "\uC0AC\uB78C\uB4E4\uC758 \uBC1C\uAE38\uC774 \uB2FF\uC9C0 \uC54A\uB294 \uC11C\uAC00 \uAD6C\uC11D\uC5D0\uB294 \uC2DC\uAC04\uC774 \uB290\uB9AC\uAC8C \uD750\uB978\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uC2B5\uAD00\uCC98\uB7FC \uC190\uAC00\uB77D\uC744 \uCC45\uB4F1 \uC704\uC5D0 \uC62C\uB9AC\uACE0 \uCC9C\uCC9C\uD788 \uD6D1\uC5B4 \uB0B4\uB824\uAC14\uB2E4." },
-    { type: "dialogue", text: "\uAC70\uCE60\uAC70\uCE60\uD55C \uC9C8\uAC10\uC774 \uC190\uB05D\uBC14\uB2E5\uC744 \uD0C0\uACE0 \uC804\uD574\uC838 \uC628\uB2E4." },
-    { type: "dialogue", text: "\uC624\uB298\uB530\uB77C \uD587\uC0B4\uC774 \uC720\uB09C\uD788\uB3C4 \uAE4A\uC219\uC774 \uC11C\uAC00 \uC0AC\uC774\uB85C \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uACF5\uC911\uC5D0 \uB5A0\uB2E4\uB2C8\uB294 \uBA3C\uC9C0 \uC785\uC790\uB4E4\uC774 \uBE5B\uC744 \uBC1B\uC544 \uBCF4\uC11D\uCC98\uB7FC \uBC18\uC9DD\uC600\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uADF8 \uC870\uC6A9\uD55C \uCDA4\uC0AC\uC704\uB97C \uBA4D\uD558\uB2C8 \uBC14\uB77C\uBCF4\uC558\uB2E4." },
-    { type: "dialogue", text: "\uC544\uBB34\uB3C4 \uC5C6\uB294 \uB3C4\uC11C\uAD00. \uC624\uC9C1 \uB098\uB9CC\uC774 \uC774 \uC138\uACC4\uC758 \uC720\uC77C\uD55C \uAD00\uCC30\uC790\uC600\uB2E4." },
-    { type: "dialogue", text: "\uD558\uC9C0\uB9CC... \uADF8 \uC0DD\uAC01\uC740 \uACE7 \uAE68\uC9C0\uACE0 \uB9D0\uC558\uB2E4." },
+    {
+      type: "dialogue",
+      text: [
+        "\uC624\uB798\uB41C \uC885\uC774 \uB0C4\uC0C8\uB294 \uC5B8\uC81C\uB098 \uB9C8\uC74C\uC744 \uCC28\uBD84\uD558\uAC8C \uB9CC\uB4E0\uB2E4.",
+        "\uB0A1\uC740 \uAC00\uC8FD \uD45C\uC9C0\uAC00 \uD48D\uAE30\uB294 \uCFF0\uCFF0\uD55C \uD5A5\uAE30, \uADF8\uB9AC\uACE0 \uC815\uC801.",
+        "\uD559\uAD50 \uB3C4\uC11C\uAD00\uC758 \uAC00\uC7A5 \uAE4A\uC219\uD55C \uACF3\uC740 \uB098\uC758 \uC720\uC77C\uD55C \uC548\uC2DD\uCC98\uC600\uB2E4.",
+        "\uC0AC\uB78C\uB4E4\uC758 \uBC1C\uAE38\uC774 \uB2FF\uC9C0 \uC54A\uB294 \uC11C\uAC00 \uAD6C\uC11D\uC5D0\uB294 \uC2DC\uAC04\uC774 \uB290\uB9AC\uAC8C \uD750\uB978\uB2E4.",
+        "\uB098\uB294 \uC2B5\uAD00\uCC98\uB7FC \uC190\uAC00\uB77D\uC744 \uCC45\uB4F1 \uC704\uC5D0 \uC62C\uB9AC\uACE0 \uCC9C\uCC9C\uD788 \uD6D1\uC5B4 \uB0B4\uB824\uAC14\uB2E4.",
+        "\uAC70\uCE60\uAC70\uCE60\uD55C \uC9C8\uAC10\uC774 \uC190\uB05D\uBC14\uB2E5\uC744 \uD0C0\uACE0 \uC804\uD574\uC838 \uC628\uB2E4.",
+        "\uC624\uB298\uB530\uB77C \uD587\uC0B4\uC774 \uC720\uB09C\uD788\uB3C4 \uAE4A\uC219\uC774 \uC11C\uAC00 \uC0AC\uC774\uB85C \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5C8\uB2E4.",
+        "\uACF5\uC911\uC5D0 \uB5A0\uB2E4\uB2C8\uB294 \uBA3C\uC9C0 \uC785\uC790\uB4E4\uC774 \uBE5B\uC744 \uBC1B\uC544 \uBCF4\uC11D\uCC98\uB7FC \uBC18\uC9DD\uC600\uB2E4.",
+        "\uB098\uB294 \uADF8 \uC870\uC6A9\uD55C \uCDA4\uC0AC\uC704\uB97C \uBA4D\uD558\uB2C8 \uBC14\uB77C\uBCF4\uC558\uB2E4.",
+        "\uC544\uBB34\uB3C4 \uC5C6\uB294 \uB3C4\uC11C\uAD00. \uC624\uC9C1 \uB098\uB9CC\uC774 \uC774 \uC138\uACC4\uC758 \uC720\uC77C\uD55C \uAD00\uCC30\uC790\uC600\uB2E4.",
+        "\uD558\uC9C0\uB9CC... \uADF8 \uC0DD\uAC01\uC740 \uACE7 \uAE68\uC9C0\uACE0 \uB9D0\uC558\uB2E4."
+      ]
+    },
     // ─── 2. 예기치 못한 조우 ───
     { type: "camera-pan", preset: "right", duration: 2500 },
     { type: "dialogue", text: "\uC11C\uAC00 \uB108\uBA38, \uCC3D\uAC00 \uC790\uB9AC\uC5D0 \uB204\uAD70\uAC00 \uC549\uC544 \uC788\uC5C8\uB2E4." },
-    { type: "character", action: "show", name: "heroine", position: "center", image: "normal", duration: 1500 },
-    { type: "dialogue", text: "\uD558\uC580 \uC154\uCE20 \uC704\uB85C \uC3DF\uC544\uC9C0\uB294 \uB178\uB780 \uD587\uC0B4." },
-    { type: "dialogue", text: "\uADF8\uB140\uB294 \uB9C8\uCE58 \uADF8\uB9BC \uC18D\uC5D0\uC11C \uB9C9 \uAC78\uC5B4 \uB098\uC628 \uAC83\uB9CC \uAC19\uC740 \uBE44\uD604\uC2E4\uC801\uC778 \uBD84\uC704\uAE30\uB97C \uD48D\uACBC\uB2E4." },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500 },
+    {
+      type: "dialogue",
+      text: [
+        "\uD558\uC580 \uC154\uCE20 \uC704\uB85C \uC3DF\uC544\uC9C0\uB294 \uB178\uB780 \uD587\uC0B4.",
+        "\uADF8\uB140\uB294 \uB9C8\uCE58 \uADF8\uB9BC \uC18D\uC5D0\uC11C \uB9C9 \uAC78\uC5B4 \uB098\uC628 \uAC83\uB9CC \uAC19\uC740 \uBE44\uD604\uC2E4\uC801\uC778 \uBD84\uC704\uAE30\uB97C \uD48D\uACBC\uB2E4."
+      ]
+    },
     { type: "camera-zoom", preset: "close-up", duration: 1200 },
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uB4E4\uACE0 \uC788\uB294 \uCC45\uC758 \uC81C\uBAA9\uC744 \uD655\uC778\uD558\uB824 \uB208\uC744 \uAC00\uB298\uAC8C \uB5B4\uB2E4." },
-    { type: "dialogue", text: "\uADF8\uAC83\uC740 \uB0B4\uAC00 \uC9C0\uB09C\uC8FC\uBD80\uD130 \uCC3E\uACE0 \uC788\uC5C8\uB358 \uC808\uD310\uB41C \uC18C\uC124\uC774\uC5C8\uB2E4." },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uAC00 \uB4E4\uACE0 \uC788\uB294 \uCC45\uC758 \uC81C\uBAA9\uC744 \uD655\uC778\uD558\uB824 \uB208\uC744 \uAC00\uB298\uAC8C \uB5B4\uB2E4.",
+        "\uADF8\uAC83\uC740 \uB0B4\uAC00 \uC9C0\uB09C\uC8FC\uBD80\uD130 \uCC3E\uACE0 \uC788\uC5C8\uB358 \uC808\uD310\uB41C \uC18C\uC124\uC774\uC5C8\uB2E4."
+      ]
+    },
     { type: "camera-zoom", preset: "reset", duration: 1e3 },
-    { type: "dialogue", speaker: "heroine", text: "......" },
-    { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC45\uC7A5\uC5D0 \uC2DC\uC120\uC744 \uACE0\uC815\uD55C \uCC44 \uBBF8\uB3D9\uB3C4 \uD558\uC9C0 \uC54A\uC558\uB2E4." },
-    { type: "dialogue", text: "\uD398\uC774\uC9C0\uB97C \uB118\uAE30\uB294 \uC18C\uB9AC\uB9CC\uC774 \uC544\uC8FC \uAC00\uB054 \uC815\uC801\uC744 \uAE7C\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uC228\uC744 \uC8FD\uC774\uACE0 \uADF8\uB140\uC758 \uC606\uBAA8\uC2B5\uC744 \uAD00\uCC30\uD588\uB2E4." },
-    { type: "dialogue", text: "\uC18D\uB208\uC379\uC774 \uD587\uBE5B\uC5D0 \uBC18\uC0AC\uB418\uC5B4 \uAC00\uB290\uB2E4\uB780 \uADF8\uB9BC\uC790\uB97C \uB9CC\uB4E4\uACE0 \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uBB34\uC5B8\uAC00 \uB9D0\uC744 \uAC78\uC5B4\uC57C \uD560\uAE4C? \uC544\uB2C8\uBA74 \uC870\uC6A9\uD788 \uC790\uB9AC\uB97C \uBE44\uCF1C\uC918\uC57C \uD560\uAE4C?" },
-    { type: "dialogue", text: "\uAC08\uB4F1\uD558\uB294 \uC0AC\uC774, \uADF8\uB140\uC758 \uC190\uAC00\uB77D\uC774 \uBA48\uCDC4\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uC0AC\uB791\uC740 \uB9D0\uC774\uC57C, \uACB0\uAD6D \uC0C1\uC2E4\uC744 \uACAC\uB514\uAE30 \uC704\uD55C \uC5F0\uC2B5\uC77C\uC9C0\uB3C4 \uBAB0\uB77C." },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "......" },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uB294 \uCC45\uC7A5\uC5D0 \uC2DC\uC120\uC744 \uACE0\uC815\uD55C \uCC44 \uBBF8\uB3D9\uB3C4 \uD558\uC9C0 \uC54A\uC558\uB2E4.",
+        "\uD398\uC774\uC9C0\uB97C \uB118\uAE30\uB294 \uC18C\uB9AC\uB9CC\uC774 \uC544\uC8FC \uAC00\uB054 \uC815\uC801\uC744 \uAE7C\uB2E4.",
+        "\uB098\uB294 \uC228\uC744 \uC8FD\uC774\uACE0 \uADF8\uB140\uC758 \uC606\uBAA8\uC2B5\uC744 \uAD00\uCC30\uD588\uB2E4.",
+        "\uC18D\uB208\uC379\uC774 \uD587\uBE5B\uC5D0 \uBC18\uC0AC\uB418\uC5B4 \uAC00\uB290\uB2E4\uB780 \uADF8\uB9BC\uC790\uB97C \uB9CC\uB4E4\uACE0 \uC788\uC5C8\uB2E4.",
+        "\uBB34\uC5B8\uAC00 \uB9D0\uC744 \uAC78\uC5B4\uC57C \uD560\uAE4C? \uC544\uB2C8\uBA74 \uC870\uC6A9\uD788 \uC790\uB9AC\uB97C \uBE44\uCF1C\uC918\uC57C \uD560\uAE4C?",
+        "\uAC08\uB4F1\uD558\uB294 \uC0AC\uC774, \uADF8\uB140\uC758 \uC190\uAC00\uB77D\uC774 \uBA48\uCDC4\uB2E4."
+      ]
+    },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC0AC\uB791\uC740 \uB9D0\uC774\uC57C, \uACB0\uAD6D \uC0C1\uC2E4\uC744 \uACAC\uB514\uAE30 \uC704\uD55C \uC5F0\uC2B5\uC77C\uC9C0\uB3C4 \uBAB0\uB77C." },
     { type: "dialogue", text: "\uADF8\uB140\uAC00 \uD63C\uC7A3\uB9D0\uCC98\uB7FC \uC911\uC5BC\uAC70\uB838\uB2E4. \uB0AE\uC740 \uBAA9\uC18C\uB9AC\uAC00 \uACF5\uAE30\uB97C \uC9C4\uB3D9\uC2DC\uCF30\uB2E4." },
     { type: "camera-effect", preset: "shake", duration: 400 },
     { type: "dialogue", text: "\uB098\uB294 \uB098\uB3C4 \uBAA8\uB974\uAC8C \uD5C9 \uD558\uACE0 \uC228\uC744 \uB4E4\uC774\uCF30\uB2E4." },
-    { type: "character", action: "show", name: "heroine", image: "smile", duration: 800 },
-    { type: "dialogue", speaker: "heroine", text: "\uC544... \uBCF4\uACE0 \uACC4\uC168\uB098\uC694?" },
-    { type: "dialogue", speaker: "heroine", text: "\uC778\uAE30\uCC99\uC774 \uB290\uAEF4\uC84C\uB294\uB370, \uC5ED\uC2DC \uB204\uAD70\uAC00 \uC788\uC5C8\uAD70\uC694." },
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uACE0\uAC1C\uB97C \uB3CC\uB824 \uB098\uB97C \uC815\uBA74\uC73C\uB85C \uBC14\uB77C\uBCF4\uC558\uB2E4." },
-    { type: "dialogue", text: "\uB208\uC774 \uB9C8\uC8FC\uCE5C \uC21C\uAC04, \uC2EC\uC7A5 \uBC15\uB3D9\uC774 \uD3C9\uC18C\uBCF4\uB2E4 \uB450 \uBC30\uB294 \uBE68\uB77C\uC9C4 \uAC83 \uAC19\uC558\uB2E4." },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      text: [
+        "\uC544... \uBCF4\uACE0 \uACC4\uC168\uB098\uC694?",
+        "\uC778\uAE30\uCC99\uC774 \uB290\uAEF4\uC84C\uB294\uB370, \uC5ED\uC2DC \uB204\uAD70\uAC00 \uC788\uC5C8\uAD70\uC694."
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uAC00 \uACE0\uAC1C\uB97C \uB3CC\uB824 \uB098\uB97C \uC815\uBA74\uC73C\uB85C \uBC14\uB77C\uBCF4\uC558\uB2E4.",
+        "\uB208\uC774 \uB9C8\uC8FC\uCE5C \uC21C\uAC04, \uC2EC\uC7A5 \uBC15\uB3D9\uC774 \uD3C9\uC18C\uBCF4\uB2E4 \uB450 \uBC30\uB294 \uBE68\uB77C\uC9C4 \uAC83 \uAC19\uC558\uB2E4."
+      ]
+    },
     // ─── 3. 긴 철학적 대화 ───
-    { type: "dialogue", speaker: "heroine", text: "\uC774 \uCC45, \uB2F9\uC2E0\uB3C4 \uCC3E\uACE0 \uC788\uC5C8\uC8E0?" },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC774 \uCC45, \uB2F9\uC2E0\uB3C4 \uCC3E\uACE0 \uC788\uC5C8\uC8E0?" },
     { type: "dialogue", text: "\uB098\uB294 \uB2F9\uD669\uD558\uBA70 \uACE0\uAC1C\uB97C \uB044\uB355\uC600\uB2E4. \uC5B4\uB5BB\uAC8C \uC54C\uC558\uB290\uB0D0\uACE0 \uBB3C\uC5C8\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uB208\uBE5B\uC744 \uBCF4\uBA74 \uC54C \uC218 \uC788\uC5B4\uC694. \uAC08\uAD6C\uD558\uB294 \uBB34\uC5B8\uAC00\uAC00 \uB2F4\uAE34 \uB208\uBE5B." },
-    { type: "dialogue", speaker: "heroine", text: "\uC804 \uC774 \uCC45\uC744 \uBC8C\uC368 \uC138 \uBC88\uC9F8 \uC77D\uACE0 \uC788\uC5B4\uC694." },
-    { type: "dialogue", speaker: "heroine", text: "\uC77D\uC744 \uB54C\uB9C8\uB2E4 \uC0C8\uB85C\uC6B4 \uC758\uBBF8\uAC00 \uBC1C\uACAC\uB418\uAC70\uB4E0\uC694." },
-    { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC45\uC7A5\uC744 \uB36E\uACE0 \uB098\uC5D0\uAC8C \uC758\uC790 \uD558\uB098\uB97C \uAC00\uB9AC\uCF30\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uC774\uB04C\uB9AC\uB4EF \uADF8\uB140\uC758 \uB9DE\uC740\uD3B8 \uC790\uB9AC\uC5D0 \uC549\uC558\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uB2F9\uC2E0\uC740 \uC774 \uC18C\uC124\uC758 \uACB0\uB9D0\uC774 \uD574\uD53C\uC5D4\uB529\uC774\uB77C\uACE0 \uC0DD\uAC01\uD558\uB098\uC694?" },
+    {
+      type: "dialogue",
+      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      text: [
+        "\uB208\uBE5B\uC744 \uBCF4\uBA74 \uC54C \uC218 \uC788\uC5B4\uC694. \uAC08\uAD6C\uD558\uB294 \uBB34\uC5B8\uAC00\uAC00 \uB2F4\uAE34 \uB208\uBE5B.",
+        "\uC804 \uC774 \uCC45\uC744 \uBC8C\uC368 \uC138 \uBC88\uC9F8 \uC77D\uACE0 \uC788\uC5B4\uC694.",
+        "\uC77D\uC744 \uB54C\uB9C8\uB2E4 \uC0C8\uB85C\uC6B4 \uC758\uBBF8\uAC00 \uBC1C\uACAC\uB418\uAC70\uB4E0\uC694."
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uB294 \uCC45\uC7A5\uC744 \uB36E\uACE0 \uB098\uC5D0\uAC8C \uC758\uC790 \uD558\uB098\uB97C \uAC00\uB9AC\uCF30\uB2E4.",
+        "\uB098\uB294 \uC774\uB04C\uB9AC\uB4EF \uADF8\uB140\uC758 \uB9DE\uC740\uD3B8 \uC790\uB9AC\uC5D0 \uC549\uC558\uB2E4."
+      ]
+    },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uB2F9\uC2E0\uC740 \uC774 \uC18C\uC124\uC758 \uACB0\uB9D0\uC774 \uD574\uD53C\uC5D4\uB529\uC774\uB77C\uACE0 \uC0DD\uAC01\uD558\uB098\uC694?" },
     { type: "dialogue", text: "\uB098\uB294 \uC7A0\uC2DC \uACE0\uBBFC\uD588\uB2E4. \uC8FC\uC778\uACF5\uC774 \uC8FD\uC5C8\uC73C\uB2C8 \uC0C8\uB4DC\uC5D4\uB529\uC774 \uC544\uB2C8\uB0D0\uACE0 \uB300\uB2F5\uD588\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uAE00\uC384\uC694... \uC804 \uB2E4\uB974\uAC8C \uC0DD\uAC01\uD574\uC694." },
-    { type: "dialogue", speaker: "heroine", text: "\uC8FD\uC74C\uC740 \uACB0\uB9D0\uC774 \uC544\uB2C8\uB77C, \uC644\uC131\uC77C \uC218\uB3C4 \uC788\uC796\uC544\uC694." },
-    { type: "dialogue", speaker: "heroine", text: "\uC790\uC2E0\uC758 \uC0AC\uB791\uC744 \uC601\uC6D0\uD788 \uBCC0\uD558\uC9C0 \uC54A\uB294 \uAC83\uC73C\uB85C \uB0A8\uAE30\uAE30 \uC704\uD55C \uC120\uD0DD." },
-    { type: "dialogue", text: "\uADF8\uB140\uC758 \uB17C\uB9AC\uB294 \uB3C5\uD2B9\uD558\uBA74\uC11C\uB3C4 \uC124\uB4DD\uB825\uC774 \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uC6B0\uB9AC\uB294 \uADF8\uB807\uAC8C \uD55C\uCC38 \uB3D9\uC548 \uC0DD\uACFC \uC0AC, \uADF8\uB9AC\uACE0 \uAE30\uC5B5\uC5D0 \uB300\uD574 \uC774\uC57C\uAE30\uD588\uB2E4." },
-    { type: "dialogue", text: "\uB3C4\uC11C\uAD00 \uCC3D\uBC16\uC73C\uB85C \uAD6C\uB984\uC774 \uD758\uB7EC\uAC00\uACE0, \uD587\uC0B4\uC758 \uAC01\uB3C4\uAC00 \uC870\uAE08\uC529 \uBCC0\uD574\uAC14\uB2E4." },
-    { type: "dialogue", text: "\uCC98\uC74C \uBCF4\uB294 \uC0AC\uB78C\uACFC \uC774\uB807\uAC8C \uAE4A\uC740 \uB300\uD654\uB97C \uB098\uB20C \uC218 \uC788\uB2E4\uB294 \uC0AC\uC2E4\uC774 \uB180\uB77C\uC6E0\uB2E4." },
-    { type: "dialogue", text: "\uB9C8\uCE58 \uC544\uC8FC \uC624\uB798\uC804\uBD80\uD130 \uC54C\uACE0 \uC9C0\uB0C8\uB358 \uC0AC\uC774\uCC98\uB7FC \uD3B8\uC548\uD588\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uC774\uB984\uC774 \uBB50\uC608\uC694?" },
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uAC11\uC791\uC2A4\uB7FD\uAC8C \uBB3C\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uC774\uB984\uC744 \uB9D0\uD574\uC92C\uB2E4. \uADF8\uB7EC\uC790 \uADF8\uB140\uAC00 \uC785\uC220\uC744 \uB2EC\uC2F9\uC774\uBA70 \uB0B4 \uC774\uB984\uC744 \uB098\uC9C1\uC774 \uC74A\uC870\uB838\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uC88B\uC740 \uC774\uB984\uC774\uB124\uC694. \uB530\uB73B\uD55C \uBE5B\uC774 \uB290\uAEF4\uC9C0\uB294 \uC774\uB984\uC774\uC5D0\uC694." },
+    {
+      type: "dialogue",
+      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      text: [
+        "\uAE00\uC384\uC694... \uC804 \uB2E4\uB974\uAC8C \uC0DD\uAC01\uD574\uC694.",
+        "\uC8FD\uC74C\uC740 \uACB0\uB9D0\uC774 \uC544\uB2C8\uB77C, \uC644\uC131\uC77C \uC218\uB3C4 \uC788\uC796\uC544\uC694.",
+        "\uC790\uC2E0\uC758 \uC0AC\uB791\uC744 \uC601\uC6D0\uD788 \uBCC0\uD558\uC9C0 \uC54A\uB294 \uAC83\uC73C\uB85C \uB0A8\uAE30\uAE30 \uC704\uD55C \uC120\uD0DD."
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uC758 \uB17C\uB9AC\uB294 \uB3C5\uD2B9\uD558\uBA74\uC11C\uB3C4 \uC124\uB4DD\uB825\uC774 \uC788\uC5C8\uB2E4.",
+        "\uC6B0\uB9AC\uB294 \uADF8\uB807\uAC8C \uD55C\uCC38 \uB3D9\uC548 \uC0DD\uACFC \uC0AC, \uADF8\uB9AC\uACE0 \uAE30\uC5B5\uC5D0 \uB300\uD574 \uC774\uC57C\uAE30\uD588\uB2E4.",
+        "\uB3C4\uC11C\uAD00 \uCC3D\uBC16\uC73C\uB85C \uAD6C\uB984\uC774 \uD758\uB7EC\uAC00\uACE0, \uD587\uC0B4\uC758 \uAC01\uB3C4\uAC00 \uC870\uAE08\uC529 \uBCC0\uD574\uAC14\uB2E4.",
+        "\uCC98\uC74C \uBCF4\uB294 \uC0AC\uB78C\uACFC \uC774\uB807\uAC8C \uAE4A\uC740 \uB300\uD654\uB97C \uB098\uB20C \uC218 \uC788\uB2E4\uB294 \uC0AC\uC2E4\uC774 \uB180\uB77C\uC6E0\uB2E4.",
+        "\uB9C8\uCE58 \uC544\uC8FC \uC624\uB798\uC804\uBD80\uD130 \uC54C\uACE0 \uC9C0\uB0C8\uB358 \uC0AC\uC774\uCC98\uB7FC \uD3B8\uC548\uD588\uB2E4."
+      ]
+    },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC774\uB984\uC774 \uBB50\uC608\uC694?" },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uAC00 \uAC11\uC791\uC2A4\uB7FD\uAC8C \uBB3C\uC5C8\uB2E4.",
+        "\uB098\uB294 \uC774\uB984\uC744 \uB9D0\uD574\uC92C\uB2E4. \uADF8\uB7EC\uC790 \uADF8\uB140\uAC00 \uC785\uC220\uC744 \uB2EC\uC2F9\uC774\uBA70 \uB0B4 \uC774\uB984\uC744 \uB098\uC9C1\uC774 \uC74A\uC870\uB838\uB2E4."
+      ]
+    },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC88B\uC740 \uC774\uB984\uC774\uB124\uC694. \uB530\uB73B\uD55C \uBE5B\uC774 \uB290\uAEF4\uC9C0\uB294 \uC774\uB984\uC774\uC5D0\uC694." },
     { type: "dialogue", text: "\uC5BC\uAD74\uC774 \uD654\uB048\uAC70\uB838\uB2E4. \uCC3D\uD53C\uD574\uC11C \uACE0\uAC1C\uB97C \uC219\uC600\uB2E4." },
     // ─── 4. 노을의 시간 ───
     { type: "mood", mood: "sunset", intensity: 0.85, duration: 5e3 },
     { type: "light", action: "add", preset: "warm", duration: 3e3 },
     { type: "effect", action: "add", effect: "sakura", rate: 15, skip: true },
-    { type: "dialogue", text: "\uC5B4\uB290\uB367 \uB3C4\uC11C\uAD00 \uB0B4\uBD80\uB294 \uC9C4\uD55C \uC624\uB80C\uC9C0\uBE5B\uC73C\uB85C \uBB3C\uB4E4\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uCC3D\uBC16\uC5D0\uC11C \uB0A0\uB824 \uB4E4\uC5B4\uC628 \uBC9A\uAF43 \uC78E\uB4E4\uC774 \uBC14\uB2E5\uC5D0 \uD769\uBFCC\uB824\uC84C\uB2E4." },
-    { type: "dialogue", text: "\uADF8\uB140\uC758 \uBA38\uB9AC\uCE74\uB77D \uC704\uC5D0\uB3C4 \uC791\uC740 \uAF43\uC78E \uD558\uB098\uAC00 \uB0B4\uB824\uC549\uC558\uB2E4." },
+    {
+      type: "dialogue",
+      text: [
+        "\uC5B4\uB290\uB367 \uB3C4\uC11C\uAD00 \uB0B4\uBD80\uB294 \uC9C4\uD55C \uC624\uB80C\uC9C0\uBE5B\uC73C\uB85C \uBB3C\uB4E4\uC5C8\uB2E4.",
+        "\uCC3D\uBC16\uC5D0\uC11C \uB0A0\uB824 \uB4E4\uC5B4\uC628 \uBC9A\uAF43 \uC78E\uB4E4\uC774 \uBC14\uB2E5\uC5D0 \uD769\uBFCC\uB824\uC84C\uB2E4.",
+        "\uADF8\uB140\uC758 \uBA38\uB9AC\uCE74\uB77D \uC704\uC5D0\uB3C4 \uC791\uC740 \uAF43\uC78E \uD558\uB098\uAC00 \uB0B4\uB824\uC549\uC558\uB2E4."
+      ]
+    },
     { type: "camera-zoom", preset: "close-up", duration: 1500 },
-    { type: "dialogue", speaker: "heroine", text: "\uC544\uB984\uB2F5\uB124\uC694... \uC774 \uC21C\uAC04." },
-    { type: "dialogue", speaker: "heroine", text: "\uAC00\uB054\uC740 \uC2DC\uAC04\uC774 \uC774\uB300\uB85C \uBA48\uCDB0\uBC84\uB838\uC73C\uBA74 \uC88B\uACA0\uB2E4\uACE0 \uC0DD\uAC01\uD574\uC694." },
-    { type: "dialogue", speaker: "heroine", text: "\uB0B4\uC77C\uC774 \uC624\uBA74 \uC624\uB298\uC758 \uC6B0\uB9AC\uB294 \uB2E4\uC2DC\uB294 \uC874\uC7AC\uD558\uC9C0 \uC54A\uAC8C \uB420 \uD14C\uB2C8\uAE4C." },
+    {
+      type: "dialogue",
+      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      text: [
+        "\uC544\uB984\uB2F5\uB124\uC694... \uC774 \uC21C\uAC04.",
+        "\uAC00\uB054\uC740 \uC2DC\uAC04\uC774 \uC774\uB300\uB85C \uBA48\uCDB0\uBC84\uB838\uC73C\uBA74 \uC88B\uACA0\uB2E4\uACE0 \uC0DD\uAC01\uD574\uC694.",
+        "\uB0B4\uC77C\uC774 \uC624\uBA74 \uC624\uB298\uC758 \uC6B0\uB9AC\uB294 \uB2E4\uC2DC\uB294 \uC874\uC7AC\uD558\uC9C0 \uC54A\uAC8C \uB420 \uD14C\uB2C8\uAE4C."
+      ]
+    },
     { type: "camera-zoom", preset: "reset", duration: 1500 },
-    { type: "dialogue", text: "\uADF8\uB140\uC758 \uB9D0\uC5D0\uB294 \uAE4A\uC740 \uC0C1\uC2E4\uAC10\uC774 \uC11C\uB824 \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uADF8\uB140\uC758 \uC190\uC744 \uC7A1\uACE0 \uC2F6\uB2E4\uB294 \uCDA9\uB3D9\uC744 \uB290\uAF08\uB2E4." },
-    { type: "dialogue", text: "\uD558\uC9C0\uB9CC \uB0B4 \uC190\uC740 \uCC45\uC0C1 \uBC11\uC5D0\uC11C \uAC00\uB298\uAC8C \uB5A8\uB9AC\uACE0 \uC788\uC744 \uBFD0\uC774\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uC801\uB9C9 \uC18D\uC5D0\uC11C \uC6B0\uB9AC\uB294 \uD55C\uB3D9\uC548 \uB178\uC744\uB9CC\uC744 \uBC14\uB77C\uBCF4\uC558\uB2E4." },
-    { type: "dialogue", speaker: "heroine", text: "\uC774\uC81C \uC804 \uAC00\uBD10\uC57C \uD574\uC694. \uD1B5\uAE08 \uC2DC\uAC04\uC774 \uC788\uAC70\uB4E0\uC694." },
-    { type: "character", action: "show", name: "heroine", image: "normal", duration: 1e3 },
-    { type: "dialogue", speaker: "heroine", text: "\uC774 \uCC45, \uC81C\uAC00 \uBE4C\uB9B0 \uAC70\uC9C0\uB9CC... \uC624\uB298\uB9CC \uB2F9\uC2E0\uC5D0\uAC8C \uBE4C\uB824\uB4DC\uB9B4\uAC8C\uC694." },
-    { type: "dialogue", speaker: "heroine", text: "\uB2E4 \uC77D\uACE0 \uB098\uBA74, \uADF8\uB54C \uB2E4\uC2DC \uC774\uC57C\uAE30\uD574\uC694." },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uC758 \uB9D0\uC5D0\uB294 \uAE4A\uC740 \uC0C1\uC2E4\uAC10\uC774 \uC11C\uB824 \uC788\uC5C8\uB2E4.",
+        "\uB098\uB294 \uADF8\uB140\uC758 \uC190\uC744 \uC7A1\uACE0 \uC2F6\uB2E4\uB294 \uCDA9\uB3D9\uC744 \uB290\uAF08\uB2E4.",
+        "\uD558\uC9C0\uB9CC \uB0B4 \uC190\uC740 \uCC45\uC0C1 \uBC11\uC5D0\uC11C \uAC00\uB298\uAC8C \uB5A8\uB9AC\uACE0 \uC788\uC744 \uBFD0\uC774\uC5C8\uB2E4.",
+        "\uC801\uB9C9 \uC18D\uC5D0\uC11C \uC6B0\uB9AC\uB294 \uD55C\uB3D9\uC548 \uB178\uC744\uB9CC\uC744 \uBC14\uB77C\uBCF4\uC558\uB2E4."
+      ]
+    },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC774\uC81C \uC804 \uAC00\uBD10\uC57C \uD574\uC694. \uD1B5\uAE08 \uC2DC\uAC04\uC774 \uC788\uAC70\uB4E0\uC694." },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "normal", duration: 1e3 },
+    {
+      type: "dialogue",
+      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      text: [
+        "\uC774 \uCC45, \uC81C\uAC00 \uBE4C\uB9B0 \uAC70\uC9C0\uB9CC... \uC624\uB298\uB9CC \uB2F9\uC2E0\uC5D0\uAC8C \uBE4C\uB824\uB4DC\uB9B4\uAC8C\uC694.",
+        "\uB2E4 \uC77D\uACE0 \uB098\uBA74, \uADF8\uB54C \uB2E4\uC2DC \uC774\uC57C\uAE30\uD574\uC694."
+      ]
+    },
     { type: "dialogue", text: "\uADF8\uB140\uAC00 \uAC00\uBC29\uC744 \uCC59\uACA8 \uC790\uB9AC\uC5D0\uC11C \uC77C\uC5B4\uB0AC\uB2E4." },
     // ─── 5. 작별과 여운 ───
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uC11C\uAC00 \uC0AC\uC774\uB85C \uCC9C\uCC9C\uD788 \uBA40\uC5B4\uC838 \uAC14\uB2E4." },
-    { type: "dialogue", text: "\uBA40\uC5B4\uC9C0\uB294 \uBC1C\uC18C\uB9AC\uAC00 \uC2EC\uC7A5 \uC18C\uB9AC\uC640 \uACB9\uCCD0 \uB4E4\uB838\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uADF8 \uC790\uB9AC\uC5D0 \uBABB \uBC15\uD78C \uB4EF \uC11C\uC11C \uADF8\uB140\uC758 \uB4B7\uBAA8\uC2B5\uC744 \uBCF4\uC558\uB2E4." },
-    { type: "dialogue", text: "\uC774\uB300\uB85C \uBCF4\uB0B4\uBA74 \uB2E4\uC2DC\uB294 \uBABB \uB9CC\uB0A0\uC9C0\uB3C4 \uBAA8\uB978\uB2E4." },
-    { type: "dialogue", text: "\uAC00\uC2B4\uC18D\uC5D0\uC11C \uBB34\uC5B8\uAC00 \uB728\uAC70\uC6B4 \uAC83\uC774 \uC6B8\uCEE5 \uCE58\uBC00\uC5B4 \uC62C\uB790\uB2E4." },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uAC00 \uC11C\uAC00 \uC0AC\uC774\uB85C \uCC9C\uCC9C\uD788 \uBA40\uC5B4\uC838 \uAC14\uB2E4.",
+        "\uBA40\uC5B4\uC9C0\uB294 \uBC1C\uC18C\uB9AC\uAC00 \uC2EC\uC7A5 \uC18C\uB9AC\uC640 \uACB9\uCCD0 \uB4E4\uB838\uB2E4.",
+        "\uB098\uB294 \uADF8 \uC790\uB9AC\uC5D0 \uBABB \uBC15\uD78C \uB4EF \uC11C\uC11C \uADF8\uB140\uC758 \uB4B7\uBAA8\uC2B5\uC744 \uBCF4\uC558\uB2E4.",
+        "\uC774\uB300\uB85C \uBCF4\uB0B4\uBA74 \uB2E4\uC2DC\uB294 \uBABB \uB9CC\uB0A0\uC9C0\uB3C4 \uBAA8\uB978\uB2E4.",
+        "\uAC00\uC2B4\uC18D\uC5D0\uC11C \uBB34\uC5B8\uAC00 \uB728\uAC70\uC6B4 \uAC83\uC774 \uC6B8\uCEE5 \uCE58\uBC00\uC5B4 \uC62C\uB790\uB2E4."
+      ]
+    },
     { type: "camera-effect", preset: "shake", duration: 600 },
-    { type: "dialogue", text: "\uB098\uB294 \uADF8\uB140\uB97C \uBD80\uB974\uAE30 \uC704\uD574 \uC785\uC744 \uC5F4\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uB3C4\uC11C\uAD00\uC758 \uACF5\uAE30\uAC00 \uAE34\uC7A5\uAC10\uC73C\uB85C \uD33D\uD33D\uD558\uAC8C \uB2F9\uACA8\uC84C\uB2E4." },
-    { type: "dialogue", text: "\uC5B4\uB5A4 \uB9D0\uC744 \uD574\uC57C \uADF8\uB140\uB97C \uBA48\uCD9C \uC218 \uC788\uC744\uAE4C?" },
+    {
+      type: "dialogue",
+      text: [
+        "\uB098\uB294 \uADF8\uB140\uB97C \uBD80\uB974\uAE30 \uC704\uD574 \uC785\uC744 \uC5F4\uC5C8\uB2E4.",
+        "\uB3C4\uC11C\uAD00\uC758 \uACF5\uAE30\uAC00 \uAE34\uC7A5\uAC10\uC73C\uB85C \uD33D\uD33D\uD558\uAC8C \uB2F9\uACA8\uC84C\uB2E4.",
+        "\uC5B4\uB5A4 \uB9D0\uC744 \uD574\uC57C \uADF8\uB140\uB97C \uBA48\uCD9C \uC218 \uC788\uC744\uAE4C?"
+      ]
+    },
     {
       type: "choice",
       choices: [
@@ -14793,16 +14932,21 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 6. 그 후의 이야기 (만약 배웅했을 경우의 감성 묘사) ───
-    { type: "dialogue", text: "\uADF8\uB140\uC758 \uBAA8\uC2B5\uC774 \uC644\uC804\uD788 \uC0AC\uB77C\uC9C4 \uD6C4\uC5D0\uB3C4, \uB3C4\uC11C\uAD00\uC5D0\uB294 \uADF8\uB140\uC758 \uD5A5\uAE30\uAC00 \uB0A8\uC544 \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uC190\uB54C \uBB3B\uC740 \uCC45\uB9CC\uC774 \uB0B4 \uC55E\uC5D0 \uB369\uADF8\uB7EC\uB2C8 \uB193\uC5EC \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uB098\uB294 \uB5A8\uB9AC\uB294 \uC190\uC73C\uB85C \uCC45\uC7A5\uC744 \uB118\uACBC\uB2E4." },
-    { type: "dialogue", text: "\uCCAB \uD398\uC774\uC9C0\uC5D0\uB294 \uADF8\uB140\uAC00 \uC801\uC5B4\uB193\uC740 \uB4EF\uD55C \uC791\uC740 \uBA54\uBAA8\uAC00 \uC788\uC5C8\uB2E4." },
-    { type: "dialogue", text: '"\uAE30\uB2E4\uB9BC\uC740 \uD76C\uB9DD\uC758 \uB2E4\uB978 \uC774\uB984\uC785\uB2C8\uB2E4."' },
-    { type: "dialogue", text: "\uBA54\uBAA8\uB97C \uC77D\uB294 \uC21C\uAC04, \uAC00\uC2B4 \uD55C\uAD6C\uC11D\uC774 \uD658\uD574\uC9C0\uB294 \uAE30\uBD84\uC774 \uB4E4\uC5C8\uB2E4." },
-    { type: "dialogue", text: "\uB0B4\uC77C\uB3C4, \uADF8\uB2E4\uC74C \uB0A0\uB3C4. \uB098\uB294 \uC774\uACF3\uC5D0 \uC624\uAC8C \uB420 \uAC83\uC774\uB2E4." },
-    { type: "dialogue", text: "\uADF8\uB140\uB97C \uB2E4\uC2DC \uB9CC\uB098\uAE30 \uC704\uD574." },
-    { type: "dialogue", text: "\uB098\uC758 \uC9C4\uC2EC\uC774 \uADF8\uB140\uC5D0\uAC8C \uB2FF\uC744 \uC218 \uC788\uAE30\uB97C \uBC14\uB77C\uBA70." },
-    { type: "dialogue", text: "\uC870\uC6A9\uD55C \uB3C4\uC11C\uAD00\uC5D0 \uBC24\uC774 \uCC3E\uC544\uC624\uACE0 \uC788\uC5C8\uB2E4." },
+    {
+      type: "dialogue",
+      text: [
+        "\uADF8\uB140\uC758 \uBAA8\uC2B5\uC774 \uC644\uC804\uD788 \uC0AC\uB77C\uC9C4 \uD6C4\uC5D0\uB3C4, \uB3C4\uC11C\uAD00\uC5D0\uB294 \uADF8\uB140\uC758 \uD5A5\uAE30\uAC00 \uB0A8\uC544 \uC788\uC5C8\uB2E4.",
+        "\uC190\uB54C \uBB3B\uC740 \uCC45\uB9CC\uC774 \uB0B4 \uC55E\uC5D0 \uB369\uADF8\uB7EC\uB2C8 \uB193\uC5EC \uC788\uC5C8\uB2E4.",
+        "\uB098\uB294 \uB5A8\uB9AC\uB294 \uC190\uC73C\uB85C \uCC45\uC7A5\uC744 \uB118\uACBC\uB2E4.",
+        "\uCCAB \uD398\uC774\uC9C0\uC5D0\uB294 \uADF8\uB140\uAC00 \uC801\uC5B4\uB193\uC740 \uB4EF\uD55C \uC791\uC740 \uBA54\uBAA8\uAC00 \uC788\uC5C8\uB2E4.",
+        '"\uAE30\uB2E4\uB9BC\uC740 \uD76C\uB9DD\uC758 \uB2E4\uB978 \uC774\uB984\uC785\uB2C8\uB2E4."',
+        "\uBA54\uBAA8\uB97C \uC77D\uB294 \uC21C\uAC04, \uAC00\uC2B4 \uD55C\uAD6C\uC11D\uC774 \uD658\uD574\uC9C0\uB294 \uAE30\uBD84\uC774 \uB4E4\uC5C8\uB2E4.",
+        "\uB0B4\uC77C\uB3C4, \uADF8\uB2E4\uC74C \uB0A0\uB3C4. \uB098\uB294 \uC774\uACF3\uC5D0 \uC624\uAC8C \uB420 \uAC83\uC774\uB2E4.",
+        "\uADF8\uB140\uB97C \uB2E4\uC2DC \uB9CC\uB098\uAE30 \uC704\uD574.",
+        "\uB098\uC758 \uC9C4\uC2EC\uC774 \uADF8\uB140\uC5D0\uAC8C \uB2FF\uC744 \uC218 \uC788\uAE30\uB97C \uBC14\uB77C\uBA70.",
+        "\uC870\uC6A9\uD55C \uB3C4\uC11C\uAD00\uC5D0 \uBC24\uC774 \uCC3E\uC544\uC624\uACE0 \uC788\uC5C8\uB2E4."
+      ]
+    },
     { type: "mood", mood: "night", intensity: 0.9, duration: 4e3 },
     { type: "effect", action: "remove", effect: "sakura", duration: 2e3 },
     { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
@@ -14862,7 +15006,7 @@ ${addLineNumbers(fragment)}`);
     },
     // ── 나쁜 분기
     { type: "label", name: "branch-bad" },
-    { type: "dialogue", speaker: "heroine", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
     { type: "dialogue", text: "(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4.)" },
     { type: "var", name: "likeability", value: 20 },
     { type: "var", name: "tries", value: 1, scope: "local" },
@@ -14870,8 +15014,8 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: "tries >= 1", goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
-    { type: "character", action: "show", name: "heroine", image: "smile" },
-    { type: "dialogue", speaker: "heroine", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694!" },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694!" },
     // ── or 조건 테스트
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
     {
@@ -14879,7 +15023,7 @@ ${addLineNumbers(fragment)}`);
       if: "likeability >= 50 or endingReached",
       goto: "skip-normal"
     },
-    { type: "dialogue", speaker: "heroine", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
     { type: "label", name: "skip-normal" },
     // ── 지역변수 최종 표시
     { type: "dialogue", text: `[\uC9C0\uC5ED\uBCC0\uC218] tries = \uC7AC\uC2DC\uB3C4 \uD69F\uC218. \uC804\uC5ED\uBCC0\uC218 likeability = \uD604\uC7AC \uD638\uAC10\uB3C4.` },

@@ -25,7 +25,7 @@ export default defineScene(config, [
 
   // ── 나쁜 분기
   { type: 'label', name: 'branch-bad' },
-  { type: 'dialogue', speaker: 'heroine', text: '...왜 이런 대우를 받는 건지 모르겠어요.' },
+  { type: 'dialogue', speaker: '아리시에로', text: '...왜 이런 대우를 받는 건지 모르겠어요.' },
   { type: 'dialogue', text: '(호감도를 20으로 강제 설정합니다.)' },
   { type: 'var', name: 'likeability', value: 20 },
   { type: 'var', name: 'tries', value: 1, scope: 'local' },
@@ -34,8 +34,8 @@ export default defineScene(config, [
 
   // ── 좋은 분기
   { type: 'label', name: 'branch-good' },
-  { type: 'character', action: 'show', name: 'heroine', image: 'smile' },
-  { type: 'dialogue', speaker: 'heroine', text: '와, 호감도가 높네요! 감사해요!' },
+  { type: 'character', action: 'show', name: '아리시에로', image: 'smile' },
+  { type: 'dialogue', speaker: '아리시에로', text: '와, 호감도가 높네요! 감사해요!' },
 
   // ── or 조건 테스트
   { type: 'dialogue', text: '[or 조건 테스트] likeability >= 50 or endingReached' },
@@ -44,7 +44,7 @@ export default defineScene(config, [
     if: 'likeability >= 50 or endingReached',
     goto: 'skip-normal',
   },
-  { type: 'dialogue', speaker: 'heroine', text: '(조건이 거짓 — 50 미만이고 엔딩 미다못함)' },
+  { type: 'dialogue', speaker: '아리시에로', text: '(조건이 거짓 — 50 미만이고 엔딩 미다못함)' },
   { type: 'label', name: 'skip-normal' },
 
   // ── 지역변수 최종 표시
