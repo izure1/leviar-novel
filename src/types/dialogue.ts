@@ -170,6 +170,12 @@ export interface CharacterShowCmd<TCharacters extends CharDefs, TName extends ke
   image?: keyof TCharacters[TName] & string
   /** 트랜지션 시간(ms) */
   duration?: number
+  /**
+   * 등장과 동시에 카메라 포커스를 수행할지 여부.
+   * `true`일 경우 기본 포인트를 사용하며, 문자열 지정 시 해당 포인트에 포커스합니다.
+   * 이는 `{ type: 'character-focus' }` 를 연달아 사용하는 것과 같은 효과입니다.
+   */
+  focus?: boolean | PointsOf<TCharacters, TName> | (string & {})
 }
 
 /** 캐릭터를 퇴장시킨다 */

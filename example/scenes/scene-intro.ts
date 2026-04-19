@@ -31,8 +31,7 @@ export default defineScene(config, [
   { type: 'camera-pan', preset: 'right', duration: 2500 },
   { type: 'dialogue', text: '서가 너머, 창가 자리에 누군가 앉아 있었다.' },
 
-  { type: 'character', action: 'show', name: '아리시에로', position: 'right', image: 'normal', duration: 1500, skip: true },
-  { type: 'character-focus', name: '아리시에로', point: 'face' },
+  { type: 'character', action: 'show', name: '아리시에로', position: 'right', image: 'normal', duration: 1500, focus: 'face', skip: true },
   {
     type: 'dialogue',
     text: [

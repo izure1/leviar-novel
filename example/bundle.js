@@ -14157,6 +14157,14 @@ ${addLineNumbers(fragment)}`);
         case "character":
           if (cmd.action === "show") {
             r.showCharacter(cmd.name, cmd.position, cmd.image, cmd.duration);
+            if (cmd.focus) {
+              r.focusCharacter(
+                cmd.name,
+                typeof cmd.focus === "string" ? cmd.focus : void 0,
+                "inherit",
+                cmd.duration ?? 800
+              );
+            }
           } else {
             r.removeCharacter(cmd.name, cmd.duration);
           }
@@ -14928,8 +14936,7 @@ ${addLineNumbers(fragment)}`);
     // ─── 2. 예기치 못한 조우 ───
     { type: "camera-pan", preset: "right", duration: 2500 },
     { type: "dialogue", text: "\uC11C\uAC00 \uB108\uBA38, \uCC3D\uAC00 \uC790\uB9AC\uC5D0 \uB204\uAD70\uAC00 \uC549\uC544 \uC788\uC5C8\uB2E4." },
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500, skip: true },
-    { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face" },
+    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500, focus: "face", skip: true },
     {
       type: "dialogue",
       text: [

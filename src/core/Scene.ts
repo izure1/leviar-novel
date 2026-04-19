@@ -408,6 +408,14 @@ export class DialogueScene {
       case 'character':
         if (cmd.action === 'show') {
           r.showCharacter(cmd.name as string, cmd.position, cmd.image as string | undefined, cmd.duration)
+          if (cmd.focus) {
+            r.focusCharacter(
+              cmd.name as string,
+              typeof cmd.focus === 'string' ? cmd.focus : undefined,
+              'inherit',
+              cmd.duration ?? 800
+            )
+          }
         } else {
           r.removeCharacter(cmd.name as string, cmd.duration)
         }
