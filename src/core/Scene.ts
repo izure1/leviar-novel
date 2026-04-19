@@ -578,6 +578,10 @@ export class DialogueScene {
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
       this.callbacks.onChoice(cmd.choices)
+    } else {
+      if (!cmd.skip) {
+        this._waitingInput = true
+      }
     }
   }
 

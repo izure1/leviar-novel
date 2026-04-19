@@ -22,8 +22,8 @@ export default defineScene(config, [
   },
 
   // ── 비 이펙트 + night 무드 + 플리커
-  // { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
-  // { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
+  { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
+  { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
   { type: 'dialogue', text: 'rain 이펙트 + cold 조명 + night 무드.' },
 
   // ── 카메라 흔들림

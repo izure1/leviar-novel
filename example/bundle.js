@@ -14329,6 +14329,10 @@ ${addLineNumbers(fragment)}`);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
         this.callbacks.onChoice(cmd.choices);
+      } else {
+        if (!cmd.skip) {
+          this._waitingInput = true;
+        }
       }
     }
     get isEnded() {
@@ -15185,7 +15189,7 @@ ${addLineNumbers(fragment)}`);
     // ── 카메라 + 이펙트 리셋
     { type: "character", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "show", position: "center", skip: true },
     { type: "camera-zoom", preset: "reset", duration: 600, skip: true },
-    { type: "camera-pan", preset: "center", duration: 600, skip: true },
+    { type: "camera-pan", position: "center", duration: 600, skip: true },
     { type: "effect", action: "remove", effect: "sakura", duration: 800 },
     // ── 다음 씬 선택
     { type: "dialogue", text: "\uB2E4\uC74C \uD14C\uC2A4\uD2B8\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4." },
@@ -15265,8 +15269,8 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ── 비 이펙트 + night 무드 + 플리커
-    // { type: 'mood', action: 'add', mood: 'night', intensity: 0.7, duration: 1200, skip: true },
-    // { type: 'mood', action: 'add', mood: 'cold', flicker: 'flicker', skip: true },
+    { type: "mood", action: "add", mood: "night", intensity: 0.7, duration: 1200, skip: true },
+    { type: "mood", action: "add", mood: "cold", flicker: "flicker", skip: true },
     { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
     // ── 카메라 흔들림
     { type: "camera-effect", preset: "shake", duration: 500, repeat: 100 },
