@@ -23,7 +23,7 @@ export default defineScene(config, { _tries: 0 }, [
   // ── 나쁜 분기
   { type: 'label', name: 'branch-bad' },
   { type: 'dialogue', speaker: '아리시에로', text: '...왜 이런 대우를 받는 건지 모르겠어요.' },
-  { type: 'dialogue', text: '(호감도를 20으로 강제 설정합니다.)' },
+  { type: 'dialogue', text: '(호감도를 20으로 강제 설정합니다. 현재: {{ likeability }})' },
   { type: 'var', name: 'likeability', value: 20 },
   { type: 'var', name: '_tries', value: 1 },
   // 강제 수정 후 재확인
@@ -32,7 +32,7 @@ export default defineScene(config, { _tries: 0 }, [
   // ── 좋은 분기
   { type: 'label', name: 'branch-good' },
   { type: 'character', action: 'show', name: '아리시에로', image: 'smile' },
-  { type: 'dialogue', speaker: '아리시에로', text: '와, 호감도가 높네요! 감사해요!' },
+  { type: 'dialogue', speaker: '아리시에로', text: '와, 호감도가 높네요! 감사해요! (현재: {{ likeability }})' },
 
   // ── or 조건 테스트
   { type: 'dialogue', text: '[or 조건 테스트] likeability >= 50 or endingReached' },

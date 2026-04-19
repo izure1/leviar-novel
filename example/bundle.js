@@ -13907,6 +13907,20 @@ ${addLineNumbers(fragment)}`);
     get _vars() {
       return { ...this.callbacks.getGlobalVars(), ...this.localVars };
     }
+    _interpolateText(text) {
+      return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
+        try {
+          const vars = this._vars;
+          const keys = Object.keys(vars);
+          const values = Object.values(vars);
+          const func = new Function(...keys, `return (${expr});`);
+          return String(func(...values));
+        } catch (e) {
+          console.warn(`[leviar-novel] Template interpolation failed for expression: ${expr}`, e);
+          return "";
+        }
+      });
+    }
     /** 씬 실행 시작 */
     start() {
       this.cursor = 0;
@@ -13925,7 +13939,8 @@ ${addLineNumbers(fragment)}`);
         if (this.textSubIndex < step.text.length - 1) {
           this.textSubIndex++;
           const txt = step.text[this.textSubIndex];
-          this.callbacks.onDialogue(step.speaker, txt, step.speed);
+          const interpolated = this._interpolateText(txt);
+          this.callbacks.onDialogue(step.speaker, interpolated, step.speed);
           return;
         }
       }
@@ -14040,7 +14055,8 @@ ${addLineNumbers(fragment)}`);
         // ── 스토리 흐름 ─────────────────────────────────────────
         case "dialogue": {
           const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
-          this.callbacks.onDialogue(cmd.speaker, txt, cmd.speed);
+          const interpolated = this._interpolateText(txt);
+          this.callbacks.onDialogue(cmd.speaker, interpolated, cmd.speed);
           break;
         }
         case "var": {
@@ -14199,7 +14215,8 @@ ${addLineNumbers(fragment)}`);
       const current = steps[this.cursor];
       if (current?.type === "dialogue") {
         const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text;
-        return { ...current, text: txt };
+        const interpolated = this._interpolateText(txt);
+        return { ...current, text: interpolated };
       }
       return null;
     }
@@ -14260,7 +14277,8 @@ ${addLineNumbers(fragment)}`);
       const cmd = step;
       if (cmd.type === "dialogue") {
         const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
-        this.callbacks.onDialogue(cmd.speaker, txt, cmd.speed);
+        const interpolated = this._interpolateText(txt);
+        this.callbacks.onDialogue(cmd.speaker, interpolated, cmd.speed);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
         this.callbacks.onChoice(cmd.choices);
@@ -15154,7 +15172,7 @@ ${addLineNumbers(fragment)}`);
     // ── 나쁜 분기
     { type: "label", name: "branch-bad" },
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
-    { type: "dialogue", text: "(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4.)" },
+    { type: "dialogue", text: "(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4. \uD604\uC7AC: {{ likeability }})" },
     { type: "var", name: "likeability", value: 20 },
     { type: "var", name: "_tries", value: 1 },
     // 강제 수정 후 재확인
@@ -15162,7 +15180,7 @@ ${addLineNumbers(fragment)}`);
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694!" },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }})" },
     // ── or 조건 테스트
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
     {

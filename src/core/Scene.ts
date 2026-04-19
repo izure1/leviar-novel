@@ -88,6 +88,21 @@ export class DialogueScene {
     return { ...this.callbacks.getGlobalVars(), ...this.localVars }
   }
 
+  private _interpolateText(text: string): string {
+    return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
+      try {
+        const vars = this._vars
+        const keys = Object.keys(vars)
+        const values = Object.values(vars)
+        const func = new Function(...keys, `return (${expr});`)
+        return String(func(...values))
+      } catch (e) {
+        console.warn(`[leviar-novel] Template interpolation failed for expression: ${expr}`, e)
+        return ''
+      }
+    })
+  }
+
   /** 씬 실행 시작 */
   start(): void {
     this.cursor = 0
@@ -109,7 +124,8 @@ export class DialogueScene {
       if (this.textSubIndex < step.text.length - 1) {
         this.textSubIndex++
         const txt = step.text[this.textSubIndex]
-        this.callbacks.onDialogue(step.speaker as string | undefined, txt, step.speed)
+        const interpolated = this._interpolateText(txt)
+        this.callbacks.onDialogue(step.speaker as string | undefined, interpolated, step.speed)
         return
       }
     }
@@ -251,7 +267,8 @@ export class DialogueScene {
       // ── 스토리 흐름 ─────────────────────────────────────────
       case 'dialogue': {
         const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
-        this.callbacks.onDialogue(cmd.speaker as string | undefined, txt, cmd.speed)
+        const interpolated = this._interpolateText(txt)
+        this.callbacks.onDialogue(cmd.speaker as string | undefined, interpolated, cmd.speed)
         break
       }
 
@@ -433,7 +450,8 @@ export class DialogueScene {
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
       const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text
-      return { ...current, text: txt } as any
+      const interpolated = this._interpolateText(txt)
+      return { ...current, text: interpolated } as any
     }
     return null
   }
@@ -500,7 +518,8 @@ export class DialogueScene {
     const cmd = step as DialogueEntry<any, any, any, any, any, any>
     if (cmd.type === 'dialogue') {
       const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
-      this.callbacks.onDialogue(cmd.speaker as string | undefined, txt, cmd.speed)
+      const interpolated = this._interpolateText(txt)
+      this.callbacks.onDialogue(cmd.speaker as string | undefined, interpolated, cmd.speed)
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
       this.callbacks.onChoice(cmd.choices)
