@@ -3,7 +3,7 @@
 // Visualnovel.ts의 렌더 메서드를 config-driven 구조로 이식한 파일입니다.
 // =============================================================
 
-import { World } from 'leviar'
+import { World, Animation } from 'leviar'
 import type { LeviarObject, EasingType } from 'leviar'
 import type { NovelConfig, CharDefs, BgDefs, NovelUIOption } from '../types/config'
 import type {
@@ -160,6 +160,8 @@ export interface RendererState {
   characters: Map<string, { position: string; imageKey: string }>
   /** 카메라 위치/줌 상태 */
   cameraState: CameraState
+  /** 플리커 상태 (null = 비활성) */
+  flicker: { light: LightPreset; preset: FlickerPreset } | null
 }
 
 // =============================================================
@@ -199,11 +201,18 @@ export class Renderer {
   private _overlayObjs: Map<string, LeviarObject> = new Map()
   private _lightObjs: Map<string, LeviarObject> = new Map()
   private _flickerObj: LeviarObject | null = null
+  private _flickerState: { light: LightPreset; preset: FlickerPreset } | null = null
   private _characterStates: Map<string, { position: string; imageKey: string }> = new Map()
   private _activeEffects: Set<EffectType> = new Set()
   private _activeLights: Set<LightPreset> = new Set()
   /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
   private _isSkipping: boolean = false
+
+  // ─── 카메라 애니메이션 추적 (중단/snap 처리용) ──────────────
+  private _activeCamPanAnim: Animation | null = null
+  private _activeCamPanTarget: { x: number; y: number } | null = null
+  private _activeCamZoomAnim: Animation | null = null
+  private _activeCamZoomTarget: { z: number } | null = null
 
   // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
   private _lastBackgroundFit: Exclude<BackgroundFitPreset, 'inherit'> = 'stretch'
@@ -247,7 +256,7 @@ export class Renderer {
     duration: number,
     easing: EasingType = 'linear',
     onEnd?: () => void,
-  ): void {
+  ): Animation | null {
     const d = this._dur(duration)
     if (d === 0) {
       if (props.style) Object.assign(obj.style, props.style)
@@ -255,10 +264,11 @@ export class Renderer {
       if (props.transform?.scale) Object.assign(obj.transform.scale, props.transform.scale)
       if (props.transform?.rotation) Object.assign(obj.transform.rotation, props.transform.rotation)
       onEnd?.()
-      return
+      return null
     }
     const anim = (obj as any).animate(props, d, easing)
     if (onEnd) anim.on('end', onEnd)
+    return anim
   }
 
   // ─── 내부 유틸 ──────────────────────────────────────────────
@@ -323,6 +333,7 @@ export class Renderer {
         y: cam?.transform.position.y ?? 0,
         z: cam?.transform.position.z ?? 0,
       },
+      flicker: this._flickerState ? { ...this._flickerState } : null,
     }
   }
 
@@ -345,6 +356,10 @@ export class Renderer {
       cam.transform.position.y = state.cameraState.y
       cam.transform.position.z = state.cameraState.z
     }
+    // 플리커 복원 (조명 복원 후 실행)
+    if (state.flicker) {
+      this.setFlicker(state.flicker.light, state.flicker.preset)
+    }
   }
 
   /** 모든 씬 오브젝트를 제거한다 */
@@ -365,6 +380,7 @@ export class Renderer {
     this._lightObjs.forEach(o => (o as any).remove?.())
     this._lightObjs.clear()
     this._flickerObj = null
+    this._flickerState = null
   }
 
   // ─── 배경 ───────────────────────────────────────────────────
@@ -587,6 +603,7 @@ export class Renderer {
     }
     const cfg = configs[flickerPreset]
     this._flickerObj = target
+    this._flickerState = { light: lightPreset, preset: flickerPreset }
 
     const step = () => {
       if (this._flickerObj !== target) {
@@ -784,6 +801,16 @@ export class Renderer {
     const cam = this.world.camera
     if (!cam) return
 
+    // 기존 zoom anim 중단 → 목표값으로 즉시 snap
+    if (this._activeCamZoomAnim) {
+      this._activeCamZoomAnim.stop()
+      this._activeCamZoomAnim = null
+      if (this._activeCamZoomTarget) {
+        cam.transform.position.z = this._activeCamZoomTarget.z
+        this._activeCamZoomTarget = null
+      }
+    }
+
     const resolvedPreset = preset === 'inherit' ? this._lastZoomPreset : preset
     this._lastZoomPreset = resolvedPreset
     const { scale, duration: pd } = ZOOM_PRESETS[resolvedPreset]
@@ -792,7 +819,12 @@ export class Renderer {
     const baseDist = (cam as any).attribute?.focalLength ?? 100
     const newZ = baseDist - (baseDist / finalScale)
 
-    this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, 'easeInOutQuad')
+    this._activeCamZoomTarget = { z: newZ }
+    this._activeCamZoomAnim = this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, 'easeInOutQuad')
+    this._activeCamZoomAnim?.on('end', () => {
+      this._activeCamZoomAnim = null
+      this._activeCamZoomTarget = null
+    })
 
     const localZ = baseDist - newZ
     const scaleAtDst = baseDist / (baseDist - newZ)
@@ -820,6 +852,17 @@ export class Renderer {
     // 'inherit' → 현재 카메라 위치 유지 (no-op)
     if (preset === 'inherit') return
 
+    // 기존 pan anim 중단 → 목표값으로 즉시 snap
+    if (this._activeCamPanAnim) {
+      this._activeCamPanAnim.stop()
+      this._activeCamPanAnim = null
+      if (this._activeCamPanTarget) {
+        cam.transform.position.x = this._activeCamPanTarget.x
+        cam.transform.position.y = this._activeCamPanTarget.y
+        this._activeCamPanTarget = null
+      }
+    }
+
     let x: number, y: number, dur: number
     if (preset === 'custom') {
       x = customX ?? 0; y = customY ?? 0; dur = this._dur(duration ?? 800)
@@ -828,7 +871,13 @@ export class Renderer {
       const p = PAN_PRESETS[preset]
       x = customX ?? p.x; y = customY ?? p.y; dur = this._dur(duration ?? p.duration)
     }
-    this._animate(cam, { transform: { position: { x, y } } }, dur, 'easeInOutQuad')
+
+    this._activeCamPanTarget = { x, y }
+    this._activeCamPanAnim = this._animate(cam, { transform: { position: { x, y } } }, dur, 'easeInOutQuad')
+    this._activeCamPanAnim?.on('end', () => {
+      this._activeCamPanAnim = null
+      this._activeCamPanTarget = null
+    })
   }
 
   cameraEffect(preset: CameraEffectPreset = 'shake', duration?: number, intensity?: number): void {

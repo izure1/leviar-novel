@@ -29,6 +29,7 @@ export default defineScene(config, [
   { type: 'character-highlight', name: '아리시에로', action: 'off' },
 
   // ── 카메라 + 이펙트 리셋
+  { type: 'character', name: '아리시에로', action: 'show', position: 'center', skip: true },
   { type: 'camera-zoom', preset: 'reset', duration: 600, skip: true },
   { type: 'camera-pan', preset: 'center', duration: 600, skip: true },
   { type: 'effect', action: 'remove', effect: 'sakura', duration: 800 },

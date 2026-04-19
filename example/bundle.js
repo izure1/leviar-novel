@@ -13005,11 +13005,17 @@ ${addLineNumbers(fragment)}`);
     _overlayObjs = /* @__PURE__ */ new Map();
     _lightObjs = /* @__PURE__ */ new Map();
     _flickerObj = null;
+    _flickerState = null;
     _characterStates = /* @__PURE__ */ new Map();
     _activeEffects = /* @__PURE__ */ new Set();
     _activeLights = /* @__PURE__ */ new Set();
     /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
     _isSkipping = false;
+    // ─── 카메라 애니메이션 추적 (중단/snap 처리용) ──────────────
+    _activeCamPanAnim = null;
+    _activeCamPanTarget = null;
+    _activeCamZoomAnim = null;
+    _activeCamZoomTarget = null;
     // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
     _lastBackgroundFit = "stretch";
     _lastZoomPreset = "reset";
@@ -13052,10 +13058,11 @@ ${addLineNumbers(fragment)}`);
         if (props.transform?.scale) Object.assign(obj.transform.scale, props.transform.scale);
         if (props.transform?.rotation) Object.assign(obj.transform.rotation, props.transform.rotation);
         onEnd?.();
-        return;
+        return null;
       }
       const anim = obj.animate(props, d, easing);
       if (onEnd) anim.on("end", onEnd);
+      return anim;
     }
     // ─── 내부 유틸 ──────────────────────────────────────────────
     get _characterPlaneLocalZ() {
@@ -13116,7 +13123,8 @@ ${addLineNumbers(fragment)}`);
           x: cam?.transform.position.x ?? 0,
           y: cam?.transform.position.y ?? 0,
           z: cam?.transform.position.z ?? 0
-        }
+        },
+        flicker: this._flickerState ? { ...this._flickerState } : null
       };
     }
     restoreState(state) {
@@ -13136,6 +13144,9 @@ ${addLineNumbers(fragment)}`);
         cam.transform.position.x = state.cameraState.x;
         cam.transform.position.y = state.cameraState.y;
         cam.transform.position.z = state.cameraState.z;
+      }
+      if (state.flicker) {
+        this.setFlicker(state.flicker.light, state.flicker.preset);
       }
     }
     /** 모든 씬 오브젝트를 제거한다 */
@@ -13159,6 +13170,7 @@ ${addLineNumbers(fragment)}`);
       this._lightObjs.forEach((o) => o.remove?.());
       this._lightObjs.clear();
       this._flickerObj = null;
+      this._flickerState = null;
     }
     // ─── 배경 ───────────────────────────────────────────────────
     setBackground(key, fit = "inherit", duration = 1e3, isVideo = false) {
@@ -13358,6 +13370,7 @@ ${addLineNumbers(fragment)}`);
       };
       const cfg = configs[flickerPreset];
       this._flickerObj = target;
+      this._flickerState = { light: lightPreset, preset: flickerPreset };
       const step = () => {
         if (this._flickerObj !== target) {
           target.animate({ style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
@@ -13530,6 +13543,14 @@ ${addLineNumbers(fragment)}`);
     zoomCamera(preset = "inherit", duration, overrideScale) {
       const cam = this.world.camera;
       if (!cam) return;
+      if (this._activeCamZoomAnim) {
+        this._activeCamZoomAnim.stop();
+        this._activeCamZoomAnim = null;
+        if (this._activeCamZoomTarget) {
+          cam.transform.position.z = this._activeCamZoomTarget.z;
+          this._activeCamZoomTarget = null;
+        }
+      }
       const resolvedPreset = preset === "inherit" ? this._lastZoomPreset : preset;
       this._lastZoomPreset = resolvedPreset;
       const { scale: scale2, duration: pd } = ZOOM_PRESETS[resolvedPreset];
@@ -13537,7 +13558,12 @@ ${addLineNumbers(fragment)}`);
       const finalDur = this._dur(duration ?? pd);
       const baseDist = cam.attribute?.focalLength ?? 100;
       const newZ = baseDist - baseDist / finalScale;
-      this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, "easeInOutQuad");
+      this._activeCamZoomTarget = { z: newZ };
+      this._activeCamZoomAnim = this._animate(cam, { transform: { position: { z: newZ } } }, finalDur, "easeInOutQuad");
+      this._activeCamZoomAnim?.on("end", () => {
+        this._activeCamZoomAnim = null;
+        this._activeCamZoomTarget = null;
+      });
       const localZ = baseDist - newZ;
       const scaleAtDst = baseDist / (baseDist - newZ);
       const exactW = this.width / scaleAtDst;
@@ -13559,6 +13585,15 @@ ${addLineNumbers(fragment)}`);
       const cam = this.world.camera;
       if (!cam) return;
       if (preset === "inherit") return;
+      if (this._activeCamPanAnim) {
+        this._activeCamPanAnim.stop();
+        this._activeCamPanAnim = null;
+        if (this._activeCamPanTarget) {
+          cam.transform.position.x = this._activeCamPanTarget.x;
+          cam.transform.position.y = this._activeCamPanTarget.y;
+          this._activeCamPanTarget = null;
+        }
+      }
       let x, y, dur;
       if (preset === "custom") {
         x = customX ?? 0;
@@ -13571,7 +13606,12 @@ ${addLineNumbers(fragment)}`);
         y = customY ?? p.y;
         dur = this._dur(duration ?? p.duration);
       }
-      this._animate(cam, { transform: { position: { x, y } } }, dur, "easeInOutQuad");
+      this._activeCamPanTarget = { x, y };
+      this._activeCamPanAnim = this._animate(cam, { transform: { position: { x, y } } }, dur, "easeInOutQuad");
+      this._activeCamPanAnim?.on("end", () => {
+        this._activeCamPanAnim = null;
+        this._activeCamPanTarget = null;
+      });
     }
     cameraEffect(preset = "shake", duration, intensity) {
       if (this._isSkipping) return;
@@ -14995,6 +15035,7 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
     { type: "character-highlight", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "off" },
     // ── 카메라 + 이펙트 리셋
+    { type: "character", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "show", position: "center", skip: true },
     { type: "camera-zoom", preset: "reset", duration: 600, skip: true },
     { type: "camera-pan", preset: "center", duration: 600, skip: true },
     { type: "effect", action: "remove", effect: "sakura", duration: 800 },
