@@ -7,7 +7,7 @@ import { World, Animation } from 'leviar'
 import type { LeviarObject, EasingType } from 'leviar'
 import type { NovelConfig, CharDefs, BgDefs, NovelUIOption } from '../types/config'
 import type {
-  MoodType, LightPreset, FlickerPreset, OverlayPreset,
+  MoodType, FlickerPreset, OverlayPreset,
   EffectType, ZoomPreset, PanPreset, CameraEffectPreset,
   BackgroundFitPreset, FadeColorPreset, FlashPreset, WipePreset,
   CharacterPositionPreset,
@@ -84,7 +84,7 @@ const WIPE_PRESETS: Record<Exclude<WipePreset, 'inherit'>, { x: number; y: numbe
   down: { x: 0, y: -1 },
 }
 
-const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string }> = {
+const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
   day: { color: 'rgba(255,230,180,0.1)', vignette: 'transparent 70%, rgba(255,200,100,0.15) 100%', blendMode: 'screen' },
   night: { color: 'rgba(10,15,60,0.5)', vignette: 'transparent 50%, rgba(0,5,25,0.6) 100%', blendMode: 'multiply' },
   dawn: { color: 'rgba(25,35,70,0.4)', vignette: 'transparent 50%, rgba(65,122,164,0.6) 100%', blendMode: 'multiply' },
@@ -98,13 +98,9 @@ const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMo
   dream: { color: 'rgba(180,150,255,0.2)', vignette: 'transparent 60%, rgba(255,200,255,0.4) 100%', blendMode: 'screen' },
   danger: { color: 'rgba(255,0,0,0.1)', vignette: 'transparent 50%, rgba(200,0,0,0.5) 100%', blendMode: 'color-burn' },
   none: { color: 'transparent' },
-}
-
-const LIGHT_PRESETS: Record<LightPreset, { color: string; opacity: number }> = {
-  spot: { color: 'radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)', opacity: 0.6 },
-  ambient: { color: 'rgba(255,230,150,1)', opacity: 0.15 },
-  warm: { color: 'rgba(255,160,50,1)', opacity: 0.25 },
-  cold: { color: 'rgba(100,160,255,1)', opacity: 0.2 },
+  spot: { color: 'radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)', blendMode: 'screen', defaultIntensity: 0.6 },
+  ambient: { color: 'rgba(255,230,150,1)', blendMode: 'screen', defaultIntensity: 0.15 },
+  warm: { color: 'rgba(255,160,50,1)', blendMode: 'screen', defaultIntensity: 0.25 },
 }
 
 const OVERLAY_PRESETS: Record<OverlayPreset, { fontSize: number; color: string; opacity: number; zIndex: number; y: 'top' | 'center' | 'bottom' }> = {
@@ -153,15 +149,13 @@ export interface CameraState {
 export interface RendererState {
   backgroundKey: string | null
   backgroundParallax: boolean
-  moodType: MoodType | null
-  moodIntensity: number
+  activeMoods: Array<{ mood: MoodType; intensity: number }>
   activeEffects: Set<EffectType>
-  activeLights: Set<LightPreset>
   characters: Map<string, { position: string; imageKey: string }>
   /** 카메라 위치/줌 상태 */
   cameraState: CameraState
   /** 플리커 상태 (null = 비활성) */
-  flicker: { light: LightPreset; preset: FlickerPreset } | null
+  flicker: { mood: MoodType; preset: FlickerPreset } | null
 }
 
 // =============================================================
@@ -194,17 +188,14 @@ export class Renderer {
   private _backgroundObj: LeviarObject | null = null
   private _backgroundIsParallax: boolean = true
   private _backgroundKey: string | null = null
-  private _moodObj: LeviarObject | null = null
-  private _moodType: MoodType | null = null
-  private _moodIntensity: number = 1
+  private _moodObjs: Map<MoodType, LeviarObject> = new Map()
+  private _activeMoods: Map<MoodType, number> = new Map()
   private _transitionObj: LeviarObject | null = null
   private _overlayObjs: Map<string, LeviarObject> = new Map()
-  private _lightObjs: Map<string, LeviarObject> = new Map()
   private _flickerObj: LeviarObject | null = null
-  private _flickerState: { light: LightPreset; preset: FlickerPreset } | null = null
+  private _flickerState: { mood: MoodType; preset: FlickerPreset } | null = null
   private _characterStates: Map<string, { position: string; imageKey: string }> = new Map()
   private _activeEffects: Set<EffectType> = new Set()
-  private _activeLights: Set<LightPreset> = new Set()
   /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
   private _isSkipping: boolean = false
 
@@ -355,13 +346,12 @@ export class Renderer {
 
   captureState(): RendererState {
     const cam = this.world.camera
+    const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => ({ mood, intensity }))
     return {
       backgroundKey: this._backgroundKey,
       backgroundParallax: this._backgroundIsParallax,
-      moodType: this._moodType,
-      moodIntensity: this._moodIntensity,
+      activeMoods: activeMoodsArr,
       activeEffects: new Set(this._activeEffects),
-      activeLights: new Set(this._activeLights),
       characters: new Map(this._characterStates),
       cameraState: {
         x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
@@ -376,11 +366,21 @@ export class Renderer {
     if (state.backgroundKey) {
       this.setBackground(state.backgroundKey, 'stretch', 0)
     }
-    if (state.moodType && state.moodType !== 'none') {
-      this.setMood(state.moodType, state.moodIntensity, 0)
+    
+    // 하위 호환성 (과거 세이브 데이터)
+    const oldState = state as any
+    if (oldState.moodType && oldState.moodType !== 'none') {
+      this.addMood(oldState.moodType, oldState.moodIntensity, 0)
     }
+    if (oldState.activeLights) {
+      oldState.activeLights.forEach((l: any) => this.addMood(l, undefined, 0))
+    }
+    
+    if (state.activeMoods) {
+      state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0))
+    }
+    
     state.activeEffects.forEach(e => this.addEffect(e))
-    state.activeLights.forEach(l => this.addLight(l))
     state.characters.forEach(({ position, imageKey }, name) => {
       this.showCharacter(name, position, imageKey)
     })
@@ -402,9 +402,10 @@ export class Renderer {
       cam.transform.position.y = state.cameraState.y
       cam.transform.position.z = state.cameraState.z
     }
-    // 플리커 복원 (조명 복원 후 실행)
+    // 플리커 복원 (무드 복원 후 실행)
     if (state.flicker) {
-      this.setFlicker(state.flicker.light, state.flicker.preset)
+      const moodKey = state.flicker.mood || (state.flicker as any).light
+      this.setFlicker(moodKey, state.flicker.preset)
     }
   }
 
@@ -416,15 +417,13 @@ export class Renderer {
     this._characterStates.clear()
     this._effects.clear()
     this._activeEffects.clear()
-    this._activeLights.clear()
     this._backgroundObj = null
     this._backgroundKey = null
-    if (this._moodObj) { (this._moodObj as any).remove?.(); this._moodObj = null }
-    this._moodType = null
-    this._overlayObjs.forEach(o => (o as any).remove?.())
+    this._moodObjs.forEach(o => { (o as any).remove?.(); this._objects.delete(o) })
+    this._moodObjs.clear()
+    this._activeMoods.clear()
+    this._overlayObjs.forEach(o => { (o as any).remove?.(); this._objects.delete(o) })
     this._overlayObjs.clear()
-    this._lightObjs.forEach(o => (o as any).remove?.())
-    this._lightObjs.clear()
     this._flickerObj = null
     this._flickerState = null
     if (this._camOffsetObj) {
@@ -501,26 +500,23 @@ export class Renderer {
 
   // ─── 무드 ───────────────────────────────────────────────────
 
-  setMood(mood: MoodType = 'none', intensity: number = 1, duration: number = 800): void {
-    const dur = this._dur(duration)
-    if (this._moodObj) {
-      if ((this._moodObj as any)._currentMood === mood) {
-        this._animate(this._moodObj, { style: { opacity: intensity } }, dur, 'easeInOutQuad')
-        this._moodIntensity = intensity
-        return
-      }
-      const old = this._moodObj
-      this._animate(old, { style: { opacity: 0 } }, dur, 'easeOut', () => {
-        ; (old as any).remove?.(); this._objects.delete(old)
-      })
-      this._moodObj = null
+  addMood(mood: MoodType, intensity?: number, duration: number = 800): void {
+    if (mood === 'none') {
+      this.clearMoods(duration)
+      return
     }
-    if (mood === 'none') { this._moodType = null; return }
 
-    this._moodType = mood
-    this._moodIntensity = intensity
+    const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood]
+    const finalIntensity = intensity ?? defaultIntensity ?? 1
+    const dur = this._dur(duration)
 
-    const { color, vignette, blendMode } = MOOD_PRESETS[mood]
+    const existing = this._moodObjs.get(mood)
+    if (existing) {
+      this._animate(existing, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+      this._activeMoods.set(mood, finalIntensity)
+      return
+    }
+
     const cam = this.world.camera as any
     const focalLength = cam?.attribute?.focalLength ?? 100
     const exactW = cam && typeof cam.calcDepthRatio === 'function'
@@ -528,22 +524,50 @@ export class Renderer {
     const exactH = cam && typeof cam.calcDepthRatio === 'function'
       ? cam.calcDepthRatio(focalLength, this.height) : this.height
 
-    const rect = this._track(this.world.createRectangle({
+    const rectOpts: any = {
       style: {
-        color, opacity: 0,
-        gradient: vignette, gradientType: 'circular',
+        color, opacity: dur > 0 ? 0 : finalIntensity,
         width: exactW, height: exactH,
         zIndex: Z_INDEX.MOOD,
         pointerEvents: false,
         blendMode: blendMode as any,
-      } as any,
+      },
       transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ } },
-    }))
+    }
+    if (vignette) {
+      rectOpts.style.gradient = vignette
+      rectOpts.style.gradientType = 'circular'
+    }
+
+    const rect = this._track(this.world.createRectangle(rectOpts))
     this.world.camera?.addChild(rect as any)
       ; (rect as any)._currentMood = mood
-    this._moodObj = rect as any
+    this._moodObjs.set(mood, rect as any)
+    this._activeMoods.set(mood, finalIntensity)
 
-    this._animate(rect, { style: { opacity: intensity } }, dur, 'easeInOutQuad')
+    if (dur > 0) {
+      this._animate(rect, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+    }
+  }
+
+  removeMood(mood: MoodType, duration: number = 800): void {
+    const obj = this._moodObjs.get(mood)
+    this._activeMoods.delete(mood)
+    if (obj) {
+      this._moodObjs.delete(mood)
+      const dur = this._dur(duration)
+      if (dur > 0 && typeof (obj as any).fadeOut === 'function') {
+        (obj as any).fadeOut(dur)
+        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, dur)
+      } else {
+        (obj as any).remove?.(); this._objects.delete(obj)
+      }
+    }
+  }
+
+  clearMoods(duration: number = 800): void {
+    const moods = Array.from(this._moodObjs.keys())
+    moods.forEach(m => this.removeMood(m, duration))
   }
 
   // ─── 이펙트 ─────────────────────────────────────────────────
@@ -601,47 +625,8 @@ export class Renderer {
 
   // ─── 조명 ───────────────────────────────────────────────────
 
-  addLight(preset: LightPreset = 'ambient', overrides?: Record<string, any>): void {
-    const p = LIGHT_PRESETS[preset]
-    const cam = this.world.camera as any
-    const focalLength = cam?.attribute?.focalLength ?? 100
-    const exactW = cam && typeof cam.calcDepthRatio === 'function'
-      ? cam.calcDepthRatio(focalLength, this.width) : this.width
-    const exactH = cam && typeof cam.calcDepthRatio === 'function'
-      ? cam.calcDepthRatio(focalLength, this.height) : this.height
-
-    if (this._lightObjs.has(preset)) this.removeLight(preset)
-    this._activeLights.add(preset)
-
-    const rect = this._track(this.world.createRectangle({
-      style: {
-        color: p.color, width: exactW, height: exactH,
-        opacity: p.opacity,
-        zIndex: Z_INDEX.LIGHT, pointerEvents: false, blendMode: 'screen',
-        ...overrides?.style,
-      } as any,
-      transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ }, ...overrides?.transform },
-    }))
-    this.world.camera?.addChild(rect as any)
-    this._lightObjs.set(preset, rect as any)
-  }
-
-  removeLight(preset: LightPreset, duration: number = 600): void {
-    const obj = this._lightObjs.get(preset)
-    this._activeLights.delete(preset)
-    if (obj) {
-      this._lightObjs.delete(preset)
-      if (duration > 0 && typeof (obj as any).fadeOut === 'function') {
-        (obj as any).fadeOut(duration)
-        setTimeout(() => { (obj as any).remove?.(); this._objects.delete(obj) }, duration)
-      } else {
-        (obj as any).remove?.(); this._objects.delete(obj)
-      }
-    }
-  }
-
-  setFlicker(lightPreset: LightPreset, flickerPreset: FlickerPreset = 'candle'): void {
-    const target = this._lightObjs.get(lightPreset)
+  setFlicker(mood: MoodType, flickerPreset: FlickerPreset = 'candle'): void {
+    const target = this._moodObjs.get(mood)
     if (!target) return
 
     this._flickerObj = null
@@ -655,7 +640,7 @@ export class Renderer {
     }
     const cfg = configs[flickerPreset]
     this._flickerObj = target
-    this._flickerState = { light: lightPreset, preset: flickerPreset }
+    this._flickerState = { mood, preset: flickerPreset }
 
     const step = () => {
       if (this._flickerObj !== target) {
@@ -883,14 +868,8 @@ export class Renderer {
     const exactW = this.width / scaleAtDst
     const exactH = this.height / scaleAtDst
 
-    if (this._moodObj) {
-      this._animate(this._moodObj, {
-        transform: { position: { z: localZ } },
-        style: { width: exactW, height: exactH },
-      }, finalDur, 'easeInOutQuad')
-    }
-    this._lightObjs.forEach(light => {
-      this._animate(light, {
+    this._moodObjs.forEach(moodObj => {
+      this._animate(moodObj, {
         transform: { position: { z: localZ } },
         style: { width: exactW, height: exactH },
       }, finalDur, 'easeInOutQuad')

@@ -21,7 +21,6 @@ export type {
 export type {
   // dialogue 프리셋 타입
   MoodType,
-  LightPreset,
   FlickerPreset,
   OverlayPreset,
   EffectType,
@@ -42,7 +41,6 @@ export type {
   BackgroundCmd,
   MoodCmd,
   EffectCmd,
-  LightCmd,
   FlickerCmd,
   OverlayCmd,
   CharacterCmd,

@@ -12942,13 +12942,10 @@ ${addLineNumbers(fragment)}`);
     flashback: { color: "rgba(200,200,200,0.2)", vignette: "transparent 60%, rgba(255,255,255,0.5) 100%", blendMode: "screen" },
     dream: { color: "rgba(180,150,255,0.2)", vignette: "transparent 60%, rgba(255,200,255,0.4) 100%", blendMode: "screen" },
     danger: { color: "rgba(255,0,0,0.1)", vignette: "transparent 50%, rgba(200,0,0,0.5) 100%", blendMode: "color-burn" },
-    none: { color: "transparent" }
-  };
-  var LIGHT_PRESETS = {
-    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)", opacity: 0.6 },
-    ambient: { color: "rgba(255,230,150,1)", opacity: 0.15 },
-    warm: { color: "rgba(255,160,50,1)", opacity: 0.25 },
-    cold: { color: "rgba(100,160,255,1)", opacity: 0.2 }
+    none: { color: "transparent" },
+    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)", blendMode: "screen", defaultIntensity: 0.6 },
+    ambient: { color: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
+    warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
   };
   var OVERLAY_PRESETS = {
     caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
@@ -12998,17 +12995,14 @@ ${addLineNumbers(fragment)}`);
     _backgroundObj = null;
     _backgroundIsParallax = true;
     _backgroundKey = null;
-    _moodObj = null;
-    _moodType = null;
-    _moodIntensity = 1;
+    _moodObjs = /* @__PURE__ */ new Map();
+    _activeMoods = /* @__PURE__ */ new Map();
     _transitionObj = null;
     _overlayObjs = /* @__PURE__ */ new Map();
-    _lightObjs = /* @__PURE__ */ new Map();
     _flickerObj = null;
     _flickerState = null;
     _characterStates = /* @__PURE__ */ new Map();
     _activeEffects = /* @__PURE__ */ new Set();
-    _activeLights = /* @__PURE__ */ new Set();
     /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
     _isSkipping = false;
     // ─── 카메라 애니메이션 추적 (중단/snap 처리용) ──────────────
@@ -13141,13 +13135,12 @@ ${addLineNumbers(fragment)}`);
     // ─── 씬 전환 상태 스냅샷 / 복원 ────────────────────────────
     captureState() {
       const cam = this.world.camera;
+      const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => ({ mood, intensity }));
       return {
         backgroundKey: this._backgroundKey,
         backgroundParallax: this._backgroundIsParallax,
-        moodType: this._moodType,
-        moodIntensity: this._moodIntensity,
+        activeMoods: activeMoodsArr,
         activeEffects: new Set(this._activeEffects),
-        activeLights: new Set(this._activeLights),
         characters: new Map(this._characterStates),
         cameraState: {
           x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
@@ -13161,11 +13154,17 @@ ${addLineNumbers(fragment)}`);
       if (state.backgroundKey) {
         this.setBackground(state.backgroundKey, "stretch", 0);
       }
-      if (state.moodType && state.moodType !== "none") {
-        this.setMood(state.moodType, state.moodIntensity, 0);
+      const oldState = state;
+      if (oldState.moodType && oldState.moodType !== "none") {
+        this.addMood(oldState.moodType, oldState.moodIntensity, 0);
+      }
+      if (oldState.activeLights) {
+        oldState.activeLights.forEach((l) => this.addMood(l, void 0, 0));
+      }
+      if (state.activeMoods) {
+        state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0));
       }
       state.activeEffects.forEach((e) => this.addEffect(e));
-      state.activeLights.forEach((l) => this.addLight(l));
       state.characters.forEach(({ position, imageKey }, name) => {
         this.showCharacter(name, position, imageKey);
       });
@@ -13187,7 +13186,8 @@ ${addLineNumbers(fragment)}`);
         cam.transform.position.z = state.cameraState.z;
       }
       if (state.flicker) {
-        this.setFlicker(state.flicker.light, state.flicker.preset);
+        const moodKey = state.flicker.mood || state.flicker.light;
+        this.setFlicker(moodKey, state.flicker.preset);
       }
     }
     /** 모든 씬 오브젝트를 제거한다 */
@@ -13198,18 +13198,19 @@ ${addLineNumbers(fragment)}`);
       this._characterStates.clear();
       this._effects.clear();
       this._activeEffects.clear();
-      this._activeLights.clear();
       this._backgroundObj = null;
       this._backgroundKey = null;
-      if (this._moodObj) {
-        this._moodObj.remove?.();
-        this._moodObj = null;
-      }
-      this._moodType = null;
-      this._overlayObjs.forEach((o) => o.remove?.());
+      this._moodObjs.forEach((o) => {
+        o.remove?.();
+        this._objects.delete(o);
+      });
+      this._moodObjs.clear();
+      this._activeMoods.clear();
+      this._overlayObjs.forEach((o) => {
+        o.remove?.();
+        this._objects.delete(o);
+      });
       this._overlayObjs.clear();
-      this._lightObjs.forEach((o) => o.remove?.());
-      this._lightObjs.clear();
       this._flickerObj = null;
       this._flickerState = null;
       if (this._camOffsetObj) {
@@ -13265,39 +13266,28 @@ ${addLineNumbers(fragment)}`);
       this._backgroundObj = this._track(bg);
     }
     // ─── 무드 ───────────────────────────────────────────────────
-    setMood(mood = "none", intensity = 1, duration = 800) {
-      const dur = this._dur(duration);
-      if (this._moodObj) {
-        if (this._moodObj._currentMood === mood) {
-          this._animate(this._moodObj, { style: { opacity: intensity } }, dur, "easeInOutQuad");
-          this._moodIntensity = intensity;
-          return;
-        }
-        const old = this._moodObj;
-        this._animate(old, { style: { opacity: 0 } }, dur, "easeOut", () => {
-          ;
-          old.remove?.();
-          this._objects.delete(old);
-        });
-        this._moodObj = null;
-      }
+    addMood(mood, intensity, duration = 800) {
       if (mood === "none") {
-        this._moodType = null;
+        this.clearMoods(duration);
         return;
       }
-      this._moodType = mood;
-      this._moodIntensity = intensity;
-      const { color, vignette, blendMode } = MOOD_PRESETS[mood];
+      const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
+      const finalIntensity = intensity ?? defaultIntensity ?? 1;
+      const dur = this._dur(duration);
+      const existing = this._moodObjs.get(mood);
+      if (existing) {
+        this._animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+        this._activeMoods.set(mood, finalIntensity);
+        return;
+      }
       const cam = this.world.camera;
       const focalLength = cam?.attribute?.focalLength ?? 100;
       const exactW = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, this.width) : this.width;
       const exactH = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, this.height) : this.height;
-      const rect = this._track(this.world.createRectangle({
+      const rectOpts = {
         style: {
           color,
-          opacity: 0,
-          gradient: vignette,
-          gradientType: "circular",
+          opacity: dur > 0 ? 0 : finalIntensity,
           width: exactW,
           height: exactH,
           zIndex: Z_INDEX.MOOD,
@@ -13305,11 +13295,41 @@ ${addLineNumbers(fragment)}`);
           blendMode
         },
         transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ } }
-      }));
+      };
+      if (vignette) {
+        rectOpts.style.gradient = vignette;
+        rectOpts.style.gradientType = "circular";
+      }
+      const rect = this._track(this.world.createRectangle(rectOpts));
       this.world.camera?.addChild(rect);
       rect._currentMood = mood;
-      this._moodObj = rect;
-      this._animate(rect, { style: { opacity: intensity } }, dur, "easeInOutQuad");
+      this._moodObjs.set(mood, rect);
+      this._activeMoods.set(mood, finalIntensity);
+      if (dur > 0) {
+        this._animate(rect, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+      }
+    }
+    removeMood(mood, duration = 800) {
+      const obj = this._moodObjs.get(mood);
+      this._activeMoods.delete(mood);
+      if (obj) {
+        this._moodObjs.delete(mood);
+        const dur = this._dur(duration);
+        if (dur > 0 && typeof obj.fadeOut === "function") {
+          obj.fadeOut(dur);
+          setTimeout(() => {
+            obj.remove?.();
+            this._objects.delete(obj);
+          }, dur);
+        } else {
+          obj.remove?.();
+          this._objects.delete(obj);
+        }
+      }
+    }
+    clearMoods(duration = 800) {
+      const moods = Array.from(this._moodObjs.keys());
+      moods.forEach((m) => this.removeMood(m, duration));
     }
     // ─── 이펙트 ─────────────────────────────────────────────────
     addEffect(type = "dust", rate, overrides) {
@@ -13363,49 +13383,8 @@ ${addLineNumbers(fragment)}`);
       }
     }
     // ─── 조명 ───────────────────────────────────────────────────
-    addLight(preset = "ambient", overrides) {
-      const p = LIGHT_PRESETS[preset];
-      const cam = this.world.camera;
-      const focalLength = cam?.attribute?.focalLength ?? 100;
-      const exactW = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, this.width) : this.width;
-      const exactH = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, this.height) : this.height;
-      if (this._lightObjs.has(preset)) this.removeLight(preset);
-      this._activeLights.add(preset);
-      const rect = this._track(this.world.createRectangle({
-        style: {
-          color: p.color,
-          width: exactW,
-          height: exactH,
-          opacity: p.opacity,
-          zIndex: Z_INDEX.LIGHT,
-          pointerEvents: false,
-          blendMode: "screen",
-          ...overrides?.style
-        },
-        transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ }, ...overrides?.transform }
-      }));
-      this.world.camera?.addChild(rect);
-      this._lightObjs.set(preset, rect);
-    }
-    removeLight(preset, duration = 600) {
-      const obj = this._lightObjs.get(preset);
-      this._activeLights.delete(preset);
-      if (obj) {
-        this._lightObjs.delete(preset);
-        if (duration > 0 && typeof obj.fadeOut === "function") {
-          obj.fadeOut(duration);
-          setTimeout(() => {
-            obj.remove?.();
-            this._objects.delete(obj);
-          }, duration);
-        } else {
-          obj.remove?.();
-          this._objects.delete(obj);
-        }
-      }
-    }
-    setFlicker(lightPreset, flickerPreset = "candle") {
-      const target = this._lightObjs.get(lightPreset);
+    setFlicker(mood, flickerPreset = "candle") {
+      const target = this._moodObjs.get(mood);
       if (!target) return;
       this._flickerObj = null;
       const baseOpacity = target._flickerBaseOpacity ?? target.style?.opacity ?? 1;
@@ -13417,7 +13396,7 @@ ${addLineNumbers(fragment)}`);
       };
       const cfg = configs[flickerPreset];
       this._flickerObj = target;
-      this._flickerState = { light: lightPreset, preset: flickerPreset };
+      this._flickerState = { mood, preset: flickerPreset };
       const step = () => {
         if (this._flickerObj !== target) {
           target.animate({ style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
@@ -13615,14 +13594,8 @@ ${addLineNumbers(fragment)}`);
       const scaleAtDst = baseDist / (baseDist - newZ);
       const exactW = this.width / scaleAtDst;
       const exactH = this.height / scaleAtDst;
-      if (this._moodObj) {
-        this._animate(this._moodObj, {
-          transform: { position: { z: localZ } },
-          style: { width: exactW, height: exactH }
-        }, finalDur, "easeInOutQuad");
-      }
-      this._lightObjs.forEach((light) => {
-        this._animate(light, {
+      this._moodObjs.forEach((moodObj) => {
+        this._animate(moodObj, {
           transform: { position: { z: localZ } },
           style: { width: exactW, height: exactH }
         }, finalDur, "easeInOutQuad");
@@ -14114,11 +14087,15 @@ ${addLineNumbers(fragment)}`);
           break;
         // ── 무드 ─────────────────────────────────────────────────
         case "mood":
-          r.setMood(
-            cmd.mood,
-            cmd.intensity ?? 1,
-            cmd.duration ?? 800
-          );
+          if (cmd.action === "remove") {
+            r.removeMood(cmd.mood, cmd.duration);
+          } else {
+            r.addMood(
+              cmd.mood,
+              cmd.intensity,
+              cmd.duration ?? 800
+            );
+          }
           break;
         // ── 이펙트 ───────────────────────────────────────────────
         case "effect":
@@ -14128,18 +14105,10 @@ ${addLineNumbers(fragment)}`);
             r.removeEffect(cmd.effect, cmd.duration);
           }
           break;
-        // ── 조명 ─────────────────────────────────────────────────
-        case "light":
-          if (cmd.action === "add") {
-            r.addLight(cmd.preset);
-          } else {
-            r.removeLight(cmd.preset, cmd.duration);
-          }
-          break;
         // ── 플리커 ───────────────────────────────────────────────
         case "flicker":
           r.setFlicker(
-            cmd.light,
+            cmd.mood,
             cmd.flicker
           );
           break;
@@ -15047,8 +15016,8 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "\uC5BC\uAD74\uC774 \uD654\uB048\uAC70\uB838\uB2E4. \uCC3D\uD53C\uD574\uC11C \uACE0\uAC1C\uB97C \uC219\uC600\uB2E4." },
     // ─── 4. 노을의 시간 ───
     { type: "control", action: "disable", duration: 5e3, skip: true },
-    // { type: 'mood', mood: 'sunset', intensity: 0.85, duration: 5000, skip: true },
-    { type: "light", action: "add", preset: "spot", duration: 3e3, skip: true },
+    { type: "mood", mood: "sepia", intensity: 0.85, duration: 5e3, skip: true },
+    { type: "mood", action: "add", mood: "ambient", duration: 3e3, skip: true },
     { type: "effect", action: "add", effect: "sakura", rate: 15, skip: true },
     {
       type: "dialogue",
@@ -15244,10 +15213,10 @@ ${addLineNumbers(fragment)}`);
     // ── 비 이펙트 + night 무드
     { type: "mood", mood: "night", intensity: 0.7, duration: 1200 },
     { type: "effect", action: "add", effect: "rain", rate: 120, skip: true },
-    { type: "light", action: "add", preset: "cold", skip: true },
+    { type: "mood", action: "add", mood: "cold", skip: true },
     { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
     // ── 조명 플리커
-    { type: "flicker", light: "cold", flicker: "flicker" },
+    { type: "flicker", mood: "cold", flicker: "flicker" },
     { type: "dialogue", text: "flicker(\uAE5C\uBE61\uC784) \uC801\uC6A9." },
     // ── 카메라 흔들림
     { type: "camera-effect", preset: "shake", duration: 500, repeat: 100 },
@@ -15261,7 +15230,7 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "screen-flash: white." },
     // ── 이펙트/조명 제거 + day 복원
     { type: "effect", action: "remove", effect: "rain", duration: 600, skip: true },
-    { type: "light", action: "remove", preset: "cold", duration: 600, skip: true },
+    { type: "mood", action: "remove", mood: "cold", duration: 600, skip: true },
     { type: "mood", mood: "day", intensity: 0.5, duration: 1e3, skip: true },
     { type: "dialogue", text: "\uC774\uD399\uD2B8 \uC81C\uAC70, day \uBB34\uB4DC \uBCF5\uC6D0." },
     // ── 와이프 전환
@@ -15341,7 +15310,6 @@ ${addLineNumbers(fragment)}`);
       rendererState: {
         ...data.rendererState,
         activeEffects: [...data.rendererState.activeEffects],
-        activeLights: [...data.rendererState.activeLights],
         characters: Object.fromEntries(data.rendererState.characters)
       }
     });
@@ -15353,7 +15321,6 @@ ${addLineNumbers(fragment)}`);
       rendererState: {
         ...raw.rendererState,
         activeEffects: new Set(raw.rendererState.activeEffects),
-        activeLights: new Set(raw.rendererState.activeLights),
         characters: new Map(Object.entries(raw.rendererState.characters))
       }
     };

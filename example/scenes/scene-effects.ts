@@ -23,11 +23,11 @@ export default defineScene(config, [
   // ── 비 이펙트 + night 무드
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 1200 },
   { type: 'effect', action: 'add', effect: 'rain', rate: 120, skip: true },
-  { type: 'light', action: 'add', preset: 'cold', skip: true },
+  { type: 'mood', action: 'add', mood: 'cold', skip: true },
   { type: 'dialogue', text: 'rain 이펙트 + cold 조명 + night 무드.' },
 
   // ── 조명 플리커
-  { type: 'flicker', light: 'cold', flicker: 'flicker' },
+  { type: 'flicker', mood: 'cold', flicker: 'flicker' },
   { type: 'dialogue', text: 'flicker(깜빡임) 적용.' },
 
   // ── 카메라 흔들림
@@ -45,7 +45,7 @@ export default defineScene(config, [
 
   // ── 이펙트/조명 제거 + day 복원
   { type: 'effect', action: 'remove', effect: 'rain', duration: 600, skip: true },
-  { type: 'light', action: 'remove', preset: 'cold', duration: 600, skip: true },
+  { type: 'mood', action: 'remove', mood: 'cold', duration: 600, skip: true },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 1000, skip: true },
   { type: 'dialogue', text: '이펙트 제거, day 무드 복원.' },
 

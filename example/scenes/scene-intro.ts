@@ -138,8 +138,8 @@ export default defineScene(config, [
 
   // ─── 4. 노을의 시간 ───
   { type: 'control', action: 'disable', duration: 5000, skip: true },
-  // { type: 'mood', mood: 'sunset', intensity: 0.85, duration: 5000, skip: true },
-  { type: 'light', action: 'add', preset: 'spot', duration: 3000, skip: true },
+  { type: 'mood', mood: 'sepia', intensity: 0.85, duration: 5000, skip: true },
+  { type: 'mood', action: 'add', mood: 'ambient', duration: 3000, skip: true },
   { type: 'effect', action: 'add', effect: 'sakura', rate: 15, skip: true },
   {
     type: 'dialogue',

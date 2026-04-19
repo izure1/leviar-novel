@@ -47,7 +47,6 @@ function serializeSave(data: SaveData): string {
     rendererState: {
       ...data.rendererState,
       activeEffects: [...data.rendererState.activeEffects],
-      activeLights:  [...data.rendererState.activeLights],
       characters:    Object.fromEntries(data.rendererState.characters),
     },
   })
@@ -60,7 +59,6 @@ function deserializeSave(json: string): SaveData {
     rendererState: {
       ...raw.rendererState,
       activeEffects: new Set<any>(raw.rendererState.activeEffects),
-      activeLights:  new Set<any>(raw.rendererState.activeLights),
       characters:    new Map<string, any>(Object.entries(raw.rendererState.characters)),
     },
   }

@@ -10,8 +10,8 @@ export type MoodType =
   | 'day' | 'night' | 'dawn' | 'sunset'
   | 'foggy' | 'sepia' | 'cold' | 'noir'
   | 'horror' | 'flashback' | 'dream' | 'danger' | 'none'
+  | 'spot' | 'ambient' | 'warm'
 
-export type LightPreset  = 'spot' | 'ambient' | 'warm' | 'cold'
 export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
 export type OverlayPreset = 'caption' | 'title' | 'whisper'
 export type EffectType   = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
@@ -111,11 +111,12 @@ export interface BackgroundCmd<TBackgrounds extends BgDefs> {
   isVideo?: boolean
 }
 
-/** 화면 분위기 오버레이를 설정한다 */
+/** 화면 분위기 오버레이(무드, 조명)를 추가하거나 제거한다 */
 export interface MoodCmd {
   type: 'mood'
+  action?: 'add' | 'remove'
   mood: MoodType
-  /** 불투명도 (0~1). 기본값: 1 */
+  /** 불투명도 (0~1). 기본값: 1 (추가 시) */
   intensity?: number
   /** 전환 시간(ms). 기본값: 800 */
   duration?: number
@@ -132,19 +133,10 @@ export interface EffectCmd {
   duration?: number
 }
 
-/** 조명 이펙트를 추가하거나 제거한다 */
-export interface LightCmd {
-  type: 'light'
-  action: 'add' | 'remove'
-  preset: LightPreset
-  /** 제거 시 페이드아웃 시간(ms). action: 'remove' 일 때만 유효 */
-  duration?: number
-}
-
-/** 조명에 깜빡임 효과를 적용한다 */
+/** 조명/무드에 깜빡임 효과를 적용한다 */
 export interface FlickerCmd {
   type: 'flicker'
-  light: LightPreset
+  mood: MoodType
   flicker: FlickerPreset
 }
 
@@ -307,7 +299,6 @@ type _DialogueEntryUnion<
   | BackgroundCmd<TBackgrounds>
   | MoodCmd
   | EffectCmd
-  | LightCmd
   | FlickerCmd
   | OverlayCmd
   | CharacterCmd<TCharacters>

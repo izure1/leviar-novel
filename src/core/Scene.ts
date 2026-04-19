@@ -7,7 +7,7 @@ import type { SceneDefinition } from '../define/defineScene'
 import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
 import type {
   DialogueEntry, DialogueStep,
-  MoodType, EffectType, LightPreset, FlickerPreset, OverlayPreset,
+  MoodType, EffectType, FlickerPreset, OverlayPreset,
   ZoomPreset, PanPreset, CameraEffectPreset,
   BackgroundFitPreset, FadeColorPreset, FlashPreset, WipePreset,
 } from '../types/dialogue'
@@ -362,11 +362,15 @@ export class DialogueScene {
 
       // ── 무드 ─────────────────────────────────────────────────
       case 'mood':
-        r.setMood(
-          cmd.mood as MoodType,
-          cmd.intensity ?? 1,
-          cmd.duration ?? 800,
-        )
+        if (cmd.action === 'remove') {
+          r.removeMood(cmd.mood as MoodType, cmd.duration)
+        } else {
+          r.addMood(
+            cmd.mood as MoodType,
+            cmd.intensity,
+            cmd.duration ?? 800,
+          )
+        }
         break
 
       // ── 이펙트 ───────────────────────────────────────────────
@@ -378,19 +382,10 @@ export class DialogueScene {
         }
         break
 
-      // ── 조명 ─────────────────────────────────────────────────
-      case 'light':
-        if (cmd.action === 'add') {
-          r.addLight(cmd.preset as LightPreset)
-        } else {
-          r.removeLight(cmd.preset as LightPreset, cmd.duration)
-        }
-        break
-
       // ── 플리커 ───────────────────────────────────────────────
       case 'flicker':
         r.setFlicker(
-          cmd.light as LightPreset,
+          cmd.mood as MoodType,
           cmd.flicker as FlickerPreset,
         )
         break
