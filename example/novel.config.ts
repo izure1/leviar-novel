@@ -66,6 +66,15 @@ export default defineNovelConfig({
     sakura: './assets/particle_sakura.png',
     fog: './assets/particle_fog.png',
   },
+  effects: {
+    rain: {
+      clip: { impulse: 0 },
+      particle: {
+        attribute: { gravityScale: 1.5 },
+        style: { width: 25, height: 100, blendMode: 'screen' }
+      }
+    }
+  },
   fallback: [
     { type: 'character', action: 'show', defaults: { duration: 300 } },
     { type: 'character', action: 'remove', defaults: { duration: 1000 } },

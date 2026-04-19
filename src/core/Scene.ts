@@ -440,7 +440,7 @@ export class DialogueScene {
 
       case 'camera-pan':
         r.panCamera(
-          cmd.preset as PanPreset,
+          (cmd as any).position as PanPreset,
           cmd.duration,
         )
         break

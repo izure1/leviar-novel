@@ -149,13 +149,15 @@ export interface CameraState {
 export interface RendererState {
   backgroundKey: string | null
   backgroundParallax: boolean
-  activeMoods: Array<{ mood: MoodType; intensity: number }>
+  activeMoods: Array<{ mood: MoodType; intensity: number; flicker?: FlickerPreset }>
   activeEffects: Array<{ type: EffectType; rate?: number; overrides?: Record<string, any>; srcKey?: string }>
   characters: Record<string, { position: string; imageKey: string }>
   /** 카메라 위치/줌 상태 */
   cameraState: CameraState
-  /** 플리커 상태 (null = 비활성) */
-  flicker: { mood: MoodType; preset: FlickerPreset } | null
+  /** 화면 전환 효과(페이드/와이프) 잔존 상태 */
+  transitionState?: { color: string; opacity: number; x: number; y: number } | null
+  /** @deprecated 하위 호환성을 위해 유지 (activeMoods 내장으로 변경됨) */
+  flicker?: { mood: MoodType; preset: FlickerPreset } | null
 }
 
 // =============================================================
@@ -346,7 +348,17 @@ export class Renderer {
 
   captureState(): RendererState {
     const cam = this.world.camera
-    const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => ({ mood, intensity }))
+    const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => {
+      const flicker = (this._flickerState?.mood === mood) ? this._flickerState.preset : undefined
+      return { mood, intensity, flicker }
+    })
+    const transitionState = this._transitionObj ? {
+      color: (this._transitionObj as any).style.color,
+      opacity: (this._transitionObj as any).style.opacity,
+      x: this._transitionObj.transform.position.x,
+      y: this._transitionObj.transform.position.y
+    } : null
+
     return {
       backgroundKey: this._backgroundKey,
       backgroundParallax: this._backgroundIsParallax,
@@ -358,7 +370,7 @@ export class Renderer {
         y: this._camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
         z: this._camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0,
       },
-      flicker: this._flickerState ? { ...this._flickerState } : null,
+      transitionState,
     }
   }
 
@@ -377,7 +389,10 @@ export class Renderer {
     }
 
     if (state.activeMoods) {
-      state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0))
+      state.activeMoods.forEach(({ mood, intensity, flicker }) => {
+        this.addMood(mood, intensity, 0)
+        if (flicker) this.setFlicker(mood, flicker)
+      })
     }
 
     state.activeEffects.forEach((e: any) => {
@@ -410,10 +425,18 @@ export class Renderer {
       cam.transform.position.y = state.cameraState.y
       cam.transform.position.z = state.cameraState.z
     }
-    // 플리커 복원 (무드 복원 후 실행)
+    // 하위 호환성용 플리커 복원 (activeMoods 내장 이전)
     if (state.flicker) {
       const moodKey = state.flicker.mood || (state.flicker as any).light
       this.setFlicker(moodKey, state.flicker.preset)
+    }
+
+    // 트랜지션 잔존 상태 복원
+    if (state.transitionState && state.transitionState.opacity > 0) {
+      const rect = this._getTransitionRect(state.transitionState.color)
+      ;(rect as any).style.opacity = state.transitionState.opacity
+      rect.transform.position.x = state.transitionState.x
+      rect.transform.position.y = state.transitionState.y
     }
   }
 
@@ -585,13 +608,17 @@ export class Renderer {
   // ─── 이펙트 ─────────────────────────────────────────────────
 
   addEffect(type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>, srcKey?: string): void {
-    const preset = EFFECT_PARTICLE_PRESETS[type]
+    const configEffect = this.config.effects?.[type]
+    const preset = {
+      attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
+      style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style },
+    }
     const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10
     const clipName = `${type}_rate_${finalRate}_${srcKey ?? 'default'}`
     const particleZ = this.depth / 2
 
     if (!(this.world as any).particleManager.get(clipName)) {
-      const clipBase = EFFECT_CLIP_PRESETS[type]
+      const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip }
       const cam = this.world.camera as any
       const ratio = cam && typeof cam.calcDepthRatio === 'function'
         ? cam.calcDepthRatio(particleZ, 1) : 1
@@ -919,10 +946,14 @@ export class Renderer {
     let x: number, y: number, dur: number
     if (preset === 'custom') {
       x = customX ?? 0; y = customY ?? 0; dur = this._dur(duration ?? 800)
-    } else {
-      this._lastPanPreset = preset
-      const p = PAN_PRESETS[preset]
+    } else if (PAN_PRESETS[preset as keyof typeof PAN_PRESETS]) {
+      this._lastPanPreset = preset as Exclude<PanPreset, 'inherit'>
+      const p = PAN_PRESETS[preset as keyof typeof PAN_PRESETS]
       x = customX ?? p.x; y = customY ?? p.y; dur = this._dur(duration ?? p.duration)
+    } else {
+      x = customX ?? (this.width * (this._resolvePositionX(preset) - 0.5))
+      y = customY ?? 0
+      dur = this._dur(duration ?? 1000)
     }
 
     this._activeCamPanTarget = { x, y }

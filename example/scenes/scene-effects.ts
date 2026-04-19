@@ -56,9 +56,9 @@ export default defineScene(config, [
   { type: 'dialogue', text: 'screen-fade: dream 프리셋.' },
 
   // ── 카메라 패닝
-  { type: 'camera-pan', preset: 'right', duration: 800 },
+  { type: 'camera-pan', position: 'right', duration: 800 },
   { type: 'dialogue', text: 'camera-pan: right.' },
-  { type: 'camera-pan', preset: 'center', duration: 800 },
+  { type: 'camera-pan', position: 'center', duration: 800 },
 
   // ── fog 이펙트
   { type: 'effect', action: 'add', effect: 'fog', src: 'fog', rate: 20 },

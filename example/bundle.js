@@ -13135,7 +13135,16 @@ ${addLineNumbers(fragment)}`);
     // ─── 씬 전환 상태 스냅샷 / 복원 ────────────────────────────
     captureState() {
       const cam = this.world.camera;
-      const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => ({ mood, intensity }));
+      const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => {
+        const flicker = this._flickerState?.mood === mood ? this._flickerState.preset : void 0;
+        return { mood, intensity, flicker };
+      });
+      const transitionState = this._transitionObj ? {
+        color: this._transitionObj.style.color,
+        opacity: this._transitionObj.style.opacity,
+        x: this._transitionObj.transform.position.x,
+        y: this._transitionObj.transform.position.y
+      } : null;
       return {
         backgroundKey: this._backgroundKey,
         backgroundParallax: this._backgroundIsParallax,
@@ -13147,7 +13156,7 @@ ${addLineNumbers(fragment)}`);
           y: this._camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
           z: this._camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0
         },
-        flicker: this._flickerState ? { ...this._flickerState } : null
+        transitionState
       };
     }
     restoreState(state) {
@@ -13162,7 +13171,10 @@ ${addLineNumbers(fragment)}`);
         oldState.activeLights.forEach((l) => this.addMood(l, void 0, 0));
       }
       if (state.activeMoods) {
-        state.activeMoods.forEach(({ mood, intensity }) => this.addMood(mood, intensity, 0));
+        state.activeMoods.forEach(({ mood, intensity, flicker }) => {
+          this.addMood(mood, intensity, 0);
+          if (flicker) this.setFlicker(mood, flicker);
+        });
       }
       state.activeEffects.forEach((e) => {
         if (typeof e === "string") {
@@ -13196,6 +13208,12 @@ ${addLineNumbers(fragment)}`);
       if (state.flicker) {
         const moodKey = state.flicker.mood || state.flicker.light;
         this.setFlicker(moodKey, state.flicker.preset);
+      }
+      if (state.transitionState && state.transitionState.opacity > 0) {
+        const rect = this._getTransitionRect(state.transitionState.color);
+        rect.style.opacity = state.transitionState.opacity;
+        rect.transform.position.x = state.transitionState.x;
+        rect.transform.position.y = state.transitionState.y;
       }
     }
     /** 모든 씬 오브젝트를 제거한다 */
@@ -13345,12 +13363,16 @@ ${addLineNumbers(fragment)}`);
     }
     // ─── 이펙트 ─────────────────────────────────────────────────
     addEffect(type = "dust", rate, overrides, srcKey) {
-      const preset = EFFECT_PARTICLE_PRESETS[type];
+      const configEffect = this.config.effects?.[type];
+      const preset = {
+        attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
+        style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style }
+      };
       const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
       const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
       const particleZ = this.depth / 2;
       if (!this.world.particleManager.get(clipName)) {
-        const clipBase = EFFECT_CLIP_PRESETS[type];
+        const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip };
         const cam = this.world.camera;
         const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(particleZ, 1) : 1;
         const maxPanX = this.width * 0.4;
@@ -13641,12 +13663,16 @@ ${addLineNumbers(fragment)}`);
         x = customX ?? 0;
         y = customY ?? 0;
         dur = this._dur(duration ?? 800);
-      } else {
+      } else if (PAN_PRESETS[preset]) {
         this._lastPanPreset = preset;
         const p = PAN_PRESETS[preset];
         x = customX ?? p.x;
         y = customY ?? p.y;
         dur = this._dur(duration ?? p.duration);
+      } else {
+        x = customX ?? this.width * (this._resolvePositionX(preset) - 0.5);
+        y = customY ?? 0;
+        dur = this._dur(duration ?? 1e3);
       }
       this._activeCamPanTarget = { x, y };
       this._activeCamPanAnim = this._animate(this._camBaseObj, { transform: { position: { x, y } } }, dur, "easeInOutQuad");
@@ -14180,7 +14206,7 @@ ${addLineNumbers(fragment)}`);
           break;
         case "camera-pan":
           r.panCamera(
-            cmd.preset,
+            cmd.position,
             cmd.duration
           );
           break;
@@ -14900,6 +14926,15 @@ ${addLineNumbers(fragment)}`);
       sakura: "./assets/particle_sakura.png",
       fog: "./assets/particle_fog.png"
     },
+    effects: {
+      rain: {
+        clip: { impulse: 0 },
+        particle: {
+          attribute: { gravityScale: 1.5 },
+          style: { width: 25, height: 100, blendMode: "screen" }
+        }
+      }
+    },
     fallback: [
       { type: "character", action: "show", defaults: { duration: 300 } },
       { type: "character", action: "remove", defaults: { duration: 1e3 } },
@@ -14932,7 +14967,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 2. 예기치 못한 조우 ───
-    { type: "camera-pan", preset: "right", duration: 2500 },
+    { type: "camera-pan", position: "1/10", duration: 2500 },
     { type: "dialogue", text: "\uC11C\uAC00 \uB108\uBA38, \uCC3D\uAC00 \uC790\uB9AC\uC5D0 \uB204\uAD70\uAC00 \uC549\uC544 \uC788\uC5C8\uB2E4." },
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500, focus: "face", skip: true },
     {
@@ -15257,9 +15292,9 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "in", preset: "dream", duration: 800 },
     { type: "dialogue", text: "screen-fade: dream \uD504\uB9AC\uC14B." },
     // ── 카메라 패닝
-    { type: "camera-pan", preset: "right", duration: 800 },
+    { type: "camera-pan", position: "right", duration: 800 },
     { type: "dialogue", text: "camera-pan: right." },
-    { type: "camera-pan", preset: "center", duration: 800 },
+    { type: "camera-pan", position: "center", duration: 800 },
     // ── fog 이펙트
     { type: "effect", action: "add", effect: "fog", src: "fog", rate: 20 },
     { type: "dialogue", text: "fog \uC774\uD399\uD2B8 \uCD94\uAC00." },

@@ -2,7 +2,8 @@
 // defineNovelConfig.ts — Novel config 헬퍼 함수
 // =============================================================
 
-import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRule } from '../types/config'
+import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRule, EffectDef } from '../types/config'
+import type { EffectType } from '../types/dialogue'
 
 /**
  * Novel config를 정의합니다. 제네릭으로 리터럴 타입을 보존하여
@@ -36,6 +37,7 @@ export function defineNovelConfig<
     scenes: TScenes
     characters: TCharacters
     backgrounds: TBackgrounds
+    effects?: Partial<Record<EffectType, EffectDef>>
     ui?: NovelUIOption
     assets?: TAssets
     fallback?: FallbackRule[]
