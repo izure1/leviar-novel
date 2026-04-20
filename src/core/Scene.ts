@@ -5,16 +5,46 @@
 import type { Renderer, RendererState } from './Renderer'
 import type { SceneDefinition } from '../define/defineScene'
 import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
-import type {
-  DialogueEntry, DialogueStep,
-  MoodType, EffectType, FlickerPreset, OverlayPreset,
-  ZoomPreset, PanPreset, CameraEffectPreset,
-  BackgroundFitPreset, FadeColorPreset, FlashPreset, WipePreset,
-} from '../types/dialogue'
+import type { DialogueEntry, DialogueStep } from '../types/dialogue'
+import { dialogueHandler } from '../cmds/dialogue'
+import { choiceHandler } from '../cmds/choice'
+import { conditionHandler } from '../cmds/condition'
+import { varHandler } from '../cmds/var'
+import { labelHandler } from '../cmds/label'
+import { backgroundHandler } from '../cmds/background'
+import { moodHandler } from '../cmds/mood'
+import { effectHandler } from '../cmds/effect'
+import { overlayHandler } from '../cmds/overlay'
+import { characterHandler, characterFocusHandler, characterHighlightHandler } from '../cmds/character'
+import { cameraZoomHandler, cameraPanHandler, cameraEffectHandler } from '../cmds/camera'
+import { screenFadeHandler, screenFlashHandler, screenWipeHandler } from '../cmds/screen'
+import { uiHandler } from '../cmds/ui'
+import { controlHandler } from '../cmds/control'
+import type { SceneContext, CommandResult } from './SceneContext'
+import { setBackground } from '../cmds/background'
 
-// =============================================================
-// condition.if 파서 (제거됨 - 함수 기반으로 대체)
-// =============================================================
+const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResult> = {
+  'dialogue': dialogueHandler,
+  'choice': choiceHandler,
+  'condition': conditionHandler,
+  'var': varHandler,
+  'label': labelHandler,
+  'background': backgroundHandler,
+  'mood': moodHandler,
+  'effect': effectHandler,
+  'overlay': overlayHandler,
+  'character': characterHandler,
+  'character-focus': characterFocusHandler,
+  'character-highlight': characterHighlightHandler,
+  'camera-zoom': cameraZoomHandler,
+  'camera-pan': cameraPanHandler,
+  'camera-effect': cameraEffectHandler,
+  'screen-fade': screenFadeHandler,
+  'screen-flash': screenFlashHandler,
+  'screen-wipe': screenWipeHandler,
+  'ui': uiHandler,
+  'control': controlHandler,
+}
 
 // =============================================================
 // Scene 콜백 인터페이스 (Novel 과의 통신)
@@ -74,7 +104,7 @@ export class DialogueScene {
   }
 
   private _buildLabelIndex(): void {
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     steps.forEach((step, i) => {
       if (step.type === 'label') {
         const cmd = step as { type: 'label'; name: string }
@@ -117,8 +147,8 @@ export class DialogueScene {
   advance(): void {
     if (!this._waitingInput || this._ended) return
 
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
-    const step = steps[this.cursor] as DialogueEntry<any, any, any, any, any, any>
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const step = steps[this.cursor] as any
 
     if (step.type === 'dialogue' && Array.isArray(step.text)) {
       if (this.textSubIndex < step.text.length - 1) {
@@ -139,33 +169,20 @@ export class DialogueScene {
   private _executeNext(): void {
     if (this._ended) return
 
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     if (this.cursor >= steps.length) {
       this._ended = true
       return
     }
 
     const step = steps[this.cursor]
+    const cmd = step as DialogueEntry<any, any, any, any, any, any, any>
 
-    const cmd = step as DialogueEntry<any, any, any, any, any, any>
+    const result = this._executeCmd(cmd)
 
-    if (cmd.type === 'label') {
-      this.cursor++
-      this.textSubIndex = 0
-      this._executeNext()
-      return
-    }
+    if (result === 'handled') return
 
-    if (cmd.type === 'condition') {
-      this._handleCondition(cmd as any)
-      return
-    }
-
-    this._executeCmd(cmd)
-
-    if (cmd.type === 'choice') return
-
-    if (cmd.skip) {
+    if (result === true || cmd.skip) {
       this.cursor++
       this.textSubIndex = 0
       this._executeNext()
@@ -174,45 +191,6 @@ export class DialogueScene {
     }
   }
 
-  private _handleCondition(cmd: {
-    type: 'condition'
-    if: (vars: any) => boolean
-    next?: string
-    goto?: string
-    else?: string
-    'else-next'?: string
-  }): void {
-    const result = cmd.if(this._vars)
-
-    if (result) {
-      if (cmd.goto) {
-        this._jumpToLabel(cmd.goto)
-      } else if (cmd.next) {
-        this._ended = true
-        this.callbacks.loadScene(cmd.next)
-      } else {
-        this.cursor++
-        this.textSubIndex = 0
-        this._executeNext()
-      }
-    } else {
-      if (cmd.else) {
-        if (this.labelIndex.has(cmd.else)) {
-          this._jumpToLabel(cmd.else)
-        } else {
-          this._ended = true
-          this.callbacks.loadScene(cmd.else)
-        }
-      } else if (cmd['else-next']) {
-        this._ended = true
-        this.callbacks.loadScene(cmd['else-next'])
-      } else {
-        this.cursor++
-        this.textSubIndex = 0
-        this._executeNext()
-      }
-    }
-  }
 
   private _jumpToLabel(label: string): void {
     const idx = this.labelIndex.get(label)
@@ -238,12 +216,12 @@ export class DialogueScene {
     return true
   }
 
-  /** 단일 커맨드를 Renderer 메서드에 매핑하여 실행 */
-  private _executeCmd(originalCmd: DialogueEntry<any, any, any, any, any, any>): void {
+  /** 단일 커맨드를 실행 */
+  private _executeCmd(originalCmd: DialogueEntry<any, any, any, any, any, any, any>): CommandResult {
     const r = this.renderer
     let cmd = originalCmd
 
-    // Fallback 적용: 역순서로 순회하여 앞에 있는 규칙이 담은 것을 나중에 덮어쓰기 방지
+    // Fallback 적용
     const fallbacks = r.config.fallback
     if (fallbacks && fallbacks.length > 0) {
       const defaultsToApply: Record<string, any> = {}
@@ -254,7 +232,6 @@ export class DialogueScene {
         }
       }
 
-      // defaults를 불마없고 원본 커맨드가 명시한 값이 우선
       cmd = { ...defaultsToApply } as any
       for (const key in originalCmd) {
         if ((originalCmd as any)[key] !== undefined) {
@@ -263,179 +240,45 @@ export class DialogueScene {
       }
     }
 
-    switch (cmd.type) {
-      // ── 스토리 흐름 ─────────────────────────────────────────
-      case 'dialogue': {
-        const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
-        const interpolated = this._interpolateText(txt)
-        this.callbacks.onDialogue(cmd.speaker as string | undefined, interpolated, cmd.speed)
-        break
+    const { type, skip, ...params } = cmd as any
+
+    const ctx: SceneContext = {
+      world: r.world,
+      globalVars: this.callbacks.getGlobalVars(),
+      localVars: this.localVars,
+      renderer: r,
+      callbacks: this.callbacks,
+      scene: {
+        getTextSubIndex: () => this.textSubIndex,
+        interpolateText: (text: string) => this._interpolateText(text),
+        jumpToLabel: (label: string) => this._jumpToLabel(label),
+        hasLabel: (label: string) => this.labelIndex.has(label),
+        getVars: () => this._vars,
+        setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
+        setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
+        loadScene: (name: string) => this.callbacks.loadScene(name),
+        end: () => { this._ended = true }
       }
-
-      case 'var': {
-        const nameStr = cmd.name as string
-        let val = cmd.value
-        
-        if (typeof val === 'function') {
-          val = val(this._vars)
-        }
-
-        if (nameStr.startsWith('_')) {
-          // _ 접두사 = 지역변수. localVars에 키 그대로 저장
-          this.localVars[nameStr] = val
-        } else {
-          this.callbacks.setGlobalVar(nameStr, val)
-        }
-        break
-      }
-
-      case 'choice':
-        this.callbacks.onChoice(cmd.choices)
-        break
-
-      // ── 배경 ─────────────────────────────────────────────────
-      case 'background':
-        r.setBackground(
-          cmd.name,
-          (cmd.fit ?? 'inherit') as BackgroundFitPreset,
-          cmd.duration ?? 1000,
-          cmd.isVideo ?? false,
-        )
-        break
-
-      // ── 무드 ─────────────────────────────────────────────────
-      case 'mood':
-        if (cmd.action === 'remove') {
-          r.removeMood(cmd.mood as MoodType, cmd.duration)
-        } else {
-          r.addMood(
-            cmd.mood as MoodType,
-            cmd.intensity,
-            cmd.duration ?? 800,
-          )
-          if (cmd.flicker) {
-            r.setFlicker(cmd.mood as MoodType, cmd.flicker as FlickerPreset)
-          }
-        }
-        break
-
-      // ── 이펙트 ───────────────────────────────────────────────
-      case 'effect':
-        if (cmd.action === 'add') {
-          r.addEffect(cmd.effect as EffectType, cmd.rate, undefined, (cmd as any).src)
-        } else {
-          r.removeEffect(cmd.effect as EffectType, cmd.duration)
-        }
-        break
-
-      // ── 오버레이 ─────────────────────────────────────────────
-      case 'overlay':
-        if (cmd.action === 'add') {
-          if (cmd.text) r.addOverlay(cmd.text, (cmd.preset ?? 'caption') as OverlayPreset)
-        } else if (cmd.action === 'remove') {
-          r.removeOverlay((cmd.preset ?? 'caption') as OverlayPreset, cmd.duration)
-        } else if (cmd.action === 'clear') {
-          r.clearOverlay(cmd.duration)
-        }
-        break
-
-      // ── 캐릭터 ───────────────────────────────────────────────
-      case 'character':
-        if (cmd.action === 'show') {
-          r.showCharacter(cmd.name as string, cmd.position, cmd.image as string | undefined, cmd.duration)
-          if (cmd.focus) {
-            r.focusCharacter(
-              cmd.name as string,
-              typeof cmd.focus === 'string' ? cmd.focus : undefined,
-              'inherit',
-              cmd.duration ?? 800
-            )
-          }
-        } else {
-          r.removeCharacter(cmd.name as string, cmd.duration)
-        }
-        break
-
-      case 'character-focus':
-        r.focusCharacter(
-          cmd.name as string,
-          cmd.point,
-          (cmd.zoom ?? 'inherit') as ZoomPreset,
-          cmd.duration ?? 800,
-        )
-        break
-
-      case 'character-highlight':
-        if (cmd.action === 'on') {
-          r.highlightCharacter(cmd.name as string)
-        } else {
-          r.unhighlightCharacter(cmd.name as string)
-        }
-        break
-
-      // ── 카메라 ───────────────────────────────────────────────
-      case 'camera-zoom':
-        r.zoomCamera(
-          cmd.preset as ZoomPreset,
-          cmd.duration,
-        )
-        break
-
-      case 'camera-pan':
-        r.panCamera(
-          (cmd as any).position as PanPreset,
-          cmd.duration,
-        )
-        break
-
-      case 'camera-effect':
-        r.cameraEffect(
-          cmd.preset as CameraEffectPreset,
-          cmd.duration,
-          cmd.intensity,
-          cmd.repeat,
-        )
-        break
-
-      // ── 화면 전환 ────────────────────────────────────────────
-      case 'screen-fade':
-        r.screenFade(
-          cmd.dir,
-          (cmd.preset ?? 'inherit') as FadeColorPreset,
-          cmd.duration ?? 600,
-        )
-        break
-
-      case 'screen-flash':
-        r.screenFlash((cmd.preset ?? 'inherit') as FlashPreset)
-        break
-
-      case 'screen-wipe':
-        r.screenWipe(
-          cmd.dir,
-          (cmd.preset ?? 'inherit') as WipePreset,
-          cmd.duration ?? 800,
-        )
-        break
-
-      case 'ui':
-        break
-
-      case 'control':
-        if (cmd.action === 'disable' && typeof cmd.duration === 'number') {
-          this.callbacks.disableInput(cmd.duration)
-        }
-        break
-
-      default:
-        console.warn(`[leviar-novel] 알 수 없는 커맨드 타입:`, (cmd as any).type)
     }
+
+    if (BUILTIN_CMDS[type]) {
+      return BUILTIN_CMDS[type](params, ctx)
+    }
+
+    const cmds = r.config.cmds
+    if (cmds && typeof cmds[type] === 'function') {
+      const customSkip = cmds[type](params, ctx)
+      return customSkip === true ? true : false
+    }
+
+    console.warn(`[leviar-novel] 알 수 없는 커맨드 타입:`, type)
+    return false
   }
 
   /** 현재 대기 중인 choice 커맨드를 반환 */
   getCurrentChoice(): { type: 'choice'; choices: any[] } | null {
     if (this._ended) return null
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'choice') {
       return current as any
@@ -446,12 +289,13 @@ export class DialogueScene {
   /** 현재 대기 중인 dialogue 커맨드를 반환 */
   getCurrentDialogue(): { type: 'dialogue'; speaker?: string; text: string } | null {
     if (this._ended) return null
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
-      const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text
+      const cmd = current as any
+      const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
       const interpolated = this._interpolateText(txt)
-      return { ...current, text: interpolated } as any
+      return { ...cmd, text: interpolated } as any
     }
     return null
   }
@@ -511,18 +355,19 @@ export class DialogueScene {
    * 로드 후 화면에 현재 상태를 복원할 때 사용합니다.
    */
   private _redisplayCurrentStep(): void {
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     const step = steps[this.cursor]
     if (!step) return
 
-    const cmd = step as DialogueEntry<any, any, any, any, any, any>
+    const cmd = step as DialogueEntry<any, any, any, any, any, any, any>
     if (cmd.type === 'dialogue') {
-      const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
+      const dCmd = cmd as any
+      const txt = Array.isArray(dCmd.text) ? dCmd.text[this.textSubIndex] : dCmd.text
       const interpolated = this._interpolateText(txt)
-      this.callbacks.onDialogue(cmd.speaker as string | undefined, interpolated, cmd.speed)
+      this.callbacks.onDialogue(dCmd.speaker as string | undefined, interpolated, dCmd.speed)
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
-      this.callbacks.onChoice(cmd.choices)
+      this.callbacks.onChoice((cmd as any).choices)
     } else {
       if (!cmd.skip) {
         this._waitingInput = true
@@ -557,7 +402,12 @@ export class ExploreScene {
 
   start(): void {
     const { background, objects } = this.definition.options
-    this.renderer.setBackground(background, 'stretch', 1000)
+    setBackground(
+      { renderer: this.renderer } as any,
+      background,
+      'stretch',
+      1000
+    )
     this._spawnObjects(objects)
   }
 

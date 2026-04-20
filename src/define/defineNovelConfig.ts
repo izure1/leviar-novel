@@ -2,7 +2,7 @@
 // defineNovelConfig.ts — Novel config 헬퍼 함수
 // =============================================================
 
-import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRule, EffectDef } from '../types/config'
+import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRule, EffectDef, CustomCmdHandler } from '../types/config'
 import type { EffectType } from '../types/dialogue'
 
 /**
@@ -22,6 +22,9 @@ import type { EffectType } from '../types/dialogue'
  *   backgrounds: {
  *     'bg-classroom': { src: './assets/bg/classroom.png', parallax: true }
  *   },
+ *   cmds: {
+ *     'my-cmd': (cmd, ctx) => { ctx.world; return false }
+ *   },
  * })
  * ```
  */
@@ -31,6 +34,7 @@ export function defineNovelConfig<
   TCharacters  extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string>,
+  TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<never, never>,
 >(
   config: {
     vars: TVars
@@ -41,7 +45,8 @@ export function defineNovelConfig<
     ui?: NovelUIOption
     assets?: TAssets
     fallback?: FallbackRule[]
+    cmds?: TCmds
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets> {
-  return config as NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets>
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds> {
+  return config as NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds>
 }

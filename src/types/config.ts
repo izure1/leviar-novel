@@ -2,7 +2,7 @@
 // config.ts — Novel config 기반 타입 정의
 // =============================================================
 
-import type { Style, Attribute } from 'leviar'
+import type { World, Style, Attribute } from 'leviar'
 import type { FallbackRule, EffectType } from './dialogue'
 
 /** 
@@ -182,6 +182,27 @@ export interface EffectDef {
 }
 
 /** 
+ * 커스텀/내장 명령어 실행 시 제공되는 컨텍스트 객체 
+ */
+export interface CustomCmdContext<TVars = any, TLocalVars = any> {
+  /** Leviar 엔진의 World 인스턴스 */
+  world: World
+  /** 게임의 전역 변수 목록 */
+  globalVars: TVars
+  /** 현재 진행 중인 씬의 지역 변수 목록 */
+  localVars: TLocalVars
+}
+
+/** 
+ * 명령어의 실행 로직을 정의하는 핸들러 함수입니다. 
+ * true를 반환할 경우, 대사 진행 등을 대기하지 않고 다음 스텝으로 즉시 넘어갑니다 (skip).
+ */
+export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
+  params: TParams,
+  context: CustomCmdContext<TVars, TLocalVars>
+) => boolean | void
+
+/** 
  * Novel 시스템의 최상위 설정 객체 타입입니다.
  * 게임 내 모든 변수, 씬, 캐릭터, 배경, 효과, UI 스타일 및 폴백 규칙을 정의합니다.
  * 
@@ -202,6 +223,7 @@ export interface NovelConfig<
   TCharacters  extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string> = Record<string, string>,
+  TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>
 > {
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars:        TVars
@@ -231,6 +253,11 @@ export interface NovelConfig<
    * 배열의 첫 번째부터 순차적으로 매칭되어 적용됩니다.
    */
   fallback?:   FallbackRule[]
+  /**
+   * 커스텀 명령어 핸들러 목록입니다.
+   * 씬에서 지정한 `type`과 매칭되어 실행됩니다.
+   */
+  cmds?:       TCmds
 }
 
 export type { FallbackRule } from './dialogue'

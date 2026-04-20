@@ -1,0 +1,103 @@
+import type { BgDefs } from '../types/config'
+import type { SceneContext } from '../core/SceneContext'
+import { Z_INDEX } from '../constants/render'
+import { defineCmd } from '../define/defineCmd'
+
+export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
+
+export interface BackgroundCmd<TBackgrounds extends BgDefs> {
+  type: 'background'
+  name: keyof TBackgrounds & string
+  fit?: BackgroundFitPreset
+  duration?: number
+  isVideo?: boolean
+}
+
+function getBgObjs(ctx: SceneContext) {
+  let objs = ctx.renderer.state.get('_bgObjs')
+  if (!objs) {
+    objs = {}
+    ctx.renderer.state.set('_bgObjs', objs)
+  }
+  return objs
+}
+
+export function setBackground(ctx: SceneContext, name: string, fit: BackgroundFitPreset, duration: number = 1000, isVideo: boolean = false) {
+  const bgDefs = ctx.renderer.config.backgrounds as any
+  const def = bgDefs?.[name]
+  if (!def) return
+
+  const src = def.src ?? name
+  const useParallax = def.parallax ?? true
+  const dur = ctx.renderer.dur(duration)
+  ctx.renderer.state.set('backgroundKey', name)
+
+  const objs = getBgObjs(ctx)
+  const existing = objs['main']
+
+  if (existing) {
+    // parallax 모드가 같을 때만 crossfade; 다르면 제거 후 재생성
+    const existingParallax = ctx.renderer.state.get('_bgParallax') ?? true
+    if (existingParallax === useParallax) {
+      if (dur > 0 && typeof existing.transition === 'function') {
+        existing.transition(src, dur)
+      } else {
+        if (existing.attribute) existing.attribute.src = src
+      }
+      return
+    }
+    // parallax 모드 변경 → 기존 제거
+    existing.remove?.()
+    ctx.renderer.untrack(existing)
+    delete objs['main']
+  }
+
+  ctx.renderer.state.set('_bgParallax', useParallax)
+
+  const cam = ctx.renderer.world.camera as any
+  const zPos = ctx.renderer.depth
+
+  const baseW = ctx.renderer.width
+  const baseH = ctx.renderer.height
+  const maxPanX = baseW * 0.4
+  const maxPanY = baseH * 0.5
+  const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
+
+  const exactW = baseW + maxPanX * 2
+  const exactH = baseH + maxPanY * 2
+
+  const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world)
+  const obj = createFn({
+    attribute: { src } as any,
+    style: {
+      width: exactW, height: exactH,
+      objectFit: fit === 'inherit' ? 'cover' : fit,
+      zIndex: Z_INDEX.BACKGROUND,
+      opacity: dur > 0 ? 0 : 1,
+      pointerEvents: false,
+    } as any,
+    transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } },
+  })
+
+  if (!useParallax) {
+    ctx.renderer.world.camera?.addChild(obj as any)
+  }
+
+  ctx.renderer.track(obj as any)
+  objs['main'] = obj
+
+  if (dur > 0) {
+    ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur, 'easeInOutQuad')
+  }
+}
+
+export const backgroundHandler = defineCmd<BackgroundCmd<any>>((cmd, ctx) => {
+  setBackground(
+    ctx,
+    cmd.name as string,
+    (cmd.fit ?? 'inherit') as BackgroundFitPreset,
+    cmd.duration ?? 1000,
+    cmd.isVideo ?? false,
+  )
+  return false
+})

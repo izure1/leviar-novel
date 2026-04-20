@@ -17,6 +17,7 @@ export default defineScene(config, {}, [
   // ── 대사
   { type: 'dialogue', speaker: '아리시에로', text: '벚꽃 잎사귀가 도서관 안까지 들어왔네요!' },
   { type: 'dialogue', text: '그녀는 창가로 걸어갔다.' },
+  { type: 'character-focus', name: '아리시에로', point: 'face' },
 
   // ── 캐릭터 표정 변경 + 클로즈업
   { type: 'character', action: 'show', name: '아리시에로', image: 'smile' },

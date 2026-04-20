@@ -7,6 +7,9 @@ export default defineNovelConfig({
     metHeroine: false,
     endingReached: false,
   },
+  cmds: {
+    'test': test,
+  },
   scenes: [
     'scene-intro',
     'scene-a',
@@ -80,4 +83,10 @@ export default defineNovelConfig({
     { type: 'character', action: 'remove', defaults: { duration: 1000 } },
     { type: 'dialogue', defaults: { speed: 60 } }
   ],
+  cmds: {
+    'test-cmd': (cmd: { message: string }, ctx) => {
+      console.log('[test-cmd]', cmd.message, ctx.globalVars)
+      return true
+    },
+  },
 })

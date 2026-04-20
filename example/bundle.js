@@ -23,6 +23,11 @@
     };
   }
 
+  // src/define/defineCmd.ts
+  function defineCmd(handler) {
+    return handler;
+  }
+
   // node_modules/leviar/dist/index.js
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -12870,6 +12875,227 @@ ${addLineNumbers(fragment)}`);
   };
 
   // src/core/Renderer.ts
+  function _extractPropKeys(props) {
+    const keys = [];
+    if (props.style) keys.push("style");
+    if (props.transform?.position) keys.push("transform.position");
+    if (props.transform?.scale) keys.push("transform.scale");
+    if (props.transform?.rotation) keys.push("transform.rotation");
+    if (keys.length === 0) keys.push("__default__");
+    return keys;
+  }
+  function _applyPropsImmediate(obj, props) {
+    if (props.style) Object.assign(obj.style, props.style);
+    if (props.transform?.position) Object.assign(obj.transform.position, props.transform.position);
+    if (props.transform?.scale) Object.assign(obj.transform.scale, props.transform.scale);
+    if (props.transform?.rotation) Object.assign(obj.transform.rotation, props.transform.rotation);
+  }
+  var Renderer3 = class {
+    world;
+    config;
+    width;
+    height;
+    depth;
+    ui;
+    _objects = /* @__PURE__ */ new Set();
+    _isSkipping = false;
+    // 커스텀 명령어들이 저장할 범용 상태 저장소
+    state = /* @__PURE__ */ new Map();
+    // ─── 카메라 변환 합성용 ─────────────────────────────────────
+    camBaseObj = null;
+    camOffsetObj = null;
+    _camSyncRafId = null;
+    constructor(world, config, option) {
+      this.world = world;
+      this.config = config;
+      this.width = option.width;
+      this.height = option.height;
+      this.depth = option.depth;
+      this.ui = option.ui;
+      if (!this.world.camera) {
+        this.world.camera = this.world.createCamera();
+      }
+      this.world.camera.transform.position.z = 0;
+      this._initCameraSync();
+    }
+    _initCameraSync() {
+      this.camBaseObj = this.world.createRectangle({
+        style: { width: 1, height: 1, opacity: 0.01, pointerEvents: false },
+        transform: { position: { x: 0, y: 0, z: 0 } }
+      });
+      this.camOffsetObj = this.world.createRectangle({
+        style: { width: 1, height: 1, opacity: 0.01, pointerEvents: false },
+        transform: { position: { x: 0, y: 0, z: 0 }, rotation: { z: 0 } }
+      });
+      this.world.camera?.addChild(this.camBaseObj);
+      this.world.camera?.addChild(this.camOffsetObj);
+      const syncLoop = () => {
+        if (this.world.camera && this.camBaseObj && this.camOffsetObj) {
+          this.world.camera.transform.position.x = this.camBaseObj.transform.position.x + this.camOffsetObj.transform.position.x;
+          this.world.camera.transform.position.y = this.camBaseObj.transform.position.y + this.camOffsetObj.transform.position.y;
+          this.world.camera.transform.position.z = this.camBaseObj.transform.position.z + this.camOffsetObj.transform.position.z;
+          if (this.world.camera.transform.rotation && this.camOffsetObj.transform.rotation) {
+            this.world.camera.transform.rotation.z = this.camOffsetObj.transform.rotation.z;
+          }
+        }
+        this._camSyncRafId = requestAnimationFrame(syncLoop);
+      };
+      this._camSyncRafId = requestAnimationFrame(syncLoop);
+    }
+    setSkipping(flag) {
+      this._isSkipping = flag;
+    }
+    dur(d) {
+      return this._isSkipping ? 0 : d;
+    }
+    animate(obj, props, duration, easing = "linear", onEnd) {
+      const d = this.dur(duration);
+      const propKeys = _extractPropKeys(props);
+      if (!obj.__activeAnims) obj.__activeAnims = /* @__PURE__ */ new Map();
+      for (const key of propKeys) {
+        const existing = obj.__activeAnims.get(key);
+        if (existing?.anim) {
+          existing.anim.stop?.();
+          _applyPropsImmediate(obj, existing.target);
+        }
+      }
+      if (d === 0) {
+        _applyPropsImmediate(obj, props);
+        for (const key of propKeys) obj.__activeAnims.delete(key);
+        onEnd?.();
+        return null;
+      }
+      const anim = obj.animate(props, d, easing);
+      const entry = { anim, target: props };
+      for (const key of propKeys) obj.__activeAnims.set(key, entry);
+      const cleanup = () => {
+        for (const key of propKeys) {
+          if (obj.__activeAnims?.get(key) === entry) obj.__activeAnims.delete(key);
+        }
+      };
+      anim.on("end", cleanup);
+      if (onEnd) anim.on("end", onEnd);
+      return anim;
+    }
+    track(obj) {
+      this._objects.add(obj);
+      return obj;
+    }
+    untrack(obj) {
+      this._objects.delete(obj);
+    }
+    captureState() {
+      const cam = this.world.camera;
+      return {
+        cameraState: {
+          x: this.camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
+          y: this.camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
+          z: this.camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0
+        },
+        pluginState: Object.fromEntries(this.state)
+      };
+    }
+    restoreState(state) {
+      const cam = this.world.camera;
+      if (cam && state.cameraState) {
+        if (this.camBaseObj) {
+          this.camBaseObj.transform.position.x = state.cameraState.x;
+          this.camBaseObj.transform.position.y = state.cameraState.y;
+          this.camBaseObj.transform.position.z = state.cameraState.z;
+        }
+        if (this.camOffsetObj) {
+          this.camOffsetObj.transform.position.x = 0;
+          this.camOffsetObj.transform.position.y = 0;
+          this.camOffsetObj.transform.position.z = 0;
+          if (this.camOffsetObj.transform.rotation) this.camOffsetObj.transform.rotation.z = 0;
+        }
+        cam.transform.position.x = state.cameraState.x;
+        cam.transform.position.y = state.cameraState.y;
+        cam.transform.position.z = state.cameraState.z;
+      }
+      this.state = new Map(Object.entries(state.pluginState || {}));
+    }
+    clear() {
+      this._objects.forEach((obj) => obj.remove?.());
+      this._objects.clear();
+      this.state.clear();
+      if (this.camOffsetObj) {
+        this.camOffsetObj.transform.position.x = 0;
+        this.camOffsetObj.transform.position.y = 0;
+        this.camOffsetObj.transform.position.z = 0;
+        if (this.camOffsetObj.transform.rotation) this.camOffsetObj.transform.rotation.z = 0;
+      }
+    }
+  };
+
+  // src/cmds/dialogue.ts
+  var dialogueHandler = defineCmd((cmd, ctx) => {
+    const txt = Array.isArray(cmd.text) ? cmd.text[ctx.scene.getTextSubIndex()] : cmd.text;
+    const interpolated = ctx.scene.interpolateText(txt);
+    ctx.callbacks.onDialogue(cmd.speaker, interpolated, cmd.speed);
+    return false;
+  });
+
+  // src/cmds/choice.ts
+  var choiceHandler = defineCmd((cmd, ctx) => {
+    ctx.callbacks.onChoice(cmd.choices);
+    return "handled";
+  });
+
+  // src/cmds/condition.ts
+  var conditionHandler = defineCmd((cmd, ctx) => {
+    const result = cmd.if(ctx.scene.getVars());
+    if (result) {
+      if (cmd.goto) {
+        ctx.scene.jumpToLabel(cmd.goto);
+        return "handled";
+      } else if (cmd.next) {
+        ctx.scene.end();
+        ctx.scene.loadScene(cmd.next);
+        return "handled";
+      } else {
+        return true;
+      }
+    } else {
+      if (cmd.else) {
+        if (ctx.scene.hasLabel(cmd.else)) {
+          ctx.scene.jumpToLabel(cmd.else);
+        } else {
+          ctx.scene.end();
+          ctx.scene.loadScene(cmd.else);
+        }
+        return "handled";
+      } else if (cmd["else-next"]) {
+        ctx.scene.end();
+        ctx.scene.loadScene(cmd["else-next"]);
+        return "handled";
+      } else {
+        return true;
+      }
+    }
+  });
+
+  // src/cmds/var.ts
+  var varHandler = defineCmd((cmd, ctx) => {
+    const nameStr = cmd.name;
+    let val = cmd.value;
+    if (typeof val === "function") {
+      val = val(ctx.scene.getVars());
+    }
+    if (nameStr.startsWith("_")) {
+      ctx.scene.setLocalVar(nameStr, val);
+    } else {
+      ctx.scene.setGlobalVar(nameStr, val);
+    }
+    return true;
+  });
+
+  // src/cmds/label.ts
+  var labelHandler = defineCmd((_cmd, _ctx) => {
+    return true;
+  });
+
+  // src/constants/render.ts
   var Z_INDEX = {
     BACKGROUND: -1,
     CHARACTER_NORMAL: 10,
@@ -12883,52 +13109,84 @@ ${addLineNumbers(fragment)}`);
     CHARACTER_CUTIN: 500,
     TRANSITION: 999
   };
-  var CHARACTER_X_RATIO = {
-    "far-left": 0.1,
-    "left": 0.25,
-    "center": 0.5,
-    "right": 0.75,
-    "far-right": 0.9
-  };
-  var ZOOM_PRESETS = {
-    "close-up": { scale: 1.5, duration: 800 },
-    "medium": { scale: 1.2, duration: 600 },
-    "wide": { scale: 0.8, duration: 800 },
-    "reset": { scale: 1, duration: 600 }
-  };
-  var PAN_PRESETS = {
-    left: { x: -200, y: 0, duration: 1e3 },
-    right: { x: 200, y: 0, duration: 1e3 },
-    up: { x: 0, y: 200, duration: 1e3 },
-    down: { x: 0, y: -200, duration: 1e3 },
-    center: { x: 0, y: 0, duration: 1e3 }
-  };
-  var CAMERA_EFFECT_PRESETS = {
-    shake: { intensity: 10, duration: 500 },
-    bounce: { intensity: 15, duration: 600 },
-    wave: { intensity: 20, duration: 1e3 },
-    nod: { intensity: 10, duration: 400 },
-    "shake-x": { intensity: 15, duration: 500 },
-    fall: { intensity: 15, duration: 800 }
-  };
-  var FADE_PRESETS = {
-    black: { color: "rgba(0,0,0,1)", easing: "linear" },
-    white: { color: "rgba(255,255,255,1)", easing: "linear" },
-    red: { color: "rgba(200,0,0,1)", easing: "easeIn" },
-    dream: { color: "rgba(200,180,255,1)", easing: "easeInOut" },
-    sepia: { color: "rgba(150,100,50,1)", easing: "easeIn" }
-  };
-  var FLASH_PRESETS = {
-    white: { color: "rgba(255,255,255,1)", duration: 300 },
-    red: { color: "rgba(255,0,0,1)", duration: 300 },
-    yellow: { color: "rgba(255,220,0,1)", duration: 250 }
-  };
-  var WIPE_PRESETS = {
-    left: { x: -1, y: 0 },
-    right: { x: 1, y: 0 },
-    up: { x: 0, y: 1 },
-    down: { x: 0, y: -1 }
-  };
+
+  // src/cmds/background.ts
+  function getBgObjs(ctx) {
+    let objs = ctx.renderer.state.get("_bgObjs");
+    if (!objs) {
+      objs = {};
+      ctx.renderer.state.set("_bgObjs", objs);
+    }
+    return objs;
+  }
+  function setBackground(ctx, name, fit, duration = 1e3, isVideo = false) {
+    const bgDefs = ctx.renderer.config.backgrounds;
+    const def = bgDefs?.[name];
+    if (!def) return;
+    const src = def.src ?? name;
+    const useParallax = def.parallax ?? true;
+    const dur = ctx.renderer.dur(duration);
+    ctx.renderer.state.set("backgroundKey", name);
+    const objs = getBgObjs(ctx);
+    const existing = objs["main"];
+    if (existing) {
+      const existingParallax = ctx.renderer.state.get("_bgParallax") ?? true;
+      if (existingParallax === useParallax) {
+        if (dur > 0 && typeof existing.transition === "function") {
+          existing.transition(src, dur);
+        } else {
+          if (existing.attribute) existing.attribute.src = src;
+        }
+        return;
+      }
+      existing.remove?.();
+      ctx.renderer.untrack(existing);
+      delete objs["main"];
+    }
+    ctx.renderer.state.set("_bgParallax", useParallax);
+    const cam = ctx.renderer.world.camera;
+    const zPos = ctx.renderer.depth;
+    const baseW = ctx.renderer.width;
+    const baseH = ctx.renderer.height;
+    const maxPanX = baseW * 0.4;
+    const maxPanY = baseH * 0.5;
+    const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
+    const exactW = baseW + maxPanX * 2;
+    const exactH = baseH + maxPanY * 2;
+    const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world);
+    const obj = createFn({
+      attribute: { src },
+      style: {
+        width: exactW,
+        height: exactH,
+        objectFit: fit === "inherit" ? "cover" : fit,
+        zIndex: Z_INDEX.BACKGROUND,
+        opacity: dur > 0 ? 0 : 1,
+        pointerEvents: false
+      },
+      transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } }
+    });
+    if (!useParallax) {
+      ctx.renderer.world.camera?.addChild(obj);
+    }
+    ctx.renderer.track(obj);
+    objs["main"] = obj;
+    if (dur > 0) {
+      ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
+    }
+  }
+  var backgroundHandler = defineCmd((cmd, ctx) => {
+    setBackground(
+      ctx,
+      cmd.name,
+      cmd.fit ?? "inherit",
+      cmd.duration ?? 1e3,
+      cmd.isVideo ?? false
+    );
+    return false;
+  });
+
+  // src/cmds/mood.ts
   var MOOD_PRESETS = {
     day: { color: "rgba(255,230,180,0.1)", vignette: "transparent 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
     night: { color: "rgba(10,15,60,0.5)", vignette: "transparent 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
@@ -12947,11 +13205,137 @@ ${addLineNumbers(fragment)}`);
     ambient: { color: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
     warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
   };
-  var OVERLAY_PRESETS = {
-    caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
-    title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
-    whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
-  };
+  function getMoodObjs(ctx) {
+    let objs = ctx.renderer.state.get("_moodObjs");
+    if (!objs) {
+      objs = {};
+      ctx.renderer.state.set("_moodObjs", objs);
+    }
+    return objs;
+  }
+  function getActiveMoods(ctx) {
+    let moods = ctx.renderer.state.get("activeMoods");
+    if (!moods) {
+      moods = {};
+      ctx.renderer.state.set("activeMoods", moods);
+    }
+    return moods;
+  }
+  function addMood(ctx, mood, intensity, duration = 800) {
+    if (mood === "none") {
+      clearMoods(ctx, duration);
+      return;
+    }
+    const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
+    const finalIntensity = intensity ?? defaultIntensity ?? 1;
+    const dur = ctx.renderer.dur(duration);
+    const objs = getMoodObjs(ctx);
+    const activeMoods = getActiveMoods(ctx);
+    const existing = objs[mood];
+    if (existing) {
+      const flickerState = ctx.renderer.state.get("_flickerState");
+      if (flickerState && flickerState.mood === mood) {
+        existing._flickerBaseOpacity = finalIntensity;
+      } else {
+        ctx.renderer.animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+      }
+      activeMoods[mood] = finalIntensity;
+      return;
+    }
+    const cam = ctx.renderer.world.camera;
+    const focalLength = cam?.attribute?.focalLength ?? 100;
+    const exactW = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, ctx.renderer.width) : ctx.renderer.width;
+    const exactH = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, ctx.renderer.height) : ctx.renderer.height;
+    const rectOpts = {
+      style: {
+        color,
+        opacity: dur > 0 ? 0 : finalIntensity,
+        width: exactW,
+        height: exactH,
+        zIndex: Z_INDEX.MOOD,
+        pointerEvents: false,
+        blendMode
+      },
+      transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } }
+    };
+    if (vignette) {
+      rectOpts.style.gradient = vignette;
+      rectOpts.style.gradientType = "circular";
+    }
+    const rect = ctx.renderer.world.createRectangle(rectOpts);
+    ctx.renderer.track(rect);
+    ctx.renderer.world.camera?.addChild(rect);
+    rect._currentMood = mood;
+    objs[mood] = rect;
+    activeMoods[mood] = finalIntensity;
+    if (dur > 0) {
+      ctx.renderer.animate(rect, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+    }
+  }
+  function removeMood(ctx, mood, duration = 800) {
+    const objs = getMoodObjs(ctx);
+    const activeMoods = getActiveMoods(ctx);
+    const obj = objs[mood];
+    delete activeMoods[mood];
+    if (obj) {
+      delete objs[mood];
+      const dur = ctx.renderer.dur(duration);
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          obj.remove?.();
+          ctx.renderer.untrack(obj);
+        });
+      } else {
+        obj.remove?.();
+        ctx.renderer.untrack(obj);
+      }
+    }
+  }
+  function clearMoods(ctx, duration = 800) {
+    const objs = getMoodObjs(ctx);
+    Object.keys(objs).forEach((m) => removeMood(ctx, m, duration));
+  }
+  function setFlicker(ctx, mood, flickerPreset = "candle") {
+    const objs = getMoodObjs(ctx);
+    const activeMoods = getActiveMoods(ctx);
+    const target = objs[mood];
+    if (!target) return;
+    const finalIntensity = activeMoods[mood] ?? 1;
+    const baseOpacity = finalIntensity;
+    target._flickerBaseOpacity = baseOpacity;
+    const configs = {
+      candle: { interval: 120, range: [0.6, 1] },
+      flicker: { interval: 80, range: [0.3, 1] },
+      strobe: { interval: 60, range: [0, 1] }
+    };
+    const cfg = configs[flickerPreset];
+    ctx.renderer.state.set("_flickerObj", target);
+    ctx.renderer.state.set("_flickerState", { mood, preset: flickerPreset });
+    const step = () => {
+      if (ctx.renderer.state.get("_flickerObj") !== target) {
+        ctx.renderer.animate(target, { style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
+        return;
+      }
+      const [min, max] = cfg.range;
+      const next = baseOpacity * (min + Math.random() * (max - min));
+      ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear", step);
+    };
+    step();
+  }
+  var moodHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "remove") {
+      removeMood(ctx, cmd.mood, cmd.duration);
+    } else {
+      const addCmd = cmd;
+      addMood(ctx, addCmd.mood, addCmd.intensity, addCmd.duration ?? 800);
+      if (addCmd.flicker) {
+        setFlicker(ctx, addCmd.mood, addCmd.flicker);
+      }
+    }
+    return false;
+  });
+
+  // src/cmds/effect.ts
   var EFFECT_PARTICLE_PRESETS = {
     dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
     rain: { attribute: { gravityScale: 1 }, style: { width: 30, height: 60, opacity: 1, blendMode: "screen" } },
@@ -12982,895 +13366,608 @@ ${addLineNumbers(fragment)}`);
     leaves: 5,
     fireflies: 5
   };
-  var Renderer3 = class {
-    world;
-    config;
-    width;
-    height;
-    depth;
-    _ui;
-    _objects = /* @__PURE__ */ new Set();
-    _characters = /* @__PURE__ */ new Map();
-    _effects = /* @__PURE__ */ new Map();
-    _backgroundObj = null;
-    _backgroundIsParallax = true;
-    _backgroundKey = null;
-    _moodObjs = /* @__PURE__ */ new Map();
-    _activeMoods = /* @__PURE__ */ new Map();
-    _transitionObj = null;
-    _overlayObjs = /* @__PURE__ */ new Map();
-    _flickerObj = null;
-    _flickerState = null;
-    _characterStates = /* @__PURE__ */ new Map();
-    _activeEffects = /* @__PURE__ */ new Map();
-    /** 스킵 모드 플래그. true 시 모든 animate duration을 0으로 처리 */
-    _isSkipping = false;
-    // ─── 카메라 애니메이션 추적 (중단/snap 처리용) ──────────────
-    _activeCamPanAnim = null;
-    _activeCamPanTarget = null;
-    _activeCamZoomAnim = null;
-    _activeCamZoomTarget = null;
-    _activeCamEffectStop = null;
-    // ─── 카메라 변환 합성용 ─────────────────────────────────────
-    _camBaseObj = null;
-    _camOffsetObj = null;
-    _camSyncRafId = null;
-    // ─── inherit 처리를 위한 last-state 트래킹 ────────────────
-    _lastBackgroundFit = "stretch";
-    _lastZoomPreset = "reset";
-    _lastPanPreset = "center";
-    _lastFadePreset = "black";
-    _lastFlashPreset = "white";
-    _lastWipePreset = "left";
-    constructor(world, config, option) {
-      this.world = world;
-      this.config = config;
-      this.width = option.width;
-      this.height = option.height;
-      this.depth = option.depth;
-      this._ui = option.ui;
-      if (!this.world.camera) {
-        this.world.camera = this.world.createCamera();
-      }
-      this.world.camera.transform.position.z = 0;
-      this._initCameraSync();
+  function getEffectObjs(ctx) {
+    let objs = ctx.renderer.state.get("_effectObjs");
+    if (!objs) {
+      objs = {};
+      ctx.renderer.state.set("_effectObjs", objs);
     }
-    _initCameraSync() {
-      this._camBaseObj = this.world.createRectangle({
-        style: { width: 0, height: 0, opacity: 0, pointerEvents: false },
-        transform: { position: { x: 0, y: 0, z: 0 } }
+    return objs;
+  }
+  function getActiveEffects(ctx) {
+    let states = ctx.renderer.state.get("activeEffects");
+    if (!states) {
+      states = {};
+      ctx.renderer.state.set("activeEffects", states);
+    }
+    return states;
+  }
+  function addEffect(ctx, type = "dust", rate, overrides, srcKey) {
+    const configEffect = ctx.renderer.config.effects?.[type];
+    const preset = {
+      attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
+      style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style }
+    };
+    const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
+    const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
+    const particleZ = ctx.renderer.depth / 2;
+    if (!ctx.renderer.world.particleManager.get(clipName)) {
+      const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip };
+      const cam = ctx.renderer.world.camera;
+      const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(particleZ, 1) : 1;
+      const maxPanX = ctx.renderer.width * 0.4;
+      const maxPanY = ctx.renderer.height * 0.5;
+      const spanW = (ctx.renderer.width + maxPanX * 2) * ratio;
+      const spanH = (ctx.renderer.height + maxPanY * 2) * ratio;
+      ctx.renderer.world.particleManager.create({
+        name: clipName,
+        src: srcKey ?? type,
+        ...clipBase,
+        rate: finalRate,
+        spawnX: spanW,
+        spawnY: spanH,
+        spawnZ: particleZ
       });
-      this._camOffsetObj = this.world.createRectangle({
-        style: { width: 0, height: 0, opacity: 0, pointerEvents: false },
-        transform: { position: { x: 0, y: 0, z: 0 }, rotation: { z: 0 } }
-      });
-      this.world.camera?.addChild(this._camBaseObj);
-      this.world.camera?.addChild(this._camOffsetObj);
-      const syncLoop = () => {
-        if (this.world.camera && this._camBaseObj && this._camOffsetObj) {
-          this.world.camera.transform.position.x = this._camBaseObj.transform.position.x + this._camOffsetObj.transform.position.x;
-          this.world.camera.transform.position.y = this._camBaseObj.transform.position.y + this._camOffsetObj.transform.position.y;
-          this.world.camera.transform.position.z = this._camBaseObj.transform.position.z + this._camOffsetObj.transform.position.z;
-          if (this.world.camera.transform.rotation && this._camOffsetObj.transform.rotation) {
-            this.world.camera.transform.rotation.z = this._camOffsetObj.transform.rotation.z;
-          }
-        }
-        this._camSyncRafId = requestAnimationFrame(syncLoop);
-      };
-      this._camSyncRafId = requestAnimationFrame(syncLoop);
     }
-    // ─── 스킵 모드 ──────────────────────────────────────────────
-    setSkipping(flag) {
-      this._isSkipping = flag;
-    }
-    /**
-     * 스킵 중이면 0, 아니면 원래 duration 반환.
-     * animate 호출 시 반드시 이 메서드를 통해 duration을 결정합니다.
-     */
-    _dur(d) {
-      return this._isSkipping ? 0 : d;
-    }
-    /**
-     * duration이 0일 때 animate 대신 직접 속성을 적용합니다.
-     * animate 체이닝(.on('end'))이 필요한 경우 onEnd 콜백을 전달합니다.
-     */
-    _animate(obj, props, duration, easing = "linear", onEnd) {
-      const d = this._dur(duration);
-      if (d === 0) {
-        if (props.style) Object.assign(obj.style, props.style);
-        if (props.transform?.position) Object.assign(obj.transform.position, props.transform.position);
-        if (props.transform?.scale) Object.assign(obj.transform.scale, props.transform.scale);
-        if (props.transform?.rotation) Object.assign(obj.transform.rotation, props.transform.rotation);
-        onEnd?.();
-        return null;
+    const objs = getEffectObjs(ctx);
+    const activeEffects = getActiveEffects(ctx);
+    const existing = objs[type];
+    if (existing) {
+      if (rate !== void 0 || srcKey !== void 0) {
+        existing.attribute.src = clipName;
       }
-      const anim = obj.animate(props, d, easing);
-      if (onEnd) anim.on("end", onEnd);
-      return anim;
+      if (overrides?.style) {
+        Object.assign(existing.style, overrides.style);
+      }
+      return;
     }
-    // ─── 내부 유틸 ──────────────────────────────────────────────
-    get _characterPlaneLocalZ() {
-      const cam = this.world.camera;
-      const focalLength = cam?.attribute?.focalLength ?? 100;
-      return focalLength - (cam?.transform.position.z ?? 0);
+    activeEffects[type] = { rate, overrides, srcKey };
+    const particle = ctx.renderer.world.createParticle({
+      attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
+      style: { ...preset.style, ...overrides?.style },
+      transform: { position: { x: 0, y: 0, z: particleZ }, ...overrides?.transform }
+    });
+    objs[type] = particle;
+    ctx.renderer.track(particle);
+    particle.play?.();
+  }
+  function removeEffect(ctx, type, duration = 600) {
+    const objs = getEffectObjs(ctx);
+    const activeEffects = getActiveEffects(ctx);
+    const effect = objs[type];
+    delete activeEffects[type];
+    if (effect) {
+      delete objs[type];
+      const dur = ctx.renderer.dur(duration);
+      if (dur > 0) {
+        ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          effect.remove?.();
+          ctx.renderer.untrack(effect);
+        });
+      } else {
+        effect.remove?.();
+        ctx.renderer.untrack(effect);
+      }
     }
-    _resolvePositionX(position) {
-      if (CHARACTER_X_RATIO[position] !== void 0) return CHARACTER_X_RATIO[position];
-      const m = position.match(/^(\d+)\/(\d+)$/);
+  }
+  var effectHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "add") {
+      const addCmd = cmd;
+      addEffect(ctx, addCmd.effect, addCmd.rate, void 0, addCmd.src);
+    } else {
+      const rmCmd = cmd;
+      removeEffect(ctx, rmCmd.effect, rmCmd.duration);
+    }
+    return false;
+  });
+
+  // src/cmds/overlay.ts
+  var OVERLAY_PRESETS = {
+    caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
+    title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
+    whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
+  };
+  function getOverlayObjs(ctx) {
+    let objs = ctx.renderer.state.get("_overlayObjs");
+    if (!objs) {
+      objs = {};
+      ctx.renderer.state.set("_overlayObjs", objs);
+    }
+    return objs;
+  }
+  function addOverlay(ctx, text, preset = "caption") {
+    const defaults = OVERLAY_PRESETS[preset];
+    const uiOv = ctx.renderer.ui?.overlay?.[preset] ?? {};
+    const p = {
+      fontSize: uiOv.fontSize ?? defaults.fontSize,
+      color: uiOv.color ?? defaults.color,
+      opacity: uiOv.opacity ?? defaults.opacity,
+      zIndex: defaults.zIndex,
+      y: defaults.y,
+      fontWeight: uiOv.fontWeight,
+      fontFamily: uiOv.fontFamily,
+      lineHeight: uiOv.lineHeight
+    };
+    const objs = getOverlayObjs(ctx);
+    if (objs[preset]) removeOverlay(ctx, preset);
+    const yMap = {
+      top: ctx.renderer.height * 0.1,
+      center: ctx.renderer.height * 0.5,
+      bottom: ctx.renderer.height * 0.85
+    };
+    const cam = ctx.renderer.world.camera;
+    const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[p.y]) : { x: 0, y: 0, z: 100 };
+    const textObj = ctx.renderer.world.createText({
+      attribute: { text },
+      style: {
+        fontSize: p.fontSize,
+        fontWeight: p.fontWeight,
+        fontFamily: p.fontFamily,
+        lineHeight: p.lineHeight,
+        color: p.color,
+        opacity: p.opacity,
+        zIndex: p.zIndex,
+        pointerEvents: false
+      },
+      transform: { position: pos }
+    });
+    ctx.renderer.world.camera?.addChild(textObj);
+    ctx.renderer.track(textObj);
+    objs[preset] = textObj;
+  }
+  function removeOverlay(ctx, preset, duration = 600) {
+    const objs = getOverlayObjs(ctx);
+    const obj = objs[preset];
+    if (obj) {
+      delete objs[preset];
+      const dur = ctx.renderer.dur(duration);
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          obj.remove?.();
+          ctx.renderer.untrack(obj);
+        });
+      } else {
+        obj.remove?.();
+        ctx.renderer.untrack(obj);
+      }
+    }
+  }
+  function clearOverlay(ctx, duration = 400) {
+    const objs = getOverlayObjs(ctx);
+    Object.keys(objs).forEach((k) => removeOverlay(ctx, k, duration));
+  }
+  var overlayHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "add") {
+      if (cmd.text) addOverlay(ctx, cmd.text, cmd.preset ?? "caption");
+    } else if (cmd.action === "remove") {
+      removeOverlay(ctx, cmd.preset ?? "caption", cmd.duration);
+    } else if (cmd.action === "clear") {
+      clearOverlay(ctx, cmd.duration);
+    }
+    return false;
+  });
+
+  // src/cmds/camera.ts
+  var ZOOM_PRESETS = {
+    "close-up": { scale: 1.5, duration: 800 },
+    "medium": { scale: 1.2, duration: 600 },
+    "wide": { scale: 0.8, duration: 800 },
+    "reset": { scale: 1, duration: 600 }
+  };
+  var PAN_PRESETS = {
+    left: { x: -200, y: 0, duration: 1e3 },
+    right: { x: 200, y: 0, duration: 1e3 },
+    up: { x: 0, y: 200, duration: 1e3 },
+    down: { x: 0, y: -200, duration: 1e3 },
+    center: { x: 0, y: 0, duration: 1e3 }
+  };
+  var CAMERA_EFFECT_PRESETS = {
+    shake: { intensity: 10, duration: 500 },
+    bounce: { intensity: 15, duration: 600 },
+    wave: { intensity: 20, duration: 1e3 },
+    nod: { intensity: 10, duration: 400 },
+    "shake-x": { intensity: 15, duration: 500 },
+    fall: { intensity: 15, duration: 800 }
+  };
+  function zoomCamera(ctx, preset, duration) {
+    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
+    ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
+    const cfg = ZOOM_PRESETS[resolvedPreset];
+    if (!cfg) return;
+    const focalLength = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
+    const targetZ = focalLength * (1 - 1 / cfg.scale);
+    if (ctx.renderer.camBaseObj) {
+      const dur = ctx.renderer.dur(duration ?? cfg.duration);
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
+    }
+  }
+  function panCamera(ctx, position, duration, customX, customY) {
+    if (position === "inherit") return;
+    const resolvedPreset = position;
+    ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
+    const cfg = PAN_PRESETS[resolvedPreset];
+    let targetX = customX ?? 0;
+    let targetY = customY ?? 0;
+    let finalDur = duration ?? 1e3;
+    if (cfg && customX === void 0 && customY === void 0) {
+      targetX = cfg.x;
+      targetY = cfg.y;
+      if (duration === void 0) finalDur = cfg.duration;
+    } else if (typeof resolvedPreset === "string" && customX === void 0) {
+      let ratio = 0.5;
+      const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
       if (m) {
         const n = parseInt(m[1], 10);
         const d = parseInt(m[2], 10);
-        if (d > 0) return n / (d + 1);
+        if (d > 0) ratio = n / (d + 1);
       }
-      return 0.5;
+      targetX = ctx.renderer.width * (ratio - 0.5);
+      targetY = 0;
     }
-    _track(obj) {
-      this._objects.add(obj);
-      return obj;
+    if (ctx.renderer.camBaseObj) {
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { x: targetX, y: targetY } } }, finalDur, "easeInOutQuad");
     }
-    _getTransitionRect(color) {
-      if (!this._transitionObj) {
-        const w = this.world.canvas?.width ?? this.width;
-        const h = this.world.canvas?.height ?? this.height;
-        const rect = this.world.createRectangle({
-          style: {
-            color,
-            width: w * 2,
-            height: h * 2,
-            opacity: 0,
-            zIndex: Z_INDEX.TRANSITION,
-            pointerEvents: false
-          },
-          transform: { position: { x: 0, y: 0, z: 10 } }
-        });
-        this.world.camera?.addChild(rect);
-        this._transitionObj = rect;
-      } else {
-        this._transitionObj.style.color = color;
-        this._transitionObj.transform.position.x = 0;
-        this._transitionObj.transform.position.y = 0;
-      }
-      return this._transitionObj;
+  }
+  function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
+    if (preset === "reset") {
+      const stopFn2 = ctx.renderer.state.get("_activeCamEffectStop");
+      if (stopFn2) stopFn2();
+      return;
     }
-    // ─── 씬 전환 상태 스냅샷 / 복원 ────────────────────────────
-    captureState() {
-      const cam = this.world.camera;
-      const activeMoodsArr = Array.from(this._activeMoods.entries()).map(([mood, intensity]) => {
-        const flicker = this._flickerState?.mood === mood ? this._flickerState.preset : void 0;
-        return { mood, intensity, flicker };
-      });
-      const transitionState = this._transitionObj ? {
-        color: this._transitionObj.style.color,
-        opacity: this._transitionObj.style.opacity,
-        x: this._transitionObj.transform.position.x,
-        y: this._transitionObj.transform.position.y
-      } : null;
-      return {
-        backgroundKey: this._backgroundKey,
-        backgroundParallax: this._backgroundIsParallax,
-        activeMoods: activeMoodsArr,
-        activeEffects: Array.from(this._activeEffects.entries()).map(([type, data]) => ({ type, ...data })),
-        characters: Object.fromEntries(this._characterStates),
-        cameraState: {
-          x: this._camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
-          y: this._camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
-          z: this._camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0
-        },
-        transitionState
-      };
-    }
-    restoreState(state) {
-      if (state.backgroundKey) {
-        this.setBackground(state.backgroundKey, "stretch", 0);
-      }
-      const oldState = state;
-      if (oldState.moodType && oldState.moodType !== "none") {
-        this.addMood(oldState.moodType, oldState.moodIntensity, 0);
-      }
-      if (oldState.activeLights) {
-        oldState.activeLights.forEach((l) => this.addMood(l, void 0, 0));
-      }
-      if (state.activeMoods) {
-        state.activeMoods.forEach(({ mood, intensity, flicker }) => {
-          this.addMood(mood, intensity, 0);
-          if (flicker) this.setFlicker(mood, flicker);
-        });
-      }
-      state.activeEffects.forEach((e) => {
-        if (typeof e === "string") {
-          this.addEffect(e);
-        } else {
-          this.addEffect(e.type, e.rate, e.overrides, e.srcKey);
-        }
-      });
-      if (state.characters) {
-        Object.entries(state.characters).forEach(([name, { position, imageKey }]) => {
-          this.showCharacter(name, position, imageKey, 0);
-        });
-      }
-      const cam = this.world.camera;
-      if (cam && state.cameraState) {
-        if (this._camBaseObj) {
-          this._camBaseObj.transform.position.x = state.cameraState.x;
-          this._camBaseObj.transform.position.y = state.cameraState.y;
-          this._camBaseObj.transform.position.z = state.cameraState.z;
-        }
-        if (this._camOffsetObj) {
-          this._camOffsetObj.transform.position.x = 0;
-          this._camOffsetObj.transform.position.y = 0;
-          this._camOffsetObj.transform.position.z = 0;
-          if (this._camOffsetObj.transform.rotation) this._camOffsetObj.transform.rotation.z = 0;
-        }
-        cam.transform.position.x = state.cameraState.x;
-        cam.transform.position.y = state.cameraState.y;
-        cam.transform.position.z = state.cameraState.z;
-      }
-      if (state.flicker) {
-        const moodKey = state.flicker.mood || state.flicker.light;
-        this.setFlicker(moodKey, state.flicker.preset);
-      }
-      if (state.transitionState && state.transitionState.opacity > 0) {
-        const rect = this._getTransitionRect(state.transitionState.color);
-        rect.style.opacity = state.transitionState.opacity;
-        rect.transform.position.x = state.transitionState.x;
-        rect.transform.position.y = state.transitionState.y;
-      }
-    }
-    /** 모든 씬 오브젝트를 제거한다 */
-    clear() {
-      this._objects.forEach((obj) => obj.remove?.());
-      this._objects.clear();
-      this._characters.clear();
-      this._characterStates.clear();
-      this._effects.clear();
-      this._activeEffects.clear();
-      this._backgroundObj = null;
-      this._backgroundKey = null;
-      this._moodObjs.forEach((o) => {
-        o.remove?.();
-        this._objects.delete(o);
-      });
-      this._moodObjs.clear();
-      this._activeMoods.clear();
-      this._overlayObjs.forEach((o) => {
-        o.remove?.();
-        this._objects.delete(o);
-      });
-      this._overlayObjs.clear();
-      this._flickerObj = null;
-      this._flickerState = null;
-      if (this._camOffsetObj) {
-        this._camOffsetObj.transform.position.x = 0;
-        this._camOffsetObj.transform.position.y = 0;
-        this._camOffsetObj.transform.position.z = 0;
-        if (this._camOffsetObj.transform.rotation) this._camOffsetObj.transform.rotation.z = 0;
-      }
-    }
-    // ─── 배경 ───────────────────────────────────────────────────
-    setBackground(key, fit = "inherit", duration = 1e3, isVideo = false) {
-      const resolvedFit = fit === "inherit" ? this._lastBackgroundFit : fit;
-      this._lastBackgroundFit = resolvedFit;
-      const bgDefs = this.config.backgrounds;
-      const def = bgDefs[key];
-      if (!def) return;
-      const useParallax = def.parallax ?? true;
-      this._backgroundKey = key;
-      const dur = this._dur(duration);
-      if (this._backgroundObj && dur > 0 && this._backgroundIsParallax === useParallax && typeof this._backgroundObj.transition === "function") {
-        ;
-        this._backgroundObj.transition(def.src, dur);
+    const stopFn = ctx.renderer.state.get("_activeCamEffectStop");
+    if (stopFn) stopFn();
+    const cfg = CAMERA_EFFECT_PRESETS[preset];
+    if (!cfg) return;
+    const finalIntensity = intensity ?? cfg.intensity;
+    const finalDuration = ctx.renderer.dur(duration ?? cfg.duration);
+    if (finalDuration <= 0) return;
+    const offsetObj = ctx.renderer.camOffsetObj;
+    if (!offsetObj) return;
+    let active = true;
+    let frame = 0;
+    const stop = () => {
+      active = false;
+      ctx.renderer.state.set("_activeCamEffectStop", null);
+      offsetObj.transform.position.x = 0;
+      offsetObj.transform.position.y = 0;
+      if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = 0;
+    };
+    ctx.renderer.state.set("_activeCamEffectStop", stop);
+    const loop = () => {
+      if (!active || frame++ >= repeat) {
+        stop();
         return;
       }
-      if (this._backgroundObj) {
-        this._backgroundObj.remove?.();
-        this._objects.delete(this._backgroundObj);
-        this._backgroundObj = null;
-      }
-      this._backgroundIsParallax = useParallax;
-      const zPos = this.depth;
-      const cam = this.world.camera;
-      const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
-      const maxCamX = this.width * 0.4;
-      const maxCamY = this.height * 0.5;
-      const exactViewW = this.width + maxCamX * 2;
-      const exactViewH = this.height + maxCamY * 2;
-      const bgOpts = {
-        attribute: { src: def.src },
-        style: { width: exactViewW, height: exactViewH, zIndex: Z_INDEX.BACKGROUND },
-        transform: {
-          position: { x: 0, y: 0, z: zPos },
-          scale: { x: ratio, y: ratio, z: 1 }
-        }
-      };
-      const bg = isVideo ? (() => {
-        const v = this.world.createVideo(bgOpts);
-        v.play?.();
-        return v;
-      })() : this.world.createImage(bgOpts);
-      if (!useParallax) this.world.camera?.addChild(bg);
-      if (dur > 0 && typeof bg.fadeIn === "function") bg.fadeIn(dur);
-      this._backgroundObj = this._track(bg);
-    }
-    // ─── 무드 ───────────────────────────────────────────────────
-    addMood(mood, intensity, duration = 800) {
-      if (mood === "none") {
-        this.clearMoods(duration);
-        return;
-      }
-      const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
-      const finalIntensity = intensity ?? defaultIntensity ?? 1;
-      const dur = this._dur(duration);
-      const existing = this._moodObjs.get(mood);
-      if (existing) {
-        if (this._flickerState && this._flickerState.mood === mood) {
-          existing._flickerBaseOpacity = finalIntensity;
-        } else {
-          this._animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
-        }
-        this._activeMoods.set(mood, finalIntensity);
-        return;
-      }
-      const cam = this.world.camera;
-      const focalLength = cam?.attribute?.focalLength ?? 100;
-      const exactW = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, this.width) : this.width;
-      const exactH = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, this.height) : this.height;
-      const rectOpts = {
-        style: {
-          color,
-          opacity: dur > 0 ? 0 : finalIntensity,
-          width: exactW,
-          height: exactH,
-          zIndex: Z_INDEX.MOOD,
-          pointerEvents: false,
-          blendMode
-        },
-        transform: { position: { x: 0, y: 0, z: this._characterPlaneLocalZ } }
-      };
-      if (vignette) {
-        rectOpts.style.gradient = vignette;
-        rectOpts.style.gradientType = "circular";
-      }
-      const rect = this._track(this.world.createRectangle(rectOpts));
-      this.world.camera?.addChild(rect);
-      rect._currentMood = mood;
-      this._moodObjs.set(mood, rect);
-      this._activeMoods.set(mood, finalIntensity);
-      if (dur > 0) {
-        this._animate(rect, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
-      }
-    }
-    removeMood(mood, duration = 800) {
-      const obj = this._moodObjs.get(mood);
-      this._activeMoods.delete(mood);
-      if (obj) {
-        this._moodObjs.delete(mood);
-        const dur = this._dur(duration);
-        if (dur > 0 && typeof obj.fadeOut === "function") {
-          obj.fadeOut(dur);
-          setTimeout(() => {
-            obj.remove?.();
-            this._objects.delete(obj);
-          }, dur);
-        } else {
-          obj.remove?.();
-          this._objects.delete(obj);
-        }
-      }
-    }
-    clearMoods(duration = 800) {
-      const moods = Array.from(this._moodObjs.keys());
-      moods.forEach((m) => this.removeMood(m, duration));
-    }
-    // ─── 이펙트 ─────────────────────────────────────────────────
-    addEffect(type = "dust", rate, overrides, srcKey) {
-      const configEffect = this.config.effects?.[type];
-      const preset = {
-        attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
-        style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style }
-      };
-      const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
-      const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
-      const particleZ = this.depth / 2;
-      if (!this.world.particleManager.get(clipName)) {
-        const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip };
-        const cam = this.world.camera;
-        const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(particleZ, 1) : 1;
-        const maxPanX = this.width * 0.4;
-        const maxPanY = this.height * 0.5;
-        const spanW = (this.width + maxPanX * 2) * ratio;
-        const spanH = (this.height + maxPanY * 2) * ratio;
-        this.world.particleManager.create({
-          name: clipName,
-          src: srcKey ?? type,
-          ...clipBase,
-          rate: finalRate,
-          spawnX: spanW,
-          spawnY: spanH,
-          spawnZ: particleZ
-        });
-      }
-      const existing = this._effects.get(type);
-      if (existing) {
-        if (rate !== void 0 || srcKey !== void 0) {
-          existing.attribute.src = clipName;
-        }
-        if (overrides?.style) {
-          Object.assign(existing.style, overrides.style);
-        }
-        return;
-      }
-      this._activeEffects.set(type, { rate, overrides, srcKey });
-      const particle = this._track(this.world.createParticle({
-        attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
-        style: { ...preset.style, ...overrides?.style },
-        transform: { position: { x: 0, y: 0, z: particleZ }, ...overrides?.transform }
-      }));
-      this._effects.set(type, particle);
-      particle.play?.();
-    }
-    removeEffect(type, duration = 600) {
-      const effect = this._effects.get(type);
-      this._activeEffects.delete(type);
-      if (effect) {
-        this._effects.delete(type);
-        if (duration > 0 && typeof effect.fadeOut === "function") {
-          effect.fadeOut(duration);
-          setTimeout(() => {
-            effect.remove?.();
-            this._objects.delete(effect);
-          }, duration);
-        } else {
-          effect.remove?.();
-          this._objects.delete(effect);
-        }
-      }
-    }
-    // ─── 조명 ───────────────────────────────────────────────────
-    setFlicker(mood, flickerPreset = "candle") {
-      const target = this._moodObjs.get(mood);
-      if (!target) return;
-      this._flickerObj = null;
-      const finalIntensity = this._activeMoods.get(mood) ?? 1;
-      const baseOpacity = finalIntensity;
-      target._flickerBaseOpacity = baseOpacity;
-      const configs = {
-        candle: { interval: 120, range: [0.6, 1] },
-        flicker: { interval: 80, range: [0.3, 1] },
-        strobe: { interval: 60, range: [0, 1] }
-      };
-      const cfg = configs[flickerPreset];
-      this._flickerObj = target;
-      this._flickerState = { mood, preset: flickerPreset };
-      const step = () => {
-        if (this._flickerObj !== target) {
-          target.animate({ style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
+      let elapsed = 0;
+      const stepTime = 16;
+      const tick = () => {
+        if (!active) return;
+        elapsed += stepTime;
+        if (elapsed > finalDuration) {
+          loop();
           return;
         }
-        const [min, max] = cfg.range;
-        const next = baseOpacity * (min + Math.random() * (max - min));
-        target.animate({ style: { opacity: next } }, cfg.interval, "linear").on("end", step);
+        const progress = elapsed / finalDuration;
+        let dx = 0, dy = 0, dz = 0;
+        switch (preset) {
+          case "shake":
+            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "shake-x":
+            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "bounce":
+            dy = Math.sin(progress * Math.PI) * finalIntensity;
+            break;
+          case "wave":
+            dx = Math.sin(progress * Math.PI * 2) * finalIntensity;
+            dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2);
+            break;
+          case "nod":
+            dy = Math.sin(progress * Math.PI) * finalIntensity;
+            break;
+          case "fall":
+            dy = Math.pow(progress, 2) * finalIntensity * 5;
+            break;
+        }
+        offsetObj.transform.position.x = dx;
+        offsetObj.transform.position.y = dy;
+        if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = dz;
+        setTimeout(tick, stepTime);
       };
-      step();
+      tick();
+    };
+    loop();
+  }
+  var cameraZoomHandler = defineCmd((cmd, ctx) => {
+    zoomCamera(ctx, cmd.preset, cmd.duration);
+    return false;
+  });
+  var cameraPanHandler = defineCmd((cmd, ctx) => {
+    panCamera(ctx, cmd.position, cmd.duration);
+    return false;
+  });
+  var cameraEffectHandler = defineCmd((cmd, ctx) => {
+    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
+    return false;
+  });
+
+  // src/cmds/character.ts
+  var CHARACTER_X_RATIO = {
+    "far-left": 0.1,
+    "left": 0.25,
+    "center": 0.5,
+    "right": 0.75,
+    "far-right": 0.9
+  };
+  function resolvePositionX(position) {
+    if (CHARACTER_X_RATIO[position] !== void 0) return CHARACTER_X_RATIO[position];
+    const m = position.match(/^(\d+)\/(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      const d = parseInt(m[2], 10);
+      if (d > 0) return n / (d + 1);
     }
-    // ─── 오버레이 ────────────────────────────────────────────────
-    addOverlay(text, preset = "caption") {
-      const defaults = OVERLAY_PRESETS[preset];
-      const uiOv = this._ui?.overlay?.[preset] ?? {};
-      const p = {
-        fontSize: uiOv.fontSize ?? defaults.fontSize,
-        color: uiOv.color ?? defaults.color,
-        opacity: uiOv.opacity ?? defaults.opacity,
-        zIndex: defaults.zIndex,
-        y: defaults.y,
-        fontWeight: uiOv.fontWeight,
-        fontFamily: uiOv.fontFamily,
-        lineHeight: uiOv.lineHeight
-      };
-      if (this._overlayObjs.has(preset)) this.removeOverlay(preset);
-      const yMap = {
-        top: this.height * 0.1,
-        center: this.height * 0.5,
-        bottom: this.height * 0.85
-      };
-      const cam = this.world.camera;
-      const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(this.width / 2, yMap[p.y]) : { x: 0, y: 0, z: 100 };
-      const textObj = this._track(this.world.createText({
-        attribute: { text },
+    return 0.5;
+  }
+  function getCharStates(ctx) {
+    let states = ctx.renderer.state.get("characters");
+    if (!states) {
+      states = {};
+      ctx.renderer.state.set("characters", states);
+    }
+    return states;
+  }
+  function getCharObjects(ctx) {
+    let objs = ctx.renderer.state.get("_charObjs");
+    if (!objs) {
+      objs = {};
+      ctx.renderer.state.set("_charObjs", objs);
+    }
+    return objs;
+  }
+  function showCharacter(ctx, name, position, imageKey, duration) {
+    const charDefs = ctx.renderer.config.characters;
+    const def = charDefs[name];
+    if (!def) return;
+    const resolvedKey = imageKey ?? Object.keys(def)[0];
+    const imageDef = def[resolvedKey];
+    if (!imageDef) return;
+    const states = getCharStates(ctx);
+    const objs = getCharObjects(ctx);
+    const existingState = states[name];
+    const resolvedPosition = !position || position === "inherit" ? existingState?.position ?? "center" : position;
+    const src = imageDef.src ?? resolvedKey;
+    const xPos = ctx.renderer.width * (resolvePositionX(resolvedPosition) - 0.5);
+    const zPos = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
+    states[name] = { position: resolvedPosition, imageKey: resolvedKey };
+    const existing = objs[name];
+    if (existing) {
+      ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, ctx.renderer.dur(duration ?? 400), "easeInOutQuad");
+      if (imageKey) {
+        if (ctx.renderer.dur(duration ?? 300) > 0 && typeof existing.transition === "function") {
+          existing.transition(src, ctx.renderer.dur(duration ?? 300));
+        } else {
+          if (existing.attribute) existing.attribute.src = src;
+        }
+      }
+      existing._currentImageKey = resolvedKey;
+      return;
+    }
+    const obj = ctx.renderer.world.createImage({
+      attribute: { src },
+      style: {
+        width: imageDef.width ?? 500,
+        opacity: ctx.renderer.dur(duration ?? 400) > 0 ? 0 : 1,
+        zIndex: Z_INDEX.CHARACTER_NORMAL,
+        anchor: { x: 0.5, y: 1 }
+      },
+      transform: {
+        position: { x: xPos, y: 0, z: zPos }
+      }
+    });
+    ctx.renderer.track(obj);
+    obj._currentImageKey = resolvedKey;
+    objs[name] = obj;
+    if (ctx.renderer.dur(duration ?? 400) > 0) {
+      ctx.renderer.animate(obj, { style: { opacity: 1 } }, duration ?? 400);
+    }
+  }
+  function removeCharacter(ctx, name, duration) {
+    const objs = getCharObjects(ctx);
+    const states = getCharStates(ctx);
+    const obj = objs[name];
+    if (obj) {
+      delete objs[name];
+      delete states[name];
+      const dur = ctx.renderer.dur(duration ?? 400);
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          obj.remove?.();
+          ctx.renderer.untrack(obj);
+        });
+      } else {
+        obj.remove?.();
+        ctx.renderer.untrack(obj);
+      }
+    }
+  }
+  function focusCharacter(ctx, name, focusType, fit = "inherit", duration = 800) {
+    const objs = getCharObjects(ctx);
+    const target = objs[name];
+    if (!target) return;
+    const charDefs = ctx.renderer.config.characters;
+    const def = charDefs[name];
+    if (!def) return;
+    const activeImgKey = target._currentImageKey ?? Object.keys(def)[0];
+    const imageDef = def[activeImgKey];
+    const fp = focusType && imageDef?.points ? imageDef.points[focusType] : { x: 0.5, y: 0.5 };
+    const targetX = target.transform?.position?.x ?? 0;
+    const charW = target.style?.width ?? 500;
+    const rendH = target.__renderedSize?.h;
+    const charH = rendH && rendH > 0 ? rendH : charW * 2;
+    const panX = targetX + charW * (fp.x - 0.5);
+    const panY = charH * (0.5 - fp.y);
+    panCamera(ctx, "center", duration, panX, panY);
+    zoomCamera(ctx, fit, duration);
+  }
+  var characterHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "show") {
+      const showCmd = cmd;
+      showCharacter(ctx, showCmd.name, showCmd.position, showCmd.image, showCmd.duration);
+      if (showCmd.focus) {
+        focusCharacter(ctx, showCmd.name, typeof showCmd.focus === "string" ? showCmd.focus : void 0, "inherit", showCmd.duration ?? 800);
+      }
+    } else {
+      removeCharacter(ctx, cmd.name, cmd.duration);
+    }
+    return false;
+  });
+  var characterFocusHandler = defineCmd((cmd, ctx) => {
+    focusCharacter(ctx, cmd.name, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
+    return false;
+  });
+  var characterHighlightHandler = defineCmd((_cmd, _ctx) => {
+    return false;
+  });
+
+  // src/cmds/screen.ts
+  var FADE_PRESETS = {
+    black: { color: "rgba(0,0,0,1)", easing: "linear" },
+    white: { color: "rgba(255,255,255,1)", easing: "linear" },
+    red: { color: "rgba(200,0,0,1)", easing: "easeIn" },
+    dream: { color: "rgba(200,180,255,1)", easing: "easeInOut" },
+    sepia: { color: "rgba(150,100,50,1)", easing: "easeIn" }
+  };
+  var FLASH_PRESETS = {
+    white: { color: "rgba(255,255,255,1)", duration: 300 },
+    red: { color: "rgba(255,0,0,1)", duration: 300 },
+    yellow: { color: "rgba(255,220,0,1)", duration: 250 }
+  };
+  var WIPE_PRESETS = {
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+    up: { x: 0, y: 1 },
+    down: { x: 0, y: -1 }
+  };
+  function getTransitionRect(ctx, color) {
+    let rect = ctx.renderer.state.get("_transitionObj");
+    if (!rect) {
+      const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
+      const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
+      rect = ctx.renderer.world.createRectangle({
         style: {
-          fontSize: p.fontSize,
-          fontWeight: p.fontWeight,
-          fontFamily: p.fontFamily,
-          lineHeight: p.lineHeight,
-          color: p.color,
-          opacity: p.opacity,
-          zIndex: p.zIndex,
+          color,
+          width: w * 2,
+          height: h * 2,
+          opacity: 0,
+          zIndex: Z_INDEX.TRANSITION,
           pointerEvents: false
         },
-        transform: { position: pos }
-      }));
-      this.world.camera?.addChild(textObj);
-      this._overlayObjs.set(preset, textObj);
-    }
-    removeOverlay(preset, duration = 600) {
-      const obj = this._overlayObjs.get(preset);
-      if (obj) {
-        this._overlayObjs.delete(preset);
-        if (duration > 0 && typeof obj.fadeOut === "function") {
-          obj.fadeOut(duration);
-          setTimeout(() => {
-            obj.remove?.();
-            this._objects.delete(obj);
-          }, duration);
-        } else {
-          obj.remove?.();
-          this._objects.delete(obj);
-        }
-      }
-    }
-    clearOverlay(duration = 400) {
-      Array.from(this._overlayObjs.keys()).forEach((k) => this.removeOverlay(k, duration));
-    }
-    // ─── 캐릭터 ─────────────────────────────────────────────────
-    showCharacter(name, position, imageKey, duration) {
-      const charDefs = this.config.characters;
-      const def = charDefs[name];
-      if (!def) return;
-      const resolvedKey = imageKey ?? Object.keys(def)[0];
-      const imageDef = def[resolvedKey];
-      if (!imageDef) return;
-      const existingState = this._characterStates.get(name);
-      const resolvedPosition = !position || position === "inherit" ? existingState?.position ?? "center" : position;
-      const src = imageDef.src ?? resolvedKey;
-      const xPos = this.width * (this._resolvePositionX(resolvedPosition) - 0.5);
-      const zPos = this.world.camera?.attribute?.focalLength ?? 100;
-      this._characterStates.set(name, { position: resolvedPosition, imageKey: resolvedKey });
-      const existing = this._characters.get(name);
-      if (existing) {
-        this._animate(existing, { transform: { position: { x: xPos } } }, this._dur(duration ?? 400), "easeInOutQuad");
-        if (imageKey) {
-          this._dur(duration ?? 300) > 0 && typeof existing.transition === "function" ? existing.transition(src, this._dur(duration ?? 300)) : existing.attribute && (existing.attribute.src = src);
-        }
-        ;
-        existing._currentImageKey = resolvedKey;
-      } else {
-        const targetW = imageDef.width ?? 500;
-        const img = this._track(this.world.createImage({
-          attribute: { src },
-          style: { width: targetW, zIndex: Z_INDEX.CHARACTER_NORMAL },
-          transform: { position: { x: xPos, y: 0, z: zPos } }
-        }));
-        const fadeDur = this._dur(duration ?? 400);
-        if (fadeDur > 0 && typeof img.fadeIn === "function") {
-          img.fadeIn(fadeDur);
-        } else {
-          img.style.opacity = 1;
-        }
-        ;
-        img._currentImageKey = resolvedKey;
-        this._characters.set(name, img);
-      }
-    }
-    removeCharacter(name, duration = 600) {
-      const obj = this._characters.get(name);
-      this._characterStates.delete(name);
-      if (obj) {
-        this._characters.delete(name);
-        const dur = this._dur(duration);
-        if (dur > 0 && typeof obj.fadeOut === "function") {
-          obj.fadeOut(dur);
-          setTimeout(() => {
-            obj.remove?.();
-            this._objects.delete(obj);
-          }, dur);
-        } else {
-          obj.remove?.();
-          this._objects.delete(obj);
-        }
-      }
-    }
-    focusCharacter(name, pointKey, zoomPreset = "close-up", duration = 800) {
-      const target = this._characters.get(name);
-      if (!target) return;
-      const charDefs = this.config.characters;
-      const def = charDefs[name];
-      const activeImgKey = target._currentImageKey ?? Object.keys(def)[0];
-      const imageDef = def[activeImgKey];
-      const fp = pointKey && imageDef?.points ? imageDef.points[pointKey] : { x: 0.5, y: 0.5 };
-      const targetX = target.transform?.position?.x ?? 0;
-      const charW = target.style?.width ?? 500;
-      const rendH = target.__renderedSize?.h;
-      const charH = rendH && rendH > 0 ? rendH : charW * 2;
-      const panX = targetX + charW * (fp.x - 0.5);
-      const panY = charH * (0.5 - fp.y);
-      this.panCamera("custom", duration, panX, panY);
-      this.zoomCamera(zoomPreset, duration);
-    }
-    highlightCharacter(name) {
-      const target = this._characters.get(name);
-      if (!target || target._originalTransform) return;
-      target._originalTransform = {
-        x: target.transform.position.x,
-        y: target.transform.position.y,
-        z: target.transform.position.z,
-        zIndex: target.style?.zIndex
-      };
-      this.world.camera?.addChild(target);
-      target.style.zIndex = Z_INDEX.CHARACTER_CUTIN;
-    }
-    unhighlightCharacter(name) {
-      const target = this._characters.get(name);
-      if (!target) return;
-      const orig = target._originalTransform;
-      if (!orig) return;
-      this.world.camera?.removeChild(target);
-      target.transform.position.x = orig.x;
-      target.transform.position.y = orig.y;
-      target.transform.position.z = orig.z;
-      target.style.zIndex = orig.zIndex;
-      delete target._originalTransform;
-    }
-    // ─── 카메라 ─────────────────────────────────────────────────
-    zoomCamera(preset = "inherit", duration, overrideScale) {
-      const cam = this.world.camera;
-      if (!cam || !this._camBaseObj) return;
-      if (this._activeCamZoomAnim) {
-        this._activeCamZoomAnim.stop();
-        this._activeCamZoomAnim = null;
-        if (this._activeCamZoomTarget) {
-          this._camBaseObj.transform.position.z = this._activeCamZoomTarget.z;
-          this._activeCamZoomTarget = null;
-        }
-      }
-      const resolvedPreset = preset === "inherit" ? this._lastZoomPreset : preset;
-      this._lastZoomPreset = resolvedPreset;
-      const { scale: scale2, duration: pd } = ZOOM_PRESETS[resolvedPreset];
-      const finalScale = overrideScale ?? scale2;
-      const finalDur = this._dur(duration ?? pd);
-      const baseDist = cam.attribute?.focalLength ?? 100;
-      const newZ = baseDist - baseDist / finalScale;
-      this._activeCamZoomTarget = { z: newZ };
-      this._activeCamZoomAnim = this._animate(this._camBaseObj, { transform: { position: { z: newZ } } }, finalDur, "easeInOutQuad");
-      this._activeCamZoomAnim?.on("end", () => {
-        this._activeCamZoomAnim = null;
-        this._activeCamZoomTarget = null;
+        transform: { position: { x: 0, y: 0, z: 10 } }
       });
-      const localZ = baseDist - newZ;
-      const scaleAtDst = baseDist / (baseDist - newZ);
-      const exactW = this.width / scaleAtDst;
-      const exactH = this.height / scaleAtDst;
-      this._moodObjs.forEach((moodObj) => {
-        this._animate(moodObj, {
-          transform: { position: { z: localZ } },
-          style: { width: exactW, height: exactH }
-        }, finalDur, "easeInOutQuad");
-      });
+      ctx.renderer.world.camera?.addChild(rect);
+      ctx.renderer.state.set("_transitionObj", rect);
+    } else {
+      rect.style.color = color;
+      rect.transform.position.x = 0;
+      rect.transform.position.y = 0;
     }
-    panCamera(preset, duration, customX, customY) {
-      const cam = this.world.camera;
-      if (!cam || !this._camBaseObj) return;
-      if (preset === "inherit") return;
-      if (this._activeCamPanAnim) {
-        this._activeCamPanAnim.stop();
-        this._activeCamPanAnim = null;
-        if (this._activeCamPanTarget) {
-          this._camBaseObj.transform.position.x = this._activeCamPanTarget.x;
-          this._camBaseObj.transform.position.y = this._activeCamPanTarget.y;
-          this._activeCamPanTarget = null;
-        }
-      }
-      let x, y, dur;
-      if (preset === "custom") {
-        x = customX ?? 0;
-        y = customY ?? 0;
-        dur = this._dur(duration ?? 800);
-      } else if (PAN_PRESETS[preset]) {
-        this._lastPanPreset = preset;
-        const p = PAN_PRESETS[preset];
-        x = customX ?? p.x;
-        y = customY ?? p.y;
-        dur = this._dur(duration ?? p.duration);
-      } else {
-        x = customX ?? this.width * (this._resolvePositionX(preset) - 0.5);
-        y = customY ?? 0;
-        dur = this._dur(duration ?? 1e3);
-      }
-      this._activeCamPanTarget = { x, y };
-      this._activeCamPanAnim = this._animate(this._camBaseObj, { transform: { position: { x, y } } }, dur, "easeInOutQuad");
-      this._activeCamPanAnim?.on("end", () => {
-        this._activeCamPanAnim = null;
-        this._activeCamPanTarget = null;
-      });
+    return rect;
+  }
+  function screenFade(ctx, dir, preset = "inherit", duration = 600) {
+    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastFadePreset") ?? "black" : preset;
+    ctx.renderer.state.set("_lastFadePreset", resolvedPreset);
+    const cfg = FADE_PRESETS[resolvedPreset];
+    if (!cfg) return;
+    const rect = getTransitionRect(ctx, cfg.color);
+    const startOpacity = dir === "in" ? 1 : 0;
+    const endOpacity = dir === "in" ? 0 : 1;
+    rect.style.opacity = startOpacity;
+    ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, duration, cfg.easing);
+  }
+  function screenFlash(ctx, preset = "inherit") {
+    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastFlashPreset") ?? "white" : preset;
+    ctx.renderer.state.set("_lastFlashPreset", resolvedPreset);
+    const cfg = FLASH_PRESETS[resolvedPreset];
+    if (!cfg) return;
+    const rect = getTransitionRect(ctx, cfg.color);
+    rect.style.opacity = 1;
+    ctx.renderer.animate(rect, { style: { opacity: 0 } }, cfg.duration, "easeOut");
+  }
+  function screenWipe(ctx, dir, preset = "inherit", duration = 800) {
+    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastWipePreset") ?? "left" : preset;
+    ctx.renderer.state.set("_lastWipePreset", resolvedPreset);
+    const cfg = WIPE_PRESETS[resolvedPreset];
+    if (!cfg) return;
+    const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
+    const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
+    const dx = cfg.x * w * 2;
+    const dy = cfg.y * h * 2;
+    const colorPreset = ctx.renderer.state.get("_lastFadePreset") ?? "black";
+    const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
+    const rect = getTransitionRect(ctx, color);
+    rect.style.opacity = 1;
+    if (dir === "out") {
+      rect.transform.position.x = dx;
+      rect.transform.position.y = dy;
+      ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, duration, "easeInOutQuad");
+    } else {
+      rect.transform.position.x = 0;
+      rect.transform.position.y = 0;
+      ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, duration, "easeInOutQuad");
     }
-    cameraEffect(preset = "shake", duration, intensity, repeat = 1) {
-      if (this._isSkipping) return;
-      const cam = this.world.camera;
-      if (!cam || !this._camOffsetObj) return;
-      if (this._activeCamEffectStop) {
-        this._activeCamEffectStop();
-        this._activeCamEffectStop = null;
-      }
-      if (preset === "reset") {
-        this._camOffsetObj.animate({ transform: { position: { x: 0, y: 0 }, rotation: { z: 0 } } }, 100, "easeOut");
-        return;
-      }
-      const { intensity: pi, duration: pd } = CAMERA_EFFECT_PRESETS[preset];
-      const fi = intensity ?? pi;
-      const fd = duration ?? pd;
-      const offsetObj = this._camOffsetObj;
-      let stopped = false;
-      this._activeCamEffectStop = () => {
-        stopped = true;
-        offsetObj.animate({ transform: { position: { x: 0, y: 0 }, rotation: { z: 0 } } }, 100, "easeOut");
-      };
-      let remainingRepeat = repeat;
-      if (preset === "shake") {
-        const steps = Math.floor(fd / 50);
-        let i = 0;
-        const run = () => {
-          if (stopped) return;
-          if (i >= steps) {
-            if (remainingRepeat < 0 || --remainingRepeat > 0) {
-              i = 0;
-              run();
-              return;
-            }
-            this._activeCamEffectStop = null;
-            offsetObj.animate({ transform: { position: { x: 0, y: 0 } } }, 100, "easeOut");
-            return;
-          }
-          offsetObj.animate({ transform: { position: { x: (Math.random() - 0.5) * fi * 2, y: (Math.random() - 0.5) * fi * 2 } } }, 50, "linear").on("end", run);
-          i++;
-        };
-        run();
-      } else if (preset === "bounce") {
-        const steps = Math.floor(fd / 100);
-        let i = 0;
-        const run = () => {
-          if (stopped) return;
-          if (i >= steps) {
-            if (remainingRepeat < 0 || --remainingRepeat > 0) {
-              i = 0;
-              run();
-              return;
-            }
-            this._activeCamEffectStop = null;
-            offsetObj.animate({ transform: { position: { y: 0 } } }, 100, "easeOut");
-            return;
-          }
-          offsetObj.animate({ transform: { position: { y: i % 2 === 0 ? fi : 0 } } }, 100, "easeInOutQuad").on("end", run);
-          i++;
-        };
-        run();
-      } else if (preset === "wave") {
-        const steps = Math.floor(fd / 50);
-        let i = 0;
-        const run = () => {
-          if (stopped) return;
-          if (i >= steps) {
-            if (remainingRepeat < 0 || --remainingRepeat > 0) {
-              i = 0;
-              run();
-              return;
-            }
-            this._activeCamEffectStop = null;
-            offsetObj.animate({ transform: { position: { x: 0, y: 0 } } }, 100, "easeOut");
-            return;
-          }
-          const t = i / steps * Math.PI * 4;
-          offsetObj.animate({ transform: { position: { x: Math.sin(t) * fi, y: Math.cos(t) * fi * 0.5 } } }, 50, "linear").on("end", run);
-          i++;
-        };
-        run();
-      } else if (preset === "nod") {
-        const steps = 4;
-        let i = 0;
-        const run = () => {
-          if (stopped) return;
-          if (i >= steps) {
-            if (remainingRepeat < 0 || --remainingRepeat > 0) {
-              i = 0;
-              run();
-              return;
-            }
-            this._activeCamEffectStop = null;
-            offsetObj.animate({ transform: { position: { y: 0 } } }, 100, "easeOut");
-            return;
-          }
-          offsetObj.animate({ transform: { position: { y: i % 2 === 0 ? -fi : 0 } } }, fd / steps, "easeInOutQuad").on("end", run);
-          i++;
-        };
-        run();
-      } else if (preset === "shake-x") {
-        const steps = 4;
-        let i = 0;
-        const run = () => {
-          if (stopped) return;
-          if (i >= steps) {
-            if (remainingRepeat < 0 || --remainingRepeat > 0) {
-              i = 0;
-              run();
-              return;
-            }
-            this._activeCamEffectStop = null;
-            offsetObj.animate({ transform: { position: { x: 0 } } }, 100, "easeOut");
-            return;
-          }
-          offsetObj.animate({ transform: { position: { x: i % 2 === 0 ? fi : -fi } } }, fd / steps, "easeInOutQuad").on("end", run);
-          i++;
-        };
-        run();
-      } else if (preset === "fall") {
-        const run = () => {
-          if (stopped) return;
-          offsetObj.animate({ transform: { position: { y: -fi * 3 }, rotation: { z: fi } } }, fd * 0.6, "easeOutElastic").on("end", () => {
-            if (stopped) return;
-            setTimeout(() => {
-              if (stopped) return;
-              offsetObj.animate({ transform: { position: { y: 0 }, rotation: { z: 0 } } }, fd * 0.4, "easeInOutQuad").on("end", () => {
-                if (stopped) return;
-                if (remainingRepeat < 0 || --remainingRepeat > 0) {
-                  run();
-                } else {
-                  this._activeCamEffectStop = null;
-                }
-              });
-            }, 300);
-          });
-        };
-        run();
-      }
+  }
+  var screenFadeHandler = defineCmd((cmd, ctx) => {
+    screenFade(ctx, cmd.dir, cmd.preset ?? "inherit", cmd.duration ?? 600);
+    return false;
+  });
+  var screenFlashHandler = defineCmd((cmd, ctx) => {
+    screenFlash(ctx, cmd.preset ?? "inherit");
+    return false;
+  });
+  var screenWipeHandler = defineCmd((cmd, ctx) => {
+    screenWipe(ctx, cmd.dir, cmd.preset ?? "inherit", cmd.duration ?? 800);
+    return false;
+  });
+
+  // src/cmds/ui.ts
+  var uiHandler = defineCmd((_cmd, _ctx) => {
+    return false;
+  });
+
+  // src/cmds/control.ts
+  var controlHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "disable" && typeof cmd.duration === "number") {
+      ctx.callbacks.disableInput(cmd.duration);
     }
-    // ─── 화면 전환 ──────────────────────────────────────────────
-    screenFade(dir, preset = "inherit", duration = 600) {
-      const resolvedPreset = preset === "inherit" ? this._lastFadePreset : preset;
-      this._lastFadePreset = resolvedPreset;
-      const { color, easing } = FADE_PRESETS[resolvedPreset];
-      const rect = this._getTransitionRect(color);
-      rect.animate({ style: { opacity: dir === "out" ? 1 : 0 } }, duration, easing);
-    }
-    screenFlash(preset = "inherit") {
-      const resolvedPreset = preset === "inherit" ? this._lastFlashPreset : preset;
-      this._lastFlashPreset = resolvedPreset;
-      const { color, duration } = FLASH_PRESETS[resolvedPreset];
-      const rect = this._getTransitionRect(color);
-      rect.animate({ style: { opacity: 1 } }, duration / 2, "easeOut").on("end", () => rect.animate({ style: { opacity: 0 } }, duration / 2, "easeIn"));
-    }
-    screenWipe(dir, preset = "inherit", duration = 800) {
-      const resolvedPreset = preset === "inherit" ? this._lastWipePreset : preset;
-      this._lastWipePreset = resolvedPreset;
-      const rect = this._getTransitionRect("rgba(0,0,0,1)");
-      const w = this.world.canvas?.width ?? this.width;
-      const h = this.world.canvas?.height ?? this.height;
-      const cam = this.world.camera;
-      if (cam) {
-        rect.style.width = cam.calcDepthRatio ? cam.calcDepthRatio(10, w) : w(rect).style.height = cam.calcDepthRatio ? cam.calcDepthRatio(10, h) : h;
-        rect.transform.position.z = 10;
-      }
-      const { x: dx, y: dy } = WIPE_PRESETS[resolvedPreset];
-      if (dir === "out") {
-        rect.transform.position.x = dx * w * 2;
-        rect.transform.position.y = dy * h * 2;
-        rect.style.opacity = 1;
-        rect.animate({ transform: { position: { x: 0, y: 0 } } }, duration, "easeInOutQuad");
-      } else {
-        rect.transform.position.x = 0;
-        rect.transform.position.y = 0;
-        rect.style.opacity = 1;
-        rect.animate({ transform: { position: { x: dx * w * 2, y: dy * h * 2 } } }, duration, "easeInOutQuad").on("end", () => {
-          ;
-          rect.style.opacity = 0;
-        });
-      }
-    }
-    fadeIn(duration = 800) {
-      this.screenFade("in", "black", duration);
-    }
-    fadeOut(duration = 800) {
-      this.screenFade("out", "black", duration);
-    }
-  };
+    return false;
+  });
 
   // src/core/Scene.ts
+  var BUILTIN_CMDS = {
+    "dialogue": dialogueHandler,
+    "choice": choiceHandler,
+    "condition": conditionHandler,
+    "var": varHandler,
+    "label": labelHandler,
+    "background": backgroundHandler,
+    "mood": moodHandler,
+    "effect": effectHandler,
+    "overlay": overlayHandler,
+    "character": characterHandler,
+    "character-focus": characterFocusHandler,
+    "character-highlight": characterHighlightHandler,
+    "camera-zoom": cameraZoomHandler,
+    "camera-pan": cameraPanHandler,
+    "camera-effect": cameraEffectHandler,
+    "screen-fade": screenFadeHandler,
+    "screen-flash": screenFlashHandler,
+    "screen-wipe": screenWipeHandler,
+    "ui": uiHandler,
+    "control": controlHandler
+  };
   var DialogueScene = class {
     renderer;
     callbacks;
@@ -13958,55 +14055,14 @@ ${addLineNumbers(fragment)}`);
       }
       const step = steps[this.cursor];
       const cmd = step;
-      if (cmd.type === "label") {
-        this.cursor++;
-        this.textSubIndex = 0;
-        this._executeNext();
-        return;
-      }
-      if (cmd.type === "condition") {
-        this._handleCondition(cmd);
-        return;
-      }
-      this._executeCmd(cmd);
-      if (cmd.type === "choice") return;
-      if (cmd.skip) {
+      const result = this._executeCmd(cmd);
+      if (result === "handled") return;
+      if (result === true || cmd.skip) {
         this.cursor++;
         this.textSubIndex = 0;
         this._executeNext();
       } else {
         this._waitingInput = true;
-      }
-    }
-    _handleCondition(cmd) {
-      const result = cmd.if(this._vars);
-      if (result) {
-        if (cmd.goto) {
-          this._jumpToLabel(cmd.goto);
-        } else if (cmd.next) {
-          this._ended = true;
-          this.callbacks.loadScene(cmd.next);
-        } else {
-          this.cursor++;
-          this.textSubIndex = 0;
-          this._executeNext();
-        }
-      } else {
-        if (cmd.else) {
-          if (this.labelIndex.has(cmd.else)) {
-            this._jumpToLabel(cmd.else);
-          } else {
-            this._ended = true;
-            this.callbacks.loadScene(cmd.else);
-          }
-        } else if (cmd["else-next"]) {
-          this._ended = true;
-          this.callbacks.loadScene(cmd["else-next"]);
-        } else {
-          this.cursor++;
-          this.textSubIndex = 0;
-          this._executeNext();
-        }
       }
     }
     _jumpToLabel(label) {
@@ -14031,7 +14087,7 @@ ${addLineNumbers(fragment)}`);
       }
       return true;
     }
-    /** 단일 커맨드를 Renderer 메서드에 매핑하여 실행 */
+    /** 단일 커맨드를 실행 */
     _executeCmd(originalCmd) {
       const r = this.renderer;
       let cmd = originalCmd;
@@ -14051,152 +14107,39 @@ ${addLineNumbers(fragment)}`);
           }
         }
       }
-      switch (cmd.type) {
-        // ── 스토리 흐름 ─────────────────────────────────────────
-        case "dialogue": {
-          const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
-          const interpolated = this._interpolateText(txt);
-          this.callbacks.onDialogue(cmd.speaker, interpolated, cmd.speed);
-          break;
+      const { type, skip, ...params } = cmd;
+      const ctx = {
+        world: r.world,
+        globalVars: this.callbacks.getGlobalVars(),
+        localVars: this.localVars,
+        renderer: r,
+        callbacks: this.callbacks,
+        scene: {
+          getTextSubIndex: () => this.textSubIndex,
+          interpolateText: (text) => this._interpolateText(text),
+          jumpToLabel: (label) => this._jumpToLabel(label),
+          hasLabel: (label) => this.labelIndex.has(label),
+          getVars: () => this._vars,
+          setGlobalVar: (key, value) => this.callbacks.setGlobalVar(key, value),
+          setLocalVar: (key, value) => {
+            this.localVars[key] = value;
+          },
+          loadScene: (name) => this.callbacks.loadScene(name),
+          end: () => {
+            this._ended = true;
+          }
         }
-        case "var": {
-          const nameStr = cmd.name;
-          let val = cmd.value;
-          if (typeof val === "function") {
-            val = val(this._vars);
-          }
-          if (nameStr.startsWith("_")) {
-            this.localVars[nameStr] = val;
-          } else {
-            this.callbacks.setGlobalVar(nameStr, val);
-          }
-          break;
-        }
-        case "choice":
-          this.callbacks.onChoice(cmd.choices);
-          break;
-        // ── 배경 ─────────────────────────────────────────────────
-        case "background":
-          r.setBackground(
-            cmd.name,
-            cmd.fit ?? "inherit",
-            cmd.duration ?? 1e3,
-            cmd.isVideo ?? false
-          );
-          break;
-        // ── 무드 ─────────────────────────────────────────────────
-        case "mood":
-          if (cmd.action === "remove") {
-            r.removeMood(cmd.mood, cmd.duration);
-          } else {
-            r.addMood(
-              cmd.mood,
-              cmd.intensity,
-              cmd.duration ?? 800
-            );
-            if (cmd.flicker) {
-              r.setFlicker(cmd.mood, cmd.flicker);
-            }
-          }
-          break;
-        // ── 이펙트 ───────────────────────────────────────────────
-        case "effect":
-          if (cmd.action === "add") {
-            r.addEffect(cmd.effect, cmd.rate, void 0, cmd.src);
-          } else {
-            r.removeEffect(cmd.effect, cmd.duration);
-          }
-          break;
-        // ── 오버레이 ─────────────────────────────────────────────
-        case "overlay":
-          if (cmd.action === "add") {
-            if (cmd.text) r.addOverlay(cmd.text, cmd.preset ?? "caption");
-          } else if (cmd.action === "remove") {
-            r.removeOverlay(cmd.preset ?? "caption", cmd.duration);
-          } else if (cmd.action === "clear") {
-            r.clearOverlay(cmd.duration);
-          }
-          break;
-        // ── 캐릭터 ───────────────────────────────────────────────
-        case "character":
-          if (cmd.action === "show") {
-            r.showCharacter(cmd.name, cmd.position, cmd.image, cmd.duration);
-            if (cmd.focus) {
-              r.focusCharacter(
-                cmd.name,
-                typeof cmd.focus === "string" ? cmd.focus : void 0,
-                "inherit",
-                cmd.duration ?? 800
-              );
-            }
-          } else {
-            r.removeCharacter(cmd.name, cmd.duration);
-          }
-          break;
-        case "character-focus":
-          r.focusCharacter(
-            cmd.name,
-            cmd.point,
-            cmd.zoom ?? "inherit",
-            cmd.duration ?? 800
-          );
-          break;
-        case "character-highlight":
-          if (cmd.action === "on") {
-            r.highlightCharacter(cmd.name);
-          } else {
-            r.unhighlightCharacter(cmd.name);
-          }
-          break;
-        // ── 카메라 ───────────────────────────────────────────────
-        case "camera-zoom":
-          r.zoomCamera(
-            cmd.preset,
-            cmd.duration
-          );
-          break;
-        case "camera-pan":
-          r.panCamera(
-            cmd.position,
-            cmd.duration
-          );
-          break;
-        case "camera-effect":
-          r.cameraEffect(
-            cmd.preset,
-            cmd.duration,
-            cmd.intensity,
-            cmd.repeat
-          );
-          break;
-        // ── 화면 전환 ────────────────────────────────────────────
-        case "screen-fade":
-          r.screenFade(
-            cmd.dir,
-            cmd.preset ?? "inherit",
-            cmd.duration ?? 600
-          );
-          break;
-        case "screen-flash":
-          r.screenFlash(cmd.preset ?? "inherit");
-          break;
-        case "screen-wipe":
-          r.screenWipe(
-            cmd.dir,
-            cmd.preset ?? "inherit",
-            cmd.duration ?? 800
-          );
-          break;
-        case "ui":
-          break;
-        case "control":
-          if (cmd.action === "disable" && typeof cmd.duration === "number") {
-            this.callbacks.disableInput(cmd.duration);
-          }
-          break;
-        default:
-          console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, cmd.type);
+      };
+      if (BUILTIN_CMDS[type]) {
+        return BUILTIN_CMDS[type](params, ctx);
       }
+      const cmds = r.config.cmds;
+      if (cmds && typeof cmds[type] === "function") {
+        const customSkip = cmds[type](params, ctx);
+        return customSkip === true ? true : false;
+      }
+      console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
+      return false;
     }
     /** 현재 대기 중인 choice 커맨드를 반환 */
     getCurrentChoice() {
@@ -14214,9 +14157,10 @@ ${addLineNumbers(fragment)}`);
       const steps = this.definition.dialogues;
       const current = steps[this.cursor];
       if (current?.type === "dialogue") {
-        const txt = Array.isArray(current.text) ? current.text[this.textSubIndex] : current.text;
+        const cmd = current;
+        const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
         const interpolated = this._interpolateText(txt);
-        return { ...current, text: interpolated };
+        return { ...cmd, text: interpolated };
       }
       return null;
     }
@@ -14276,9 +14220,10 @@ ${addLineNumbers(fragment)}`);
       if (!step) return;
       const cmd = step;
       if (cmd.type === "dialogue") {
-        const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
+        const dCmd = cmd;
+        const txt = Array.isArray(dCmd.text) ? dCmd.text[this.textSubIndex] : dCmd.text;
         const interpolated = this._interpolateText(txt);
-        this.callbacks.onDialogue(cmd.speaker, interpolated, cmd.speed);
+        this.callbacks.onDialogue(dCmd.speaker, interpolated, dCmd.speed);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
         this.callbacks.onChoice(cmd.choices);
@@ -14308,7 +14253,12 @@ ${addLineNumbers(fragment)}`);
     }
     start() {
       const { background, objects } = this.definition.options;
-      this.renderer.setBackground(background, "stretch", 1e3);
+      setBackground(
+        { renderer: this.renderer },
+        background,
+        "stretch",
+        1e3
+      );
       this._spawnObjects(objects);
     }
     _spawnObjects(objects) {
@@ -14824,6 +14774,9 @@ ${addLineNumbers(fragment)}`);
       metHeroine: false,
       endingReached: false
     },
+    cmds: {
+      "test": test
+    },
     scenes: [
       "scene-intro",
       "scene-a",
@@ -14896,7 +14849,13 @@ ${addLineNumbers(fragment)}`);
       { type: "character", action: "show", defaults: { duration: 300 } },
       { type: "character", action: "remove", defaults: { duration: 1e3 } },
       { type: "dialogue", defaults: { speed: 60 } }
-    ]
+    ],
+    cmds: {
+      "test-cmd": (cmd, ctx) => {
+        console.log("[test-cmd]", cmd.message, ctx.globalVars);
+        return true;
+      }
+    }
   });
 
   // example/scenes/scene-intro.ts
@@ -15131,6 +15090,7 @@ ${addLineNumbers(fragment)}`);
     // ── 대사
     { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
     { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
+    { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face" },
     // ── 캐릭터 표정 변경 + 클로즈업
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
     { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face", zoom: "close-up", duration: 800, skip: true },
@@ -15180,7 +15140,7 @@ ${addLineNumbers(fragment)}`);
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
     { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }})" },
+    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }}, \uB2E4\uC74C: {{ likeability + 10 }})" },
     // ── or 조건 테스트
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
     {

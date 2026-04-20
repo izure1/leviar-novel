@@ -60,6 +60,7 @@ export type {
 export { defineNovelConfig } from './define/defineNovelConfig'
 export { defineScene } from './define/defineScene'
 export { defineExploreScene } from './define/defineExploreScene'
+export { defineCmd } from './define/defineCmd'
 export type { SceneDefinition } from './define/defineScene'
 export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
 

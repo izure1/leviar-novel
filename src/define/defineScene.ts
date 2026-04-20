@@ -48,7 +48,7 @@ export interface SceneDefinition<
  * ```
  */
 export function defineScene<
-  TConfig extends NovelConfig<any, readonly string[], any, any, any>,
+  TConfig extends NovelConfig<any, readonly string[], any, any, any, any>,
   TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
 >(
   config: TConfig,
@@ -59,7 +59,8 @@ export function defineScene<
     TConfig['scenes'],
     TConfig['characters'],
     TConfig['backgrounds'],
-    [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>
+    [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>,
+    [TConfig['cmds']] extends [undefined] ? Record<never, never> : NonNullable<TConfig['cmds']>
   >[],
   options?: {
     /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
