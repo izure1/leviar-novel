@@ -7,19 +7,29 @@ export type FadeColorPreset = 'black' | 'white' | 'red' | 'dream' | 'sepia' | 'i
 export type FlashPreset = 'white' | 'red' | 'yellow' | 'inherit'
 export type WipePreset = 'left' | 'right' | 'up' | 'down' | 'inherit'
 
+/** 화면을 페이드인/아웃한다 */
 export interface ScreenFadeCmd {
+  /** 'in'은 화면이 밝아지는 것, 'out'은 화면이 지정된 색으로 덮이는 것을 의미합니다. */
   dir: 'in' | 'out'
+  /** 페이드에 사용될 색상 프리셋(black, white 등)입니다. */
   preset?: FadeColorPreset
+  /** 페이드 애니메이션 시간(ms 단위)입니다. (기본값: 600) */
   duration?: number
 }
 
+/** 화면을 순간 플래시한다 */
 export interface ScreenFlashCmd {
+  /** 플래시 효과에 사용될 색상 프리셋입니다. */
   preset?: FlashPreset
 }
 
+/** 화면을 와이프 전환한다 */
 export interface ScreenWipeCmd {
+  /** 'in'은 새 화면이 덮는 것, 'out'은 현재 화면이 벗겨지는 것을 의미합니다. */
   dir: 'in' | 'out'
+  /** 와이프 애니메이션 방향 프리셋(left, up 등)입니다. */
   preset?: WipePreset
+  /** 와이프 애니메이션 시간(ms 단위)입니다. (기본값: 800) */
   duration?: number
 }
 

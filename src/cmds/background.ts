@@ -5,10 +5,22 @@ import { defineCmd } from '../define/defineCmd'
 
 export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
 
+/** 
+ * 배경을 전환한다 
+ * 
+ * @example
+ * ```ts
+ * { type: 'background', name: 'classroom', duration: 1500, fit: 'cover' }
+ * ```
+ */
 export interface BackgroundCmd<TBackgrounds extends BgDefs> {
+  /** 전환할 배경 이미지의 에셋 키(config.backgrounds에 정의됨)입니다. */
   name: keyof TBackgrounds & string
+  /** 배경 이미지의 화면 맞춤 방식(stretch, cover 등)입니다. */
   fit?: BackgroundFitPreset
+  /** 배경 전환 시 크로스페이드(Fade)되는 시간(ms 단위)입니다. (기본값: 1000) */
   duration?: number
+  /** 대상 에셋을 비디오(video)로 처리할지 여부입니다. (기본값: false) */
   isVideo?: boolean
 }
 

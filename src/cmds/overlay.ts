@@ -4,10 +4,15 @@ import { defineCmd } from '../define/defineCmd'
 
 export type OverlayPreset = 'caption' | 'title' | 'whisper'
 
+/** 텍스트 오버레이를 추가, 제거, 전체 제거한다 */
 export interface OverlayCmd {
+  /** 수행할 동작: 'add'(추가), 'remove'(지정 항목 제거), 'clear'(모두 제거). */
   action: 'add' | 'remove' | 'clear'
+  /** 화면에 표시할 텍스트입니다. (action이 'add'일 때 필수) */
   text?: string
+  /** 텍스트 오버레이의 스타일 프리셋(캡션, 타이틀 등)입니다. */
   preset?: OverlayPreset
+  /** 'remove' 또는 'clear' 시 텍스트가 페이드아웃 되는 시간(ms 단위)입니다. */
   duration?: number
 }
 

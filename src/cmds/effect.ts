@@ -3,16 +3,33 @@ import { defineCmd } from '../define/defineCmd'
 
 export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
 
+/** 
+ * 파티클 이펙트를 추가하거나 제거한다 
+ * 
+ * @example
+ * ```ts
+ * { type: 'effect', action: 'add', effect: 'rain', src: 'raindrop', rate: 10 }
+ * // 또는 제거
+ * { type: 'effect', action: 'remove', effect: 'rain', duration: 500 }
+ * ```
+ */
 export type EffectCmd<TAssets extends Record<string, string> = Record<string, string>> =
   | {
+    /** 'add'는 화면에 새로운 파티클 효과를 추가합니다. */
     action: 'add'
+    /** 추가할 이펙트의 프리셋 종류(눈, 비 등)입니다. */
     effect: EffectType
+    /** 파티클로 렌더링 할 에셋의 키 (config.assets에 정의된 키)입니다. */
     src: keyof TAssets & string
+    /** 파티클의 생성 빈도(속도) 배율입니다. 높을수록 많이 생성됩니다. */
     rate?: number
   }
   | {
+    /** 'remove'는 현재 활성화된 파티클 효과를 중단하고 제거합니다. */
     action: 'remove'
+    /** 제거할 이펙트의 프리셋 종류입니다. */
     effect: EffectType
+    /** 이펙트가 서서히 사라지는 페이드아웃 시간(ms 단위)입니다. */
     duration?: number
   }
 

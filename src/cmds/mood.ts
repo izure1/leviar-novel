@@ -9,9 +9,40 @@ export type MoodType =
 
 export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
 
+/** 
+ * 화면 분위기 오버레이(무드, 조명)를 추가하거나 제거한다 
+ * 
+ * @example
+ * ```ts
+ * // 무드 추가
+ * { type: 'mood', action: 'add', mood: 'sunset', intensity: 0.8, duration: 1000 }
+ * // 무드 제거
+ * { type: 'mood', action: 'remove', mood: 'sunset' }
+ * // action이 없을 경우 모든 무드를 제거하고 현재 지정된 값으로 덮어쓰기
+ * { type: 'mood', mood: 'sunset', intensity: 0.9 }
+ * ```
+ */
 export type MoodCmd =
-  | { action?: 'add', mood: MoodType, intensity?: number, flicker?: FlickerPreset, duration?: number }
-  | { action: 'remove', mood: MoodType, duration?: number }
+  | { 
+    /** 'add'는 새로운 무드 효과를 추가합니다. */
+    action?: 'add'
+    /** 추가할 무드의 타입입니다. */
+    mood: MoodType
+    /** 무드 레이어의 불투명도(0~1)입니다. (기본값: 1) */
+    intensity?: number
+    /** 무드 레이어에 깜빡임(flicker) 애니메이션을 적용할 프리셋입니다. */
+    flicker?: FlickerPreset
+    /** 효과가 추가되면서 페이드인 되는 시간(ms 단위)입니다. (기본값: 800) */
+    duration?: number 
+  }
+  | { 
+    /** 'remove'는 현재 활성화된 무드 효과를 제거합니다. */
+    action: 'remove'
+    /** 제거할 무드의 타입입니다. */
+    mood: MoodType
+    /** 효과가 제거되면서 페이드아웃 되는 시간(ms 단위)입니다. (기본값: 800) */
+    duration?: number 
+  }
 
 const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
   day: { color: 'rgba(255,230,180,0.1)', vignette: 'transparent 70%, rgba(255,200,100,0.15) 100%', blendMode: 'screen' },

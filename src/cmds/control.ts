@@ -1,8 +1,11 @@
 import type { SceneContext } from '../core/SceneContext'
 import { defineCmd } from '../define/defineCmd'
 
+/** 사용자의 입력을 제어한다 (예: 일정 시간 동안 진행 무시) */
 export interface ControlCmd {
+  /** 'disable'은 일정 시간 동안 사용자의 클릭 등 입력을 차단합니다. */
   action: 'disable'
+  /** 입력을 차단할 시간(ms 단위)입니다. */
   duration: number
 }
 

@@ -5,20 +5,38 @@ export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
 export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit' | (string & {})
 export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall' | 'reset'
 
+/** 카메라를 줌한다 */
 export interface CameraZoomCmd {
+  /** 목표 줌 레벨 프리셋(close-up, wide 등)입니다. */
   preset: ZoomPreset
+  /** 줌 애니메이션에 걸리는 시간(ms 단위)입니다. */
   duration?: number
 }
 
+/** 카메라를 패닝한다 */
 export interface CameraPanCmd {
+  /** 목표 패닝 방향/위치 프리셋(left, center 등)입니다. */
   position: PanPreset
+  /** 패닝 애니메이션에 걸리는 시간(ms 단위)입니다. */
   duration?: number
 }
 
+/** 
+ * 카메라 흔들림 등 연출 효과를 재생한다 
+ * 
+ * @example
+ * ```ts
+ * { type: 'camera-effect', preset: 'shake', duration: 500, intensity: 5, repeat: 3 }
+ * ```
+ */
 export interface CameraEffectCmd {
+  /** 재생할 카메라 효과 프리셋(흔들림, 반동 등)입니다. */
   preset: CameraEffectPreset
+  /** 효과가 한 번 재생되는 데 걸리는 시간(ms 단위)입니다. */
   duration?: number
+  /** 효과의 강도/진폭입니다. 클수록 크게 요동칩니다. */
   intensity?: number
+  /** 효과를 반복할 횟수입니다. 음수일 경우 무한히 반복됩니다. (기본값: 1) */
   repeat?: number
 }
 
