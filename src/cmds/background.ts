@@ -6,7 +6,6 @@ import { defineCmd } from '../define/defineCmd'
 export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
 
 export interface BackgroundCmd<TBackgrounds extends BgDefs> {
-  type: 'background'
   name: keyof TBackgrounds & string
   fit?: BackgroundFitPreset
   duration?: number

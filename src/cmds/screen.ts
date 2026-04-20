@@ -8,19 +8,16 @@ export type FlashPreset = 'white' | 'red' | 'yellow' | 'inherit'
 export type WipePreset = 'left' | 'right' | 'up' | 'down' | 'inherit'
 
 export interface ScreenFadeCmd {
-  type: 'screen-fade'
   dir: 'in' | 'out'
   preset?: FadeColorPreset
   duration?: number
 }
 
 export interface ScreenFlashCmd {
-  type: 'screen-flash'
   preset?: FlashPreset
 }
 
 export interface ScreenWipeCmd {
-  type: 'screen-wipe'
   dir: 'in' | 'out'
   preset?: WipePreset
   duration?: number

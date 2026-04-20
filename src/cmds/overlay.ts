@@ -5,7 +5,6 @@ import { defineCmd } from '../define/defineCmd'
 export type OverlayPreset = 'caption' | 'title' | 'whisper'
 
 export interface OverlayCmd {
-  type: 'overlay'
   action: 'add' | 'remove' | 'clear'
   text?: string
   preset?: OverlayPreset
@@ -40,7 +39,7 @@ function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'ca
     fontFamily: (uiOv as any).fontFamily,
     lineHeight: (uiOv as any).lineHeight,
   }
-  
+
   const objs = getOverlayObjs(ctx)
   if (objs[preset]) removeOverlay(ctx, preset)
 
@@ -49,7 +48,7 @@ function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'ca
     center: ctx.renderer.height * 0.5,
     bottom: ctx.renderer.height * 0.85,
   }
-  
+
   const cam = ctx.renderer.world.camera as any
   const pos = cam && typeof cam.canvasToLocal === 'function'
     ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[p.y])
@@ -69,7 +68,7 @@ function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'ca
     } as any,
     transform: { position: pos },
   })
-  
+
   ctx.renderer.world.camera?.addChild(textObj as any)
   ctx.renderer.track(textObj as any)
   objs[preset] = textObj

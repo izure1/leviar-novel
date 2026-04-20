@@ -2,7 +2,6 @@ import type { SceneContext } from '../core/SceneContext'
 import { defineCmd } from '../define/defineCmd'
 
 export interface ControlCmd {
-  type: 'control'
   action: 'disable'
   duration: number
 }

@@ -1,5 +1,10 @@
 // example/novel.config.ts
-import { defineNovelConfig } from '../src'
+import { defineNovelConfig, defineCmd } from '../src'
+
+const testCmd = defineCmd<{ message: string }>((cmd, ctx) => {
+  console.log('[test-cmd]', cmd.message, ctx.globalVars)
+  return true
+})
 
 export default defineNovelConfig({
   vars: {
@@ -8,7 +13,7 @@ export default defineNovelConfig({
     endingReached: false,
   },
   cmds: {
-    'test': test,
+    'test-cmd': testCmd,
   },
   scenes: [
     'scene-intro',
@@ -83,10 +88,4 @@ export default defineNovelConfig({
     { type: 'character', action: 'remove', defaults: { duration: 1000 } },
     { type: 'dialogue', defaults: { speed: 60 } }
   ],
-  cmds: {
-    'test-cmd': (cmd: { message: string }, ctx) => {
-      console.log('[test-cmd]', cmd.message, ctx.globalVars)
-      return true
-    },
-  },
 })

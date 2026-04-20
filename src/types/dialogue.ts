@@ -41,6 +41,8 @@ export type CustomCmd<TCmds extends Record<string, CustomCmdHandler<any, any, an
   [K in keyof TCmds & string]: { type: K } & Parameters<TCmds[K]>[0]
 }[keyof TCmds & string]
 
+type _WithType<T, K extends string> = T extends any ? { type: K } & T : never
+
 type _DialogueEntryUnion<
   TVars,
   TLocalVars,
@@ -50,26 +52,26 @@ type _DialogueEntryUnion<
   TAssets extends Record<string, string> = Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
 > =
-  | DialogueCmd<TCharacters>
-  | ChoiceCmd<TVars, TScenes>
-  | ConditionCmd<TVars, TLocalVars, TScenes>
-  | VarCmd<TVars, TLocalVars>
-  | LabelCmd
-  | BackgroundCmd<TBackgrounds>
-  | MoodCmd
-  | EffectCmd<TAssets>
-  | OverlayCmd
-  | CharacterCmd<TCharacters>
-  | CharacterFocusCmd<TCharacters>
-  | CharacterHighlightCmd<TCharacters>
-  | CameraZoomCmd
-  | CameraPanCmd
-  | CameraEffectCmd
-  | ScreenFadeCmd
-  | ScreenFlashCmd
-  | ScreenWipeCmd
-  | UICmd
-  | ControlCmd
+  | _WithType<DialogueCmd<TCharacters>, 'dialogue'>
+  | _WithType<ChoiceCmd<TVars, TScenes>, 'choice'>
+  | _WithType<ConditionCmd<TVars, TLocalVars, TScenes>, 'condition'>
+  | _WithType<VarCmd<TVars, TLocalVars>, 'var'>
+  | _WithType<LabelCmd, 'label'>
+  | _WithType<BackgroundCmd<TBackgrounds>, 'background'>
+  | _WithType<MoodCmd, 'mood'>
+  | _WithType<EffectCmd<TAssets>, 'effect'>
+  | _WithType<OverlayCmd, 'overlay'>
+  | _WithType<CharacterCmd<TCharacters>, 'character'>
+  | _WithType<CharacterFocusCmd<TCharacters>, 'character-focus'>
+  | _WithType<CharacterHighlightCmd<TCharacters>, 'character-highlight'>
+  | _WithType<CameraZoomCmd, 'camera-zoom'>
+  | _WithType<CameraPanCmd, 'camera-pan'>
+  | _WithType<CameraEffectCmd, 'camera-effect'>
+  | _WithType<ScreenFadeCmd, 'screen-fade'>
+  | _WithType<ScreenFlashCmd, 'screen-flash'>
+  | _WithType<ScreenWipeCmd, 'screen-wipe'>
+  | _WithType<UICmd, 'ui'>
+  | _WithType<ControlCmd, 'control'>
   | CustomCmd<TCmds>
 
 type _WithSkip<T> = T extends any ? T & {

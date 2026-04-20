@@ -14768,6 +14768,10 @@ ${addLineNumbers(fragment)}`);
   };
 
   // example/novel.config.ts
+  var testCmd = defineCmd((cmd, ctx) => {
+    console.log("[test-cmd]", cmd.message, ctx.globalVars);
+    return true;
+  });
   var novel_config_default = defineNovelConfig({
     vars: {
       likeability: 0,
@@ -14775,7 +14779,7 @@ ${addLineNumbers(fragment)}`);
       endingReached: false
     },
     cmds: {
-      "test": test
+      "test-cmd": testCmd
     },
     scenes: [
       "scene-intro",
@@ -14849,13 +14853,7 @@ ${addLineNumbers(fragment)}`);
       { type: "character", action: "show", defaults: { duration: 300 } },
       { type: "character", action: "remove", defaults: { duration: 1e3 } },
       { type: "dialogue", defaults: { speed: 60 } }
-    ],
-    cmds: {
-      "test-cmd": (cmd, ctx) => {
-        console.log("[test-cmd]", cmd.message, ctx.globalVars);
-        return true;
-      }
-    }
+    ]
   });
 
   // example/scenes/scene-intro.ts
@@ -14866,6 +14864,7 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "day", intensity: 0.3, duration: 0 },
     { type: "effect", action: "add", effect: "dust", src: "dust", rate: 15, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 3e3 },
+    { type: "test-cmd", message: "Custom command works!" },
     {
       type: "dialogue",
       text: [

@@ -4,6 +4,7 @@
 
 import type { World, Style, Attribute } from 'leviar'
 import type { FallbackRule, EffectType } from './dialogue'
+import type { SceneContext, CommandResult } from '../core/SceneContext'
 
 /** 
  * 단일 캐릭터 이미지 변형 정의 
@@ -199,8 +200,8 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
  */
 export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
   params: TParams,
-  context: CustomCmdContext<TVars, TLocalVars>
-) => boolean | void
+  context: SceneContext<TVars, TLocalVars>
+) => CommandResult
 
 /** 
  * Novel 시스템의 최상위 설정 객체 타입입니다.

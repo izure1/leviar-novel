@@ -10,8 +10,8 @@ export type MoodType =
 export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
 
 export type MoodCmd =
-  | { type: 'mood', action?: 'add', mood: MoodType, intensity?: number, flicker?: FlickerPreset, duration?: number }
-  | { type: 'mood', action: 'remove', mood: MoodType, duration?: number }
+  | { action?: 'add', mood: MoodType, intensity?: number, flicker?: FlickerPreset, duration?: number }
+  | { action: 'remove', mood: MoodType, duration?: number }
 
 const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
   day: { color: 'rgba(255,230,180,0.1)', vignette: 'transparent 70%, rgba(255,200,100,0.15) 100%', blendMode: 'screen' },
@@ -98,8 +98,8 @@ export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, d
   const rect = ctx.renderer.world.createRectangle(rectOpts)
   ctx.renderer.track(rect as any)
   ctx.renderer.world.camera?.addChild(rect as any)
-  ;(rect as any)._currentMood = mood
-  
+    ; (rect as any)._currentMood = mood
+
   objs[mood] = rect
   activeMoods[mood] = finalIntensity
 

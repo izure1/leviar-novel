@@ -6,19 +6,16 @@ export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit' 
 export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall' | 'reset'
 
 export interface CameraZoomCmd {
-  type: 'camera-zoom'
   preset: ZoomPreset
   duration?: number
 }
 
 export interface CameraPanCmd {
-  type: 'camera-pan'
   position: PanPreset
   duration?: number
 }
 
 export interface CameraEffectCmd {
-  type: 'camera-effect'
   preset: CameraEffectPreset
   duration?: number
   intensity?: number
@@ -134,7 +131,7 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
       stop()
       return
     }
-    
+
     // 단순 효과 시뮬레이션 (LeviarWorld 애니메이션 엔진이 아닌 JS 타이머로 구현)
     let elapsed = 0
     const stepTime = 16
@@ -147,7 +144,7 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
       }
       const progress = elapsed / finalDuration
       let dx = 0, dy = 0, dz = 0
-      
+
       switch (preset) {
         case 'shake':
           dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
@@ -170,11 +167,11 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
           dy = Math.pow(progress, 2) * finalIntensity * 5
           break
       }
-      
+
       offsetObj.transform.position.x = dx
       offsetObj.transform.position.y = dy
       if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = dz
-      
+
       setTimeout(tick, stepTime)
     }
     tick()

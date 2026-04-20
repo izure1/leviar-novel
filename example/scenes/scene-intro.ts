@@ -9,6 +9,7 @@ export default defineScene(config, {}, [
   { type: 'mood', mood: 'day', intensity: 0.3, duration: 0 },
   { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 15, skip: true },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 3000 },
+  { type: 'test-cmd', message: 'Custom command works!' },
 
   {
     type: 'dialogue',

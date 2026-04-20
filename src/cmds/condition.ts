@@ -2,7 +2,6 @@ import type { SceneContext } from '../core/SceneContext'
 import { defineCmd } from '../define/defineCmd'
 
 export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string[]> {
-  type: 'condition'
   if: (vars: TVars & TLocalVars) => boolean
   next?: TScenes[number]
   goto?: string

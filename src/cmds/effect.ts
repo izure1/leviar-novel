@@ -5,14 +5,12 @@ export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog'
 
 export type EffectCmd<TAssets extends Record<string, string> = Record<string, string>> =
   | {
-    type: 'effect'
     action: 'add'
     effect: EffectType
     src: keyof TAssets & string
     rate?: number
   }
   | {
-    type: 'effect'
     action: 'remove'
     effect: EffectType
     duration?: number
@@ -81,12 +79,12 @@ function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: number, 
     const spanW = (ctx.renderer.width + maxPanX * 2) * ratio
     const spanH = (ctx.renderer.height + maxPanY * 2) * ratio
 
-    ;(ctx.renderer.world as any).particleManager.create({
-      name: clipName, src: srcKey ?? type,
-      ...clipBase,
-      rate: finalRate,
-      spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
-    })
+      ; (ctx.renderer.world as any).particleManager.create({
+        name: clipName, src: srcKey ?? type,
+        ...clipBase,
+        rate: finalRate,
+        spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
+      })
   }
 
   const objs = getEffectObjs(ctx)
@@ -113,7 +111,7 @@ function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: number, 
 
   objs[type] = particle
   ctx.renderer.track(particle as any)
-  ;(particle as any).play?.()
+    ; (particle as any).play?.()
 }
 
 function removeEffect(ctx: SceneContext, type: EffectType, duration: number = 600) {

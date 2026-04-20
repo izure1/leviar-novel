@@ -3,7 +3,6 @@ import type { SceneContext } from '../core/SceneContext'
 import { defineCmd } from '../define/defineCmd'
 
 export interface DialogueCmd<TCharacters extends CharDefs> {
-  type: 'dialogue'
   speaker?: keyof TCharacters & string
   text: string | string[]
   speed?: number

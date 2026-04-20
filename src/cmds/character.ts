@@ -16,13 +16,12 @@ type _AllImageKeys<TCharacters extends CharDefs> = {
 type _AllPointKeys<TCharacters extends CharDefs> = {
   [K in keyof TCharacters]: {
     [IK in keyof TCharacters[K]]: TCharacters[K][IK] extends { points?: Record<string, any> }
-      ? keyof NonNullable<TCharacters[K][IK]['points']> & string
-      : never
+    ? keyof NonNullable<TCharacters[K][IK]['points']> & string
+    : never
   }[keyof TCharacters[K]]
 }[keyof TCharacters]
 
 export interface CharacterCmd<TCharacters extends CharDefs> {
-  type: 'character'
   action: 'show' | 'remove'
   name: keyof TCharacters & string | (string & {})
   position?: CharacterPositionPreset
@@ -32,7 +31,6 @@ export interface CharacterCmd<TCharacters extends CharDefs> {
 }
 
 export interface CharacterFocusCmd<TCharacters extends CharDefs> {
-  type: 'character-focus'
   name: keyof TCharacters & string | (string & {})
   point?: _AllPointKeys<TCharacters> | 'inherit' | (string & {})
   zoom?: ZoomPreset
@@ -40,7 +38,6 @@ export interface CharacterFocusCmd<TCharacters extends CharDefs> {
 }
 
 export interface CharacterHighlightCmd<TCharacters extends CharDefs> {
-  type: 'character-highlight'
   name: keyof TCharacters & string | (string & {})
   action: 'on' | 'off'
   duration?: number
@@ -134,7 +131,7 @@ function showCharacter(ctx: SceneContext, name: string, position?: CharacterPosi
   })
 
   ctx.renderer.track(obj)
-  ;(obj as any)._currentImageKey = resolvedKey
+    ; (obj as any)._currentImageKey = resolvedKey
   objs[name] = obj
 
   if (ctx.renderer.dur(duration ?? 400) > 0) {
@@ -166,11 +163,11 @@ function focusCharacter(ctx: SceneContext, name: string, focusType?: string, fit
   const objs = getCharObjects(ctx)
   const target = objs[name]
   if (!target) return
-  
+
   const charDefs = ctx.renderer.config.characters
   const def = charDefs[name]
   if (!def) return
-  
+
   const activeImgKey = target._currentImageKey ?? Object.keys(def)[0]
   const imageDef = def[activeImgKey]
   const fp = (focusType && imageDef?.points) ? imageDef.points[focusType] : { x: 0.5, y: 0.5 }
