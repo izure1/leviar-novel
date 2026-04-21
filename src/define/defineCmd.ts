@@ -37,9 +37,12 @@ export type ResolvableItem<T, TVars, TLocalVars> =
 /**
  * `type` 키를 제외한 모든 Cmd 속성을 Resolvable로 변환합니다.
  * 배열 속성(예: choices[])의 원소 내부 속성에도 재귀 적용됩니다.
+ * 
+ * @note `ResolvableItem` 대신 `Resolvable`을 직접 사용하여 TypeScript contextual typing을 보장합니다.
+ * (조건부 타입을 mapped type에 넣으면 contextual typing이 deferred되어 vars가 any로 추론됩니다)
  */
 export type ResolvableProps<TCmd, TVars = any, TLocalVars = any> = {
-  [K in keyof TCmd]: K extends 'type' ? TCmd[K] : ResolvableItem<TCmd[K], TVars, TLocalVars>
+  [K in keyof TCmd]: K extends 'type' ? TCmd[K] : Resolvable<TCmd[K], TVars, TLocalVars>
 }
 
 // ─── 런타임 resolve 헬퍼 ────────────────────────────────────

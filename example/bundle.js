@@ -15178,21 +15178,21 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: ({ _tries }) => _tries >= 1, goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
-    // ── [Resolvable 검증] name, image 돈다 함수형 prop
+    // ── [Resolvable 검증] name, image 함수형 prop (vars 자동 추론)
     {
       type: "character",
       action: "show",
-      name: (vars) => vars.likeability >= 10 ? "arisiero" : "arisiero",
-      image: (vars) => vars.likeability >= 20 ? "smile" : "normal"
+      name: ({ likeability }) => likeability >= 10 ? "arisiero" : "arisiero",
+      image: ({ likeability }) => likeability >= 20 ? "smile" : "normal"
     },
     { type: "dialogue", speaker: "arisiero", text: '\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "\uCC38" : "\uAC70\uC9D3" }})' },
     // ── [Resolvable 검증] text에 함수 반환값 + {{ }} 템플릿 중첩
-    { type: "dialogue", text: (vars) => `[\uD568\uC218\uD615 text] \uD604\uC7AC \uD638\uAC10\uB3C4: {{ ${vars.likeability} }}, \uC870\uAC74: ${vars.likeability >= 10 ? "\uD1B5\uACFC" : "\uC2E4\uD328"}` },
+    { type: "dialogue", text: ({ likeability }) => `[\uD568\uC218\uD615 text] \uD604\uC7AC \uD638\uAC10\uB3C4: {{ ${likeability} }}, \uC870\uAC74: ${likeability >= 10 ? "\uD1B5\uACFC" : "\uC2E4\uD328"}` },
     // ── [Resolvable 검증] choices 배열 원소 내부 text도 함수형
     {
       type: "choice",
       choices: [
-        { text: (vars) => `\uD638\uAC10\uB3C4(${vars.likeability})\uB85C \uACC4\uC18D`, next: "scene-effects" },
+        { text: ({ likeability }) => `\uD638\uAC10\uB3C4(${likeability})\uB85C \uACC4\uC18D`, next: "scene-effects" },
         { text: "\uC2DC\uC791\uC73C\uB85C", next: "scene-intro" }
       ]
     },

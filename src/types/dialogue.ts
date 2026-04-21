@@ -63,7 +63,7 @@ type _DialogueEntryUnion<
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
 > =
   | _WithType<DialogueCmd<TCharacters>, 'dialogue', TVars, TLocalVars>
-  | _WithType<ChoiceCmd<TVars, TScenes>, 'choice', TVars, TLocalVars>
+  | _WithType<ChoiceCmd<TVars, TLocalVars, TScenes>, 'choice', TVars, TLocalVars>
   | _WithType<ConditionCmd<TVars, TLocalVars, TScenes>, 'condition', TVars, TLocalVars>
   | _WithType<VarCmd<TVars, TLocalVars>, 'var', TVars, TLocalVars>
   | _WithType<LabelCmd, 'label', TVars, TLocalVars>

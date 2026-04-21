@@ -31,21 +31,21 @@ export default defineScene(config, { _tries: 0 }, [
 
   // ── 좋은 분기
   { type: 'label', name: 'branch-good' },
-  // ── [Resolvable 검증] name, image 돈다 함수형 prop
+  // ── [Resolvable 검증] name, image 함수형 prop (vars 자동 추론)
   {
     type: 'character',
     action: 'show',
-    name: (vars: typeof config.vars & { _tries: number }) => vars.likeability >= 10 ? 'arisiero' : 'arisiero',
-    image: (vars: typeof config.vars & { _tries: number }) => vars.likeability >= 20 ? 'smile' : 'normal',
+    name: ({ likeability }) => likeability >= 10 ? 'arisiero' : 'arisiero',
+    image: ({ likeability }) => likeability >= 20 ? 'smile' : 'normal',
   },
   { type: 'dialogue', speaker: 'arisiero', text: '와, 호감도가 높네요! 감사해요! (현재: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "참" : "거짓" }})' },
   // ── [Resolvable 검증] text에 함수 반환값 + {{ }} 템플릿 중첩
-  { type: 'dialogue', text: (vars: typeof config.vars & { _tries: number }) => `[함수형 text] 현재 호감도: {{ ${vars.likeability} }}, 조건: ${ vars.likeability >= 10 ? '통과' : '실패'}` },
+  { type: 'dialogue', text: ({ likeability }) => `[함수형 text] 현재 호감도: {{ ${likeability} }}, 조건: ${likeability >= 10 ? '통과' : '실패'}` },
   // ── [Resolvable 검증] choices 배열 원소 내부 text도 함수형
   {
     type: 'choice',
     choices: [
-      { text: (vars: typeof config.vars & { _tries: number }) => `호감도(${vars.likeability})로 계속`, next: 'scene-effects' },
+      { text: ({ likeability }) => `호감도(${likeability})로 계속`, next: 'scene-effects' },
       { text: '시작으로', next: 'scene-intro' },
     ],
   },
