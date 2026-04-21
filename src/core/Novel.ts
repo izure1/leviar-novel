@@ -17,7 +17,7 @@ import type { NovelConfig, NovelOption, NovelUIOption } from '../types/config'
 // =============================================================
 
 type AnySceneDef =
-  | SceneDefinition<any, any, any, any, any>
+  | SceneDefinition<any, any, any, any, any, any>
   | ExploreSceneDefinition<any, any>
 
 type ActiveScene = DialogueScene | ExploreScene

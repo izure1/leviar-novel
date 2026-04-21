@@ -33,7 +33,7 @@ export interface CharacterCmd<TCharacters extends CharDefs> {
   /** 'show'는 캐릭터를 등장/이동, 'remove'는 퇴장시킵니다. */
   action: 'show' | 'remove'
   /** 조작할 캐릭터의 이름(config.characters의 키)입니다. */
-  name: keyof TCharacters & string | (string & {})
+  name: keyof TCharacters & string
   /** 화면 내 캐릭터의 가로 위치입니다. (프리셋 또는 'n/m' 분수) */
   position?: CharacterPositionPreset
   /** 렌더링 할 캐릭터의 이미지 키(config.characters[name]에 정의된 키)입니다. */
@@ -57,7 +57,7 @@ export interface CharacterCmd<TCharacters extends CharDefs> {
  */
 export interface CharacterFocusCmd<TCharacters extends CharDefs> {
   /** 포커스 할 캐릭터의 이름입니다. */
-  name: keyof TCharacters & string | (string & {})
+  name: keyof TCharacters & string
   /** 맞출 카메라 초점 포인트입니다. (config의 points 키로 자동완성됩니다) */
   point?: _AllPointKeys<TCharacters> | 'inherit' | (string & {})
   /** 포커스 시 적용될 화면 줌(Zoom) 수준입니다. */
@@ -69,7 +69,7 @@ export interface CharacterFocusCmd<TCharacters extends CharDefs> {
 /** 캐릭터를 컷인(전면) 레이어로 올리거나 복원한다 */
 export interface CharacterHighlightCmd<TCharacters extends CharDefs> {
   /** 하이라이트 할 캐릭터의 이름입니다. */
-  name: keyof TCharacters & string | (string & {})
+  name: keyof TCharacters & string
   /** 'on'은 캐릭터를 전경으로 올리고, 'off'는 원래 뎁스로 복구합니다. */
   action: 'on' | 'off'
   /** 전환 시 적용되는 애니메이션 시간(ms 단위)입니다. */

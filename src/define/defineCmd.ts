@@ -7,19 +7,42 @@ import type { SceneContext, CommandResult } from '../core/SceneContext'
 // ─── Resolvable 유틸리티 타입 ────────────────────────────────
 
 /**
+ * IDE 자동완성용 `(string & {})` escape hatch를 제거합니다.
+ * - 순수 `string` 타입(= `string & {}`)이면 `never`로 치환
+ * - 리터럴 타입 또는 `keyof` 제약 타입이면 그대로 유지
+ *
+ * 함수형 반환 타입에 적용하여, 직접 값에서는 허용되는 임의 string이
+ * 함수 반환에서는 엄격하게 검증되도록 합니다.
+ */
+type _StrictOf<T> =
+  T extends string
+    ? string extends T
+      ? never  // 순수 string (= string & {}) → 제거
+      : T      // 리터럴 / keyof 제약 → 유지
+    : T        // 비string 타입 → 그대로
+
+/** 유니온 멤버별 분산 적용: escape 제거 후 never이면 원본 멤버 유지 */
+type _ReturnOf<T> = T extends any
+  ? _StrictOf<T> extends never ? T : _StrictOf<T>
+  : never
+
+/**
  * 단일 값 T, 또는 vars를 받아 T를 반환하는 함수.
  * cmd 속성에 정적 값 대신 동적 함수를 허용합니다.
  *
+ * - **직접 값**: T 전체 허용 (IDE 자동완성용 `string & {}` escape 포함)
+ * - **함수 반환값**: `_ReturnOf<T>` 적용 → escape 제거, 리터럴/keyof만 허용
+ *
  * @example
  * ```ts
- * // 정적 값
+ * // 정적 값 (임의 string도 허용)
  * { type: 'character', name: 'arisiero' }
- * // 동적 함수
+ * // 동적 함수 (config에 정의된 key만 허용)
  * { type: 'character', name: ({ likeability }) => likeability >= 10 ? 'arisiero' : 'hero' }
  * ```
  */
 export type Resolvable<T, TVars = any, TLocalVars = any> =
-  T | ((vars: TVars & TLocalVars) => T)
+  T | ((vars: TVars & TLocalVars) => _ReturnOf<T>)
 
 /**
  * 배열이면 원소 타입에도 ResolvableProps를 재귀 적용하고, 배열 자체도 Resolvable.
