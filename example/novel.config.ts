@@ -23,22 +23,25 @@ export default defineNovelConfig({
     'explore-map',
   ] as const,
   characters: {
-    '아리시에로': {
-      normal: {
-        src: 'girl_normal',
-        width: 350,
-        points: {
-          face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 },
+    'arisiero': {
+      name: '아리시에로',
+      points: {
+        normal: {
+          src: 'girl_normal',
+          width: 350,
+          points: {
+            face: { x: 0.5, y: 0.18 },
+            chest: { x: 0.5, y: 0.45 },
+          },
         },
-      },
-      smile: {
-        src: 'girl_smile',
-        width: 350,
-        points: {
-          face: { x: 0.5, y: 0.18 },
+        smile: {
+          src: 'girl_smile',
+          width: 350,
+          points: {
+            face: { x: 0.5, y: 0.18 },
+          },
         },
-      },
+      }
     },
   },
   backgrounds: {

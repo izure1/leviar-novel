@@ -30,6 +30,16 @@ export interface DialogueCmd<TCharacters extends CharDefs> {
 export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx) => {
   const txt = Array.isArray(cmd.text) ? cmd.text[ctx.scene.getTextSubIndex()] : cmd.text
   const interpolated = ctx.scene.interpolateText(txt)
-  ctx.callbacks.onDialogue(cmd.speaker as string | undefined, interpolated, cmd.speed)
+  
+  let speakerName = cmd.speaker as string | undefined
+  if (speakerName) {
+    const charDefs = ctx.renderer.config.characters as any
+    const def = charDefs?.[speakerName]
+    if (def?.name) {
+      speakerName = def.name
+    }
+  }
+
+  ctx.callbacks.onDialogue(speakerName, interpolated, cmd.speed)
   return false
 })

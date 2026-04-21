@@ -15,22 +15,22 @@ export default defineScene(config, {}, [
   { type: 'effect', action: 'add', effect: 'sakura', src: 'sakura', rate: 6, skip: true },
 
   // ── 대사
-  { type: 'dialogue', speaker: '아리시에로', text: '벚꽃 잎사귀가 도서관 안까지 들어왔네요!' },
+  { type: 'dialogue', speaker: 'arisiero', text: '벚꽃 잎사귀가 도서관 안까지 들어왔네요!' },
   { type: 'dialogue', text: '그녀는 창가로 걸어갔다.' },
-  { type: 'character-focus', name: '아리시에로', point: 'face' },
+  { type: 'character-focus', name: 'arisiero', point: 'face' },
 
   // ── 캐릭터 표정 변경 + 클로즈업
-  { type: 'character', action: 'show', name: '아리시에로', image: 'smile' },
-  { type: 'character-focus', name: '아리시에로', point: 'face', zoom: 'close-up', duration: 800, skip: true },
-  { type: 'dialogue', speaker: '아리시에로', text: '(클로즈업 상태 — character-focus 테스트)' },
+  { type: 'character', action: 'show', name: 'arisiero', image: 'smile' },
+  { type: 'character-focus', name: 'arisiero', point: 'face', zoom: 'close-up', duration: 800, skip: true },
+  { type: 'dialogue', speaker: 'arisiero', text: '(클로즈업 상태 — character-focus 테스트)' },
 
   // ── 하이라이트 (컷인)
-  { type: 'character-highlight', name: '아리시에로', action: 'on', skip: true },
-  { type: 'dialogue', speaker: '아리시에로', text: '(하이라이트 컷인 — character-highlight 테스트)' },
-  { type: 'character-highlight', name: '아리시에로', action: 'off' },
+  { type: 'character-highlight', name: 'arisiero', action: 'on', skip: true },
+  { type: 'dialogue', speaker: 'arisiero', text: '(하이라이트 컷인 — character-highlight 테스트)' },
+  { type: 'character-highlight', name: 'arisiero', action: 'off' },
 
   // ── 카메라 + 이펙트 리셋
-  { type: 'character', name: '아리시에로', action: 'show', position: 'center', skip: true },
+  { type: 'character', name: 'arisiero', action: 'show', position: 'center', skip: true },
   { type: 'camera-zoom', preset: 'reset', duration: 600, skip: true },
   { type: 'camera-pan', position: 'center', duration: 600, skip: true },
   { type: 'effect', action: 'remove', effect: 'sakura', duration: 800 },

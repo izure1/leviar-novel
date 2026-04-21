@@ -140,6 +140,14 @@ export class DialogueScene {
     this._executeNext()
   }
 
+  /** 캐릭터 키를 실제 이름으로 변환 */
+  private _getSpeakerName(speakerKey: string | undefined): string | undefined {
+    if (!speakerKey) return undefined
+    const charDefs = this.renderer.config.characters as any
+    const def = charDefs?.[speakerKey]
+    return def?.name ?? speakerKey
+  }
+
   /**
    * 사용자 입력(클릭/엔터)을 받아 다음 스텝으로 진행합니다.
    * Novel이 호출합니다.
@@ -155,7 +163,8 @@ export class DialogueScene {
         this.textSubIndex++
         const txt = step.text[this.textSubIndex]
         const interpolated = this._interpolateText(txt)
-        this.callbacks.onDialogue(step.speaker as string | undefined, interpolated, step.speed)
+        const speakerName = this._getSpeakerName(step.speaker as string | undefined)
+        this.callbacks.onDialogue(speakerName, interpolated, step.speed)
         return
       }
     }
@@ -295,7 +304,8 @@ export class DialogueScene {
       const cmd = current as any
       const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
       const interpolated = this._interpolateText(txt)
-      return { ...cmd, text: interpolated } as any
+      const speakerName = this._getSpeakerName(cmd.speaker as string | undefined)
+      return { ...cmd, text: interpolated, speaker: speakerName } as any
     }
     return null
   }
@@ -364,7 +374,8 @@ export class DialogueScene {
       const dCmd = cmd as any
       const txt = Array.isArray(dCmd.text) ? dCmd.text[this.textSubIndex] : dCmd.text
       const interpolated = this._interpolateText(txt)
-      this.callbacks.onDialogue(dCmd.speaker as string | undefined, interpolated, dCmd.speed)
+      const speakerName = this._getSpeakerName(dCmd.speaker as string | undefined)
+      this.callbacks.onDialogue(speakerName, interpolated, dCmd.speed)
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
       this.callbacks.onChoice((cmd as any).choices)

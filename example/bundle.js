@@ -13032,7 +13032,15 @@ ${addLineNumbers(fragment)}`);
   var dialogueHandler = defineCmd((cmd, ctx) => {
     const txt = Array.isArray(cmd.text) ? cmd.text[ctx.scene.getTextSubIndex()] : cmd.text;
     const interpolated = ctx.scene.interpolateText(txt);
-    ctx.callbacks.onDialogue(cmd.speaker, interpolated, cmd.speed);
+    let speakerName = cmd.speaker;
+    if (speakerName) {
+      const charDefs = ctx.renderer.config.characters;
+      const def = charDefs?.[speakerName];
+      if (def?.name) {
+        speakerName = def.name;
+      }
+    }
+    ctx.callbacks.onDialogue(speakerName, interpolated, cmd.speed);
     return false;
   });
 
@@ -13731,8 +13739,8 @@ ${addLineNumbers(fragment)}`);
     const charDefs = ctx.renderer.config.characters;
     const def = charDefs[name];
     if (!def) return;
-    const resolvedKey = imageKey ?? Object.keys(def)[0];
-    const imageDef = def[resolvedKey];
+    const resolvedKey = imageKey ?? Object.keys(def.points)[0];
+    const imageDef = def.points[resolvedKey];
     if (!imageDef) return;
     const states = getCharStates(ctx);
     const objs = getCharObjects(ctx);
@@ -13800,8 +13808,8 @@ ${addLineNumbers(fragment)}`);
     const charDefs = ctx.renderer.config.characters;
     const def = charDefs[name];
     if (!def) return;
-    const activeImgKey = target._currentImageKey ?? Object.keys(def)[0];
-    const imageDef = def[activeImgKey];
+    const activeImgKey = target._currentImageKey ?? Object.keys(def.points)[0];
+    const imageDef = def.points[activeImgKey];
     const fp = focusType && imageDef?.points ? imageDef.points[focusType] : { x: 0.5, y: 0.5 };
     const targetX = target.transform?.position?.x ?? 0;
     const charW = target.style?.width ?? 500;
@@ -14024,6 +14032,13 @@ ${addLineNumbers(fragment)}`);
       this.textSubIndex = 0;
       this._executeNext();
     }
+    /** 캐릭터 키를 실제 이름으로 변환 */
+    _getSpeakerName(speakerKey) {
+      if (!speakerKey) return void 0;
+      const charDefs = this.renderer.config.characters;
+      const def = charDefs?.[speakerKey];
+      return def?.name ?? speakerKey;
+    }
     /**
      * 사용자 입력(클릭/엔터)을 받아 다음 스텝으로 진행합니다.
      * Novel이 호출합니다.
@@ -14037,7 +14052,8 @@ ${addLineNumbers(fragment)}`);
           this.textSubIndex++;
           const txt = step.text[this.textSubIndex];
           const interpolated = this._interpolateText(txt);
-          this.callbacks.onDialogue(step.speaker, interpolated, step.speed);
+          const speakerName = this._getSpeakerName(step.speaker);
+          this.callbacks.onDialogue(speakerName, interpolated, step.speed);
           return;
         }
       }
@@ -14160,7 +14176,8 @@ ${addLineNumbers(fragment)}`);
         const cmd = current;
         const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
         const interpolated = this._interpolateText(txt);
-        return { ...cmd, text: interpolated };
+        const speakerName = this._getSpeakerName(cmd.speaker);
+        return { ...cmd, text: interpolated, speaker: speakerName };
       }
       return null;
     }
@@ -14223,7 +14240,8 @@ ${addLineNumbers(fragment)}`);
         const dCmd = cmd;
         const txt = Array.isArray(dCmd.text) ? dCmd.text[this.textSubIndex] : dCmd.text;
         const interpolated = this._interpolateText(txt);
-        this.callbacks.onDialogue(dCmd.speaker, interpolated, dCmd.speed);
+        const speakerName = this._getSpeakerName(dCmd.speaker);
+        this.callbacks.onDialogue(speakerName, interpolated, dCmd.speed);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
         this.callbacks.onChoice(cmd.choices);
@@ -14789,20 +14807,23 @@ ${addLineNumbers(fragment)}`);
       "explore-map"
     ],
     characters: {
-      "\uC544\uB9AC\uC2DC\uC5D0\uB85C": {
-        normal: {
-          src: "girl_normal",
-          width: 350,
-          points: {
-            face: { x: 0.5, y: 0.18 },
-            chest: { x: 0.5, y: 0.45 }
-          }
-        },
-        smile: {
-          src: "girl_smile",
-          width: 350,
-          points: {
-            face: { x: 0.5, y: 0.18 }
+      "arisiero": {
+        name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+        points: {
+          normal: {
+            src: "girl_normal",
+            width: 350,
+            points: {
+              face: { x: 0.5, y: 0.18 },
+              chest: { x: 0.5, y: 0.45 }
+            }
+          },
+          smile: {
+            src: "girl_smile",
+            width: 350,
+            points: {
+              face: { x: 0.5, y: 0.18 }
+            }
           }
         }
       }
@@ -14884,7 +14905,7 @@ ${addLineNumbers(fragment)}`);
     // ─── 2. 예기치 못한 조우 ───
     { type: "camera-pan", position: "1/10", duration: 2500 },
     { type: "dialogue", text: "\uC11C\uAC00 \uB108\uBA38, \uCC3D\uAC00 \uC790\uB9AC\uC5D0 \uB204\uAD70\uAC00 \uC549\uC544 \uC788\uC5C8\uB2E4." },
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", position: "right", image: "normal", duration: 1500, focus: "face", skip: true },
+    { type: "character", action: "show", name: "arisiero", position: "right", image: "normal", duration: 1500, focus: "face", skip: true },
     {
       type: "dialogue",
       text: [
@@ -14901,7 +14922,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "camera-zoom", preset: "reset", duration: 1e3 },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "......" },
+    { type: "dialogue", speaker: "arisiero", text: "......" },
     {
       type: "dialogue",
       text: [
@@ -14913,13 +14934,13 @@ ${addLineNumbers(fragment)}`);
         "\uAC08\uB4F1\uD558\uB294 \uC0AC\uC774, \uADF8\uB140\uC758 \uC190\uAC00\uB77D\uC774 \uBA48\uCDC4\uB2E4."
       ]
     },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC0AC\uB791\uC740 \uB9D0\uC774\uC57C, \uACB0\uAD6D \uC0C1\uC2E4\uC744 \uACAC\uB514\uAE30 \uC704\uD55C \uC5F0\uC2B5\uC77C\uC9C0\uB3C4 \uBAB0\uB77C." },
+    { type: "dialogue", speaker: "arisiero", text: "\uC0AC\uB791\uC740 \uB9D0\uC774\uC57C, \uACB0\uAD6D \uC0C1\uC2E4\uC744 \uACAC\uB514\uAE30 \uC704\uD55C \uC5F0\uC2B5\uC77C\uC9C0\uB3C4 \uBAB0\uB77C." },
     { type: "camera-effect", preset: "shake", duration: 400, skip: true },
     { type: "dialogue", text: "\uADF8\uB140\uAC00 \uD63C\uC7A3\uB9D0\uCC98\uB7FC \uC911\uC5BC\uAC70\uB838\uB2E4. \uB0AE\uC740 \uBAA9\uC18C\uB9AC\uAC00 \uACF5\uAE30\uB97C \uC9C4\uB3D9\uC2DC\uCF30\uB2E4.\n\uB098\uB294 \uB098\uB3C4 \uBAA8\uB974\uAC8C \uD5C9 \uD558\uACE0 \uC228\uC744 \uB4E4\uC774\uCF30\uB2E4." },
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile", duration: 800 },
+    { type: "character", action: "show", name: "arisiero", image: "smile", duration: 800 },
     {
       type: "dialogue",
-      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      speaker: "arisiero",
       text: [
         "\uC544... \uBCF4\uACE0 \uACC4\uC168\uB098\uC694?",
         "\uC778\uAE30\uCC99\uC774 \uB290\uAEF4\uC84C\uB294\uB370, \uC5ED\uC2DC \uB204\uAD70\uAC00 \uC788\uC5C8\uAD70\uC694."
@@ -14933,11 +14954,11 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 3. 긴 철학적 대화 ───
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC774 \uCC45, \uB2F9\uC2E0\uB3C4 \uCC3E\uACE0 \uC788\uC5C8\uC8E0?" },
+    { type: "dialogue", speaker: "arisiero", text: "\uC774 \uCC45, \uB2F9\uC2E0\uB3C4 \uCC3E\uACE0 \uC788\uC5C8\uC8E0?" },
     { type: "dialogue", text: "\uB098\uB294 \uB2F9\uD669\uD558\uBA70 \uACE0\uAC1C\uB97C \uB044\uB355\uC600\uB2E4. \uC5B4\uB5BB\uAC8C \uC54C\uC558\uB290\uB0D0\uACE0 \uBB3C\uC5C8\uB2E4." },
     {
       type: "dialogue",
-      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      speaker: "arisiero",
       text: [
         "\uB208\uBE5B\uC744 \uBCF4\uBA74 \uC54C \uC218 \uC788\uC5B4\uC694. \uAC08\uAD6C\uD558\uB294 \uBB34\uC5B8\uAC00\uAC00 \uB2F4\uAE34 \uB208\uBE5B.",
         "\uC804 \uC774 \uCC45\uC744 \uBC8C\uC368 \uC138 \uBC88\uC9F8 \uC77D\uACE0 \uC788\uC5B4\uC694.",
@@ -14951,11 +14972,11 @@ ${addLineNumbers(fragment)}`);
         "\uB098\uB294 \uC774\uB04C\uB9AC\uB4EF \uADF8\uB140\uC758 \uB9DE\uC740\uD3B8 \uC790\uB9AC\uC5D0 \uC549\uC558\uB2E4."
       ]
     },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uB2F9\uC2E0\uC740 \uC774 \uC18C\uC124\uC758 \uACB0\uB9D0\uC774 \uD574\uD53C\uC5D4\uB529\uC774\uB77C\uACE0 \uC0DD\uAC01\uD558\uB098\uC694?" },
+    { type: "dialogue", speaker: "arisiero", text: "\uB2F9\uC2E0\uC740 \uC774 \uC18C\uC124\uC758 \uACB0\uB9D0\uC774 \uD574\uD53C\uC5D4\uB529\uC774\uB77C\uACE0 \uC0DD\uAC01\uD558\uB098\uC694?" },
     { type: "dialogue", text: "\uB098\uB294 \uC7A0\uC2DC \uACE0\uBBFC\uD588\uB2E4. \uC8FC\uC778\uACF5\uC774 \uC8FD\uC5C8\uC73C\uB2C8 \uC0C8\uB4DC\uC5D4\uB529\uC774 \uC544\uB2C8\uB0D0\uACE0 \uB300\uB2F5\uD588\uB2E4." },
     {
       type: "dialogue",
-      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      speaker: "arisiero",
       text: [
         "\uAE00\uC384\uC694... \uC804 \uB2E4\uB974\uAC8C \uC0DD\uAC01\uD574\uC694.",
         "\uC8FD\uC74C\uC740 \uACB0\uB9D0\uC774 \uC544\uB2C8\uB77C, \uC644\uC131\uC77C \uC218\uB3C4 \uC788\uC796\uC544\uC694.",
@@ -14972,7 +14993,7 @@ ${addLineNumbers(fragment)}`);
         "\uB9C8\uCE58 \uC544\uC8FC \uC624\uB798\uC804\uBD80\uD130 \uC54C\uACE0 \uC9C0\uB0C8\uB358 \uC0AC\uC774\uCC98\uB7FC \uD3B8\uC548\uD588\uB2E4."
       ]
     },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC774\uB984\uC774 \uBB50\uC608\uC694?" },
+    { type: "dialogue", speaker: "arisiero", text: "\uC774\uB984\uC774 \uBB50\uC608\uC694?" },
     {
       type: "dialogue",
       text: [
@@ -14980,7 +15001,7 @@ ${addLineNumbers(fragment)}`);
         "\uB098\uB294 \uC774\uB984\uC744 \uB9D0\uD574\uC92C\uB2E4. \uADF8\uB7EC\uC790 \uADF8\uB140\uAC00 \uC785\uC220\uC744 \uB2EC\uC2F9\uC774\uBA70 \uB0B4 \uC774\uB984\uC744 \uB098\uC9C1\uC774 \uC74A\uC870\uB838\uB2E4."
       ]
     },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC88B\uC740 \uC774\uB984\uC774\uB124\uC694. \uB530\uB73B\uD55C \uBE5B\uC774 \uB290\uAEF4\uC9C0\uB294 \uC774\uB984\uC774\uC5D0\uC694." },
+    { type: "dialogue", speaker: "arisiero", text: "\uC88B\uC740 \uC774\uB984\uC774\uB124\uC694. \uB530\uB73B\uD55C \uBE5B\uC774 \uB290\uAEF4\uC9C0\uB294 \uC774\uB984\uC774\uC5D0\uC694." },
     { type: "dialogue", text: "\uC5BC\uAD74\uC774 \uD654\uB048\uAC70\uB838\uB2E4. \uCC3D\uD53C\uD574\uC11C \uACE0\uAC1C\uB97C \uC219\uC600\uB2E4." },
     // ─── 4. 노을의 시간 ───
     { type: "control", action: "disable", duration: 5e3, skip: true },
@@ -14998,7 +15019,7 @@ ${addLineNumbers(fragment)}`);
     { type: "camera-zoom", preset: "close-up", duration: 1500 },
     {
       type: "dialogue",
-      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      speaker: "arisiero",
       text: [
         "\uC544\uB984\uB2F5\uB124\uC694... \uC774 \uC21C\uAC04.",
         "\uAC00\uB054\uC740 \uC2DC\uAC04\uC774 \uC774\uB300\uB85C \uBA48\uCDB0\uBC84\uB838\uC73C\uBA74 \uC88B\uACA0\uB2E4\uACE0 \uC0DD\uAC01\uD574\uC694.",
@@ -15015,11 +15036,11 @@ ${addLineNumbers(fragment)}`);
         "\uC801\uB9C9 \uC18D\uC5D0\uC11C \uC6B0\uB9AC\uB294 \uD55C\uB3D9\uC548 \uB178\uC744\uB9CC\uC744 \uBC14\uB77C\uBCF4\uC558\uB2E4."
       ]
     },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC774\uC81C \uC804 \uAC00\uBD10\uC57C \uD574\uC694. \uD1B5\uAE08 \uC2DC\uAC04\uC774 \uC788\uAC70\uB4E0\uC694." },
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "normal", duration: 1e3 },
+    { type: "dialogue", speaker: "arisiero", text: "\uC774\uC81C \uC804 \uAC00\uBD10\uC57C \uD574\uC694. \uD1B5\uAE08 \uC2DC\uAC04\uC774 \uC788\uAC70\uB4E0\uC694." },
+    { type: "character", action: "show", name: "arisiero", image: "normal", duration: 1e3 },
     {
       type: "dialogue",
-      speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+      speaker: "arisiero",
       text: [
         "\uC774 \uCC45, \uC81C\uAC00 \uBE4C\uB9B0 \uAC70\uC9C0\uB9CC... \uC624\uB298\uB9CC \uB2F9\uC2E0\uC5D0\uAC8C \uBE4C\uB824\uB4DC\uB9B4\uAC8C\uC694.",
         "\uB2E4 \uC77D\uACE0 \uB098\uBA74, \uADF8\uB54C \uB2E4\uC2DC \uC774\uC57C\uAE30\uD574\uC694."
@@ -15087,19 +15108,19 @@ ${addLineNumbers(fragment)}`);
     { type: "overlay", action: "remove", preset: "title", duration: 800, skip: true },
     { type: "effect", action: "add", effect: "sakura", src: "sakura", rate: 6, skip: true },
     // ── 대사
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
+    { type: "dialogue", speaker: "arisiero", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
     { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
-    { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face" },
+    { type: "character-focus", name: "arisiero", point: "face" },
     // ── 캐릭터 표정 변경 + 클로즈업
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
-    { type: "character-focus", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", point: "face", zoom: "close-up", duration: 800, skip: true },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" },
+    { type: "character", action: "show", name: "arisiero", image: "smile" },
+    { type: "character-focus", name: "arisiero", point: "face", zoom: "close-up", duration: 800, skip: true },
+    { type: "dialogue", speaker: "arisiero", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" },
     // ── 하이라이트 (컷인)
-    { type: "character-highlight", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "on", skip: true },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
-    { type: "character-highlight", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "off" },
+    { type: "character-highlight", name: "arisiero", action: "on", skip: true },
+    { type: "dialogue", speaker: "arisiero", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
+    { type: "character-highlight", name: "arisiero", action: "off" },
     // ── 카메라 + 이펙트 리셋
-    { type: "character", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", action: "show", position: "center", skip: true },
+    { type: "character", name: "arisiero", action: "show", position: "center", skip: true },
     { type: "camera-zoom", preset: "reset", duration: 600, skip: true },
     { type: "camera-pan", position: "center", duration: 600, skip: true },
     { type: "effect", action: "remove", effect: "sakura", duration: 800 },
@@ -15130,16 +15151,16 @@ ${addLineNumbers(fragment)}`);
     },
     // ── 나쁜 분기
     { type: "label", name: "branch-bad" },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
-    { type: "dialogue", text: "(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4. \uD604\uC7AC: {{ likeability }})" },
+    { type: "dialogue", speaker: "arisiero", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
+    { type: "dialogue", text: '(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4. \uD604\uC7AC: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "\uCC38" : "\uAC70\uC9D3" }})' },
     { type: "var", name: "likeability", value: 20 },
     { type: "var", name: "_tries", value: 1 },
     // 강제 수정 후 재확인
     { type: "condition", if: ({ _tries }) => _tries >= 1, goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
-    { type: "character", action: "show", name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", image: "smile" },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }}, \uB2E4\uC74C: {{ likeability + 10 }})" },
+    { type: "character", action: "show", name: "arisiero", image: "smile" },
+    { type: "dialogue", speaker: "arisiero", text: '\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "\uCC38" : "\uAC70\uC9D3" }})' },
     // ── or 조건 테스트
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
     {
@@ -15147,7 +15168,7 @@ ${addLineNumbers(fragment)}`);
       if: ({ likeability, endingReached }) => likeability >= 50 || endingReached,
       goto: "skip-normal"
     },
-    { type: "dialogue", speaker: "\uC544\uB9AC\uC2DC\uC5D0\uB85C", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
+    { type: "dialogue", speaker: "arisiero", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
     { type: "label", name: "skip-normal" },
     // ── 지역변수 최종 표시
     { type: "dialogue", text: `[\uC9C0\uC5ED\uBCC0\uC218] _tries = \uC7AC\uC2DC\uB3C4 \uD69F\uC218. \uC804\uC5ED\uBCC0\uC218 likeability = \uD604\uC7AC \uD638\uAC10\uB3C4.` },

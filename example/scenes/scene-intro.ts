@@ -32,7 +32,7 @@ export default defineScene(config, {}, [
   { type: 'camera-pan', position: '1/10', duration: 2500 },
   { type: 'dialogue', text: '서가 너머, 창가 자리에 누군가 앉아 있었다.' },
 
-  { type: 'character', action: 'show', name: '아리시에로', position: 'right', image: 'normal', duration: 1500, focus: 'face', skip: true },
+  { type: 'character', action: 'show', name: 'arisiero', position: 'right', image: 'normal', duration: 1500, focus: 'face', skip: true },
   {
     type: 'dialogue',
     text: [
@@ -50,7 +50,7 @@ export default defineScene(config, {}, [
   },
   { type: 'camera-zoom', preset: 'reset', duration: 1000 },
 
-  { type: 'dialogue', speaker: '아리시에로', text: '......' },
+  { type: 'dialogue', speaker: 'arisiero', text: '......' },
   {
     type: 'dialogue',
     text: [
@@ -63,14 +63,14 @@ export default defineScene(config, {}, [
     ]
   },
 
-  { type: 'dialogue', speaker: '아리시에로', text: '사랑은 말이야, 결국 상실을 견디기 위한 연습일지도 몰라.' },
+  { type: 'dialogue', speaker: 'arisiero', text: '사랑은 말이야, 결국 상실을 견디기 위한 연습일지도 몰라.' },
   { type: 'camera-effect', preset: 'shake', duration: 400, skip: true },
   { type: 'dialogue', text: '그녀가 혼잣말처럼 중얼거렸다. 낮은 목소리가 공기를 진동시켰다.\n나는 나도 모르게 헉 하고 숨을 들이켰다.' },
 
-  { type: 'character', action: 'show', name: '아리시에로', image: 'smile', duration: 800 },
+  { type: 'character', action: 'show', name: 'arisiero', image: 'smile', duration: 800 },
   {
     type: 'dialogue',
-    speaker: '아리시에로',
+    speaker: 'arisiero',
     text: [
       '아... 보고 계셨나요?',
       '인기척이 느껴졌는데, 역시 누군가 있었군요.'
@@ -85,11 +85,11 @@ export default defineScene(config, {}, [
   },
 
   // ─── 3. 긴 철학적 대화 ───
-  { type: 'dialogue', speaker: '아리시에로', text: '이 책, 당신도 찾고 있었죠?' },
+  { type: 'dialogue', speaker: 'arisiero', text: '이 책, 당신도 찾고 있었죠?' },
   { type: 'dialogue', text: '나는 당황하며 고개를 끄덕였다. 어떻게 알았느냐고 물었다.' },
   {
     type: 'dialogue',
-    speaker: '아리시에로',
+    speaker: 'arisiero',
     text: [
       '눈빛을 보면 알 수 있어요. 갈구하는 무언가가 담긴 눈빛.',
       '전 이 책을 벌써 세 번째 읽고 있어요.',
@@ -104,11 +104,11 @@ export default defineScene(config, {}, [
     ]
   },
 
-  { type: 'dialogue', speaker: '아리시에로', text: '당신은 이 소설의 결말이 해피엔딩이라고 생각하나요?' },
+  { type: 'dialogue', speaker: 'arisiero', text: '당신은 이 소설의 결말이 해피엔딩이라고 생각하나요?' },
   { type: 'dialogue', text: '나는 잠시 고민했다. 주인공이 죽었으니 새드엔딩이 아니냐고 대답했다.' },
   {
     type: 'dialogue',
-    speaker: '아리시에로',
+    speaker: 'arisiero',
     text: [
       '글쎄요... 전 다르게 생각해요.',
       '죽음은 결말이 아니라, 완성일 수도 있잖아요.',
@@ -126,7 +126,7 @@ export default defineScene(config, {}, [
     ]
   },
 
-  { type: 'dialogue', speaker: '아리시에로', text: '이름이 뭐예요?' },
+  { type: 'dialogue', speaker: 'arisiero', text: '이름이 뭐예요?' },
   {
     type: 'dialogue',
     text: [
@@ -134,7 +134,7 @@ export default defineScene(config, {}, [
       '나는 이름을 말해줬다. 그러자 그녀가 입술을 달싹이며 내 이름을 나직이 읊조렸다.'
     ]
   },
-  { type: 'dialogue', speaker: '아리시에로', text: '좋은 이름이네요. 따뜻한 빛이 느껴지는 이름이에요.' },
+  { type: 'dialogue', speaker: 'arisiero', text: '좋은 이름이네요. 따뜻한 빛이 느껴지는 이름이에요.' },
   { type: 'dialogue', text: '얼굴이 화끈거렸다. 창피해서 고개를 숙였다.' },
 
   // ─── 4. 노을의 시간 ───
@@ -154,7 +154,7 @@ export default defineScene(config, {}, [
   { type: 'camera-zoom', preset: 'close-up', duration: 1500 },
   {
     type: 'dialogue',
-    speaker: '아리시에로',
+    speaker: 'arisiero',
     text: [
       '아름답네요... 이 순간.',
       '가끔은 시간이 이대로 멈춰버렸으면 좋겠다고 생각해요.',
@@ -173,11 +173,11 @@ export default defineScene(config, {}, [
     ]
   },
 
-  { type: 'dialogue', speaker: '아리시에로', text: '이제 전 가봐야 해요. 통금 시간이 있거든요.' },
-  { type: 'character', action: 'show', name: '아리시에로', image: 'normal', duration: 1000 },
+  { type: 'dialogue', speaker: 'arisiero', text: '이제 전 가봐야 해요. 통금 시간이 있거든요.' },
+  { type: 'character', action: 'show', name: 'arisiero', image: 'normal', duration: 1000 },
   {
     type: 'dialogue',
-    speaker: '아리시에로',
+    speaker: 'arisiero',
     text: [
       '이 책, 제가 빌린 거지만... 오늘만 당신에게 빌려드릴게요.',
       '다 읽고 나면, 그때 다시 이야기해요.'

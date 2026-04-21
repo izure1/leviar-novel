@@ -45,7 +45,12 @@ export interface CharImageDef {
  * }
  * ```
  */
-export type CharDef = Record<string, CharImageDef>
+export interface CharDef {
+  /** 캐릭터의 표시용 이름 (대사창 등에 사용) */
+  name?: string
+  /** 캐릭터의 각 표정/상태별 이미지 정의 */
+  points: Record<string, CharImageDef>
+}
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
 

@@ -15,33 +15,33 @@ export default defineScene(config, { _tries: 0 }, [
   // ── 복합 조건: likeability >= 10
   {
     type: 'condition',
-    if: ({ likeability }: any) => likeability >= 10,
+    if: ({ likeability }) => likeability >= 10,
     goto: 'branch-good',
     else: 'branch-bad',
   },
 
   // ── 나쁜 분기
   { type: 'label', name: 'branch-bad' },
-  { type: 'dialogue', speaker: '아리시에로', text: '...왜 이런 대우를 받는 건지 모르겠어요.' },
-  { type: 'dialogue', text: '(호감도를 20으로 강제 설정합니다. 현재: {{ likeability }})' },
+  { type: 'dialogue', speaker: 'arisiero', text: '...왜 이런 대우를 받는 건지 모르겠어요.' },
+  { type: 'dialogue', text: '(호감도를 20으로 강제 설정합니다. 현재: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "참" : "거짓" }})' },
   { type: 'var', name: 'likeability', value: 20 },
   { type: 'var', name: '_tries', value: 1 },
   // 강제 수정 후 재확인
-  { type: 'condition', if: ({ _tries }: any) => _tries >= 1, goto: 'cond-check' },
+  { type: 'condition', if: ({ _tries }) => _tries >= 1, goto: 'cond-check' },
 
   // ── 좋은 분기
   { type: 'label', name: 'branch-good' },
-  { type: 'character', action: 'show', name: '아리시에로', image: 'smile' },
-  { type: 'dialogue', speaker: '아리시에로', text: '와, 호감도가 높네요! 감사해요! (현재: {{ likeability }}, 다음: {{ likeability + 10 }})' },
+  { type: 'character', action: 'show', name: 'arisiero', image: 'smile' },
+  { type: 'dialogue', speaker: 'arisiero', text: '와, 호감도가 높네요! 감사해요! (현재: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "참" : "거짓" }})' },
 
   // ── or 조건 테스트
   { type: 'dialogue', text: '[or 조건 테스트] likeability >= 50 or endingReached' },
   {
     type: 'condition',
-    if: ({ likeability, endingReached }: any) => likeability >= 50 || endingReached,
+    if: ({ likeability, endingReached }) => likeability >= 50 || endingReached,
     goto: 'skip-normal',
   },
-  { type: 'dialogue', speaker: '아리시에로', text: '(조건이 거짓 — 50 미만이고 엔딩 미다못함)' },
+  { type: 'dialogue', speaker: 'arisiero', text: '(조건이 거짓 — 50 미만이고 엔딩 미다못함)' },
   { type: 'label', name: 'skip-normal' },
 
   // ── 지역변수 최종 표시

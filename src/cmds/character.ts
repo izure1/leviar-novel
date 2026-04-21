@@ -9,16 +9,16 @@ export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center'
 
 /** 모든 캐릭터의 모든 이미지 키를 추출 */
 type _AllImageKeys<TCharacters extends CharDefs> = {
-  [K in keyof TCharacters]: keyof TCharacters[K] & string
+  [K in keyof TCharacters]: keyof TCharacters[K]['points'] & string
 }[keyof TCharacters]
 
 /** 모든 캐릭터의 모든 points 키를 추출 */
 type _AllPointKeys<TCharacters extends CharDefs> = {
   [K in keyof TCharacters]: {
-    [IK in keyof TCharacters[K]]: TCharacters[K][IK] extends { points?: Record<string, any> }
-    ? keyof NonNullable<TCharacters[K][IK]['points']> & string
+    [IK in keyof TCharacters[K]['points']]: TCharacters[K]['points'][IK] extends { points?: Record<string, any> }
+    ? keyof NonNullable<TCharacters[K]['points'][IK]['points']> & string
     : never
-  }[keyof TCharacters[K]]
+  }[keyof TCharacters[K]['points']]
 }[keyof TCharacters]
 
 /** 
@@ -118,8 +118,8 @@ function showCharacter(ctx: SceneContext, name: string, position?: CharacterPosi
   const def = charDefs[name]
   if (!def) return
 
-  const resolvedKey = imageKey ?? Object.keys(def)[0]
-  const imageDef = def[resolvedKey]
+  const resolvedKey = imageKey ?? Object.keys(def.points)[0]
+  const imageDef = def.points[resolvedKey]
   if (!imageDef) return
 
   const states = getCharStates(ctx)
@@ -201,8 +201,8 @@ function focusCharacter(ctx: SceneContext, name: string, focusType?: string, fit
   const def = charDefs[name]
   if (!def) return
 
-  const activeImgKey = target._currentImageKey ?? Object.keys(def)[0]
-  const imageDef = def[activeImgKey]
+  const activeImgKey = target._currentImageKey ?? Object.keys(def.points)[0]
+  const imageDef = def.points[activeImgKey]
   const fp = (focusType && imageDef?.points) ? imageDef.points[focusType] : { x: 0.5, y: 0.5 }
 
   const targetX = target.transform?.position?.x ?? 0
