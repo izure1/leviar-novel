@@ -112,9 +112,11 @@ async function main() {
     e.stopPropagation()
     try {
       const data = novel.save()
+      console.log(data)
       localStorage.setItem('leviar-novel-save', JSON.stringify(data))
       showToast('💾 저장 완료!', 'success')
-    } catch {
+    } catch (e) {
+      console.error(e)
       showToast('⚠ 저장 실패: 대화 씬에서만 가능', 'error')
     }
   })
@@ -131,7 +133,8 @@ async function main() {
       const data = JSON.parse(raw)
       novel.loadSave(data)
       showToast('📂 불러오기 완료!', 'success')
-    } catch {
+    } catch (e) {
+      console.error(e)
       showToast('⚠ 불러오기 실패', 'error')
     }
   })

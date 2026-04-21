@@ -296,6 +296,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     // 렌더러 초기화 + 상태 복원
     this._renderer.clear()
     this._renderer.restoreState(data.rendererState)
+    this._renderer.rebuildFromState()
 
     // 새 씬 인스턴스 생성 (start() 호출 없이)
     const callbacks = this._buildCallbacks()

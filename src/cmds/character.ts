@@ -113,7 +113,7 @@ function getCharObjects(ctx: SceneContext) {
   return objs
 }
 
-function showCharacter(ctx: SceneContext, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
+export function showCharacter(ctx: SceneContext, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
   const charDefs = ctx.renderer.config.characters as CharDefs
   const def = charDefs[name]
   if (!def) return

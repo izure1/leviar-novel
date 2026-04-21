@@ -77,7 +77,7 @@ function getActiveEffects(ctx: SceneContext) {
   return states
 }
 
-function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>, srcKey?: string) {
+export function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>, srcKey?: string) {
   const configEffect = ctx.renderer.config.effects?.[type]
   const preset = {
     attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },

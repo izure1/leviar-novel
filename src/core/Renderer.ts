@@ -5,6 +5,11 @@
 import { World, Animation } from 'leviar'
 import type { LeviarObject, EasingType } from 'leviar'
 import type { NovelConfig, NovelUIOption } from '../types/config'
+import type { SceneContext } from './SceneContext'
+import { setBackground } from '../cmds/background'
+import { showCharacter } from '../cmds/character'
+import { addMood } from '../cmds/mood'
+import { addEffect } from '../cmds/effect'
 
 // ─── 내부 헬퍼 ─────────────────────────────────────────────────
 
@@ -216,7 +221,14 @@ export class Renderer {
         y: this.camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
         z: this.camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0,
       },
-      pluginState: Object.fromEntries(this.state)
+      pluginState: Object.fromEntries(
+        Array.from(this.state.entries()).filter(([key, value]) => {
+          // _ prefix 키는 런타임 내부 참조(LeviarObject 등) → 무조건 제외
+          if (key.startsWith('_')) return false
+          // 직렬화 가능 여부 검사: 순환 참조 객체는 stringify 시 throw → 제외
+          try { JSON.stringify(value); return true } catch { return false }
+        })
+      )
     }
   }
 
@@ -245,6 +257,44 @@ export class Renderer {
   }
 
   /**
+   * pluginState 데이터를 기반으로 배경, 캐릭터, 무드, 이펙트를 화면에 재생성합니다.
+   * restoreState() 이후 호출하여 실제 렌더링을 복원합니다.
+   */
+  rebuildFromState(): void {
+    const ctx = _makeRestoreCtx(this)
+
+    // 배경 복원
+    const bgKey = this.state.get('backgroundKey')
+    if (bgKey) {
+      setBackground(ctx, bgKey, 'inherit', 0)
+    }
+
+    // 캐릭터 복원
+    const characters = this.state.get('characters') as Record<string, { position: string; imageKey: string }> | undefined
+    if (characters) {
+      for (const [name, info] of Object.entries(characters)) {
+        showCharacter(ctx, name, info.position, info.imageKey, 0)
+      }
+    }
+
+    // 무드 복원
+    const activeMoods = this.state.get('activeMoods') as Record<string, number> | undefined
+    if (activeMoods) {
+      for (const [mood, intensity] of Object.entries(activeMoods)) {
+        addMood(ctx, mood as any, intensity, 0)
+      }
+    }
+
+    // 이펙트(파티클) 복원
+    const activeEffects = this.state.get('activeEffects') as Record<string, { rate?: number; srcKey?: string }> | undefined
+    if (activeEffects) {
+      for (const [type, info] of Object.entries(activeEffects)) {
+        addEffect(ctx, type as any, info.rate, undefined, info.srcKey)
+      }
+    }
+  }
+
+  /**
    * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
    * 주로 씬(Scene) 전환이나 종료 시 호출됩니다.
    */
@@ -258,5 +308,38 @@ export class Renderer {
       this.camOffsetObj.transform.position.z = 0
       if (this.camOffsetObj.transform.rotation) this.camOffsetObj.transform.rotation.z = 0
     }
+  }
+}
+
+// ─── 복원용 SceneContext stub ────────────────────────────────
+
+function _makeRestoreCtx(renderer: Renderer): SceneContext {
+  const noop = () => { /* no-op */ }
+  return {
+    world: renderer.world,
+    renderer,
+    globalVars: {},
+    localVars: {},
+    callbacks: {
+      getGlobalVars: () => ({}),
+      setGlobalVar: noop as any,
+      loadScene: noop as any,
+      captureRenderer: () => renderer.captureState(),
+      onDialogue: noop as any,
+      onChoice: noop as any,
+      isSkipping: () => true,
+      disableInput: noop as any,
+    },
+    scene: {
+      getTextSubIndex: () => 0,
+      interpolateText: (t: string) => t,
+      jumpToLabel: noop as any,
+      hasLabel: () => false,
+      getVars: () => ({}),
+      setGlobalVar: noop as any,
+      setLocalVar: noop as any,
+      loadScene: noop as any,
+      end: noop,
+    },
   }
 }
