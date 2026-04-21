@@ -23,11 +23,11 @@ export interface ChoiceCmd<TVars, TLocalVars, TScenes extends readonly string[]>
     /** 선택지 버튼에 표시될 텍스트입니다. 함수를 사용하면 변수를 참조할 수 있습니다. */
     text: Resolvable<string, TVars, TLocalVars>
     /** 해당 선택지를 골랐을 때 이동할 씬(Scene)의 이름입니다. */
-    next?: TScenes[number]
+    next?: Resolvable<TScenes[number], TVars, TLocalVars>
     /** 해당 선택지를 골랐을 때 이동할 현재 씬 내의 라벨(Label) 이름입니다. */
-    goto?: string
+    goto?: Resolvable<string, TVars, TLocalVars>
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
-    var?: Partial<Record<keyof TVars, any>>
+    var?: Resolvable<Partial<Record<keyof TVars, any>>, TVars, TLocalVars>
   }[]
 }
 
