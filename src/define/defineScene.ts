@@ -52,7 +52,7 @@ export function defineScene<
   TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
 >(
   config: TConfig,
-  localVars: TLocalVars,
+  localVars: keyof TLocalVars extends `_${string}` ? TLocalVars : never,
   dialogues: DialogueStep<
     TConfig['vars'],
     TLocalVars,
