@@ -1,13 +1,12 @@
 // example/main.ts — 기능 테스트 진입점
 import { Novel } from '../src'
-import type { SaveData } from '../src'
 import config from './novel.config'
 
-import sceneIntro   from './scenes/scene-intro'
-import sceneA       from './scenes/scene-a'
-import sceneCond    from './scenes/scene-condition'
+import sceneIntro from './scenes/scene-intro'
+import sceneA from './scenes/scene-a'
+import sceneCond from './scenes/scene-condition'
 import sceneEffects from './scenes/scene-effects'
-import exploreMap   from './scenes/explore-map'
+import exploreMap from './scenes/explore-map'
 
 // =============================================================
 // SVG 인라인 유틸 (클릭 오브젝트만 SVG 사용)
@@ -44,8 +43,8 @@ const OBJECTS: Record<string, string> = {
 function showToast(msg: string, type: 'success' | 'error' | 'info' = 'success'): void {
   const el = document.getElementById('toast')
   if (!el) return
-  el.textContent  = msg
-  el.className    = `toast toast-${type} show`
+  el.textContent = msg
+  el.className = `toast toast-${type} show`
   setTimeout(() => el.classList.remove('show'), 2200)
 }
 
@@ -58,15 +57,15 @@ async function main() {
 
   const novel = new Novel(config, {
     canvas,
-    width:  800,
+    width: 800,
     height: 600,
-    depth:  500,
+    depth: 500,
     scenes: {
-      'scene-intro':     sceneIntro,
-      'scene-a':         sceneA,
+      'scene-intro': sceneIntro,
+      'scene-a': sceneA,
       'scene-condition': sceneCond,
-      'scene-effects':   sceneEffects,
-      'explore-map':     exploreMap,
+      'scene-effects': sceneEffects,
+      'explore-map': exploreMap,
     },
   })
 
