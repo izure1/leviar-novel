@@ -2,7 +2,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, {}, [
+export default defineScene({ config }, [
   // ─── 1. 적막한 도서관의 오후 ───
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },

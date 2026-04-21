@@ -6,11 +6,11 @@
   }
 
   // src/define/defineScene.ts
-  function defineScene(config, localVars, dialogues, options) {
+  function defineScene({ config, variables = {} }, dialogues, options) {
     return {
       kind: "dialogue",
       dialogues,
-      localVars,
+      localVars: variables,
       nextScene: options?.next
     };
   }
@@ -14938,7 +14938,7 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/scenes/scene-intro.ts
-  var scene_intro_default = defineScene(novel_config_default, {}, [
+  var scene_intro_default = defineScene({ config: novel_config_default }, [
     // ─── 1. 적막한 도서관의 오후 ───
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
@@ -15159,7 +15159,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-a.ts
-  var scene_a_default = defineScene(novel_config_default, {}, [
+  var scene_a_default = defineScene({ config: novel_config_default }, [
     // ── 배경 전환 + 벚꽃 효과
     { type: "background", name: "bg-library", duration: 800, skip: true },
     { type: "mood", mood: "day", intensity: 0.5, duration: 800, skip: true },
@@ -15196,7 +15196,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-condition.ts
-  var scene_condition_default = defineScene(novel_config_default, { _tries: 0 }, [
+  var scene_condition_default = defineScene({ config: novel_config_default, variables: { _tries: 0 } }, [
     // ── 나레이션
     { type: "dialogue", text: `[\uC870\uAC74 \uBD84\uAE30 \uD14C\uC2A4\uD2B8]` },
     { type: "dialogue", text: `\uD604\uC7AC \uD638\uAC10\uB3C4\uC640 \uB9CC\uB0A8 \uC5EC\uBD80\uB85C \uBD84\uAE30\uD569\uB2C8\uB2E4.` },
@@ -15260,7 +15260,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-effects.ts
-  var scene_effects_default = defineScene(novel_config_default, {}, [
+  var scene_effects_default = defineScene({ config: novel_config_default }, [
     // ── 공원으로 배경 전환
     { type: "background", name: "bg-park", duration: 1e3, skip: true },
     { type: "effect", action: "add", effect: "rain", src: "rain", rate: 500, skip: true },

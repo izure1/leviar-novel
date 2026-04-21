@@ -3,7 +3,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, {}, [
+export default defineScene({ config }, [
 
   // ── 배경 전환 + 벚꽃 효과
   { type: 'background', name: 'bg-library', duration: 800, skip: true },

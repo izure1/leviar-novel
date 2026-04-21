@@ -25,15 +25,15 @@ export interface SceneDefinition<
 /**
  * DialogueScene을 정의합니다.
  *
- * - 두 번째 인자로 씬 **지역변수** 초깃값 객체를 전달합니다.
+ * - 첫 번째 인자 객체의 `variables`에 씬 **지역변수** 초깃값을 전달합니다.
  *   키 이름에 `_` 접두사를 **반드시** 붙여야 합니다. (ex: `{ _tries: 0 }`)
  *   `_` 접두사가 없는 키를 전달하면 타입 에러가 발생합니다.
- * - 지역변수가 없는 씬은 `{}` 를 전달합니다.
+ * - 지역변수가 없는 씬은 `variables: {}` 를 전달합니다.
  * - 씬 전환 시 지역변수는 초기화됩니다.
  *
  * @example 지역변수 없음
  * ```ts
- * export default defineScene(config, {}, [
+ * export default defineScene({ config, variables: {} }, [
  *   { type: 'background', name: 'bg-classroom' },
  *   { type: 'dialogue', speaker: 'characterA', text: '안녕!' },
  * ])
@@ -41,7 +41,7 @@ export interface SceneDefinition<
  *
  * @example 지역변수 사용 (_ 접두사 필수)
  * ```ts
- * export default defineScene(config, { _tries: 0 }, [
+ * export default defineScene({ config, variables: { _tries: 0 } }, [
  *   { type: 'var', name: '_tries', value: 0 },
  *   { type: 'condition', if: '_tries >= 3', goto: 'end' },
  * ], { next: 'scene-b' })
@@ -51,8 +51,10 @@ export function defineScene<
   TConfig extends NovelConfig<any, readonly string[], any, any, any, any>,
   TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
 >(
-  config: TConfig,
-  localVars: keyof TLocalVars extends `_${string}` ? TLocalVars : never,
+  { config, variables = {} as any }: {
+    config: TConfig
+    variables?: keyof TLocalVars extends `_${string}` ? TLocalVars : never
+  },
   dialogues: DialogueStep<
     TConfig['vars'],
     TLocalVars,
@@ -77,7 +79,7 @@ export function defineScene<
   return {
     kind: 'dialogue',
     dialogues: dialogues as any,
-    localVars: localVars,
+    localVars: variables,
     nextScene: options?.next as string | undefined,
   }
 }

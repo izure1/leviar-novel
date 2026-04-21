@@ -3,7 +3,7 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
 
-export default defineScene(config, { _tries: 0 }, [
+export default defineScene({ config, variables: { _tries: 0 } }, [
 
   // ── 나레이션
   { type: 'dialogue', text: `[조건 분기 테스트]` },
