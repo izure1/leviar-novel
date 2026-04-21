@@ -3,6 +3,7 @@
 // =============================================================
 
 import type { CharDefs, BgDefs, CustomCmdHandler } from './config'
+import type { ResolvableProps } from '../define/defineCmd'
 
 // 프리셋 타입들 import (필요시 export)
 export type { MoodType, FlickerPreset } from '../cmds/mood'
@@ -37,11 +38,20 @@ export type {
   UICmd, ControlCmd
 }
 
-export type CustomCmd<TCmds extends Record<string, CustomCmdHandler<any, any, any>>> = {
-  [K in keyof TCmds & string]: { type: K } & Parameters<TCmds[K]>[0]
+export type CustomCmd<
+  TCmds extends Record<string, CustomCmdHandler<any, any, any>>,
+  TVars = any,
+  TLocalVars = any,
+> = {
+  [K in keyof TCmds & string]: { type: K } & ResolvableProps<Parameters<TCmds[K]>[0], TVars, TLocalVars>
 }[keyof TCmds & string]
 
-type _WithType<T, K extends string> = T extends any ? { type: K } & T : never
+/**
+ * T를 ResolvableProps로 감싼 뒤 type 키를 붙이는 헬퍼.
+ * T가 유니온이면 분산(distributive)되어 각 멤버에 개별 적용됩니다.
+ */
+type _WithType<T, K extends string, TVars, TLocalVars> =
+  T extends any ? { type: K } & ResolvableProps<T, TVars, TLocalVars> : never
 
 type _DialogueEntryUnion<
   TVars,
@@ -52,27 +62,27 @@ type _DialogueEntryUnion<
   TAssets extends Record<string, string> = Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
 > =
-  | _WithType<DialogueCmd<TCharacters>, 'dialogue'>
-  | _WithType<ChoiceCmd<TVars, TScenes>, 'choice'>
-  | _WithType<ConditionCmd<TVars, TLocalVars, TScenes>, 'condition'>
-  | _WithType<VarCmd<TVars, TLocalVars>, 'var'>
-  | _WithType<LabelCmd, 'label'>
-  | _WithType<BackgroundCmd<TBackgrounds>, 'background'>
-  | _WithType<MoodCmd, 'mood'>
-  | _WithType<EffectCmd<TAssets>, 'effect'>
-  | _WithType<OverlayCmd, 'overlay'>
-  | _WithType<CharacterCmd<TCharacters>, 'character'>
-  | _WithType<CharacterFocusCmd<TCharacters>, 'character-focus'>
-  | _WithType<CharacterHighlightCmd<TCharacters>, 'character-highlight'>
-  | _WithType<CameraZoomCmd, 'camera-zoom'>
-  | _WithType<CameraPanCmd, 'camera-pan'>
-  | _WithType<CameraEffectCmd, 'camera-effect'>
-  | _WithType<ScreenFadeCmd, 'screen-fade'>
-  | _WithType<ScreenFlashCmd, 'screen-flash'>
-  | _WithType<ScreenWipeCmd, 'screen-wipe'>
-  | _WithType<UICmd, 'ui'>
-  | _WithType<ControlCmd, 'control'>
-  | CustomCmd<TCmds>
+  | _WithType<DialogueCmd<TCharacters>, 'dialogue', TVars, TLocalVars>
+  | _WithType<ChoiceCmd<TVars, TScenes>, 'choice', TVars, TLocalVars>
+  | _WithType<ConditionCmd<TVars, TLocalVars, TScenes>, 'condition', TVars, TLocalVars>
+  | _WithType<VarCmd<TVars, TLocalVars>, 'var', TVars, TLocalVars>
+  | _WithType<LabelCmd, 'label', TVars, TLocalVars>
+  | _WithType<BackgroundCmd<TBackgrounds>, 'background', TVars, TLocalVars>
+  | _WithType<MoodCmd, 'mood', TVars, TLocalVars>
+  | _WithType<EffectCmd<TAssets>, 'effect', TVars, TLocalVars>
+  | _WithType<OverlayCmd, 'overlay', TVars, TLocalVars>
+  | _WithType<CharacterCmd<TCharacters>, 'character', TVars, TLocalVars>
+  | _WithType<CharacterFocusCmd<TCharacters>, 'character-focus', TVars, TLocalVars>
+  | _WithType<CharacterHighlightCmd<TCharacters>, 'character-highlight', TVars, TLocalVars>
+  | _WithType<CameraZoomCmd, 'camera-zoom', TVars, TLocalVars>
+  | _WithType<CameraPanCmd, 'camera-pan', TVars, TLocalVars>
+  | _WithType<CameraEffectCmd, 'camera-effect', TVars, TLocalVars>
+  | _WithType<ScreenFadeCmd, 'screen-fade', TVars, TLocalVars>
+  | _WithType<ScreenFlashCmd, 'screen-flash', TVars, TLocalVars>
+  | _WithType<ScreenWipeCmd, 'screen-wipe', TVars, TLocalVars>
+  | _WithType<UICmd, 'ui', TVars, TLocalVars>
+  | _WithType<ControlCmd, 'control', TVars, TLocalVars>
+  | CustomCmd<TCmds, TVars, TLocalVars>
 
 type _WithSkip<T> = T extends any ? T & {
   /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */

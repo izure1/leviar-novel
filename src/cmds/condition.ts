@@ -16,12 +16,16 @@ import { defineCmd } from '../define/defineCmd'
  */
 export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string[]> {
   /**
-   * 평가할 조건식 함수입니다.
+   * 평가할 조건 함수 또는 값입니다.
    * `vars` 인자를 통해 전역변수와 지역변수(`_` 접두사)를 구조 분해 할당하여 사용할 수 있습니다.
+   * 직접 `boolean` 값을 전달하는 것도 가능합니다.
    * 
    * @example
    * ```ts
+   * // 함수 형태
    * if: ({ likeability, _tries }) => likeability >= 10 && _tries >= 1
+   * // 직접 값
+   * if: true
    * ```
    */
   if: (vars: TVars & TLocalVars) => boolean
@@ -42,7 +46,7 @@ export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string
 }
 
 export const conditionHandler = defineCmd<ConditionCmd<any, any, any>>((cmd, ctx) => {
-  const result = cmd.if(ctx.scene.getVars())
+  const result = cmd.if as unknown as boolean
 
   if (result) {
     if (cmd.goto) {

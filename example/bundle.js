@@ -24,8 +24,30 @@
   }
 
   // src/define/defineCmd.ts
+  function resolveVal(val, vars) {
+    if (typeof val === "function") return val(vars);
+    if (Array.isArray(val)) {
+      return val.map(
+        (item) => item && typeof item === "object" && !Array.isArray(item) ? resolveObj(item, vars) : resolveVal(item, vars)
+      );
+    }
+    return val;
+  }
+  function resolveObj(obj, vars) {
+    const result = {};
+    for (const key in obj) {
+      result[key] = resolveVal(obj[key], vars);
+    }
+    return result;
+  }
+  function resolveParams(params, ctx) {
+    return resolveObj(params, ctx.scene.getVars());
+  }
   function defineCmd(handler) {
-    return handler;
+    return (rawParams, ctx) => {
+      const resolved = resolveParams(rawParams, ctx);
+      return handler(resolved, ctx);
+    };
   }
 
   // node_modules/leviar/dist/index.js
@@ -13052,7 +13074,7 @@ ${addLineNumbers(fragment)}`);
 
   // src/cmds/condition.ts
   var conditionHandler = defineCmd((cmd, ctx) => {
-    const result = cmd.if(ctx.scene.getVars());
+    const result = cmd.if;
     if (result) {
       if (cmd.goto) {
         ctx.scene.jumpToLabel(cmd.goto);
@@ -13086,10 +13108,7 @@ ${addLineNumbers(fragment)}`);
   // src/cmds/var.ts
   var varHandler = defineCmd((cmd, ctx) => {
     const nameStr = cmd.name;
-    let val = cmd.value;
-    if (typeof val === "function") {
-      val = val(ctx.scene.getVars());
-    }
+    const val = cmd.value;
     if (nameStr.startsWith("_")) {
       ctx.scene.setLocalVar(nameStr, val);
     } else {
@@ -15159,8 +15178,25 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: ({ _tries }) => _tries >= 1, goto: "cond-check" },
     // ── 좋은 분기
     { type: "label", name: "branch-good" },
-    { type: "character", action: "show", name: "arisiero", image: "smile" },
+    // ── [Resolvable 검증] name, image 돈다 함수형 prop
+    {
+      type: "character",
+      action: "show",
+      name: (vars) => vars.likeability >= 10 ? "arisiero" : "arisiero",
+      image: (vars) => vars.likeability >= 20 ? "smile" : "normal"
+    },
     { type: "dialogue", speaker: "arisiero", text: '\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "\uCC38" : "\uAC70\uC9D3" }})' },
+    // ── [Resolvable 검증] text에 함수 반환값 + {{ }} 템플릿 중첩
+    { type: "dialogue", text: (vars) => `[\uD568\uC218\uD615 text] \uD604\uC7AC \uD638\uAC10\uB3C4: {{ ${vars.likeability} }}, \uC870\uAC74: ${vars.likeability >= 10 ? "\uD1B5\uACFC" : "\uC2E4\uD328"}` },
+    // ── [Resolvable 검증] choices 배열 원소 내부 text도 함수형
+    {
+      type: "choice",
+      choices: [
+        { text: (vars) => `\uD638\uAC10\uB3C4(${vars.likeability})\uB85C \uACC4\uC18D`, next: "scene-effects" },
+        { text: "\uC2DC\uC791\uC73C\uB85C", next: "scene-intro" }
+      ]
+    },
+    // ── 실제 이 분기 이후는 choice에서 넘어가므로 아래는 도달 안 함
     // ── or 조건 테스트
     { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
     {
