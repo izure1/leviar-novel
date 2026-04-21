@@ -118,10 +118,31 @@ export class Renderer {
     this._camSyncRafId = requestAnimationFrame(syncLoop)
   }
 
+  /**
+   * 스킵 모드 상태를 설정합니다. 스킵 모드일 경우 애니메이션 시간이 0으로 처리됩니다.
+   * @param flag 스킵 활성화 여부
+   */
   setSkipping(flag: boolean): void { this._isSkipping = flag }
 
+  /**
+   * 스킵 모드 상태를 고려하여 실제 적용할 애니메이션 소요 시간(ms)을 반환합니다.
+   * @param d 원본 소요 시간(ms)
+   * @returns 스킵 중이면 0, 아니면 원본 시간
+   */
   public dur(d: number): number { return this._isSkipping ? 0 : d }
 
+  /**
+   * 객체에 애니메이션을 적용합니다. 
+   * 이전에 진행 중이던 동일 속성의 애니메이션이 있다면 중단하고 즉시 목표값으로 스냅시킵니다.
+   * 스킵 모드이거나 duration이 0인 경우 애니메이션 없이 즉시 속성을 적용합니다.
+   * 
+   * @param obj 애니메이션을 적용할 대상 객체
+   * @param props 변경할 속성 객체 (예: { transform: { position: { x: 100 } } })
+   * @param duration 애니메이션 소요 시간(ms)
+   * @param easing 애니메이션 이징 함수
+   * @param onEnd 애니메이션 종료 시 호출될 콜백 함수
+   * @returns 생성된 애니메이션 인스턴스 (즉시 적용 시 null)
+   */
   public animate(
     obj: any,
     props: any,
@@ -165,15 +186,28 @@ export class Renderer {
     return anim
   }
 
+  /**
+   * 렌더러가 관리할 객체를 추적 목록에 추가합니다.
+   * 씬(Scene) 종료 시 추적된 객체들은 자동으로 화면에서 제거(clear)됩니다.
+   * @param obj 추적할 객체
+   */
   public track<T extends LeviarObject>(obj: T): T {
     this._objects.add(obj)
     return obj
   }
 
+  /**
+   * 지정된 객체를 추적 목록에서 제거합니다.
+   * 더 이상 렌더러의 일괄 삭제 관리를 받지 않게 됩니다.
+   * @param obj 추적 해제할 객체
+   */
   public untrack(obj: LeviarObject): void {
     this._objects.delete(obj)
   }
 
+  /**
+   * 세이브 저장을 위해 현재 렌더러의 뷰포트/카메라 상태와 커스텀 플러그인 상태를 캡처하여 반환합니다.
+   */
   captureState(): RendererState {
     const cam = this.world.camera
     return {
@@ -186,6 +220,9 @@ export class Renderer {
     }
   }
 
+  /**
+   * 로드 시 저장된 상태(state)를 기반으로 렌더러의 카메라 위치 및 커스텀 플러그인 상태를 복원합니다.
+   */
   restoreState(state: RendererState): void {
     const cam = this.world.camera
     if (cam && state.cameraState) {
@@ -207,6 +244,10 @@ export class Renderer {
     this.state = new Map(Object.entries(state.pluginState || {}))
   }
 
+  /**
+   * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
+   * 주로 씬(Scene) 전환이나 종료 시 호출됩니다.
+   */
   clear(): void {
     this._objects.forEach(obj => (obj as any).remove?.())
     this._objects.clear()

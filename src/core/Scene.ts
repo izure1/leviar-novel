@@ -50,16 +50,26 @@ const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResul
 // Scene 콜백 인터페이스 (Novel 과의 통신)
 // =============================================================
 
+/**
+ * 씬(Scene) 내부에서 Novel 엔진 본체(상위 컴포넌트)와 통신하기 위해 사용하는 콜백 인터페이스.
+ * 전역 변수 조작, 씬 전환, UI 업데이트 등을 엔진에 요청할 때 사용됩니다.
+ */
 export interface SceneCallbacks {
+  /** 전역 변수 전체 객체를 반환합니다. */
   getGlobalVars(): Record<string, any>
+  /** 특정 전역 변수의 값을 설정합니다. */
   setGlobalVar(name: string, value: any): void
+  /** 지정된 이름의 새로운 씬을 로드하고 현재 씬을 종료합니다. */
   loadScene(name: string): void
+  /** 세이브 저장을 위해 현재 렌더러 상태를 캡처하여 반환합니다. */
   captureRenderer(): RendererState
+  /** UI에 대화(대사)를 출력하도록 요청합니다. */
   onDialogue(speaker: string | undefined, text: string, speed?: number): void
+  /** UI에 선택지를 출력하고 사용자의 선택을 대기하도록 요청합니다. */
   onChoice(choices: { text: string; next?: string; goto?: string }[]): void
-  /** 현재 스킵 모드 여부 */
+  /** 현재 스킵 모드 활성화 여부를 반환합니다. */
   isSkipping(): boolean
-  /** 지정된 시간(ms) 동안 사용자 입력을 무시합니다 */
+  /** 지정된 시간(ms) 동안 사용자의 입력(클릭/엔터 등)을 무시하도록 처리합니다. */
   disableInput(duration: number): void
 }
 
@@ -67,6 +77,10 @@ export interface SceneCallbacks {
 // DialogueScene 실행기
 // =============================================================
 
+/**
+ * 대화형 씬(Dialogue Scene)을 순차적으로 실행하고 관리하는 핵심 실행기(Runner) 클래스.
+ * 설정된 스크립트(dialogues)를 읽어 커맨드 핸들러를 호출하고 진행 상태를 관리합니다.
+ */
 export class DialogueScene {
   private readonly renderer: Renderer
   private readonly callbacks: SceneCallbacks
@@ -394,6 +408,10 @@ export class DialogueScene {
 // ExploreScene 실행기
 // =============================================================
 
+/**
+ * 탐색형 씬(Explore Scene)을 실행하고 관리하는 실행기 클래스.
+ * 배경 위에 클릭 가능한 오브젝트를 배치하고, 클릭 시 다른 씬으로 이동하는 등의 상호작용을 처리합니다.
+ */
 export class ExploreScene {
   private readonly renderer: Renderer
   private readonly callbacks: SceneCallbacks
