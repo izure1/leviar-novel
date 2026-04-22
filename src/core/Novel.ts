@@ -120,18 +120,34 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   }
 
   /**
-   * config.cmds를 순회하며 __uiName/__uiBuilder 메타가 부착된
-   * UIHandler를 _uiDefinitions에 등록합니다.
+   * config.ui 및 config.cmds를 순회하며 UIHandler를 _uiDefinitions에 등록합니다.
+   * config.ui 우선, 이후 config.cmds에서 __uiName 메타 부착 항목 수집 (하위 호환).
    */
   private _collectUIDefinitions(cmds?: Record<string, any>): void {
+    const config = this._config as any
+
+    // 1. config.ui: { 'dialogue': dialogueUISetup, ... }
+    const uiDefs = config.ui as Record<string, any> | undefined
+    if (uiDefs) {
+      for (const [uiKey, handler] of Object.entries(uiDefs)) {
+        const h = handler as any
+        if (typeof h === 'function' && h.__isUIHandler) {
+          this._uiDefinitions.set(uiKey, h.__uiBuilder)
+          if (h.__uiOptions) {
+            ;(this._uiDefinitions as any)[`__opts_${uiKey}`] = h.__uiOptions
+          }
+        }
+      }
+    }
+
+    // 2. config.cmds: 하위 호환 (__uiName 메타 부착 핸들러)
     if (!cmds) return
     for (const handler of Object.values(cmds)) {
       const h = handler as any
       if (h.__uiName && typeof h.__uiBuilder === 'function') {
         this._uiDefinitions.set(h.__uiName, h.__uiBuilder)
-        // options가 있으면 빌더와 함께 저장해두기 위해 메타 보존
         if (h.__uiOptions) {
-          (this._uiDefinitions as any)[`__opts_${h.__uiName}`] = h.__uiOptions
+          ;(this._uiDefinitions as any)[`__opts_${h.__uiName}`] = h.__uiOptions
         }
       }
     }
@@ -398,11 +414,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       }
     }
 
-    // 6. defineUI 빌더 실행 (dialogue, choice 등)
+    // 6. config.ui 빌더 실행 (dialogue, choice 등)
     for (const [name, builder] of this._uiDefinitions) {
-      const style = this._cmdStateStore.get(`setup-${name}`) ?? {}
+      // define() 팩토리 사용: cmdState '__ui__' 에 데이터 저장
+      // 하위 호환: 이전 'setup-{name}' 키도 확인
+      const style = this._cmdStateStore.get(`__ui__`) ?? this._cmdStateStore.get(`setup-${name}`) ?? {}
       const entry = builder(style, ctx)
-      // options 복원 (메타에서 읽기)
       const opts = (this._uiDefinitions as any)[`__opts_${name}`]
       if (opts) entry.options = { ...opts, ...entry.options }
       this._uiRegistry.set(name, entry)

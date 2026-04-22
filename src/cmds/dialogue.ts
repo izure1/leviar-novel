@@ -1,18 +1,24 @@
 import type { Style } from 'leviar'
 import type { CharDefs } from '../types/config'
-import { defineCmd } from '../define/defineCmd'
-import { defineUI } from '../define/defineUI'
+import { define } from '../define/defineCmdUI'
 
-// ─── 대화 UI 스타일 타입 ─────────────────────────────────────
+// ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
 
-/** dialogueUISetup 커맨드에 전달하는 UI 스타일 설정 */
-export interface DialogueUIStyle {
-  /** 대화창 배경 패널 스타일 (Leviar Style) */
-  bg?:      Partial<Style> & { height?: number }
-  /** 화자(캐릭터 이름) 텍스트 스타일 (Leviar Style) */
-  speaker?: Partial<Style>
-  /** 대사 텍스트 스타일 (Leviar Style) */
-  text?:    Partial<Style>
+/** dialogueUISetup이 공유하는 데이터 스키마 */
+export interface DialogueSchema {
+  /** 대화창 배경 패널 스타일 */
+  bg?:        Partial<Style> & { height?: number }
+  /** 화자(캐릭터 이름) 텍스트 스타일 */
+  speaker?:   Partial<Style>
+  /** 대사 텍스트 스타일 */
+  text?:      Partial<Style>
+  // ─── 런타임 상태 ───────────────────────────────────────────
+  /** 현재 텍스트 서브 인덱스 */
+  subIndex:   number
+  /** 현재 대사 줄 목록 */
+  lines:      string[]
+  /** 현재 화자 키 */
+  speakerKey: string | undefined
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -40,23 +46,34 @@ function resolveSpeaker(speakerKey: string | undefined, charDefs: any): string |
   return charDefs?.[speakerKey]?.name ?? speakerKey
 }
 
-// ─── dialogueUISetup — defineUI로 생성 ──────────────────────
+// ─── define(schema) 팩토리 ───────────────────────────────────
+
+const { defineCmd, defineUI } = define<DialogueSchema>({
+  bg:         undefined,
+  speaker:    undefined,
+  text:       undefined,
+  subIndex:   0,
+  lines:      [],
+  speakerKey: undefined,
+})
+
+// ─── dialogueUISetup ─────────────────────────────────────────
 
 /**
- * 대화 UI(배경/화자/텍스트)를 생성하고 레지스트리에 등록하는 셋업 커맨드 핸들러.
+ * 대화 UI(배경/화자/텍스트)를 생성하고 레지스트리에 등록하는 셋업 핸들러.
+ * `novel.config`의 `ui: { 'dialogue': dialogueUISetup }` 형태로 등록합니다.
  *
  * @example
  * ```ts
  * // novel.config.ts
- * cmds: { 'setup-dialogue': dialogueUISetup }
+ * ui: { 'dialogue': dialogueUISetup }
  *
- * // scene
- * { type: 'setup-dialogue', bg: { height: 168 }, text: { fontSize: 18, color: '#f0f0f0' } }
+ * // scene (initial 사용)
+ * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
  * ```
  */
-export const dialogueUISetup = defineUI<DialogueUIStyle>(
-  'dialogue',
-  (style, ctx) => {
+export const dialogueUISetup = defineUI(
+  (data, ctx) => {
     const cam = ctx.world.camera as any
     const w   = ctx.renderer.width
     const h   = ctx.renderer.height
@@ -67,9 +84,9 @@ export const dialogueUISetup = defineUI<DialogueUIStyle>(
         : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
     // 스타일 병합
-    const bgCfg  = { ...DEFAULT_BG,      ...(style.bg      ?? {}) } as any
-    const spkCfg = { ...DEFAULT_SPEAKER, ...(style.speaker ?? {}) } as any
-    const txtCfg = { ...DEFAULT_TEXT,    ...(style.text    ?? {}) } as any
+    const bgCfg  = { ...DEFAULT_BG,      ...(data.bg      ?? {}) } as any
+    const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as any
+    const txtCfg = { ...DEFAULT_TEXT,    ...(data.text    ?? {}) } as any
 
     const BOX_H  = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
     const BOX_CY = h - (BOX_H / 2)
@@ -174,18 +191,17 @@ export const dialogueUISetup = defineUI<DialogueUIStyle>(
     }
 
     // 복원: 로드 시 저장된 대사 즉시 렌더링
-    const saved = ctx.cmdState.get('dialogue')
-    if (saved?.lines?.length) {
-      const txt = saved.lines[saved.subIndex ?? 0] as string
+    if (data.lines?.length) {
+      const txt = data.lines[data.subIndex ?? 0] as string
       const charDefs = ctx.renderer.config.characters as any
-      const spkName  = resolveSpeaker(saved.speaker, charDefs)
+      const spkName  = resolveSpeaker(data.speakerKey, charDefs)
       _renderText(spkName, txt, undefined, true)
     }
 
     return {
       show:    (dur?: number) => _show(dur),
       hide:    (dur?: number) => _hide(dur),
-      isTyping:      () => _isTyping,
+      isTyping:       () => _isTyping,
       completeTyping: () => {
         if (!_isTyping) return
         _isTyping = false
@@ -204,9 +220,9 @@ export const dialogueUISetup = defineUI<DialogueUIStyle>(
 
 // ─── dialogueHandler ─────────────────────────────────────────
 
-/** 
- * 대사 또는 나레이션 출력 
- * 
+/**
+ * 대사 또는 나레이션 출력
+ *
  * @example
  * ```ts
  * { type: 'dialogue', speaker: 'hero', text: 'Hello world!', speed: 50 }
@@ -215,21 +231,21 @@ export const dialogueUISetup = defineUI<DialogueUIStyle>(
  * ```
  */
 export interface DialogueCmd<TCharacters extends CharDefs> {
-  /** 
-   * 화자의 이름 (config.characters의 키). 
+  /**
+   * 화자의 이름 (config.characters의 키).
    * 생략할 경우 화자 이름 없이 나레이션으로 처리됩니다.
    */
   speaker?: keyof TCharacters & string
   /** 화면에 출력할 텍스트입니다. 배열일 경우 여러 줄로 출력될 수 있습니다. */
   text: string | string[]
-  /** 
-   * 텍스트가 한 글자씩 출력되는 속도(ms 단위)입니다. 
+  /**
+   * 텍스트가 한 글자씩 출력되는 속도(ms 단위)입니다.
    * 미지정 시 시스템 설정 속도 또는 기본값(예: 30ms)이 사용됩니다.
    */
   speed?: number
 }
 
-export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx) => {
+export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
   const charDefs = ctx.renderer.config.characters as any
   const spkName  = resolveSpeaker(cmd.speaker as string | undefined, charDefs)
   const entry    = ctx.ui.get('dialogue')
@@ -237,11 +253,10 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx) => {
   // 단일 문자열
   if (!Array.isArray(cmd.text)) {
     const text = ctx.scene.interpolateText(cmd.text)
-    ctx.cmdState.set('dialogue', {
-      subIndex: 0,
-      lines:    [text],
-      speaker:  cmd.speaker,
-    })
+    data.subIndex   = 0
+    data.lines      = [text]
+    data.speakerKey = cmd.speaker as string | undefined
+    ctx.cmdState.set('dialogue', { subIndex: 0, lines: [text], speaker: cmd.speaker })
     entry?.onDialogue?.(spkName, text, cmd.speed)
     return false
   }
@@ -252,11 +267,10 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx) => {
 
   return () => {
     const text = ctx.scene.interpolateText(lines[index])
-    ctx.cmdState.set('dialogue', {
-      subIndex: index,
-      lines,
-      speaker:  cmd.speaker,
-    })
+    data.subIndex   = index
+    data.lines      = lines
+    data.speakerKey = cmd.speaker as string | undefined
+    ctx.cmdState.set('dialogue', { subIndex: index, lines, speaker: cmd.speaker })
     entry?.onDialogue?.(spkName, text, cmd.speed)
     index++
     return index >= lines.length

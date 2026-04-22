@@ -3,6 +3,7 @@
 // =============================================================
 
 import type { CharDefs, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
+import type { UIHandler } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
 
 /**
@@ -14,13 +15,11 @@ import type { EffectType } from '../types/dialogue'
  * export default defineNovelConfig({
  *   vars: { likeability: 0, metCharacterA: false },
  *   scenes: ['scene-a', 'scene-b'] as const,
- *   characters: {
- *     characterA: {
- *       normal: { src: './assets/a_normal.png', width: 500 }
- *     }
- *   },
- *   backgrounds: {
- *     'bg-classroom': { src: './assets/bg/classroom.png', parallax: true }
+ *   characters: { ... },
+ *   backgrounds: { ... },
+ *   ui: {
+ *     'dialogue': dialogueUISetup,
+ *     'choices':  choiceUISetup,
  *   },
  *   cmds: {
  *     'my-cmd': (cmd, ctx) => { ctx.world; return false }
@@ -35,6 +34,7 @@ export function defineNovelConfig<
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string>,
   TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<never, never>,
+  TUi          extends Record<string, UIHandler<any>> = Record<never, never>,
 >(
   config: {
     vars: TVars
@@ -43,9 +43,10 @@ export function defineNovelConfig<
     backgrounds: TBackgrounds
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets
-    fallback?: [FallbackRuleOf<TCmds>] extends [infer T] ? T[] : never
+    fallback?: NoInfer<[FallbackRuleOf<TCmds>] extends [infer T] ? T[] : never>
     cmds?: TCmds
+    ui?: TUi
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds> {
-  return config as NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds>
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds> & { ui?: TUi } {
+  return config as any
 }

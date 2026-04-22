@@ -14,10 +14,12 @@ export default defineNovelConfig({
     metHeroine: false,
     endingReached: false,
   },
+  ui: {
+    'dialogue': dialogueUISetup,
+    'choices':  choiceUISetup,
+  },
   cmds: {
-    'test-cmd':       testCmd,
-    'setup-dialogue': dialogueUISetup,
-    'setup-choice':   choiceUISetup,
+    'test-cmd': testCmd,
   },
   scenes: [
     'scene-intro',

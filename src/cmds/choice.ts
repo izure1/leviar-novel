@@ -1,11 +1,10 @@
 import type { Resolvable } from '../define/defineCmd'
-import { defineCmd } from '../define/defineCmd'
-import { defineUI } from '../define/defineUI'
+import { define } from '../define/defineCmdUI'
 
-// ─── 선택지 UI 스타일 타입 ──────────────────────────────────
+// ─── 선택지 UI 스타일 + 런타임 상태 스키마 ────────────────────
 
-/** choiceUISetup 커맨드에 전달하는 UI 스타일 설정 */
-export interface ChoiceUIStyle {
+/** choiceUISetup이 공유하는 데이터 스키마 */
+export interface ChoiceSchema {
   fontSize?:         number
   fontFamily?:       string
   color?:            string
@@ -19,7 +18,7 @@ export interface ChoiceUIStyle {
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_CHOICE: Required<ChoiceUIStyle> = {
+const DEFAULT_CHOICE: Required<ChoiceSchema> = {
   fontSize:         18,
   fontFamily:       '"Noto Sans KR","Malgun Gothic",sans-serif',
   color:            '#fff',
@@ -31,24 +30,38 @@ const DEFAULT_CHOICE: Required<ChoiceUIStyle> = {
   minWidth:         260,
 }
 
-// ─── choiceUISetup — defineUI로 생성 ────────────────────────
+// ─── define(schema) 팩토리 ───────────────────────────────────
+
+const { defineCmd, defineUI } = define<ChoiceSchema>({
+  fontSize:         undefined,
+  fontFamily:       undefined,
+  color:            undefined,
+  background:       undefined,
+  borderColor:      undefined,
+  hoverBackground:  undefined,
+  hoverBorderColor: undefined,
+  borderRadius:     undefined,
+  minWidth:         undefined,
+})
+
+// ─── choiceUISetup ───────────────────────────────────────────
 
 /**
- * 선택지 UI(HTML 컨테이너)를 생성하고 레지스트리에 등록하는 셋업 커맨드 핸들러.
+ * 선택지 UI(HTML 컨테이너)를 생성하고 레지스트리에 등록하는 셋업 핸들러.
+ * `novel.config`의 `ui: { 'choices': choiceUISetup }` 형태로 등록합니다.
  *
  * @example
  * ```ts
  * // novel.config.ts
- * cmds: { 'setup-choice': choiceUISetup }
+ * ui: { 'choices': choiceUISetup }
  *
- * // scene
- * { type: 'setup-choice', background: 'rgba(20,20,50,0.9)', minWidth: 280 }
+ * // scene (initial 사용)
+ * defineScene({ config, initial: { 'choices': { background: 'rgba(20,20,50,0.90)', minWidth: 280 } } }, [...])
  * ```
  */
-export const choiceUISetup = defineUI<ChoiceUIStyle>(
-  'choices',
-  (style, ctx) => {
-    const cfg = { ...DEFAULT_CHOICE, ...style } as Required<ChoiceUIStyle>
+export const choiceUISetup = defineUI(
+  (data, ctx) => {
+    const cfg = { ...DEFAULT_CHOICE, ...data } as Required<ChoiceSchema>
 
     const canvas = ctx.renderer.world.canvas as HTMLCanvasElement
     const parent = canvas.parentElement ?? document.body
@@ -67,8 +80,7 @@ export const choiceUISetup = defineUI<ChoiceUIStyle>(
     parent.appendChild(el)
 
     // 씬 종료(clear) 시 DOM도 제거
-    const origRemove = () => { el.remove() }
-    ;(el as any).__novelRemove = origRemove
+    ;(el as any).__novelRemove = () => { el.remove() }
 
     return {
       show: () => { el.style.display = 'flex' },
@@ -115,9 +127,9 @@ export const choiceUISetup = defineUI<ChoiceUIStyle>(
 
 // ─── choice 커맨드 타입 ──────────────────────────────────────
 
-/** 
- * 선택지를 표시하고 분기한다 
- * 
+/**
+ * 선택지를 표시하고 분기한다
+ *
  * @example
  * ```ts
  * {
@@ -144,7 +156,7 @@ export interface ChoiceCmd<TVars, TLocalVars, TScenes extends readonly string[]>
   }[]
 }
 
-export const choiceHandler = defineCmd<ChoiceCmd<any, any, any>>((cmd, ctx) => {
+export const choiceHandler = defineCmd<ChoiceCmd<any, any, any>>((cmd, ctx, _data) => {
   const entry = ctx.ui.get('choices')
 
   // 대화창 숨김

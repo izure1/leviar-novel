@@ -161,7 +161,78 @@ export class DialogueScene {
   start(): void {
     this.cursor = 0
     this.textSubIndex = 0
+    this._runInitial()
     this._executeNext()
+  }
+
+  /**
+   * `definition.initial`에 정의된 UI 초기 데이터를 자동으로 setup 합니다.
+   * `novel.config.ui` 또는 `cmds`에 등록된 핸들러를 키로 찾아 실행합니다.
+   */
+  private _runInitial(): void {
+    const initial = this.definition.initial
+    if (!initial) return
+
+    const r = this.renderer
+    const uiDefs = (r.config as any).ui as Record<string, any> | undefined
+    if (!uiDefs) return
+
+    const cmdStateStore = this.callbacks.getCmdStateStore()
+    const uiRegistry    = this.callbacks.getUIRegistry()
+
+    const ctx: SceneContext = {
+      world:      r.world,
+      globalVars: this.callbacks.getGlobalVars(),
+      localVars:  this.localVars,
+      renderer:   r,
+      callbacks:  this.callbacks,
+      cmdState: {
+        set: (name, data) => { cmdStateStore.set(name, data) },
+        get: (name)       => cmdStateStore.get(name),
+      },
+      ui: {
+        register: (name, entry) => { uiRegistry.set(name, entry) },
+        get:      (name)        => uiRegistry.get(name),
+        show:     (name, dur)   => uiRegistry.get(name)?.show(dur),
+        hide:     (name, dur)   => uiRegistry.get(name)?.hide(dur),
+      },
+      scene: {
+        getTextSubIndex: () => this.textSubIndex,
+        interpolateText: (text: string) => this._interpolateText(text),
+        jumpToLabel: (label: string) => this._jumpToLabel(label),
+        hasLabel: (label: string) => this.labelIndex.has(label),
+        getVars: () => this._vars,
+        setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
+        setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
+        loadScene: (name: string) => this.callbacks.loadScene(name),
+        end: () => { this._ended = true }
+      }
+    }
+
+    for (const [uiKey, styleData] of Object.entries(initial)) {
+      const handler = uiDefs[uiKey] as any
+      if (!handler) {
+        console.warn(`[leviar-novel] initial: '${uiKey}' ui 핸들러를 찾을 수 없습니다.`)
+        continue
+      }
+
+      // UIHandler(define 팩토리)인 경우: __uiBuilder를 직접 호출하여 정확한 키로 등록
+      if (typeof handler.__uiBuilder === 'function') {
+        // schema 기본값 + 전달된 스타일로 data 준비
+        const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {})
+        const entry = handler.__uiBuilder(mergedData, ctx)
+        if (handler.__uiOptions) entry.options = { ...handler.__uiOptions, ...entry.options }
+        // CmdState에도 저장 (세이브/로드용)
+        ctx.cmdState.set('__ui__', mergedData)
+        uiRegistry.set(uiKey, entry)
+      } else if (typeof handler === 'function') {
+        // 일반 함수인 경우 (하위 호환)
+        const result = handler(styleData ?? {}, ctx)
+        if (result && typeof result === 'object' && typeof result.show === 'function') {
+          uiRegistry.set(uiKey, result)
+        }
+      }
+    }
   }
 
   /** 캐릭터 키를 실제 이름으로 변환 */

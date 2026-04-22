@@ -5,6 +5,7 @@
 import type { World, Style, Attribute } from 'leviar'
 import type { FallbackRule, FallbackRuleOf, EffectType } from './dialogue'
 import type { SceneContext, CommandResult } from '../core/SceneContext'
+import type { UIHandler } from '../define/defineCmdUI'
 
 /** 
  * 단일 캐릭터 이미지 변형 정의 
@@ -166,7 +167,8 @@ export interface NovelConfig<
   TCharacters  extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string> = Record<string, string>,
-  TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>
+  TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>,
+  TUi          extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>
 > {
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars:        TVars
@@ -196,6 +198,19 @@ export interface NovelConfig<
    * 씬에서 지정한 `type`과 매칭되어 실행됩니다.
    */
   cmds?:       TCmds
+  /**
+   * UI 핸들러 목록입니다. key가 UIRegistry 등록 키가 됩니다.
+   * `defineScene`의 `initial`에서 키/값 타입 추론에 사용됩니다.
+   *
+   * @example
+   * ```ts
+   * ui: {
+   *   'dialogue': dialogueUISetup,
+   *   'choices':  choiceUISetup,
+   * }
+   * ```
+   */
+  ui?:         Record<string, UIHandler<any>>
 }
 
 export type { FallbackRule, FallbackRuleOf } from './dialogue'
