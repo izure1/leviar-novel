@@ -81,6 +81,5 @@ export default defineNovelConfig({
     { type: 'character', action: 'show', defaults: { duration: 300 } },
     { type: 'character', action: 'remove', defaults: { duration: 1000 } },
     { type: 'dialogue', defaults: { speed: 60 } },
-    { type: 'test-cmd', defaults: {} }
   ],
 })

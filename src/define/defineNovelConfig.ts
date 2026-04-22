@@ -44,7 +44,7 @@ export function defineNovelConfig<
     effects?: Partial<Record<EffectType, EffectDef>>
     ui?: NovelUIOption
     assets?: TAssets
-    fallback?: FallbackRuleOf<TCmds>[]
+    fallback?: [FallbackRuleOf<TCmds>] extends [infer T] ? T[] : never
     cmds?: TCmds
   }
 ): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds> {

@@ -109,9 +109,11 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * })
  * ```
  */
+import type { CustomCmdHandler } from '../types/config'
+
 export function defineCmd<TCmd>(
   handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult
-): (cmd: any, ctx: SceneContext) => CommandResult {
+): CustomCmdHandler<Omit<TCmd, 'type'>, any, any> {
   return (rawParams, ctx) => {
     const resolved = resolveParams(rawParams, ctx)
     return handler(resolved as Omit<TCmd, 'type'>, ctx)
