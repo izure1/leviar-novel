@@ -6,6 +6,7 @@ import type { Renderer, RendererState } from './Renderer'
 import type { SceneDefinition } from '../define/defineScene'
 import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
+import type { SceneContext, CommandResult, SimpleCommandResult } from './SceneContext'
 import { dialogueHandler } from '../cmds/dialogue'
 import { choiceHandler } from '../cmds/choice'
 import { conditionHandler } from '../cmds/condition'
@@ -20,7 +21,6 @@ import { cameraZoomHandler, cameraPanHandler, cameraEffectHandler } from '../cmd
 import { screenFadeHandler, screenFlashHandler, screenWipeHandler } from '../cmds/screen'
 import { uiHandler } from '../cmds/ui'
 import { controlHandler } from '../cmds/control'
-import type { SceneContext, CommandResult } from './SceneContext'
 import { setBackground } from '../cmds/background'
 
 const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResult> = {
@@ -104,6 +104,12 @@ export class DialogueScene {
   /** 씬 종료 여부 */
   private _ended: boolean = false
 
+  /**
+   * TickFn 모드: defineCmd에서 함수를 반환했을 때 저장됩니다.
+   * 사용자 입력마다 이 함수가 재호출되고, true 반환 시 다음 스텝으로 진행됩니다.
+   */
+  private _tickFn: (() => SimpleCommandResult) | null = null
+
   constructor(
     renderer: Renderer,
     callbacks: SceneCallbacks,
@@ -169,6 +175,26 @@ export class DialogueScene {
   advance(): void {
     if (!this._waitingInput || this._ended) return
 
+    // ─ TickFn 모드: 사용자 입력 → tick 재호출
+    if (this._tickFn) {
+      const tickResult = this._tickFn()
+      if (tickResult === 'handled') {
+        this._tickFn = null
+        this._waitingInput = false
+        return
+      }
+      if (tickResult === true) {
+        // 루프 종료 → 다음 스텝으로
+        this._tickFn = null
+        this._waitingInput = false
+        this.cursor++
+        this.textSubIndex = 0
+        this._executeNext()
+      }
+      // false / void → 계속 대기
+      return
+    }
+
     const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     const step = steps[this.cursor] as any
 
@@ -202,6 +228,27 @@ export class DialogueScene {
     const cmd = step as DialogueEntry<any, any, any, any, any, any, any>
 
     const result = this._executeCmd(cmd)
+
+    // TickFn 반환: 즉시 1회 실행 후 결과에 따라 처리
+    if (typeof result === 'function') {
+      this._tickFn = result
+      const firstResult = result()
+      if (firstResult === 'handled') {
+        this._tickFn = null
+        return
+      }
+      if (firstResult === true) {
+        // 첫 tick에서 바로 완료
+        this._tickFn = null
+        this.cursor++
+        this.textSubIndex = 0
+        this._executeNext()
+      } else {
+        // false / void → 입력 대기
+        this._waitingInput = true
+      }
+      return
+    }
 
     if (result === 'handled') return
 
@@ -290,8 +337,7 @@ export class DialogueScene {
 
     const cmds = r.config.cmds
     if (cmds && typeof cmds[type] === 'function') {
-      const customSkip = cmds[type](params, ctx)
-      return customSkip === true ? true : false
+      return cmds[type](params, ctx)
     }
 
     console.warn(`[leviar-novel] 알 수 없는 커맨드 타입:`, type)

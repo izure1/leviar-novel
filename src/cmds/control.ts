@@ -12,6 +12,9 @@ export interface ControlCmd {
 export const controlHandler = defineCmd<ControlCmd>((cmd, ctx) => {
   if (cmd.action === 'disable' && typeof cmd.duration === 'number') {
     ctx.callbacks.disableInput(cmd.duration)
+    const expireAt = Date.now() + cmd.duration
+    // TickFn: 차단 시간 만료 전까지 입력 무시, 만료 후 다음 스텝
+    return () => Date.now() >= expireAt
   }
-  return false
+  return true
 })

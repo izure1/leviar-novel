@@ -1,4 +1,3 @@
-import type { SceneContext } from '../core/SceneContext'
 import { defineCmd } from '../define/defineCmd'
 
 /** 

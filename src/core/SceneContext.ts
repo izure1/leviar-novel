@@ -35,9 +35,20 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
 }
 
 /**
- * 커맨드 핸들러의 실행 결과 반환값
+ * 단순 결과값: 커맨드 핸들러의 실행 결과
  * - `true`: 커맨드 즉시 완료, 대기 없이 다음 스텝 자동 진행
  * - `false` | `void`: 커맨드 실행 후 멈춤, 사용자 입력(클릭/엔터 등) 대기
  * - `'handled'`: 씬 이동 등으로 인해 엔진의 기본 실행 루프 즉시 중단
  */
-export type CommandResult = boolean | 'handled' | void
+export type SimpleCommandResult = boolean | 'handled' | void
+
+/**
+ * 커맨드 핸들러의 실행 결과 반환값
+ * - `SimpleCommandResult`: 기존 방식 — 즉시 결과 결정
+ * - `() => SimpleCommandResult` (TickFn): do-while 루프 방식
+ *   - 반환 즉시 1회 실행되며, 이후 사용자 입력마다 재호출됨
+ *   - `true` 반환 시 루프 종료 후 다음 스텝으로 진행
+ *   - `false` / `void` 반환 시 계속 입력 대기
+ *   - `'handled'` 반환 시 씬 이동 등으로 인해 엔진 루프 즉시 중단
+ */
+export type CommandResult = SimpleCommandResult | (() => SimpleCommandResult)

@@ -200,8 +200,9 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
 }
 
 /** 
- * 명령어의 실행 로직을 정의하는 핸들러 함수입니다. 
- * true를 반환할 경우, 대사 진행 등을 대기하지 않고 다음 스텝으로 즉시 넘어갑니다 (skip).
+ * 명령어의 실행 로직을 정의하는 핸들러 함수입니다.
+ * - `SimpleCommandResult` 반환: 대사 진행 등을 대기하지 않고 다음 스텝으로 즉시 넘어갑니다 (skip).
+ * - `TickFn` 반환: 1회 즉시 실행된 후, 사용자 입력마다 함수가 재호출되며 `true` 반환 시에 다음 스텝으로 진행됩니다.
  */
 export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
   params: TParams,

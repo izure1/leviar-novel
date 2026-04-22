@@ -13814,18 +13814,31 @@ ${addLineNumbers(fragment)}`);
 
   // src/cmds/dialogue.ts
   var dialogueHandler = defineCmd((cmd, ctx) => {
-    const txt = Array.isArray(cmd.text) ? cmd.text[ctx.scene.getTextSubIndex()] : cmd.text;
-    const interpolated = ctx.scene.interpolateText(txt);
+    if (!Array.isArray(cmd.text)) {
+      const interpolated = ctx.scene.interpolateText(cmd.text);
+      let speakerName2 = cmd.speaker;
+      if (speakerName2) {
+        const charDefs = ctx.renderer.config.characters;
+        const def = charDefs?.[speakerName2];
+        if (def?.name) speakerName2 = def.name;
+      }
+      ctx.callbacks.onDialogue(speakerName2, interpolated, cmd.speed);
+      return false;
+    }
+    const lines = cmd.text;
+    let index = 0;
     let speakerName = cmd.speaker;
     if (speakerName) {
       const charDefs = ctx.renderer.config.characters;
       const def = charDefs?.[speakerName];
-      if (def?.name) {
-        speakerName = def.name;
-      }
+      if (def?.name) speakerName = def.name;
     }
-    ctx.callbacks.onDialogue(speakerName, interpolated, cmd.speed);
-    return false;
+    return () => {
+      const interpolated = ctx.scene.interpolateText(lines[index]);
+      ctx.callbacks.onDialogue(speakerName, interpolated, cmd.speed);
+      index++;
+      return index >= lines.length;
+    };
   });
 
   // src/cmds/choice.ts
@@ -14079,8 +14092,10 @@ ${addLineNumbers(fragment)}`);
   var controlHandler = defineCmd((cmd, ctx) => {
     if (cmd.action === "disable" && typeof cmd.duration === "number") {
       ctx.callbacks.disableInput(cmd.duration);
+      const expireAt = Date.now() + cmd.duration;
+      return () => Date.now() >= expireAt;
     }
-    return false;
+    return true;
   });
 
   // src/core/Scene.ts
@@ -14122,6 +14137,11 @@ ${addLineNumbers(fragment)}`);
     _waitingInput = false;
     /** 씬 종료 여부 */
     _ended = false;
+    /**
+     * TickFn 모드: defineCmd에서 함수를 반환했을 때 저장됩니다.
+     * 사용자 입력마다 이 함수가 재호출되고, true 반환 시 다음 스텝으로 진행됩니다.
+     */
+    _tickFn = null;
     constructor(renderer, callbacks, definition) {
       this.renderer = renderer;
       this.callbacks = callbacks;
@@ -14175,6 +14195,22 @@ ${addLineNumbers(fragment)}`);
      */
     advance() {
       if (!this._waitingInput || this._ended) return;
+      if (this._tickFn) {
+        const tickResult = this._tickFn();
+        if (tickResult === "handled") {
+          this._tickFn = null;
+          this._waitingInput = false;
+          return;
+        }
+        if (tickResult === true) {
+          this._tickFn = null;
+          this._waitingInput = false;
+          this.cursor++;
+          this.textSubIndex = 0;
+          this._executeNext();
+        }
+        return;
+      }
       const steps = this.definition.dialogues;
       const step = steps[this.cursor];
       if (step.type === "dialogue" && Array.isArray(step.text)) {
@@ -14202,6 +14238,23 @@ ${addLineNumbers(fragment)}`);
       const step = steps[this.cursor];
       const cmd = step;
       const result = this._executeCmd(cmd);
+      if (typeof result === "function") {
+        this._tickFn = result;
+        const firstResult = result();
+        if (firstResult === "handled") {
+          this._tickFn = null;
+          return;
+        }
+        if (firstResult === true) {
+          this._tickFn = null;
+          this.cursor++;
+          this.textSubIndex = 0;
+          this._executeNext();
+        } else {
+          this._waitingInput = true;
+        }
+        return;
+      }
       if (result === "handled") return;
       if (result === true || cmd.skip) {
         this.cursor++;
@@ -14281,8 +14334,7 @@ ${addLineNumbers(fragment)}`);
       }
       const cmds = r.config.cmds;
       if (cmds && typeof cmds[type] === "function") {
-        const customSkip = cmds[type](params, ctx);
-        return customSkip === true ? true : false;
+        return cmds[type](params, ctx);
       }
       console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
       return false;

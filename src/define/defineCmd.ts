@@ -100,12 +100,30 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * 커맨드 핸들러를 정의합니다.
  * 핸들러가 호출될 때 cmd의 모든 속성(함수 포함)이 자동으로 resolve됩니다.
  *
- * @example
+ * ## 반환값
+ * - `true` / `false` / `void` / `'handled'`: 즉시 결과 결정
+ * - `() => SimpleCommandResult` (**TickFn**): do-while 루프 방식
+ *   - 반환 즉시 1회 실행됨
+ *   - 이후 사용자 입력마다 재호출됨
+ *   - `true` 반환 시 루프 종료 뒤 다음 스텝
+ *
+ * @example 이전 방식 (단순 결과)
  * ```ts
  * export const myHandler = defineCmd<{ message: string }>((cmd, ctx) => {
- *   // cmd.message는 이미 resolve된 string 값
  *   ctx.callbacks.onDialogue(undefined, cmd.message)
  *   return false
+ * })
+ * ```
+ *
+ * @example TickFn 방식 (여러 줄 대사 클릭마다 다음줄)
+ * ```ts
+ * export const multiLineHandler = defineCmd<{ lines: string[] }>((cmd, ctx) => {
+ *   let index = 0
+ *   return () => {
+ *     ctx.callbacks.onDialogue(undefined, cmd.lines[index])
+ *     index++
+ *     return index >= cmd.lines.length // 마지막 줄이면 true → 다음 스텝
+ *   }
  * })
  * ```
  */
