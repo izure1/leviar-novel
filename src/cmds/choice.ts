@@ -1,6 +1,118 @@
-import type { SceneContext } from '../core/SceneContext'
 import type { Resolvable } from '../define/defineCmd'
 import { defineCmd } from '../define/defineCmd'
+import { defineUI } from '../define/defineUI'
+
+// ─── 선택지 UI 스타일 타입 ──────────────────────────────────
+
+/** choiceUISetup 커맨드에 전달하는 UI 스타일 설정 */
+export interface ChoiceUIStyle {
+  fontSize?:         number
+  fontFamily?:       string
+  color?:            string
+  background?:       string
+  borderColor?:      string
+  hoverBackground?:  string
+  hoverBorderColor?: string
+  borderRadius?:     number
+  minWidth?:         number
+}
+
+// ─── 기본값 ──────────────────────────────────────────────────
+
+const DEFAULT_CHOICE: Required<ChoiceUIStyle> = {
+  fontSize:         18,
+  fontFamily:       '"Noto Sans KR","Malgun Gothic",sans-serif',
+  color:            '#fff',
+  background:       'rgba(30,30,60,0.85)',
+  borderColor:      'rgba(255,255,255,0.3)',
+  hoverBackground:  'rgba(80,80,180,0.9)',
+  hoverBorderColor: 'rgba(255,255,255,0.7)',
+  borderRadius:     8,
+  minWidth:         260,
+}
+
+// ─── choiceUISetup — defineUI로 생성 ────────────────────────
+
+/**
+ * 선택지 UI(HTML 컨테이너)를 생성하고 레지스트리에 등록하는 셋업 커맨드 핸들러.
+ *
+ * @example
+ * ```ts
+ * // novel.config.ts
+ * cmds: { 'setup-choice': choiceUISetup }
+ *
+ * // scene
+ * { type: 'setup-choice', background: 'rgba(20,20,50,0.9)', minWidth: 280 }
+ * ```
+ */
+export const choiceUISetup = defineUI<ChoiceUIStyle>(
+  'choices',
+  (style, ctx) => {
+    const cfg = { ...DEFAULT_CHOICE, ...style } as Required<ChoiceUIStyle>
+
+    const canvas = ctx.renderer.world.canvas as HTMLCanvasElement
+    const parent = canvas.parentElement ?? document.body
+
+    const el = document.createElement('div')
+    el.style.cssText = [
+      'position:absolute', 'top:0', 'left:0', 'right:0', 'bottom:0',
+      'display:none',
+      'flex-direction:column', 'justify-content:center', 'align-items:center',
+      'gap:12px',
+      'background:rgba(0,0,0,0.6)',
+      'pointer-events:auto',
+      `font-family:${cfg.fontFamily}`,
+    ].join(';')
+    parent.style.position = 'relative'
+    parent.appendChild(el)
+
+    // 씬 종료(clear) 시 DOM도 제거
+    const origRemove = () => { el.remove() }
+    ;(el as any).__novelRemove = origRemove
+
+    return {
+      show: () => { el.style.display = 'flex' },
+      hide: () => { el.style.display = 'none'; el.innerHTML = '' },
+      onChoices: (choices, onSelect) => {
+        el.style.display = 'flex'
+        el.innerHTML = ''
+
+        choices.forEach((choice: any, i: number) => {
+          const btn = document.createElement('button')
+          btn.textContent = choice.text
+          btn.style.cssText = [
+            'padding:12px 32px',
+            `font-size:${cfg.fontSize}px`,
+            `font-family:${cfg.fontFamily}`,
+            `color:${cfg.color}`,
+            `background:${cfg.background}`,
+            `border:1.5px solid ${cfg.borderColor}`,
+            `border-radius:${cfg.borderRadius}px`,
+            'cursor:pointer',
+            'transition:background 0.15s,border-color 0.15s',
+            `min-width:${cfg.minWidth}px`,
+            'text-align:center',
+          ].join(';')
+          btn.addEventListener('mouseenter', () => {
+            btn.style.background  = cfg.hoverBackground
+            btn.style.borderColor = cfg.hoverBorderColor
+          })
+          btn.addEventListener('mouseleave', () => {
+            btn.style.background  = cfg.background
+            btn.style.borderColor = cfg.borderColor
+          })
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation()
+            onSelect(i)
+          })
+          el.appendChild(btn)
+        })
+      },
+    }
+  }
+)
+
+// ─── choice 커맨드 타입 ──────────────────────────────────────
 
 /** 
  * 선택지를 표시하고 분기한다 
@@ -32,7 +144,34 @@ export interface ChoiceCmd<TVars, TLocalVars, TScenes extends readonly string[]>
 }
 
 export const choiceHandler = defineCmd<ChoiceCmd<any, any, any>>((cmd, ctx) => {
-  // choices 배열 원소의 text는 이미 resolveVal에 의해 string으로 resolve됨
-  ctx.callbacks.onChoice(cmd.choices as any)
+  const entry = ctx.ui.get('choices')
+
+  // 대화창 숨김
+  ctx.ui.get('dialogue')?.hide?.()
+
+  entry?.onChoices?.(cmd.choices as any, (i: number) => {
+    const selected = (cmd.choices as any[])[i]
+    if (!selected) return
+
+    // var 설정
+    if (selected.var) {
+      for (const [key, value] of Object.entries(selected.var as Record<string, any>)) {
+        ctx.scene.setGlobalVar(key, value)
+      }
+    }
+
+    // 선택지 숨기기
+    entry.hide?.()
+
+    // 분기
+    if (selected.next) {
+      ctx.scene.loadScene(selected.next)
+    } else if (selected.goto) {
+      ctx.scene.jumpToLabel(selected.goto)
+    } else {
+      // goto/next 없으면 다음 스텝 (Scene.advance 없이 직접 처리 불가 — 기존 방식 유지)
+    }
+  })
+
   return 'handled'
 })

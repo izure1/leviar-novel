@@ -2,6 +2,7 @@ import type { World } from 'leviar'
 import type { Renderer } from './Renderer'
 import type { SceneCallbacks } from './Scene'
 import type { CustomCmdContext } from '../types/config'
+import type { UIRuntimeEntry } from './UIRegistry'
 
 /**
  * 커맨드 핸들러 실행 시 제공되는 씬(Scene)의 컨텍스트 정보
@@ -31,6 +32,38 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
     loadScene: (name: string) => void
     /** 현재 씬의 진행을 즉시 종료 */
     end: () => void
+  }
+  /**
+   * 씬 전환에도 유지되는 cmd 상태 저장소.
+   * 세이브/로드 시 SaveData.cmdStates에 자동 포함됩니다.
+   *
+   * @example
+   * ```ts
+   * // 저장
+   * ctx.cmdState.set('dialogue', { subIndex: 2, lines: [...] })
+   * // 읽기 (로드 후 복원 시에도 사용)
+   * const saved = ctx.cmdState.get('dialogue')
+   * ```
+   */
+  cmdState: {
+    /** 이름으로 직렬화 가능한 데이터를 저장합니다 */
+    set(name: string, data: Record<string, any>): void
+    /** 이름으로 저장된 데이터를 읽습니다 */
+    get(name: string): Record<string, any> | undefined
+  }
+  /**
+   * UI 레지스트리 접근 네임스페이스.
+   * defineUI로 생성된 UI 요소를 등록하거나 제어합니다.
+   */
+  ui: {
+    /** 이름으로 UIRuntimeEntry를 등록합니다 (이미 있으면 덮어쓰기) */
+    register(name: string, entry: UIRuntimeEntry): void
+    /** 이름으로 UIRuntimeEntry를 조회합니다 */
+    get(name: string): UIRuntimeEntry | undefined
+    /** 등록된 UI를 페이드인하여 표시합니다 */
+    show(name: string, duration?: number): void
+    /** 등록된 UI를 페이드아웃하여 숨깁니다 */
+    hide(name: string, duration?: number): void
   }
 }
 

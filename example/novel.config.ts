@@ -1,5 +1,7 @@
 // example/novel.config.ts
 import { defineNovelConfig, defineCmd } from '../src'
+import { dialogueUISetup } from '../src/cmds/dialogue'
+import { choiceUISetup } from '../src/cmds/choice'
 
 const testCmd = defineCmd<{ message: string }>((cmd, ctx) => {
   console.log('[test-cmd]', cmd.message, ctx.globalVars)
@@ -13,7 +15,9 @@ export default defineNovelConfig({
     endingReached: false,
   },
   cmds: {
-    'test-cmd': testCmd,
+    'test-cmd':       testCmd,
+    'setup-dialogue': dialogueUISetup,
+    'setup-choice':   choiceUISetup,
   },
   scenes: [
     'scene-intro',
@@ -48,19 +52,6 @@ export default defineNovelConfig({
     'bg-floor': { src: 'bg_floor', parallax: true },
     'bg-library': { src: 'bg_library', parallax: true },
     'bg-park': { src: 'bg_park', parallax: true },
-  },
-  ui: {
-    dialogueBg: { color: '#00000000', gradientType: 'linear', gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%', height: 168 },
-    speaker: { fontSize: 27, fontWeight: 'bold', color: '#ffd966', borderWidth: 2, borderColor: 'rgb(255,255,255)' },
-    dialogue: { fontSize: 18, color: '#f0f0f0', lineHeight: 1.65 },
-    choice: {
-      background: 'rgba(20,20,50,0.90)',
-      borderColor: 'rgba(255,255,255,0.25)',
-      hoverBackground: 'rgba(80,60,180,0.92)',
-      hoverBorderColor: 'rgba(200,180,255,0.8)',
-      borderRadius: 10,
-      minWidth: 280,
-    },
   },
   assets: {
     // 배경

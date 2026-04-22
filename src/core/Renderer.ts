@@ -4,12 +4,13 @@
 
 import { World, Animation } from 'leviar'
 import type { LeviarObject, EasingType } from 'leviar'
-import type { NovelConfig, NovelUIOption } from '../types/config'
+import type { NovelConfig } from '../types/config'
 import type { SceneContext } from './SceneContext'
 import { setBackground } from '../cmds/background'
 import { showCharacter } from '../cmds/character'
 import { addMood } from '../cmds/mood'
 import { addEffect } from '../cmds/effect'
+import { rebuildOverlays } from '../cmds/overlay'
 
 // ─── 내부 헬퍼 ─────────────────────────────────────────────────
 
@@ -59,7 +60,6 @@ export interface RendererOption {
   width: number
   height: number
   depth: number
-  ui?: NovelUIOption
 }
 
 export class Renderer {
@@ -68,7 +68,6 @@ export class Renderer {
   public readonly width: number
   public readonly height: number
   public readonly depth: number
-  public readonly ui: NovelUIOption | undefined
 
   private _objects: Set<LeviarObject> = new Set()
   private _isSkipping: boolean = false
@@ -87,7 +86,6 @@ export class Renderer {
     this.width = option.width
     this.height = option.height
     this.depth = option.depth
-    this.ui = option.ui
 
     if (!this.world.camera) {
       this.world.camera = (this.world as any).createCamera()
@@ -292,6 +290,9 @@ export class Renderer {
         addEffect(ctx, type as any, info.rate, undefined, info.srcKey)
       }
     }
+
+    // 오버레이 텍스트 복원
+    rebuildOverlays(ctx)
   }
 
   /**
@@ -325,10 +326,20 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       setGlobalVar: noop as any,
       loadScene: noop as any,
       captureRenderer: () => renderer.captureState(),
-      onDialogue: noop as any,
-      onChoice: noop as any,
       isSkipping: () => true,
       disableInput: noop as any,
+      getCmdStateStore: () => new Map(),
+      getUIRegistry: () => new Map(),
+    },
+    cmdState: {
+      set: noop as any,
+      get: () => undefined,
+    },
+    ui: {
+      register: noop as any,
+      get: () => undefined,
+      show: noop as any,
+      hide: noop as any,
     },
     scene: {
       getTextSubIndex: () => 0,

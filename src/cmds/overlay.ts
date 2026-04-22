@@ -18,9 +18,11 @@ export interface OverlayCmd {
 
 const OVERLAY_PRESETS: Record<OverlayPreset, { fontSize: number; color: string; opacity: number; zIndex: number; y: 'top' | 'center' | 'bottom' }> = {
   caption: { fontSize: 24, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: 'bottom' },
-  title: { fontSize: 48, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: 'center' },
+  title:   { fontSize: 48, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE,   y: 'center' },
   whisper: { fontSize: 18, color: '#cccccc', opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: 'bottom' },
 }
+
+// ─── 런타임 오브젝트 참조 (직렬화 불가 → `_` prefix) ──────────
 
 function getOverlayObjs(ctx: SceneContext) {
   let objs = ctx.renderer.state.get('_overlayObjs')
@@ -31,25 +33,41 @@ function getOverlayObjs(ctx: SceneContext) {
   return objs
 }
 
+// ─── 직렬화 가능한 텍스트 데이터 (세이브 포함) ───────────────
+
+/**
+ * 현재 화면에 표시 중인 오버레이 텍스트 데이터.
+ * `renderer.state['overlayTexts']`에 저장 → pluginState → SaveData에 포함됨.
+ */
+function getOverlayTexts(ctx: SceneContext): Record<string, string> {
+  let texts = ctx.renderer.state.get('overlayTexts') as Record<string, string> | undefined
+  if (!texts) {
+    texts = {}
+    ctx.renderer.state.set('overlayTexts', texts)
+  }
+  return texts
+}
+
+// ─── 핵심 로직 ───────────────────────────────────────────────
+
 function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'caption') {
   const defaults = OVERLAY_PRESETS[preset]
-  const uiOv = ctx.renderer.ui?.overlay?.[preset] ?? {}
   const p = {
-    fontSize: uiOv.fontSize ?? defaults.fontSize,
-    color: uiOv.color ?? defaults.color,
-    opacity: uiOv.opacity ?? defaults.opacity,
-    zIndex: defaults.zIndex,
-    y: defaults.y,
-    fontWeight: (uiOv as any).fontWeight,
-    fontFamily: (uiOv as any).fontFamily,
-    lineHeight: (uiOv as any).lineHeight,
+    fontSize:   defaults.fontSize,
+    color:      defaults.color,
+    opacity:    defaults.opacity,
+    zIndex:     defaults.zIndex,
+    y:          defaults.y,
+    fontWeight: undefined as any,
+    fontFamily: undefined as any,
+    lineHeight: undefined as any,
   }
 
   const objs = getOverlayObjs(ctx)
-  if (objs[preset]) removeOverlay(ctx, preset)
+  if (objs[preset]) removeOverlay(ctx, preset, 0)
 
   const yMap: Record<string, number> = {
-    top: ctx.renderer.height * 0.1,
+    top:    ctx.renderer.height * 0.1,
     center: ctx.renderer.height * 0.5,
     bottom: ctx.renderer.height * 0.85,
   }
@@ -62,13 +80,13 @@ function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'ca
   const textObj = ctx.renderer.world.createText({
     attribute: { text } as any,
     style: {
-      fontSize: p.fontSize,
-      fontWeight: p.fontWeight,
-      fontFamily: p.fontFamily,
-      lineHeight: p.lineHeight,
-      color: p.color,
-      opacity: p.opacity,
-      zIndex: p.zIndex,
+      fontSize:      p.fontSize,
+      fontWeight:    p.fontWeight,
+      fontFamily:    p.fontFamily,
+      lineHeight:    p.lineHeight,
+      color:         p.color,
+      opacity:       p.opacity,
+      zIndex:        p.zIndex,
       pointerEvents: false,
     } as any,
     transform: { position: pos },
@@ -77,13 +95,18 @@ function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'ca
   ctx.renderer.world.camera?.addChild(textObj as any)
   ctx.renderer.track(textObj as any)
   objs[preset] = textObj
+
+  // 텍스트 데이터 저장 (세이브/복원용)
+  getOverlayTexts(ctx)[preset] = text
 }
 
 function removeOverlay(ctx: SceneContext, preset: OverlayPreset, duration: number = 600) {
-  const objs = getOverlayObjs(ctx)
-  const obj = objs[preset]
+  const objs  = getOverlayObjs(ctx)
+  const texts = getOverlayTexts(ctx)
+  const obj   = objs[preset]
   if (obj) {
     delete objs[preset]
+    delete texts[preset]
     const dur = ctx.renderer.dur(duration)
     if (dur > 0) {
       ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
@@ -112,3 +135,17 @@ export const overlayHandler = defineCmd<OverlayCmd>((cmd, ctx) => {
   }
   return false
 })
+
+// ─── rebuildFromState 연동용 헬퍼 (Renderer에서 호출) ─────────
+
+/**
+ * 세이브에서 복원 시 저장된 overlayTexts 데이터를 이용해 오버레이를 재생성합니다.
+ * Renderer.rebuildFromState()에서 호출됩니다.
+ */
+export function rebuildOverlays(ctx: SceneContext): void {
+  const texts = ctx.renderer.state.get('overlayTexts') as Record<string, string> | undefined
+  if (!texts) return
+  for (const [preset, text] of Object.entries(texts)) {
+    addOverlay(ctx, text, preset as OverlayPreset)
+  }
+}

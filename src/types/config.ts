@@ -80,71 +80,7 @@ export interface BgDef {
 /** 배경 목록 정의: bgKey → BgDef 매핑 */
 export type BgDefs = Record<string, BgDef>
 
-// ─── UI 스타일 타입 ──────────────────────────────────────────
 
-/** 선택지 버튼의 스타일 정의 (HTML 엘리먼트 기반 렌더링에 사용됩니다) */
-export interface UIChoiceStyle {
-  /** 선택지 텍스트의 폰트 크기(px 단위)입니다. */
-  fontSize?:         number
-  /** 선택지 텍스트의 폰트 종류(font-family)입니다. */
-  fontFamily?:       string
-  /** 선택지 텍스트의 색상(CSS 색상 값)입니다. */
-  color?:            string
-  /** 선택지 버튼의 기본 배경색(CSS 색상 값)입니다. */
-  background?:       string
-  /** 선택지 버튼의 기본 테두리 색상(CSS 색상 값)입니다. */
-  borderColor?:      string
-  /** 선택지 버튼에 마우스 호버 시 배경색(CSS 색상 값)입니다. */
-  hoverBackground?:  string
-  /** 선택지 버튼에 마우스 호버 시 테두리 색상(CSS 색상 값)입니다. */
-  hoverBorderColor?: string
-  /** 선택지 버튼의 테두리 둥글기(px 단위)입니다. */
-  borderRadius?:     number
-  /** 선택지 버튼의 최소 너비(px 단위)입니다. */
-  minWidth?:         number
-}
-
-/**
- * Novel 설정의 UI 관련 옵션입니다.
- * dialogueBg, speaker, dialogue, overlay 등의 항목은 내부 엔진(Leviar)의 Style 속성을 직접 사용합니다.
- * 모든 필드는 선택적이며, 미지정 시 엔진 기본값이 사용됩니다.
- *
- * @example
- * ```ts
- * new Novel(config, {
- *   ui: {
- *     dialogueBg: { color: 'rgba(8,8,20,0.88)', height: 168 },
- *     speaker:    { fontSize: 17, fontWeight: 'bold', color: '#ffd966' },
- *     dialogue:   { fontSize: 18, color: '#f0f0f0', lineHeight: 1.65 },
- *   }
- * })
- * ```
- */
-export interface NovelUIOption {
-  /**
-   * 대화창 배경 패널의 스타일 설정입니다. (Leviar Style 속성 사용)
-   * `height` 속성 미지정 시 캔버스 높이의 28%가 기본 적용됩니다.
-   */
-  dialogueBg?: Partial<Style>
-  /** 화자(캐릭터 이름) 텍스트의 스타일 설정입니다. (Leviar Style 속성 사용) */
-  speaker?:    Partial<Style>
-  /** 대사 텍스트의 스타일 설정입니다. (Leviar Style 속성 사용) */
-  dialogue?:   Partial<Style>
-  /** 
-   * 화면에 표시되는 선택지 버튼의 스타일 설정입니다. 
-   * 캔버스 외부의 HTML/CSS로 렌더링 되므로 별도 스타일 인터페이스를 사용합니다.
-   */
-  choice?:     UIChoiceStyle
-  /** 오버레이 텍스트(화면 전체 캡션, 타이틀, 귓속말 등)의 스타일 설정입니다. */
-  overlay?: {
-    /** 캡션 텍스트의 스타일 설정입니다. (Leviar Style 속성 사용) */
-    caption?: Partial<Style>
-    /** 타이틀 텍스트의 스타일 설정입니다. (Leviar Style 속성 사용) */
-    title?:   Partial<Style>
-    /** 귓속말 텍스트의 스타일 설정입니다. (Leviar Style 속성 사용) */
-    whisper?: Partial<Style>
-  }
-}
 
 /** 
  * 특수 효과(날씨, 파티클 등)의 상세 속성 정의입니다. 미지정 속성은 Renderer 내부 폴백 값을 따릅니다. 
@@ -246,11 +182,6 @@ export interface NovelConfig<
    */
   effects?:    Partial<Record<EffectType, EffectDef>>
   /** 
-   * UI 구성요소(대화창, 선택지 등)의 스타일 설정 객체입니다. 
-   * 미지정 필드는 엔진 기본값이 사용됩니다.
-   */
-  ui?:         NovelUIOption
-  /** 
    * 에셋의 키와 경로 매핑 목록입니다. 
    * 엔진 초기화 시점에 이 경로를 바탕으로 에셋을 자동 로드합니다.
    */
@@ -268,6 +199,7 @@ export interface NovelConfig<
 }
 
 export type { FallbackRule, FallbackRuleOf } from './dialogue'
+
 
 
 /** 

@@ -1,4 +1,3 @@
-import type { SceneContext } from '../core/SceneContext'
 import { defineCmd } from '../define/defineCmd'
 
 /** 정의된 UI 요소를 페이드인/아웃한다 */
@@ -11,6 +10,11 @@ export interface UICmd {
   duration?: number
 }
 
-export const uiHandler = defineCmd<UICmd>((_cmd, _ctx) => {
-  return false
+export const uiHandler = defineCmd<UICmd>((cmd, ctx) => {
+  if (cmd.action === 'show') {
+    ctx.ui.show(cmd.name, cmd.duration)
+  } else {
+    ctx.ui.hide(cmd.name, cmd.duration)
+  }
+  return true
 })

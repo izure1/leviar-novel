@@ -10,7 +10,13 @@ import type { RendererState }          from './Renderer'
 import type { SceneDefinition }        from '../define/defineScene'
 export type { SceneDefinition }
 import type { ExploreSceneDefinition } from '../define/defineExploreScene'
-import type { NovelConfig, NovelOption, NovelUIOption } from '../types/config'
+import type { NovelConfig, NovelOption } from '../types/config'
+import type { UIRuntimeEntry } from './UIRegistry'
+import type { SceneContext } from './SceneContext'
+import { setBackground } from '../cmds/background'
+import { showCharacter } from '../cmds/character'
+import { addMood } from '../cmds/mood'
+import { addEffect } from '../cmds/effect'
 
 // =============================================================
 // 내부 타입
@@ -30,40 +36,18 @@ export interface SaveData {
   sceneName:     string
   /** 저장 시점의 dialogues 배열 인덱스 */
   cursor:        number
-  /** dialogues 요소가 text 배열일 경우, 서브 인덱스 */
-  textSubIndex?: number
   /** 전역 변수 스냅샷 */
   globalVars:    Record<string, any>
   /** 지역 변수 스냅샷 */
   localVars:     Record<string, any>
   /** 렌더러 상태 (배경, 캐릭터, 카메라 등) 스냅샷 */
   rendererState: RendererState
-}
-
-// ─── UI 기본값 ────────────────────────────────────────────────
-
-const UI_DEFAULT_BG: Record<string, any> = {
-  color: 'rgba(0,0,0,0.82)',
-}
-
-const UI_DEFAULT_SPEAKER: Record<string, any> = {
-  fontSize: 18, fontWeight: 'bold', color: '#ffe066',
-  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-  textAlign: 'left',
-}
-
-const UI_DEFAULT_DIALOGUE: Record<string, any> = {
-  fontSize: 20, color: '#ffffff', lineHeight: 1.6,
-  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-  textAlign: 'left',
-}
-
-const UI_DEFAULT_CHOICE = {
-  fontSize: 18, color: '#fff',
-  background: 'rgba(30,30,60,0.85)', borderColor: 'rgba(255,255,255,0.3)',
-  hoverBackground: 'rgba(80,80,180,0.9)', hoverBorderColor: 'rgba(255,255,255,0.7)',
-  borderRadius: 8, minWidth: 260,
-  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+  /**
+   * 각 cmd가 저장하는 상태 스냅샷.
+   * 'dialogue' → { subIndex, lines, speaker }
+   * 'setup-dialogue' → { bg, speaker, text } 등
+   */
+  cmdStates:     Record<string, any>
 }
 
 // =============================================================
@@ -76,39 +60,34 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   private readonly _config:   TConfig
   private readonly _option:   { canvas: HTMLCanvasElement; width: number; height: number; depth: number }
-  private readonly _ui:       NovelUIOption
   private readonly _world:    World
   private readonly _renderer: Renderer
   private readonly _scenes:   Map<string, AnySceneDef> = new Map()
+
+  /** CmdState — 씬 전환 후에도 유지, 세이브/로드 대상 */
+  private readonly _cmdStateStore: Map<string, any> = new Map()
+
+  /**
+   * UI 정의 레지스트리 — Novel 생성 시 config.cmds에서 자동 수집.
+   * rebuildUI 시 여기서 빌더를 꺼내 UI 오브젝트를 재생성합니다.
+   */
+  private readonly _uiDefinitions: Map<string, (style: any, ctx: SceneContext) => UIRuntimeEntry> = new Map()
+
+  /** UI 런타임 레지스트리 — scene 실행 중 setup-* 커맨드가 등록 */
+  private readonly _uiRegistry: Map<string, UIRuntimeEntry> = new Map()
 
   private _currentScene:    ActiveScene | null    = null
   private _currentSceneDef: AnySceneDef | null    = null
   private _inputMode:       InputMode              = 'none'
   private _isSkipping:      boolean               = false
-  /** 텍스트 타이핑(transition) 진행 중 여부 */
-  private _isTextTyping:    boolean               = false
-  /** 현재 출력 중인 전체 대사 텍스트 (즉시 완성에 사용) */
-  private _currentTypingText: string              = ''
-  /** 현재 실행 중인 TextTransition 객체 */
-  private _activeTextTransition: any              = null
   /** 사용자 입력 무시 만료 시간 (ms) */
   private _inputDisabledUntil: number             = 0
-
-  /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
-  private _dialogueBgObj:   any = null
-  /** 화자 이름창 (Leviar Text, 카메라 자식) */
-  private _speakerTextObj:  any = null
-  /** 대사 텍스트창 (Leviar Text, 카메라 자식) */
-  private _dialogueTextObj: any = null
-  /** 선택지 컨테이너 (HTML) */
-  private _choicesEl:       HTMLDivElement | null  = null
 
   constructor(
     config: TConfig,
     option: NovelOption & { scenes: Record<TConfig['scenes'][number], AnySceneDef> }
   ) {
     this._config = config
-    this._ui     = config.ui ?? {}
 
     const canvas = option.canvas
     this._option = {
@@ -123,18 +102,32 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       width:  this._option.width,
       height: this._option.height,
       depth:  this._option.depth,
-      ui:     this._ui,
     })
 
     this.vars = { ...(config.vars as object) } as TConfig['vars']
 
-    this._setupBuiltinUI()
+    // config.cmds에서 UIHandler 자동 감지 → _uiDefinitions 등록
+    this._collectUIDefinitions(config.cmds)
+
     this._world.start()
 
-    // ── option.scenes 딕셔너리에서 씬 등록
     for (const [name, scene] of Object.entries(option.scenes) as [string, AnySceneDef][]) {
       scene.name = name
       this._scenes.set(name, scene)
+    }
+  }
+
+  /**
+   * config.cmds를 순회하며 __uiName/__uiBuilder 메타가 부착된
+   * UIHandler를 _uiDefinitions에 등록합니다.
+   */
+  private _collectUIDefinitions(cmds?: Record<string, any>): void {
+    if (!cmds) return
+    for (const handler of Object.values(cmds)) {
+      const h = handler as any
+      if (h.__uiName && typeof h.__uiBuilder === 'function') {
+        this._uiDefinitions.set(h.__uiName, h.__uiBuilder)
+      }
     }
   }
 
@@ -178,12 +171,17 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     if (this._currentScene instanceof ExploreScene) {
       this._currentScene.cleanup()
     }
+    // 씬 전환 시 choice UI DOM 정리
+    this._cleanupChoiceUI()
     this._currentScene = null
 
     this._renderer.clear()
     if (prevState) {
       this._renderer.restoreState(prevState)
     }
+
+    // UI 레지스트리 초기화 (새 씬에서 setup-* 명령어가 재등록)
+    this._uiRegistry.clear()
 
     const callbacks = this._buildCallbacks()
     const scene = def.kind === 'dialogue'
@@ -193,9 +191,16 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._currentScene    = scene
     this._currentSceneDef = def
     this._inputMode       = 'none'
-    this._hideDialogueUI()
     scene.start()
     this._syncUIState()
+  }
+
+  /** 씬 전환 시 choice HTML 컨테이너 정리 */
+  private _cleanupChoiceUI(): void {
+    const choiceEntry = this._uiRegistry.get('choices') as any
+    if (choiceEntry?.__novelRemove) {
+      choiceEntry.__novelRemove()
+    }
   }
 
   // ─── 스킵 기능 ───────────────────────────────────────────────
@@ -220,7 +225,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _tickSkip(): void {
     if (!this._isSkipping) return
 
-    // 씬 종료 또는 ExploreScene이면 중지
     if (!this._currentScene || this._currentScene.isEnded) {
       this.stopSkip()
       return
@@ -230,13 +234,11 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       return
     }
 
-    // 선택지 발생 시 중지
     if (this._currentScene.getCurrentChoice()) {
       this.stopSkip()
       return
     }
 
-    // 입력 대기 중이면 즉시 advance
     if (this._currentScene.isWaitingInput) {
       this._currentScene.advance()
       this._syncUIState()
@@ -266,10 +268,10 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     return {
       sceneName:     this._currentSceneDef.name as string,
       cursor:        this._currentScene.getCursor(),
-      textSubIndex:  this._currentScene.getTextSubIndex(),
       globalVars:    { ...this.vars as object },
       localVars:     this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
+      cmdStates:     Object.fromEntries(this._cmdStateStore),
     }
   }
 
@@ -284,31 +286,55 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       return
     }
 
-    // 현재 씬 정리
     if (this._currentScene instanceof ExploreScene) {
       this._currentScene.cleanup()
     }
+    this._cleanupChoiceUI()
     this.stopSkip()
 
     // 전역 변수 복원
     Object.assign(this.vars as object, data.globalVars)
 
+    // CmdState 복원
+    this._cmdStateStore.clear()
+    for (const [k, v] of Object.entries(data.cmdStates ?? {})) {
+      this._cmdStateStore.set(k, v)
+    }
+
     // 렌더러 초기화 + 상태 복원
+    this._uiRegistry.clear()
     this._renderer.clear()
     this._renderer.restoreState(data.rendererState)
     this._renderer.rebuildFromState()
+
+    // UI 재생성 (cmdState에서 스타일 읽어 빌더 실행)
+    this._rebuildUI()
 
     // 새 씬 인스턴스 생성 (start() 호출 없이)
     const callbacks = this._buildCallbacks()
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any,any,any,any,any>)
 
     // 지역 변수 + cursor 복원
-    scene.restoreState(data.cursor, data.localVars, data.textSubIndex)
+    const subIndex = (data.cmdStates?.['dialogue'] as any)?.subIndex ?? 0
+    scene.restoreState(data.cursor, data.localVars, subIndex)
 
     this._currentScene    = scene
     this._currentSceneDef = def
     this._inputMode       = 'none'
     this._syncUIState()
+  }
+
+  /**
+   * _uiDefinitions를 순회하며 저장된 스타일(cmdState)로 UI를 재생성합니다.
+   * loadSave() 호출 후 실행됩니다.
+   */
+  private _rebuildUI(): void {
+    const restoreCtx = this._makeRebuildCtx()
+    for (const [name, builder] of this._uiDefinitions) {
+      const style = this._cmdStateStore.get(`setup-${name}`) ?? {}
+      const entry = builder(style, restoreCtx)
+      this._uiRegistry.set(name, entry)
+    }
   }
 
   // ─── 콜백 팩토리 ─────────────────────────────────────────────
@@ -319,10 +345,10 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       setGlobalVar:    (name, value)  => { (this.vars as any)[name] = value },
       loadScene:       (name)         => { this.loadScene(name) },
       captureRenderer: ()             => this._renderer.captureState(),
-      onDialogue:      (speaker, text, speed) => { this._showDialogue(speaker, text, speed) },
-      onChoice:        (choices)      => { this._showChoices(choices) },
       isSkipping:      ()             => this._isSkipping,
       disableInput:    (duration)     => { this._inputDisabledUntil = Date.now() + duration },
+      getCmdStateStore: ()            => this._cmdStateStore,
+      getUIRegistry:    ()            => this._uiRegistry,
     }
   }
 
@@ -332,7 +358,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    * 대화를 한 단계 진행합니다.
    * - 텍스트 타이핑 중이면 즉시 완성
    * - 대기 중이면 다음 대사/단계로 이동
-   * main.ts 등 외부에서 click/keydown 이벤트에 연결하여 사용합니다.
    */
   next(): void {
     if (Date.now() < this._inputDisabledUntil) return
@@ -340,8 +365,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     if (!this._currentScene || this._currentScene.isEnded) return
 
     // 타이핑 중이면 즉시 완성 (advance 하지 않음)
-    if (this._isTextTyping) {
-      this._completeTyping()
+    const dialogueEntry = this._uiRegistry.get('dialogue')
+    if (dialogueEntry?.isTyping?.()) {
+      dialogueEntry.completeTyping?.()
       return
     }
 
@@ -349,26 +375,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._syncUIState()
   }
 
-  /** transition 중단 후 현재 전체 텍스트를 즉시 표시합니다 */
-  private _completeTyping(): void {
-    this._isTextTyping = false
-    if (!this._dialogueTextObj) return
-    
-    // transition 객체의 stop 호출
-    if (this._activeTextTransition && typeof this._activeTextTransition.stop === 'function') {
-      this._activeTextTransition.stop()
-      this._activeTextTransition = null
-    }
-
-    // 전체 텍스트를 직접 지정
-    ; (this._dialogueTextObj as any).attribute.text = this._currentTypingText
-    ; (this._dialogueTextObj as any).style.opacity  = 1
-  }
-
   private _syncUIState(): void {
     if (!this._currentScene || this._currentScene.isEnded) {
       this._inputMode = 'none'
-      this._hideDialogueUI()
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
         const next = (this._currentSceneDef as SceneDefinition<any,any,any,any,any>).nextScene
         if (next) { this.loadScene(next); return }
@@ -391,201 +400,48 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._inputMode = 'none'
   }
 
-  // ─── 빌트인 대화 UI ──────────────────────────────────────────
+  // ─── rebuild용 SceneContext stub ────────────────────────────
 
-  private _setupBuiltinUI(): void {
-    const cam = this._world.camera as any
-    const w   = this._option.width
-    const h   = this._option.height
-    const focalLength = cam?.attribute?.focalLength ?? 100
-
-    const toLocal = (cx: number, cy: number) =>
-      (cam && typeof cam.canvasToLocal === 'function')
-        ? cam.canvasToLocal(cx, cy)
-        : { x: cx - w / 2, y: -(cy - h / 2), z: focalLength }
-
-    // ── UI 설정 병합 (기본값 + 사용자 Leviar Style)
-    const bgCfg  = { ...UI_DEFAULT_BG,       ...(this._ui.dialogueBg ?? {}) } as any
-    const spkCfg = { ...UI_DEFAULT_SPEAKER,   ...(this._ui.speaker    ?? {}) } as any
-    const dlgCfg = { ...UI_DEFAULT_DIALOGUE,  ...(this._ui.dialogue   ?? {}) } as any
-
-    // height 미지정 시 캔버스 높이의 28%
-    const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
-    const BOX_CY = h - (BOX_H / 2)   // 박스 중앙 y
-
-    // ── 대화창 배경 (center 기준)
-    const bgRect = this._world.createRectangle({
-      style: {
-        ...bgCfg,
-        width:         bgCfg.width  ?? w,
-        height:        BOX_H,
-        zIndex:        bgCfg.zIndex ?? 300,
-        opacity:       0,
-        pointerEvents: false,
-      } as any,
-      transform: { position: toLocal(w / 2, BOX_CY) },
-    })
-    this._world.camera?.addChild(bgRect as any)
-    this._dialogueBgObj = bgRect
-
-    // ── 화자 이름창 (좌측 정렬)
-    const spkY = h - BOX_H + 24
-    const speakerText = this._world.createText({
-      attribute: { text: '' } as any,
-      style: {
-        ...spkCfg,
-        width:         w * 0.90,
-        zIndex:        spkCfg.zIndex ?? 301,
-        opacity:       0,
-        pointerEvents: false,
-      } as any,
-      transform: { position: toLocal(w / 2, spkY) },
-    })
-    this._world.camera?.addChild(speakerText as any)
-    this._speakerTextObj = speakerText
-
-    // ── 대사 텍스트창 (이름창 아래)
-    const spkH = (spkCfg.fontSize ?? 18) * 1.5
-    const dialogueText = this._world.createText({
-      attribute: { text: '' } as any,
-      style: {
-        ...dlgCfg,
-        width:         dlgCfg.width ?? w * 0.90,
-        zIndex:        dlgCfg.zIndex ?? 301,
-        opacity:       0,
-        pointerEvents: false,
-      } as any,
-      transform: { position: toLocal(w / 2, spkY + spkH + 8) },
-    })
-    this._world.camera?.addChild(dialogueText as any)
-    this._dialogueTextObj = dialogueText
-
-    // ── 선택지 컨테이너 (HTML)
-    const canvas  = this._option.canvas
-    const parent  = canvas.parentElement ?? document.body
-    const choices = document.createElement('div')
-    const chCfg   = { ...UI_DEFAULT_CHOICE, ...(this._ui.choice ?? {}) }
-    choices.style.cssText = [
-      'position:absolute', 'top:0', 'left:0', 'right:0', 'bottom:0',
-      'display:none',
-      'flex-direction:column', 'justify-content:center', 'align-items:center',
-      'gap:12px',
-      'background:rgba(0,0,0,0.6)',
-      'pointer-events:auto',
-      `font-family:${chCfg.fontFamily}`,
-    ].join(';')
-    parent.style.position = 'relative'
-    parent.appendChild(choices)
-    this._choicesEl = choices
-  }
-
-  private _showDialogue(speaker: string | undefined, text: string, speed?: number): void {
-    if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return
-
-    const skipping = this._isSkipping
-
-    // 대화창 배경 페이드인
-    if (!skipping) {
-      ; (this._dialogueBgObj as any).animate({ style: { opacity: 1 } }, 250, 'easeOut')
-    } else {
-      ; (this._dialogueBgObj as any).style.opacity = 1
-    }
-
-    // ── 이름창: 항상 즉시 교체 (transition 없음)
-    ; (this._speakerTextObj as any).attribute.text = speaker ?? ''
-    ; (this._speakerTextObj as any).style.opacity  = speaker ? 1 : 0
-
-    // ── 대사 텍스트: 스킵 중 즉시, 아니면 transition(타이핑 효과)
-    if (skipping) {
-      this._isTextTyping = false
-      this._currentTypingText = text
-      if (this._activeTextTransition) {
-        this._activeTextTransition.stop?.()
-        this._activeTextTransition = null
-      }
-      ; (this._dialogueTextObj as any).attribute.text = text
-      ; (this._dialogueTextObj as any).style.opacity  = 1
-    } else {
-      const spd = speed ?? 30
-      this._isTextTyping = true
-      this._currentTypingText = text
-      const anim = (this._dialogueTextObj as any).transition(text, spd)
-      this._activeTextTransition = anim
-      ; (this._dialogueTextObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
-      // transition 완료 시 타이핑 플래그 해제
-      if (anim && typeof anim.on === 'function') {
-        anim.on('end', () => { 
-          this._isTextTyping = false 
-          this._activeTextTransition = null
-        })
-      }
-    }
-
-    if (this._choicesEl) {
-      this._choicesEl.style.display = 'none'
-      this._choicesEl.innerHTML     = ''
-    }
-  }
-
-  private _showChoices(choices: { text: string; next?: string; goto?: string }[]): void {
-    if (!this._choicesEl) return
-
-    if (this._dialogueBgObj)   (this._dialogueBgObj   as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
-    if (this._speakerTextObj)  (this._speakerTextObj  as any).style.opacity = 0
-    if (this._dialogueTextObj) (this._dialogueTextObj as any).animate({ style: { opacity: 0 } }, 200, 'easeIn')
-
-    this._choicesEl.style.display = 'flex'
-    this._choicesEl.innerHTML     = ''
-    this._inputMode               = 'choice'
-
-    const chCfg = { ...UI_DEFAULT_CHOICE, ...(this._ui.choice ?? {}) }
-
-    choices.forEach((choice, i) => {
-      const btn = document.createElement('button')
-      btn.textContent = choice.text
-      btn.style.cssText = [
-        `padding:12px 32px`,
-        `font-size:${chCfg.fontSize}px`,
-        `font-family:${chCfg.fontFamily}`,
-        `color:${chCfg.color}`,
-        `background:${chCfg.background}`,
-        `border:1.5px solid ${chCfg.borderColor}`,
-        `border-radius:${chCfg.borderRadius}px`,
-        `cursor:pointer`,
-        `transition:background 0.15s,border-color 0.15s`,
-        `min-width:${chCfg.minWidth}px`,
-        `text-align:center`,
-      ].join(';')
-      btn.addEventListener('mouseenter', () => {
-        btn.style.background   = chCfg.hoverBackground
-        btn.style.borderColor  = chCfg.hoverBorderColor
-      })
-      btn.addEventListener('mouseleave', () => {
-        btn.style.background   = chCfg.background
-        btn.style.borderColor  = chCfg.borderColor
-      })
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        if (this._currentScene instanceof DialogueScene) {
-          const prevScene = this._currentScene
-          this._currentScene.selectChoice(i)
-          if (this._currentScene === prevScene) {
-            this._hideDialogueUI()
-            this._syncUIState()
-          }
-        }
-      })
-      this._choicesEl!.appendChild(btn)
-    })
-  }
-
-  private _hideDialogueUI(): void {
-    if (this._dialogueBgObj)   (this._dialogueBgObj   as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
-    if (this._speakerTextObj)  (this._speakerTextObj  as any).style.opacity = 0
-    if (this._dialogueTextObj) (this._dialogueTextObj as any).animate({ style: { opacity: 0 } }, 300, 'easeIn')
-    if (this._choicesEl) {
-      this._choicesEl.style.display = 'none'
-      this._choicesEl.innerHTML     = ''
+  private _makeRebuildCtx(): SceneContext {
+    const noop = () => { /* no-op */ }
+    const cmdStateStore = this._cmdStateStore
+    const uiRegistry    = this._uiRegistry
+    return {
+      world:      this._world,
+      renderer:   this._renderer,
+      globalVars: {},
+      localVars:  {},
+      callbacks: {
+        getGlobalVars:    () => ({}),
+        setGlobalVar:     noop as any,
+        loadScene:        noop as any,
+        captureRenderer:  () => this._renderer.captureState(),
+        isSkipping:       () => true,
+        disableInput:     noop as any,
+        getCmdStateStore: () => cmdStateStore,
+        getUIRegistry:    () => uiRegistry,
+      },
+      cmdState: {
+        set: (name, data) => { cmdStateStore.set(name, data) },
+        get: (name)       => cmdStateStore.get(name),
+      },
+      ui: {
+        register: (name, entry) => { uiRegistry.set(name, entry) },
+        get:      (name)        => uiRegistry.get(name),
+        show:     (name, dur)   => uiRegistry.get(name)?.show(dur),
+        hide:     (name, dur)   => uiRegistry.get(name)?.hide(dur),
+      },
+      scene: {
+        getTextSubIndex: () => 0,
+        interpolateText: (t: string) => t,
+        jumpToLabel: noop as any,
+        hasLabel: () => false,
+        getVars: () => ({}),
+        setGlobalVar: noop as any,
+        setLocalVar: noop as any,
+        loadScene: noop as any,
+        end: noop,
+      },
     }
   }
 }

@@ -7,8 +7,9 @@ import type { SceneDefinition } from '../define/defineScene'
 import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
 import type { SceneContext, CommandResult, SimpleCommandResult } from './SceneContext'
-import { dialogueHandler } from '../cmds/dialogue'
-import { choiceHandler } from '../cmds/choice'
+import type { UIRuntimeEntry } from './UIRegistry'
+import { dialogueHandler, dialogueUISetup } from '../cmds/dialogue'
+import { choiceHandler, choiceUISetup } from '../cmds/choice'
 import { conditionHandler } from '../cmds/condition'
 import { varHandler } from '../cmds/var'
 import { labelHandler } from '../cmds/label'
@@ -44,6 +45,9 @@ const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResul
   'screen-wipe': screenWipeHandler,
   'ui': uiHandler,
   'control': controlHandler,
+  // setup cmds (builtin UI)
+  'setup-dialogue': dialogueUISetup,
+  'setup-choice':   choiceUISetup,
 }
 
 // =============================================================
@@ -63,14 +67,14 @@ export interface SceneCallbacks {
   loadScene(name: string): void
   /** 세이브 저장을 위해 현재 렌더러 상태를 캡처하여 반환합니다. */
   captureRenderer(): RendererState
-  /** UI에 대화(대사)를 출력하도록 요청합니다. */
-  onDialogue(speaker: string | undefined, text: string, speed?: number): void
-  /** UI에 선택지를 출력하고 사용자의 선택을 대기하도록 요청합니다. */
-  onChoice(choices: { text: string; next?: string; goto?: string }[]): void
   /** 현재 스킵 모드 활성화 여부를 반환합니다. */
   isSkipping(): boolean
   /** 지정된 시간(ms) 동안 사용자의 입력(클릭/엔터 등)을 무시하도록 처리합니다. */
   disableInput(duration: number): void
+  /** CmdState store 참조 (cmdState 네임스페이스용) */
+  getCmdStateStore(): Map<string, any>
+  /** UIRegistry 참조 (ui 네임스페이스용) */
+  getUIRegistry(): Map<string, UIRuntimeEntry>
 }
 
 // =============================================================
@@ -201,10 +205,7 @@ export class DialogueScene {
     if (step.type === 'dialogue' && Array.isArray(step.text)) {
       if (this.textSubIndex < step.text.length - 1) {
         this.textSubIndex++
-        const txt = step.text[this.textSubIndex]
-        const interpolated = this._interpolateText(txt)
-        const speakerName = this._getSpeakerName(step.speaker as string | undefined)
-        this.callbacks.onDialogue(speakerName, interpolated, step.speed)
+        // 다음 줄은 dialogueHandler의 TickFn이 처리하므로 여기서는 커서만 이동
         return
       }
     }
@@ -312,12 +313,25 @@ export class DialogueScene {
 
     const { type, skip, ...params } = cmd as any
 
+    const cmdStateStore = this.callbacks.getCmdStateStore()
+    const uiRegistry    = this.callbacks.getUIRegistry()
+
     const ctx: SceneContext = {
       world: r.world,
       globalVars: this.callbacks.getGlobalVars(),
       localVars: this.localVars,
       renderer: r,
       callbacks: this.callbacks,
+      cmdState: {
+        set: (name, data) => { cmdStateStore.set(name, data) },
+        get: (name)       => cmdStateStore.get(name),
+      },
+      ui: {
+        register: (name, entry) => { uiRegistry.set(name, entry) },
+        get:      (name)        => uiRegistry.get(name),
+        show:     (name, dur)   => uiRegistry.get(name)?.show(dur),
+        hide:     (name, dur)   => uiRegistry.get(name)?.hide(dur),
+      },
       scene: {
         getTextSubIndex: () => this.textSubIndex,
         interpolateText: (text: string) => this._interpolateText(text),
@@ -331,13 +345,14 @@ export class DialogueScene {
       }
     }
 
-    if (BUILTIN_CMDS[type]) {
-      return BUILTIN_CMDS[type](params, ctx)
-    }
-
+    // 커스텀 cmds 우선 (builtin보다 먼저 확인)
     const cmds = r.config.cmds
     if (cmds && typeof cmds[type] === 'function') {
       return cmds[type](params, ctx)
+    }
+
+    if (BUILTIN_CMDS[type]) {
+      return BUILTIN_CMDS[type](params, ctx)
     }
 
     console.warn(`[leviar-novel] 알 수 없는 커맨드 타입:`, type)
@@ -431,14 +446,11 @@ export class DialogueScene {
 
     const cmd = step as DialogueEntry<any, any, any, any, any, any, any>
     if (cmd.type === 'dialogue') {
-      const dCmd = cmd as any
-      const txt = Array.isArray(dCmd.text) ? dCmd.text[this.textSubIndex] : dCmd.text
-      const interpolated = this._interpolateText(txt)
-      const speakerName = this._getSpeakerName(dCmd.speaker as string | undefined)
-      this.callbacks.onDialogue(speakerName, interpolated, dCmd.speed)
+      // cmdState에 저장된 데이터로 dialogueUI가 복원 처리 (rebuildUI 단계에서 이미 렌더됨)
       this._waitingInput = true
     } else if (cmd.type === 'choice') {
-      this.callbacks.onChoice((cmd as any).choices)
+      // choice도 동일 — rebuildUI에서 복원
+      this._waitingInput = true
     } else {
       if (!cmd.skip) {
         this._waitingInput = true

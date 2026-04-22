@@ -14,9 +14,6 @@ export type {
   NovelOption,
   FallbackRule,
   FallbackRuleOf,
-  // UI 스타일
-  UIChoiceStyle,
-  NovelUIOption,
 } from './types/config'
 
 export type {
@@ -62,8 +59,15 @@ export { defineNovelConfig } from './define/defineNovelConfig'
 export { defineScene } from './define/defineScene'
 export { defineExploreScene } from './define/defineExploreScene'
 export { defineCmd } from './define/defineCmd'
+export { defineUI } from './define/defineUI'
 export type { SceneDefinition } from './define/defineScene'
 export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
+export type { UIHandler, UIHandlerMeta } from './define/defineUI'
+
+// ─── UI 시스템 ───────────────────────────────────────────────
+export type { UIRuntimeEntry } from './core/UIRegistry'
+export type { DialogueUIStyle } from './cmds/dialogue'
+export type { ChoiceUIStyle } from './cmds/choice'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'

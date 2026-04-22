@@ -50,6 +50,19 @@
     };
   }
 
+  // src/define/defineUI.ts
+  function defineUI(name, builder) {
+    const handler = (rawStyle, ctx) => {
+      ctx.cmdState.set(`setup-${name}`, rawStyle);
+      const entry = builder(rawStyle, ctx);
+      ctx.ui.register(name, entry);
+      return true;
+    };
+    handler.__uiName = name;
+    handler.__uiBuilder = builder;
+    return handler;
+  }
+
   // node_modules/leviar/dist/index.js
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -13547,6 +13560,109 @@ ${addLineNumbers(fragment)}`);
     return false;
   });
 
+  // src/cmds/overlay.ts
+  var OVERLAY_PRESETS = {
+    caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
+    title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
+    whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
+  };
+  function getOverlayObjs(ctx) {
+    let objs = ctx.renderer.state.get("_overlayObjs");
+    if (!objs) {
+      objs = {};
+      ctx.renderer.state.set("_overlayObjs", objs);
+    }
+    return objs;
+  }
+  function getOverlayTexts(ctx) {
+    let texts = ctx.renderer.state.get("overlayTexts");
+    if (!texts) {
+      texts = {};
+      ctx.renderer.state.set("overlayTexts", texts);
+    }
+    return texts;
+  }
+  function addOverlay(ctx, text, preset = "caption") {
+    const defaults = OVERLAY_PRESETS[preset];
+    const p = {
+      fontSize: defaults.fontSize,
+      color: defaults.color,
+      opacity: defaults.opacity,
+      zIndex: defaults.zIndex,
+      y: defaults.y,
+      fontWeight: void 0,
+      fontFamily: void 0,
+      lineHeight: void 0
+    };
+    const objs = getOverlayObjs(ctx);
+    if (objs[preset]) removeOverlay(ctx, preset, 0);
+    const yMap = {
+      top: ctx.renderer.height * 0.1,
+      center: ctx.renderer.height * 0.5,
+      bottom: ctx.renderer.height * 0.85
+    };
+    const cam = ctx.renderer.world.camera;
+    const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[p.y]) : { x: 0, y: 0, z: 100 };
+    const textObj = ctx.renderer.world.createText({
+      attribute: { text },
+      style: {
+        fontSize: p.fontSize,
+        fontWeight: p.fontWeight,
+        fontFamily: p.fontFamily,
+        lineHeight: p.lineHeight,
+        color: p.color,
+        opacity: p.opacity,
+        zIndex: p.zIndex,
+        pointerEvents: false
+      },
+      transform: { position: pos }
+    });
+    ctx.renderer.world.camera?.addChild(textObj);
+    ctx.renderer.track(textObj);
+    objs[preset] = textObj;
+    getOverlayTexts(ctx)[preset] = text;
+  }
+  function removeOverlay(ctx, preset, duration = 600) {
+    const objs = getOverlayObjs(ctx);
+    const texts = getOverlayTexts(ctx);
+    const obj = objs[preset];
+    if (obj) {
+      delete objs[preset];
+      delete texts[preset];
+      const dur = ctx.renderer.dur(duration);
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          obj.remove?.();
+          ctx.renderer.untrack(obj);
+        });
+      } else {
+        obj.remove?.();
+        ctx.renderer.untrack(obj);
+      }
+    }
+  }
+  function clearOverlay(ctx, duration = 400) {
+    const objs = getOverlayObjs(ctx);
+    Object.keys(objs).forEach((k) => removeOverlay(ctx, k, duration));
+  }
+  var overlayHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "add") {
+      if (cmd.text) addOverlay(ctx, cmd.text, cmd.preset ?? "caption");
+    } else if (cmd.action === "remove") {
+      removeOverlay(ctx, cmd.preset ?? "caption", cmd.duration);
+    } else if (cmd.action === "clear") {
+      clearOverlay(ctx, cmd.duration);
+    }
+    return false;
+  });
+  function rebuildOverlays(ctx) {
+    const texts = ctx.renderer.state.get("overlayTexts");
+    if (!texts) return;
+    for (const [preset, text] of Object.entries(texts)) {
+      addOverlay(ctx, text, preset);
+    }
+  }
+
   // src/core/Renderer.ts
   function _extractPropKeys(props) {
     const keys = [];
@@ -13569,7 +13685,6 @@ ${addLineNumbers(fragment)}`);
     width;
     height;
     depth;
-    ui;
     _objects = /* @__PURE__ */ new Set();
     _isSkipping = false;
     // 커스텀 명령어들이 저장할 범용 상태 저장소
@@ -13584,7 +13699,6 @@ ${addLineNumbers(fragment)}`);
       this.width = option.width;
       this.height = option.height;
       this.depth = option.depth;
-      this.ui = option.ui;
       if (!this.world.camera) {
         this.world.camera = this.world.createCamera();
       }
@@ -13763,6 +13877,7 @@ ${addLineNumbers(fragment)}`);
           addEffect(ctx, type, info.rate, void 0, info.srcKey);
         }
       }
+      rebuildOverlays(ctx);
     }
     /**
      * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
@@ -13793,10 +13908,20 @@ ${addLineNumbers(fragment)}`);
         setGlobalVar: noop,
         loadScene: noop,
         captureRenderer: () => renderer.captureState(),
-        onDialogue: noop,
-        onChoice: noop,
         isSkipping: () => true,
-        disableInput: noop
+        disableInput: noop,
+        getCmdStateStore: () => /* @__PURE__ */ new Map(),
+        getUIRegistry: () => /* @__PURE__ */ new Map()
+      },
+      cmdState: {
+        set: noop,
+        get: () => void 0
+      },
+      ui: {
+        register: noop,
+        get: () => void 0,
+        show: noop,
+        hide: noop
       },
       scene: {
         getTextSubIndex: () => 0,
@@ -13813,37 +13938,281 @@ ${addLineNumbers(fragment)}`);
   }
 
   // src/cmds/dialogue.ts
-  var dialogueHandler = defineCmd((cmd, ctx) => {
-    if (!Array.isArray(cmd.text)) {
-      const interpolated = ctx.scene.interpolateText(cmd.text);
-      let speakerName2 = cmd.speaker;
-      if (speakerName2) {
+  var DEFAULT_BG = {
+    color: "rgba(0,0,0,0.82)"
+  };
+  var DEFAULT_SPEAKER = {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#ffe066",
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    textAlign: "left"
+  };
+  var DEFAULT_TEXT = {
+    fontSize: 20,
+    color: "#ffffff",
+    lineHeight: 1.6,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    textAlign: "left"
+  };
+  function resolveSpeaker(speakerKey, charDefs) {
+    if (!speakerKey) return void 0;
+    return charDefs?.[speakerKey]?.name ?? speakerKey;
+  }
+  var dialogueUISetup = defineUI(
+    "dialogue",
+    (style, ctx) => {
+      const cam = ctx.world.camera;
+      const w = ctx.renderer.width;
+      const h = ctx.renderer.height;
+      const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+      const bgCfg = { ...DEFAULT_BG, ...style.bg ?? {} };
+      const spkCfg = { ...DEFAULT_SPEAKER, ...style.speaker ?? {} };
+      const txtCfg = { ...DEFAULT_TEXT, ...style.text ?? {} };
+      const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
+      const BOX_CY = h - BOX_H / 2;
+      const bgObj = ctx.world.createRectangle({
+        style: {
+          ...bgCfg,
+          width: bgCfg.width ?? w,
+          height: BOX_H,
+          zIndex: bgCfg.zIndex ?? 300,
+          opacity: 0,
+          pointerEvents: false
+        },
+        transform: { position: toLocal(w / 2, BOX_CY) }
+      });
+      ctx.world.camera?.addChild(bgObj);
+      ctx.renderer.track(bgObj);
+      const spkY = h - BOX_H + 24;
+      const speakerObj = ctx.world.createText({
+        attribute: { text: "" },
+        style: {
+          ...spkCfg,
+          width: w * 0.9,
+          zIndex: spkCfg.zIndex ?? 301,
+          opacity: 0,
+          pointerEvents: false
+        },
+        transform: { position: toLocal(w / 2, spkY) }
+      });
+      ctx.world.camera?.addChild(speakerObj);
+      ctx.renderer.track(speakerObj);
+      const spkH = (spkCfg.fontSize ?? 18) * 1.5;
+      const textObj = ctx.world.createText({
+        attribute: { text: "" },
+        style: {
+          ...txtCfg,
+          width: txtCfg.width ?? w * 0.9,
+          zIndex: txtCfg.zIndex ?? 301,
+          opacity: 0,
+          pointerEvents: false
+        },
+        transform: { position: toLocal(w / 2, spkY + spkH + 8) }
+      });
+      ctx.world.camera?.addChild(textObj);
+      ctx.renderer.track(textObj);
+      let _isTyping = false;
+      let _fullText = "";
+      let _activeTx = null;
+      const _show = (dur = 250) => {
+        ;
+        bgObj.animate({ style: { opacity: 1 } }, dur, "easeOut");
+      };
+      const _hide = (dur = 300) => {
+        ;
+        bgObj.animate({ style: { opacity: 0 } }, dur, "easeIn");
+        speakerObj.style.opacity = 0;
+        textObj.animate({ style: { opacity: 0 } }, dur, "easeIn");
+      };
+      const _renderText = (speaker, text, speed, immediate = false) => {
+        _show();
+        speakerObj.attribute.text = speaker ?? "";
+        speakerObj.style.opacity = speaker ? 1 : 0;
+        if (immediate || speed === 0) {
+          _isTyping = false;
+          _fullText = text;
+          _activeTx?.stop?.();
+          _activeTx = null;
+          textObj.attribute.text = text;
+          textObj.style.opacity = 1;
+        } else {
+          const spd = speed ?? 30;
+          _isTyping = true;
+          _fullText = text;
+          if (_activeTx) {
+            _activeTx.stop?.();
+            _activeTx = null;
+          }
+          const anim = textObj.transition(text, spd);
+          _activeTx = anim;
+          textObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
+          if (anim && typeof anim.on === "function") {
+            anim.on("end", () => {
+              _isTyping = false;
+              _activeTx = null;
+            });
+          }
+        }
+      };
+      const saved = ctx.cmdState.get("dialogue");
+      if (saved?.lines?.length) {
+        const txt = saved.lines[saved.subIndex ?? 0];
         const charDefs = ctx.renderer.config.characters;
-        const def = charDefs?.[speakerName2];
-        if (def?.name) speakerName2 = def.name;
+        const spkName = resolveSpeaker(saved.speaker, charDefs);
+        _renderText(spkName, txt, void 0, true);
       }
-      ctx.callbacks.onDialogue(speakerName2, interpolated, cmd.speed);
+      return {
+        show: (dur) => _show(dur),
+        hide: (dur) => _hide(dur),
+        isTyping: () => _isTyping,
+        completeTyping: () => {
+          if (!_isTyping) return;
+          _isTyping = false;
+          _activeTx?.stop?.();
+          _activeTx = null;
+          textObj.attribute.text = _fullText;
+          textObj.style.opacity = 1;
+        },
+        onDialogue: (speaker, text, speed) => {
+          _renderText(speaker, text, speed);
+        }
+      };
+    }
+  );
+  var dialogueHandler = defineCmd((cmd, ctx) => {
+    const charDefs = ctx.renderer.config.characters;
+    const spkName = resolveSpeaker(cmd.speaker, charDefs);
+    const entry = ctx.ui.get("dialogue");
+    if (!Array.isArray(cmd.text)) {
+      const text = ctx.scene.interpolateText(cmd.text);
+      ctx.cmdState.set("dialogue", {
+        subIndex: 0,
+        lines: [text],
+        speaker: cmd.speaker
+      });
+      entry?.onDialogue?.(spkName, text, cmd.speed);
       return false;
     }
     const lines = cmd.text;
     let index = 0;
-    let speakerName = cmd.speaker;
-    if (speakerName) {
-      const charDefs = ctx.renderer.config.characters;
-      const def = charDefs?.[speakerName];
-      if (def?.name) speakerName = def.name;
-    }
     return () => {
-      const interpolated = ctx.scene.interpolateText(lines[index]);
-      ctx.callbacks.onDialogue(speakerName, interpolated, cmd.speed);
+      const text = ctx.scene.interpolateText(lines[index]);
+      ctx.cmdState.set("dialogue", {
+        subIndex: index,
+        lines,
+        speaker: cmd.speaker
+      });
+      entry?.onDialogue?.(spkName, text, cmd.speed);
       index++;
       return index >= lines.length;
     };
   });
 
   // src/cmds/choice.ts
+  var DEFAULT_CHOICE = {
+    fontSize: 18,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    color: "#fff",
+    background: "rgba(30,30,60,0.85)",
+    borderColor: "rgba(255,255,255,0.3)",
+    hoverBackground: "rgba(80,80,180,0.9)",
+    hoverBorderColor: "rgba(255,255,255,0.7)",
+    borderRadius: 8,
+    minWidth: 260
+  };
+  var choiceUISetup = defineUI(
+    "choices",
+    (style, ctx) => {
+      const cfg = { ...DEFAULT_CHOICE, ...style };
+      const canvas = ctx.renderer.world.canvas;
+      const parent = canvas.parentElement ?? document.body;
+      const el = document.createElement("div");
+      el.style.cssText = [
+        "position:absolute",
+        "top:0",
+        "left:0",
+        "right:0",
+        "bottom:0",
+        "display:none",
+        "flex-direction:column",
+        "justify-content:center",
+        "align-items:center",
+        "gap:12px",
+        "background:rgba(0,0,0,0.6)",
+        "pointer-events:auto",
+        `font-family:${cfg.fontFamily}`
+      ].join(";");
+      parent.style.position = "relative";
+      parent.appendChild(el);
+      const origRemove = () => {
+        el.remove();
+      };
+      el.__novelRemove = origRemove;
+      return {
+        show: () => {
+          el.style.display = "flex";
+        },
+        hide: () => {
+          el.style.display = "none";
+          el.innerHTML = "";
+        },
+        onChoices: (choices, onSelect) => {
+          el.style.display = "flex";
+          el.innerHTML = "";
+          choices.forEach((choice, i) => {
+            const btn = document.createElement("button");
+            btn.textContent = choice.text;
+            btn.style.cssText = [
+              "padding:12px 32px",
+              `font-size:${cfg.fontSize}px`,
+              `font-family:${cfg.fontFamily}`,
+              `color:${cfg.color}`,
+              `background:${cfg.background}`,
+              `border:1.5px solid ${cfg.borderColor}`,
+              `border-radius:${cfg.borderRadius}px`,
+              "cursor:pointer",
+              "transition:background 0.15s,border-color 0.15s",
+              `min-width:${cfg.minWidth}px`,
+              "text-align:center"
+            ].join(";");
+            btn.addEventListener("mouseenter", () => {
+              btn.style.background = cfg.hoverBackground;
+              btn.style.borderColor = cfg.hoverBorderColor;
+            });
+            btn.addEventListener("mouseleave", () => {
+              btn.style.background = cfg.background;
+              btn.style.borderColor = cfg.borderColor;
+            });
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              onSelect(i);
+            });
+            el.appendChild(btn);
+          });
+        }
+      };
+    }
+  );
   var choiceHandler = defineCmd((cmd, ctx) => {
-    ctx.callbacks.onChoice(cmd.choices);
+    const entry = ctx.ui.get("choices");
+    ctx.ui.get("dialogue")?.hide?.();
+    entry?.onChoices?.(cmd.choices, (i) => {
+      const selected = cmd.choices[i];
+      if (!selected) return;
+      if (selected.var) {
+        for (const [key, value] of Object.entries(selected.var)) {
+          ctx.scene.setGlobalVar(key, value);
+        }
+      }
+      entry.hide?.();
+      if (selected.next) {
+        ctx.scene.loadScene(selected.next);
+      } else if (selected.goto) {
+        ctx.scene.jumpToLabel(selected.goto);
+      } else {
+      }
+    });
     return "handled";
   });
 
@@ -13895,92 +14264,6 @@ ${addLineNumbers(fragment)}`);
   // src/cmds/label.ts
   var labelHandler = defineCmd((_cmd, _ctx) => {
     return true;
-  });
-
-  // src/cmds/overlay.ts
-  var OVERLAY_PRESETS = {
-    caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
-    title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
-    whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
-  };
-  function getOverlayObjs(ctx) {
-    let objs = ctx.renderer.state.get("_overlayObjs");
-    if (!objs) {
-      objs = {};
-      ctx.renderer.state.set("_overlayObjs", objs);
-    }
-    return objs;
-  }
-  function addOverlay(ctx, text, preset = "caption") {
-    const defaults = OVERLAY_PRESETS[preset];
-    const uiOv = ctx.renderer.ui?.overlay?.[preset] ?? {};
-    const p = {
-      fontSize: uiOv.fontSize ?? defaults.fontSize,
-      color: uiOv.color ?? defaults.color,
-      opacity: uiOv.opacity ?? defaults.opacity,
-      zIndex: defaults.zIndex,
-      y: defaults.y,
-      fontWeight: uiOv.fontWeight,
-      fontFamily: uiOv.fontFamily,
-      lineHeight: uiOv.lineHeight
-    };
-    const objs = getOverlayObjs(ctx);
-    if (objs[preset]) removeOverlay(ctx, preset);
-    const yMap = {
-      top: ctx.renderer.height * 0.1,
-      center: ctx.renderer.height * 0.5,
-      bottom: ctx.renderer.height * 0.85
-    };
-    const cam = ctx.renderer.world.camera;
-    const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[p.y]) : { x: 0, y: 0, z: 100 };
-    const textObj = ctx.renderer.world.createText({
-      attribute: { text },
-      style: {
-        fontSize: p.fontSize,
-        fontWeight: p.fontWeight,
-        fontFamily: p.fontFamily,
-        lineHeight: p.lineHeight,
-        color: p.color,
-        opacity: p.opacity,
-        zIndex: p.zIndex,
-        pointerEvents: false
-      },
-      transform: { position: pos }
-    });
-    ctx.renderer.world.camera?.addChild(textObj);
-    ctx.renderer.track(textObj);
-    objs[preset] = textObj;
-  }
-  function removeOverlay(ctx, preset, duration = 600) {
-    const objs = getOverlayObjs(ctx);
-    const obj = objs[preset];
-    if (obj) {
-      delete objs[preset];
-      const dur = ctx.renderer.dur(duration);
-      if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove?.();
-          ctx.renderer.untrack(obj);
-        });
-      } else {
-        obj.remove?.();
-        ctx.renderer.untrack(obj);
-      }
-    }
-  }
-  function clearOverlay(ctx, duration = 400) {
-    const objs = getOverlayObjs(ctx);
-    Object.keys(objs).forEach((k) => removeOverlay(ctx, k, duration));
-  }
-  var overlayHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "add") {
-      if (cmd.text) addOverlay(ctx, cmd.text, cmd.preset ?? "caption");
-    } else if (cmd.action === "remove") {
-      removeOverlay(ctx, cmd.preset ?? "caption", cmd.duration);
-    } else if (cmd.action === "clear") {
-      clearOverlay(ctx, cmd.duration);
-    }
-    return false;
   });
 
   // src/cmds/screen.ts
@@ -14084,8 +14367,13 @@ ${addLineNumbers(fragment)}`);
   });
 
   // src/cmds/ui.ts
-  var uiHandler = defineCmd((_cmd, _ctx) => {
-    return false;
+  var uiHandler = defineCmd((cmd, ctx) => {
+    if (cmd.action === "show") {
+      ctx.ui.show(cmd.name, cmd.duration);
+    } else {
+      ctx.ui.hide(cmd.name, cmd.duration);
+    }
+    return true;
   });
 
   // src/cmds/control.ts
@@ -14119,7 +14407,10 @@ ${addLineNumbers(fragment)}`);
     "screen-flash": screenFlashHandler,
     "screen-wipe": screenWipeHandler,
     "ui": uiHandler,
-    "control": controlHandler
+    "control": controlHandler,
+    // setup cmds (builtin UI)
+    "setup-dialogue": dialogueUISetup,
+    "setup-choice": choiceUISetup
   };
   var DialogueScene = class {
     renderer;
@@ -14216,10 +14507,6 @@ ${addLineNumbers(fragment)}`);
       if (step.type === "dialogue" && Array.isArray(step.text)) {
         if (this.textSubIndex < step.text.length - 1) {
           this.textSubIndex++;
-          const txt = step.text[this.textSubIndex];
-          const interpolated = this._interpolateText(txt);
-          const speakerName = this._getSpeakerName(step.speaker);
-          this.callbacks.onDialogue(speakerName, interpolated, step.speed);
           return;
         }
       }
@@ -14307,12 +14594,28 @@ ${addLineNumbers(fragment)}`);
         }
       }
       const { type, skip, ...params } = cmd;
+      const cmdStateStore = this.callbacks.getCmdStateStore();
+      const uiRegistry = this.callbacks.getUIRegistry();
       const ctx = {
         world: r.world,
         globalVars: this.callbacks.getGlobalVars(),
         localVars: this.localVars,
         renderer: r,
         callbacks: this.callbacks,
+        cmdState: {
+          set: (name, data) => {
+            cmdStateStore.set(name, data);
+          },
+          get: (name) => cmdStateStore.get(name)
+        },
+        ui: {
+          register: (name, entry) => {
+            uiRegistry.set(name, entry);
+          },
+          get: (name) => uiRegistry.get(name),
+          show: (name, dur) => uiRegistry.get(name)?.show(dur),
+          hide: (name, dur) => uiRegistry.get(name)?.hide(dur)
+        },
         scene: {
           getTextSubIndex: () => this.textSubIndex,
           interpolateText: (text) => this._interpolateText(text),
@@ -14329,12 +14632,12 @@ ${addLineNumbers(fragment)}`);
           }
         }
       };
-      if (BUILTIN_CMDS[type]) {
-        return BUILTIN_CMDS[type](params, ctx);
-      }
       const cmds = r.config.cmds;
       if (cmds && typeof cmds[type] === "function") {
         return cmds[type](params, ctx);
+      }
+      if (BUILTIN_CMDS[type]) {
+        return BUILTIN_CMDS[type](params, ctx);
       }
       console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
       return false;
@@ -14419,14 +14722,9 @@ ${addLineNumbers(fragment)}`);
       if (!step) return;
       const cmd = step;
       if (cmd.type === "dialogue") {
-        const dCmd = cmd;
-        const txt = Array.isArray(dCmd.text) ? dCmd.text[this.textSubIndex] : dCmd.text;
-        const interpolated = this._interpolateText(txt);
-        const speakerName = this._getSpeakerName(dCmd.speaker);
-        this.callbacks.onDialogue(speakerName, interpolated, dCmd.speed);
         this._waitingInput = true;
       } else if (cmd.type === "choice") {
-        this.callbacks.onChoice(cmd.choices);
+        this._waitingInput = true;
       } else {
         if (!cmd.skip) {
           this._waitingInput = true;
@@ -14505,66 +14803,31 @@ ${addLineNumbers(fragment)}`);
   };
 
   // src/core/Novel.ts
-  var UI_DEFAULT_BG = {
-    color: "rgba(0,0,0,0.82)"
-  };
-  var UI_DEFAULT_SPEAKER = {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#ffe066",
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    textAlign: "left"
-  };
-  var UI_DEFAULT_DIALOGUE = {
-    fontSize: 20,
-    color: "#ffffff",
-    lineHeight: 1.6,
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    textAlign: "left"
-  };
-  var UI_DEFAULT_CHOICE = {
-    fontSize: 18,
-    color: "#fff",
-    background: "rgba(30,30,60,0.85)",
-    borderColor: "rgba(255,255,255,0.3)",
-    hoverBackground: "rgba(80,80,180,0.9)",
-    hoverBorderColor: "rgba(255,255,255,0.7)",
-    borderRadius: 8,
-    minWidth: 260,
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif'
-  };
   var Novel = class {
     /** 전역 변수. 씬 전환에도 유지됩니다 */
     vars;
     _config;
     _option;
-    _ui;
     _world;
     _renderer;
     _scenes = /* @__PURE__ */ new Map();
+    /** CmdState — 씬 전환 후에도 유지, 세이브/로드 대상 */
+    _cmdStateStore = /* @__PURE__ */ new Map();
+    /**
+     * UI 정의 레지스트리 — Novel 생성 시 config.cmds에서 자동 수집.
+     * rebuildUI 시 여기서 빌더를 꺼내 UI 오브젝트를 재생성합니다.
+     */
+    _uiDefinitions = /* @__PURE__ */ new Map();
+    /** UI 런타임 레지스트리 — scene 실행 중 setup-* 커맨드가 등록 */
+    _uiRegistry = /* @__PURE__ */ new Map();
     _currentScene = null;
     _currentSceneDef = null;
     _inputMode = "none";
     _isSkipping = false;
-    /** 텍스트 타이핑(transition) 진행 중 여부 */
-    _isTextTyping = false;
-    /** 현재 출력 중인 전체 대사 텍스트 (즉시 완성에 사용) */
-    _currentTypingText = "";
-    /** 현재 실행 중인 TextTransition 객체 */
-    _activeTextTransition = null;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
-    /** 대화창 배경 (Leviar Rectangle, 카메라 자식) */
-    _dialogueBgObj = null;
-    /** 화자 이름창 (Leviar Text, 카메라 자식) */
-    _speakerTextObj = null;
-    /** 대사 텍스트창 (Leviar Text, 카메라 자식) */
-    _dialogueTextObj = null;
-    /** 선택지 컨테이너 (HTML) */
-    _choicesEl = null;
     constructor(config, option) {
       this._config = config;
-      this._ui = config.ui ?? {};
       const canvas = option.canvas;
       this._option = {
         canvas,
@@ -14576,15 +14839,27 @@ ${addLineNumbers(fragment)}`);
       this._renderer = new Renderer3(this._world, config, {
         width: this._option.width,
         height: this._option.height,
-        depth: this._option.depth,
-        ui: this._ui
+        depth: this._option.depth
       });
       this.vars = { ...config.vars };
-      this._setupBuiltinUI();
+      this._collectUIDefinitions(config.cmds);
       this._world.start();
       for (const [name, scene] of Object.entries(option.scenes)) {
         scene.name = name;
         this._scenes.set(name, scene);
+      }
+    }
+    /**
+     * config.cmds를 순회하며 __uiName/__uiBuilder 메타가 부착된
+     * UIHandler를 _uiDefinitions에 등록합니다.
+     */
+    _collectUIDefinitions(cmds) {
+      if (!cmds) return;
+      for (const handler of Object.values(cmds)) {
+        const h = handler;
+        if (h.__uiName && typeof h.__uiBuilder === "function") {
+          this._uiDefinitions.set(h.__uiName, h.__uiBuilder);
+        }
       }
     }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
@@ -14616,19 +14891,27 @@ ${addLineNumbers(fragment)}`);
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
       }
+      this._cleanupChoiceUI();
       this._currentScene = null;
       this._renderer.clear();
       if (prevState) {
         this._renderer.restoreState(prevState);
       }
+      this._uiRegistry.clear();
       const callbacks = this._buildCallbacks();
       const scene = def.kind === "dialogue" ? new DialogueScene(this._renderer, callbacks, def) : new ExploreScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
-      this._hideDialogueUI();
       scene.start();
       this._syncUIState();
+    }
+    /** 씬 전환 시 choice HTML 컨테이너 정리 */
+    _cleanupChoiceUI() {
+      const choiceEntry = this._uiRegistry.get("choices");
+      if (choiceEntry?.__novelRemove) {
+        choiceEntry.__novelRemove();
+      }
     }
     // ─── 스킵 기능 ───────────────────────────────────────────────
     /** 현재 스킵(빠른 감기) 중인지 여부 */
@@ -14682,10 +14965,10 @@ ${addLineNumbers(fragment)}`);
       return {
         sceneName: this._currentSceneDef.name,
         cursor: this._currentScene.getCursor(),
-        textSubIndex: this._currentScene.getTextSubIndex(),
         globalVars: { ...this.vars },
         localVars: this._currentScene.getLocalVars(),
-        rendererState: this._renderer.captureState()
+        rendererState: this._renderer.captureState(),
+        cmdStates: Object.fromEntries(this._cmdStateStore)
       };
     }
     /**
@@ -14701,18 +14984,38 @@ ${addLineNumbers(fragment)}`);
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
       }
+      this._cleanupChoiceUI();
       this.stopSkip();
       Object.assign(this.vars, data.globalVars);
+      this._cmdStateStore.clear();
+      for (const [k, v] of Object.entries(data.cmdStates ?? {})) {
+        this._cmdStateStore.set(k, v);
+      }
+      this._uiRegistry.clear();
       this._renderer.clear();
       this._renderer.restoreState(data.rendererState);
       this._renderer.rebuildFromState();
+      this._rebuildUI();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      scene.restoreState(data.cursor, data.localVars, data.textSubIndex);
+      const subIndex = data.cmdStates?.["dialogue"]?.subIndex ?? 0;
+      scene.restoreState(data.cursor, data.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
       this._syncUIState();
+    }
+    /**
+     * _uiDefinitions를 순회하며 저장된 스타일(cmdState)로 UI를 재생성합니다.
+     * loadSave() 호출 후 실행됩니다.
+     */
+    _rebuildUI() {
+      const restoreCtx = this._makeRebuildCtx();
+      for (const [name, builder] of this._uiDefinitions) {
+        const style = this._cmdStateStore.get(`setup-${name}`) ?? {};
+        const entry = builder(style, restoreCtx);
+        this._uiRegistry.set(name, entry);
+      }
     }
     // ─── 콜백 팩토리 ─────────────────────────────────────────────
     _buildCallbacks() {
@@ -14725,16 +15028,12 @@ ${addLineNumbers(fragment)}`);
           this.loadScene(name);
         },
         captureRenderer: () => this._renderer.captureState(),
-        onDialogue: (speaker, text, speed) => {
-          this._showDialogue(speaker, text, speed);
-        },
-        onChoice: (choices) => {
-          this._showChoices(choices);
-        },
         isSkipping: () => this._isSkipping,
         disableInput: (duration) => {
           this._inputDisabledUntil = Date.now() + duration;
-        }
+        },
+        getCmdStateStore: () => this._cmdStateStore,
+        getUIRegistry: () => this._uiRegistry
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
@@ -14742,35 +15041,22 @@ ${addLineNumbers(fragment)}`);
      * 대화를 한 단계 진행합니다.
      * - 텍스트 타이핑 중이면 즉시 완성
      * - 대기 중이면 다음 대사/단계로 이동
-     * main.ts 등 외부에서 click/keydown 이벤트에 연결하여 사용합니다.
      */
     next() {
       if (Date.now() < this._inputDisabledUntil) return;
       if (this._inputMode !== "dialogue") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
-      if (this._isTextTyping) {
-        this._completeTyping();
+      const dialogueEntry = this._uiRegistry.get("dialogue");
+      if (dialogueEntry?.isTyping?.()) {
+        dialogueEntry.completeTyping?.();
         return;
       }
       this._currentScene.advance();
       this._syncUIState();
     }
-    /** transition 중단 후 현재 전체 텍스트를 즉시 표시합니다 */
-    _completeTyping() {
-      this._isTextTyping = false;
-      if (!this._dialogueTextObj) return;
-      if (this._activeTextTransition && typeof this._activeTextTransition.stop === "function") {
-        this._activeTextTransition.stop();
-        this._activeTextTransition = null;
-      }
-      ;
-      this._dialogueTextObj.attribute.text = this._currentTypingText;
-      this._dialogueTextObj.style.opacity = 1;
-    }
     _syncUIState() {
       if (!this._currentScene || this._currentScene.isEnded) {
         this._inputMode = "none";
-        this._hideDialogueUI();
         if (this._currentScene?.isEnded && this._currentSceneDef?.kind === "dialogue") {
           const next = this._currentSceneDef.nextScene;
           if (next) {
@@ -14792,179 +15078,53 @@ ${addLineNumbers(fragment)}`);
       }
       this._inputMode = "none";
     }
-    // ─── 빌트인 대화 UI ──────────────────────────────────────────
-    _setupBuiltinUI() {
-      const cam = this._world.camera;
-      const w = this._option.width;
-      const h = this._option.height;
-      const focalLength = cam?.attribute?.focalLength ?? 100;
-      const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: focalLength };
-      const bgCfg = { ...UI_DEFAULT_BG, ...this._ui.dialogueBg ?? {} };
-      const spkCfg = { ...UI_DEFAULT_SPEAKER, ...this._ui.speaker ?? {} };
-      const dlgCfg = { ...UI_DEFAULT_DIALOGUE, ...this._ui.dialogue ?? {} };
-      const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
-      const BOX_CY = h - BOX_H / 2;
-      const bgRect = this._world.createRectangle({
-        style: {
-          ...bgCfg,
-          width: bgCfg.width ?? w,
-          height: BOX_H,
-          zIndex: bgCfg.zIndex ?? 300,
-          opacity: 0,
-          pointerEvents: false
+    // ─── rebuild용 SceneContext stub ────────────────────────────
+    _makeRebuildCtx() {
+      const noop = () => {
+      };
+      const cmdStateStore = this._cmdStateStore;
+      const uiRegistry = this._uiRegistry;
+      return {
+        world: this._world,
+        renderer: this._renderer,
+        globalVars: {},
+        localVars: {},
+        callbacks: {
+          getGlobalVars: () => ({}),
+          setGlobalVar: noop,
+          loadScene: noop,
+          captureRenderer: () => this._renderer.captureState(),
+          isSkipping: () => true,
+          disableInput: noop,
+          getCmdStateStore: () => cmdStateStore,
+          getUIRegistry: () => uiRegistry
         },
-        transform: { position: toLocal(w / 2, BOX_CY) }
-      });
-      this._world.camera?.addChild(bgRect);
-      this._dialogueBgObj = bgRect;
-      const spkY = h - BOX_H + 24;
-      const speakerText = this._world.createText({
-        attribute: { text: "" },
-        style: {
-          ...spkCfg,
-          width: w * 0.9,
-          zIndex: spkCfg.zIndex ?? 301,
-          opacity: 0,
-          pointerEvents: false
+        cmdState: {
+          set: (name, data) => {
+            cmdStateStore.set(name, data);
+          },
+          get: (name) => cmdStateStore.get(name)
         },
-        transform: { position: toLocal(w / 2, spkY) }
-      });
-      this._world.camera?.addChild(speakerText);
-      this._speakerTextObj = speakerText;
-      const spkH = (spkCfg.fontSize ?? 18) * 1.5;
-      const dialogueText = this._world.createText({
-        attribute: { text: "" },
-        style: {
-          ...dlgCfg,
-          width: dlgCfg.width ?? w * 0.9,
-          zIndex: dlgCfg.zIndex ?? 301,
-          opacity: 0,
-          pointerEvents: false
+        ui: {
+          register: (name, entry) => {
+            uiRegistry.set(name, entry);
+          },
+          get: (name) => uiRegistry.get(name),
+          show: (name, dur) => uiRegistry.get(name)?.show(dur),
+          hide: (name, dur) => uiRegistry.get(name)?.hide(dur)
         },
-        transform: { position: toLocal(w / 2, spkY + spkH + 8) }
-      });
-      this._world.camera?.addChild(dialogueText);
-      this._dialogueTextObj = dialogueText;
-      const canvas = this._option.canvas;
-      const parent = canvas.parentElement ?? document.body;
-      const choices = document.createElement("div");
-      const chCfg = { ...UI_DEFAULT_CHOICE, ...this._ui.choice ?? {} };
-      choices.style.cssText = [
-        "position:absolute",
-        "top:0",
-        "left:0",
-        "right:0",
-        "bottom:0",
-        "display:none",
-        "flex-direction:column",
-        "justify-content:center",
-        "align-items:center",
-        "gap:12px",
-        "background:rgba(0,0,0,0.6)",
-        "pointer-events:auto",
-        `font-family:${chCfg.fontFamily}`
-      ].join(";");
-      parent.style.position = "relative";
-      parent.appendChild(choices);
-      this._choicesEl = choices;
-    }
-    _showDialogue(speaker, text, speed) {
-      if (!this._dialogueBgObj || !this._speakerTextObj || !this._dialogueTextObj) return;
-      const skipping = this._isSkipping;
-      if (!skipping) {
-        ;
-        this._dialogueBgObj.animate({ style: { opacity: 1 } }, 250, "easeOut");
-      } else {
-        ;
-        this._dialogueBgObj.style.opacity = 1;
-      }
-      ;
-      this._speakerTextObj.attribute.text = speaker ?? "";
-      this._speakerTextObj.style.opacity = speaker ? 1 : 0;
-      if (skipping) {
-        this._isTextTyping = false;
-        this._currentTypingText = text;
-        if (this._activeTextTransition) {
-          this._activeTextTransition.stop?.();
-          this._activeTextTransition = null;
+        scene: {
+          getTextSubIndex: () => 0,
+          interpolateText: (t) => t,
+          jumpToLabel: noop,
+          hasLabel: () => false,
+          getVars: () => ({}),
+          setGlobalVar: noop,
+          setLocalVar: noop,
+          loadScene: noop,
+          end: noop
         }
-        ;
-        this._dialogueTextObj.attribute.text = text;
-        this._dialogueTextObj.style.opacity = 1;
-      } else {
-        const spd = speed ?? 30;
-        this._isTextTyping = true;
-        this._currentTypingText = text;
-        const anim = this._dialogueTextObj.transition(text, spd);
-        this._activeTextTransition = anim;
-        this._dialogueTextObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
-        if (anim && typeof anim.on === "function") {
-          anim.on("end", () => {
-            this._isTextTyping = false;
-            this._activeTextTransition = null;
-          });
-        }
-      }
-      if (this._choicesEl) {
-        this._choicesEl.style.display = "none";
-        this._choicesEl.innerHTML = "";
-      }
-    }
-    _showChoices(choices) {
-      if (!this._choicesEl) return;
-      if (this._dialogueBgObj) this._dialogueBgObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
-      if (this._speakerTextObj) this._speakerTextObj.style.opacity = 0;
-      if (this._dialogueTextObj) this._dialogueTextObj.animate({ style: { opacity: 0 } }, 200, "easeIn");
-      this._choicesEl.style.display = "flex";
-      this._choicesEl.innerHTML = "";
-      this._inputMode = "choice";
-      const chCfg = { ...UI_DEFAULT_CHOICE, ...this._ui.choice ?? {} };
-      choices.forEach((choice, i) => {
-        const btn = document.createElement("button");
-        btn.textContent = choice.text;
-        btn.style.cssText = [
-          `padding:12px 32px`,
-          `font-size:${chCfg.fontSize}px`,
-          `font-family:${chCfg.fontFamily}`,
-          `color:${chCfg.color}`,
-          `background:${chCfg.background}`,
-          `border:1.5px solid ${chCfg.borderColor}`,
-          `border-radius:${chCfg.borderRadius}px`,
-          `cursor:pointer`,
-          `transition:background 0.15s,border-color 0.15s`,
-          `min-width:${chCfg.minWidth}px`,
-          `text-align:center`
-        ].join(";");
-        btn.addEventListener("mouseenter", () => {
-          btn.style.background = chCfg.hoverBackground;
-          btn.style.borderColor = chCfg.hoverBorderColor;
-        });
-        btn.addEventListener("mouseleave", () => {
-          btn.style.background = chCfg.background;
-          btn.style.borderColor = chCfg.borderColor;
-        });
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (this._currentScene instanceof DialogueScene) {
-            const prevScene = this._currentScene;
-            this._currentScene.selectChoice(i);
-            if (this._currentScene === prevScene) {
-              this._hideDialogueUI();
-              this._syncUIState();
-            }
-          }
-        });
-        this._choicesEl.appendChild(btn);
-      });
-    }
-    _hideDialogueUI() {
-      if (this._dialogueBgObj) this._dialogueBgObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
-      if (this._speakerTextObj) this._speakerTextObj.style.opacity = 0;
-      if (this._dialogueTextObj) this._dialogueTextObj.animate({ style: { opacity: 0 } }, 300, "easeIn");
-      if (this._choicesEl) {
-        this._choicesEl.style.display = "none";
-        this._choicesEl.innerHTML = "";
-      }
+      };
     }
   };
 
@@ -14980,7 +15140,9 @@ ${addLineNumbers(fragment)}`);
       endingReached: false
     },
     cmds: {
-      "test-cmd": testCmd
+      "test-cmd": testCmd,
+      "setup-dialogue": dialogueUISetup,
+      "setup-choice": choiceUISetup
     },
     scenes: [
       "scene-intro",
@@ -15016,19 +15178,6 @@ ${addLineNumbers(fragment)}`);
       "bg-library": { src: "bg_library", parallax: true },
       "bg-park": { src: "bg_park", parallax: true }
     },
-    ui: {
-      dialogueBg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
-      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 2, borderColor: "rgb(255,255,255)" },
-      dialogue: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 },
-      choice: {
-        background: "rgba(20,20,50,0.90)",
-        borderColor: "rgba(255,255,255,0.25)",
-        hoverBackground: "rgba(80,60,180,0.92)",
-        hoverBorderColor: "rgba(200,180,255,0.8)",
-        borderRadius: 10,
-        minWidth: 280
-      }
-    },
     assets: {
       // 배경
       bg_floor: "./assets/bg_floor.png",
@@ -15053,6 +15202,22 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-intro.ts
   var scene_intro_default = defineScene({ config: novel_config_default }, [
+    // ─── UI 셋업 ─────────────────────────────────────────────────
+    {
+      type: "setup-dialogue",
+      bg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
+      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 2, borderColor: "rgb(255,255,255)" },
+      text: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 }
+    },
+    {
+      type: "setup-choice",
+      background: "rgba(20,20,50,0.90)",
+      borderColor: "rgba(255,255,255,0.25)",
+      hoverBackground: "rgba(80,60,180,0.92)",
+      hoverBorderColor: "rgba(200,180,255,0.8)",
+      borderRadius: 10,
+      minWidth: 280
+    },
     // ─── 1. 적막한 도서관의 오후 ───
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
