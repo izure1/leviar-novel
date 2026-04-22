@@ -57,7 +57,21 @@
 
   // src/define/defineCmdUI.ts
   function define2(schema) {
-    const data = { ...schema };
+    let _onUpdate = null;
+    let _version = 0;
+    const _raw = { ...schema };
+    const data = new Proxy(_raw, {
+      set(target, key, value) {
+        target[key] = value;
+        const v = ++_version;
+        Promise.resolve().then(() => {
+          if (_version === v) {
+            _onUpdate?.(data);
+          }
+        });
+        return true;
+      }
+    });
     function resolveVal2(val, vars) {
       if (typeof val === "function") return val(vars);
       if (Array.isArray(val)) {
@@ -92,13 +106,22 @@
             }
           }
         }
-        ctx.cmdState.set("__ui__", { ...data });
         builder(data, ctx);
         return true;
       };
       handler.__isUIHandler = true;
       handler.__schemaDefault = schema;
-      handler.__uiBuilder = builder;
+      handler.__uiBuilder = (mergedData, ctx) => {
+        for (const key in mergedData) {
+          if (mergedData[key] !== void 0) {
+            data[key] = mergedData[key];
+          }
+        }
+        const entry = builder(data, ctx);
+        _onUpdate = (d) => entry.update?.(d);
+        ++_version;
+        return entry;
+      };
       handler.__uiOptions = options;
       return handler;
     }
@@ -13189,7 +13212,8 @@ ${addLineNumbers(fragment)}`);
     text: void 0,
     subIndex: 0,
     lines: [],
-    speakerKey: void 0
+    speakerKey: void 0,
+    speed: void 0
   });
   var dialogueUISetup = defineUI(
     (data, ctx) => {
@@ -13243,9 +13267,12 @@ ${addLineNumbers(fragment)}`);
       });
       ctx.world.camera?.addChild(textObj);
       ctx.renderer.track(textObj);
+      const charDefs = ctx.renderer.config.characters;
       let _isTyping = false;
       let _fullText = "";
       let _activeTx = null;
+      let _prevLines = null;
+      let _prevSubIndex = -1;
       const _show = (dur = 250) => {
         ;
         bgObj.animate({ style: { opacity: 1 } }, dur, "easeOut");
@@ -13287,8 +13314,9 @@ ${addLineNumbers(fragment)}`);
         }
       };
       if (data.lines?.length) {
-        const txt = data.lines[data.subIndex ?? 0];
-        const charDefs = ctx.renderer.config.characters;
+        _prevLines = data.lines;
+        _prevSubIndex = data.subIndex ?? 0;
+        const txt = data.lines[_prevSubIndex];
         const spkName = resolveSpeaker(data.speakerKey, charDefs);
         _renderText(spkName, txt, void 0, true);
       }
@@ -13304,35 +13332,51 @@ ${addLineNumbers(fragment)}`);
           textObj.attribute.text = _fullText;
           textObj.style.opacity = 1;
         },
-        onDialogue: (speaker, text, speed) => {
-          _renderText(speaker, text, speed);
+        /**
+         * data가 변경될 때 Proxy가 자동으로 호출합니다.
+         * - lines 참조가 새로워지거나 subIndex가 바뀐 경우: 텍스트 재렌더
+         * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
+         */
+        update: (d) => {
+          const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {} };
+          const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
+          const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
+          Object.assign(bgObj.style, newBgCfg);
+          Object.assign(speakerObj.style, newSpkCfg);
+          Object.assign(textObj.style, newTxtCfg);
+          const linesChanged = d.lines !== _prevLines;
+          const subIndexChanged = d.subIndex !== _prevSubIndex;
+          if (d.lines && d.lines.length > 0 && (linesChanged || subIndexChanged)) {
+            _prevLines = d.lines;
+            _prevSubIndex = d.subIndex ?? 0;
+            const txt = d.lines[_prevSubIndex];
+            const spkName = resolveSpeaker(d.speakerKey, charDefs);
+            _renderText(spkName, txt, d.speed);
+          }
         }
       };
     },
     { hideable: true, attachToCamera: true }
   );
   var dialogueHandler = defineCmd2((cmd, ctx, data) => {
-    const charDefs = ctx.renderer.config.characters;
-    const spkName = resolveSpeaker(cmd.speaker, charDefs);
-    const entry = ctx.ui.get("dialogue");
     if (!Array.isArray(cmd.text)) {
       const text = ctx.scene.interpolateText(cmd.text);
       data.subIndex = 0;
-      data.lines = [text];
       data.speakerKey = cmd.speaker;
-      ctx.cmdState.set("dialogue", { subIndex: 0, lines: [text], speaker: cmd.speaker });
-      entry?.onDialogue?.(spkName, text, cmd.speed);
+      data.speed = cmd.speed;
+      data.lines = [text];
+      ctx.cmdState.set("dialogue", { ...data });
       return false;
     }
-    const lines = cmd.text;
+    const lines = cmd.text.map((t) => ctx.scene.interpolateText(t));
     let index = 0;
     return () => {
-      const text = ctx.scene.interpolateText(lines[index]);
       data.subIndex = index;
-      data.lines = lines;
       data.speakerKey = cmd.speaker;
-      ctx.cmdState.set("dialogue", { subIndex: index, lines, speaker: cmd.speaker });
-      entry?.onDialogue?.(spkName, text, cmd.speed);
+      data.speed = cmd.speed;
+      data.lines = lines;
+      ctx.ui.get("dialogue")?.update?.(data);
+      ctx.cmdState.set("dialogue", { ...data });
       index++;
       return index >= lines.length;
     };
@@ -13428,6 +13472,10 @@ ${addLineNumbers(fragment)}`);
             });
             el.appendChild(btn);
           });
+        },
+        /** data 변경 시 내부 cfg를 갱신합니다. 이후 onChoices 호출 시 새 스타일이 적용됩니다. */
+        update: (d) => {
+          Object.assign(cfg, DEFAULT_CHOICE, d);
         }
       };
     },
@@ -14532,7 +14580,6 @@ ${addLineNumbers(fragment)}`);
           const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {});
           const entry = handler.__uiBuilder(mergedData, ctx);
           if (handler.__uiOptions) entry.options = { ...handler.__uiOptions, ...entry.options };
-          ctx.cmdState.set(`__ui_${uiKey}__`, mergedData);
           uiRegistry.set(uiKey, entry);
         } else if (typeof handler === "function") {
           const result = handler(styleData ?? {}, ctx);
@@ -15148,7 +15195,7 @@ ${addLineNumbers(fragment)}`);
         }
       }
       for (const [name, builder] of this._uiDefinitions) {
-        const style = this._cmdStateStore.get(`__ui_${name}__`) ?? this._cmdStateStore.get(`setup-${name}`) ?? {};
+        const style = this._cmdStateStore.get(name) ?? {};
         const entry = builder(style, ctx);
         const opts = this._uiDefinitions[`__opts_${name}`];
         if (opts) entry.options = { ...opts, ...entry.options };

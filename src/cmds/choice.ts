@@ -120,6 +120,10 @@ export const choiceUISetup = defineUI(
           el.appendChild(btn)
         })
       },
+      /** data 변경 시 내부 cfg를 갱신합니다. 이후 onChoices 호출 시 새 스타일이 적용됩니다. */
+      update: (d: ChoiceSchema) => {
+        Object.assign(cfg, DEFAULT_CHOICE, d)
+      },
     }
   },
   { hideable: true, attachToCamera: true }

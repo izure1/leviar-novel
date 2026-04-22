@@ -43,4 +43,9 @@ export interface UIRuntimeEntry {
    * 선택지 버튼을 렌더링합니다 (choice cmd 전용).
    */
   onChoices?(choices: any[], onSelect: (index: number) => void): void
+  /**
+   * 공유 data가 변경될 때 반응형으로 호출됩니다.
+   * 스타일 적용, 텍스트 재렌더 등 UI 갱신 로직을 구현하세요.
+   */
+  update?(data: any): void
 }

@@ -36,7 +36,8 @@ export type UIHandler<TSchema> = CustomCmdHandler<Partial<TSchema>> & UIHandlerM
  * `defineCmd`와 `defineUI`가 동일한 데이터 객체를 공유하도록 묶는 팩토리입니다.
  *
  * `schema`가 공유 데이터의 초깃값이자 타입 기반이 됩니다.
- * `defineCmd` 핸들러에서 데이터를 변경하면 `defineUI`에도 반영됩니다.
+ * `defineCmd` 핸들러에서 데이터를 변경하면 Proxy를 통해 `defineUI`의
+ * `entry.update(data)`가 자동으로 호출됩니다 (반응형).
  *
  * @example
  * ```ts
@@ -48,12 +49,14 @@ export type UIHandler<TSchema> = CustomCmdHandler<Partial<TSchema>> & UIHandlerM
  *
  * export const dialogueUISetup = defineUI((data, ctx) => {
  *   // data.bg, data.lines 사용
- *   return { show: ..., hide: ..., onDialogue: ... }
+ *   return {
+ *     show: ..., hide: ...,
+ *     update: (d) => { /* 스타일/텍스트 반응형 갱신 *\/ }
+ *   }
  * })
  *
  * export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
- *   data.lines = [cmd.text]  // 변경하면 defineUI의 data도 동일 객체
- *   ctx.ui.get('dialogue')?.onDialogue?.(...)
+ *   data.lines = [cmd.text]  // → 자동으로 entry.update(data) 호출됨
  *   return false
  * })
  * ```
@@ -67,8 +70,32 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): {
     options?: UIEntryOptions
   ) => UIHandler<TSchema>
 } {
-  // 공유 데이터 객체 (클로저로 defineCmd·defineUI 양측에서 참조)
-  const data: TSchema = { ...schema }
+  // ─── 반응형 구독자 ────────────────────────────────────────
+  let _onUpdate: ((data: TSchema) => void) | null = null
+
+  /**
+   * 버전 카운터: 빌더 초기화 도중 발생한 set을 무시하기 위해 사용합니다.
+   * `__uiBuilder` 내부에서 `++_version`을 호출하면, 초기화 중 예약된
+   * microtask들이 버전 불일치로 인해 스킵됩니다.
+   */
+  let _version = 0
+
+  // ─── Proxy로 래핑된 공유 data ─────────────────────────────
+  const _raw: TSchema = { ...schema }
+
+  const data = new Proxy(_raw, {
+    set(target, key, value) {
+      (target as any)[key] = value
+      const v = ++_version
+      // 동일 틱의 여러 set을 하나의 microtask로 배치 처리
+      Promise.resolve().then(() => {
+        if (_version === v) {
+          _onUpdate?.(data)
+        }
+      })
+      return true
+    },
+  })
 
   // ─── 내부 resolveParams (defineCmd.ts 동일 로직) ──────────
   function resolveVal(val: any, vars: any): any {
@@ -111,7 +138,6 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): {
     options?: UIEntryOptions
   ): UIHandler<TSchema> {
     const handler = (rawStyle: Partial<TSchema>, ctx: SceneContext): CommandResult => {
-      // 전달된 style로 data 갱신 (초기값 오버라이드)
       if (rawStyle && typeof rawStyle === 'object') {
         for (const key in rawStyle) {
           if ((rawStyle as any)[key] !== undefined) {
@@ -119,20 +145,38 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): {
           }
         }
       }
-
-      // 갱신된 data를 CmdState에 저장 (세이브/로드용)
-      ctx.cmdState.set('__ui__', { ...data })
-
-      // 빌더로 UI 생성 (UIRegistry 등록은 _runInitial에서 __uiBuilder 직접 호출로 처리)
       builder(data, ctx)
-
       return true
     }
 
-    ;(handler as any).__isUIHandler   = true
+    ;(handler as any).__isUIHandler = true
     ;(handler as any).__schemaDefault = schema
-    ;(handler as any).__uiBuilder     = builder
-    ;(handler as any).__uiOptions     = options
+
+    /**
+     * `_runInitial`이 직접 호출하는 빌더 래퍼.
+     * 1) mergedData를 data proxy에 반영
+     * 2) builder 실행 → entry 획득
+     * 3) entry.update를 반응형 구독자로 등록
+     * 4) 초기화 중 예약된 microtask를 버전 카운터로 무효화
+     */
+    ;(handler as any).__uiBuilder = (mergedData: TSchema, ctx: SceneContext): UIRuntimeEntry => {
+      // 스타일 병합 (proxy 경유 → set 트랩 → microtask 예약)
+      for (const key in mergedData) {
+        if ((mergedData as any)[key] !== undefined) {
+          (data as any)[key] = (mergedData as any)[key]
+        }
+      }
+
+      const entry = builder(data, ctx)
+
+      // 구독자 등록 후 버전 bump → 초기화 중 예약된 microtask 무효화
+      _onUpdate = (d) => entry.update?.(d)
+      ++_version
+
+      return entry
+    }
+
+    ;(handler as any).__uiOptions = options
 
     return handler as UIHandler<TSchema>
   }

@@ -222,8 +222,6 @@ export class DialogueScene {
         const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {})
         const entry = handler.__uiBuilder(mergedData, ctx)
         if (handler.__uiOptions) entry.options = { ...handler.__uiOptions, ...entry.options }
-        // UI별 독립적 cmdState 키 (세이브/로드용)
-        ctx.cmdState.set(`__ui_${uiKey}__`, mergedData)
         uiRegistry.set(uiKey, entry)
       } else if (typeof handler === 'function') {
         // 일반 함수인 경우 (하위 호환)
