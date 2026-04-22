@@ -416,9 +416,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
     // 6. config.ui 빌더 실행 (dialogue, choice 등)
     for (const [name, builder] of this._uiDefinitions) {
-      // define() 팩토리 사용: cmdState '__ui__' 에 데이터 저장
-      // 하위 호환: 이전 'setup-{name}' 키도 확인
-      const style = this._cmdStateStore.get(`__ui__`) ?? this._cmdStateStore.get(`setup-${name}`) ?? {}
+      // UI별 독립 키 우선, 하위 호환: 이전 'setup-{name}' 키도 확인
+      const style = this._cmdStateStore.get(`__ui_${name}__`) ?? this._cmdStateStore.get(`setup-${name}`) ?? {}
       const entry = builder(style, ctx)
       const opts = (this._uiDefinitions as any)[`__opts_${name}`]
       if (opts) entry.options = { ...opts, ...entry.options }

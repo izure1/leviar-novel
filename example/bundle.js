@@ -14532,7 +14532,7 @@ ${addLineNumbers(fragment)}`);
           const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {});
           const entry = handler.__uiBuilder(mergedData, ctx);
           if (handler.__uiOptions) entry.options = { ...handler.__uiOptions, ...entry.options };
-          ctx.cmdState.set("__ui__", mergedData);
+          ctx.cmdState.set(`__ui_${uiKey}__`, mergedData);
           uiRegistry.set(uiKey, entry);
         } else if (typeof handler === "function") {
           const result = handler(styleData ?? {}, ctx);
@@ -15148,7 +15148,7 @@ ${addLineNumbers(fragment)}`);
         }
       }
       for (const [name, builder] of this._uiDefinitions) {
-        const style = this._cmdStateStore.get(`__ui__`) ?? this._cmdStateStore.get(`setup-${name}`) ?? {};
+        const style = this._cmdStateStore.get(`__ui_${name}__`) ?? this._cmdStateStore.get(`setup-${name}`) ?? {};
         const entry = builder(style, ctx);
         const opts = this._uiDefinitions[`__opts_${name}`];
         if (opts) entry.options = { ...opts, ...entry.options };
