@@ -56,11 +56,11 @@ export type {
 
 // ─── define 헬퍼 함수 ────────────────────────────────────────
 export { defineNovelConfig } from './define/defineNovelConfig'
-export { defineScene } from './define/defineScene'
 export { defineExploreScene } from './define/defineExploreScene'
 export { defineCmd } from './define/defineCmd'
 export { defineUI } from './define/defineUI'
 export { define } from './define/defineCmdUI'
+export { defineScene, defineInitial } from './define/defineScene'
 export type { SceneDefinition } from './define/defineScene'
 export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
 export type { UIHandler, UIHandlerMeta } from './define/defineCmdUI'

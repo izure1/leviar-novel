@@ -2,8 +2,9 @@
 // 테스트: condition(and/or), label/goto, var, localVars
 import config from '../novel.config'
 import { defineScene } from '../../src'
+import { commonInitial } from './common-initial'
 
-export default defineScene({ config, variables: { _tries: 0 } }, [
+export default defineScene({ config, initial: commonInitial, variables: { _tries: 0 } }, [
 
   // ── 나레이션
   { type: 'dialogue', text: `[조건 분기 테스트]` },

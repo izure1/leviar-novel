@@ -12,8 +12,30 @@ import type { DialogueStep } from '../types/dialogue'
  * `config.ui` 타입에서 `initial` 허용 값 구조를 추출합니다.
  * key: `keyof TUi`, value: 해당 `UIHandler`의 스키마(`TSchema`)의 `Partial`
  */
-type InitialOf<TUi> = {
+export type InitialOf<TUi> = {
   [K in keyof TUi]?: TUi[K] extends UIHandler<infer TSchema> ? Partial<TSchema> : never
+}
+
+/**
+ * `defineScene` 외부에서 `initial` 데이터를 공통 모듈로 분리할 때 사용하는 타입 추론 헬퍼입니다.
+ * 
+ * @example
+ * ```ts
+ * import config from '../novel.config'
+ * import { defineInitial } from 'leviar-novel'
+ * 
+ * export const commonInitial = defineInitial(config, {
+ *   dialogue: { text: { fontSize: 18 } }
+ * })
+ * ```
+ */
+export function defineInitial<
+  TConfig extends NovelConfig<any, any, any, any, any, any> & { ui?: Record<string, UIHandler<any>> }
+>(
+  config: TConfig,
+  initial: [TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>
+): typeof initial {
+  return initial
 }
 
 /** 씬 정의 결과물. Scene 실행기가 소비합니다. */

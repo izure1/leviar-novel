@@ -5,21 +5,6 @@
     return config;
   }
 
-  // src/define/defineScene.ts
-  function defineScene({
-    config,
-    variables = {},
-    initial
-  }, dialogues, options) {
-    return {
-      kind: "dialogue",
-      dialogues,
-      localVars: variables,
-      nextScene: options?.next,
-      initial
-    };
-  }
-
   // src/define/defineExploreScene.ts
   function defineExploreScene(config, options) {
     return {
@@ -126,6 +111,24 @@
       return handler;
     }
     return { defineCmd: defineCmd4, defineUI: defineUI4 };
+  }
+
+  // src/define/defineScene.ts
+  function defineInitial(config, initial) {
+    return initial;
+  }
+  function defineScene({
+    config,
+    variables = {},
+    initial
+  }, dialogues, options) {
+    return {
+      kind: "dialogue",
+      dialogues,
+      localVars: variables,
+      nextScene: options?.next,
+      initial
+    };
   }
 
   // node_modules/leviar/dist/index.js
@@ -15336,7 +15339,8 @@ ${addLineNumbers(fragment)}`);
       "scene-a",
       "scene-condition",
       "scene-effects",
-      "explore-map"
+      "explore-map",
+      "scene-zena"
     ],
     characters: {
       "arisiero": {
@@ -15348,6 +15352,25 @@ ${addLineNumbers(fragment)}`);
             points: {
               face: { x: 0.5, y: 0.18 },
               chest: { x: 0.5, y: 0.45 }
+            }
+          },
+          smile: {
+            src: "girl_smile",
+            width: 350,
+            points: {
+              face: { x: 0.5, y: 0.18 }
+            }
+          }
+        }
+      },
+      "zena": {
+        name: "\uC81C\uB098",
+        points: {
+          normal: {
+            src: "girl_normal",
+            width: 350,
+            points: {
+              face: { x: 0.5, y: 0.18 }
             }
           },
           smile: {
@@ -15387,24 +15410,27 @@ ${addLineNumbers(fragment)}`);
     ]
   });
 
+  // example/scenes/common-initial.ts
+  var commonInitial = defineInitial(novel_config_default, {
+    "dialogue": {
+      bg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
+      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 2, borderColor: "rgb(255,255,255)" },
+      text: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 }
+    },
+    "choices": {
+      background: "rgba(20,20,50,0.90)",
+      borderColor: "rgba(255,255,255,0.25)",
+      hoverBackground: "rgba(80,60,180,0.92)",
+      hoverBorderColor: "rgba(200,180,255,0.8)",
+      borderRadius: 10,
+      minWidth: 280
+    }
+  });
+
   // example/scenes/scene-intro.ts
   var scene_intro_default = defineScene({
     config: novel_config_default,
-    initial: {
-      "dialogue": {
-        bg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
-        speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 2, borderColor: "rgb(255,255,255)" },
-        text: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 }
-      },
-      "choices": {
-        background: "rgba(20,20,50,0.90)",
-        borderColor: "rgba(255,255,255,0.25)",
-        hoverBackground: "rgba(80,60,180,0.92)",
-        hoverBorderColor: "rgba(200,180,255,0.8)",
-        borderRadius: 10,
-        minWidth: 280
-      }
-    }
+    initial: commonInitial
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
@@ -15625,7 +15651,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-a.ts
-  var scene_a_default = defineScene({ config: novel_config_default }, [
+  var scene_a_default = defineScene({ config: novel_config_default, initial: commonInitial }, [
     // ── 배경 전환 + 벚꽃 효과
     { type: "background", name: "bg-library", duration: 800, skip: true },
     { type: "mood", mood: "day", intensity: 0.5, duration: 800, skip: true },
@@ -15662,7 +15688,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-condition.ts
-  var scene_condition_default = defineScene({ config: novel_config_default, variables: { _tries: 0 } }, [
+  var scene_condition_default = defineScene({ config: novel_config_default, initial: commonInitial, variables: { _tries: 0 } }, [
     // ── 나레이션
     { type: "dialogue", text: `[\uC870\uAC74 \uBD84\uAE30 \uD14C\uC2A4\uD2B8]` },
     { type: "dialogue", text: `\uD604\uC7AC \uD638\uAC10\uB3C4\uC640 \uB9CC\uB0A8 \uC5EC\uBD80\uB85C \uBD84\uAE30\uD569\uB2C8\uB2E4.` },
@@ -15726,7 +15752,7 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // example/scenes/scene-effects.ts
-  var scene_effects_default = defineScene({ config: novel_config_default }, [
+  var scene_effects_default = defineScene({ config: novel_config_default, initial: commonInitial }, [
     // ── 공원으로 배경 전환
     { type: "background", name: "bg-park", duration: 1e3, skip: true },
     { type: "effect", action: "add", effect: "rain", src: "rain", rate: 500, skip: true },
@@ -15811,6 +15837,115 @@ ${addLineNumbers(fragment)}`);
     ]
   });
 
+  // example/scenes/scene-zena.ts
+  var scene_zena_default = defineScene({
+    config: novel_config_default,
+    variables: {
+      _isAnnoyed: false
+    },
+    initial: commonInitial
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
+    { type: "background", name: "bg-floor", duration: 0 },
+    { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    {
+      type: "dialogue",
+      text: [
+        "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4.",
+        "\uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C, \uAD6C\uC11D \uC790\uB9AC\uC5D0\uC11C \uBB18\uD55C \uC0B4\uAE30\uAC00 \uB290\uAEF4\uC84C\uB2E4.",
+        "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544... \uC778\uC0DD \uC9C4\uC9DC \uB85C\uADF8\uC544\uC6C3\uD558\uACE0 \uC2F6\uB2E4."
+    },
+    { type: "dialogue", text: "\uADF8\uB140\uB294 \uC55E\uC5D0 \uB193\uC778 \uB178\uD2B8\uBD81\uC744 \uC8FD\uC77C \uB4EF\uC774 \uB178\uB824\uBCF4\uACE0 \uC788\uC5C8\uB2E4." },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        '\uB2D8, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uC784"\uC774\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC74C?',
+        "\uC65C \uD558\uD544 \uB0B4 \uC55E\uC5D0\uC11C \uADF8\uB807\uAC8C \uD574\uB9D1\uAC8C \uCEE4\uD53C\uB97C \uB9C8\uC2DC\uB294 \uAC70\uC784? \uC790\uBE44 \uC810."
+      ]
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: '"\uBB34\uC2A8 \uC77C \uD558\uC138\uC694?"\uB77C\uACE0 \uBB3B\uB294\uB2E4', goto: "ask-job" },
+        { text: '"\uB178\uD2B8\uBD81\uC5D0 \uBC84\uADF8 \uB0AC\uB098\uC694?"\uB77C\uACE0 \uBB3B\uB294\uB2E4', goto: "ask-bug" },
+        { text: "\uC870\uC6A9\uD788 \uC790\uB9AC\uB97C \uD53C\uD55C\uB2E4", goto: "escape" }
+      ]
+    },
+    // ─── 분기: 일 질문 ───
+    { type: "label", label: "ask-job" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC77C? \uD558, \uBE44\uC988\uB2C8\uC2A4 \uD1A0\uD06C \uAE08\uC9C0\uC784. \uC9C0\uAE08 \uB0B4 \uB450\uB1CC\uB294 404 Error \uC0C1\uD0DC\uB77C\uACE0\uC694.",
+        "\uADF8\uB0E5... \uC138\uC0C1\uC758 \uBAA8\uB4E0 \uCF54\uB4DC\uB97C \uC0AD\uC81C\uD558\uACE0 \uD3C9\uD654\uB85C\uC6B4 \uC790\uC5F0\uC778\uC73C\uB85C \uC0B4\uACE0 \uC2F6\uC744 \uBFD0\uC784."
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADFC\uB370 \uB2D8 \uCEE4\uD53C \uB9DB\uC788\uC5B4 \uBCF4\uC784. \uD55C \uC785\uB9CC? \uC544, \uB18D\uB2F4\uC784. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD558\uC148."
+    },
+    { type: "control", action: "goto", next: "common-end" },
+    // ─── 분기: 버그 질문 ───
+    { type: "label", label: "ask-bug" },
+    { type: "camera-effect", preset: "shake", duration: 400 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uBC84\uADF8?! \uB2D8, \uC9C0\uAE08 \uAE08\uAE30\uC5B4 \uC37C\uC74C. \uB0B4 \uC778\uC0DD \uC790\uCCB4\uAC00 \uAC70\uB300\uD55C \uBC84\uADF8\uC778\uB370 \uBB34\uC2A8 \uC18C\uB9B4 \uD558\uB294 \uAC70\uC784?",
+        "\uC138\uBBF8\uCF5C\uB860 \uD558\uB098 \uB54C\uBB38\uC5D0 \uB0B4 \uC8FC\uB9D0\uC774 \uD1B5\uC9F8\uB85C \uB0A0\uC544\uAC14\uB2E4\uACE0! \uC774\uAC74 \uC778\uAD8C \uCE68\uD574\uC784!"
+      ]
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "...\uADFC\uB370 \uB2D8 \uAC1C\uBC1C\uC790\uC784? \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uD6C8\uC218 \uB450\uB294 \uD558\uCCAD \uC5C5\uC790\uC784? \uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
+    },
+    { type: "control", action: "goto", next: "common-end" },
+    // ─── 분기: 도망 ───
+    { type: "label", label: "escape" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC10? \uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uBE61\uCCD0 \uC788\uC73C\uB77C\uACE0?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB2D8, \uC549\uC73C\uC148. \uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC784. \uB3C4\uB9DD \uBABB \uAC10."
+    },
+    { type: "control", action: "goto", next: "common-end" },
+    // ─── 공통 엔딩 ───
+    { type: "label", label: "common-end" },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uD558... \uBAA8\uB974\uACA0\uB2E4. \uAC13\uC0DD\uC740 \uB0B4\uC77C\uBD80\uD130 \uC0B4\uC9C0 \uBB50.",
+        "\uB2D8, \uB098\uB791 \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798\uC694? \uC694\uC998 \uC720\uD589\uD558\uB294 \uADF8 \uBC84\uADF8 \uAC9C."
+      ]
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uB178\uD2B8\uBD81\uC744 \uCF85 \uB2EB\uACE0\uB294, \uAC00\uBC29\uC5D0\uC11C \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uD588\uB2E4."
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
+    { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uCCAB \uB9CC\uB0A8\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
+  ]);
+
   // example/main.ts
   var svg = (body, w, h) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
     `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
@@ -15851,12 +15986,13 @@ ${addLineNumbers(fragment)}`);
         "scene-a": scene_a_default,
         "scene-condition": scene_condition_default,
         "scene-effects": scene_effects_default,
-        "explore-map": explore_map_default
+        "explore-map": explore_map_default,
+        "scene-zena": scene_zena_default
       }
     });
     await novel.load();
     await novel.loadAssets(OBJECTS);
-    novel.start("scene-intro");
+    novel.start("scene-zena");
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");
     const btnLoad = document.getElementById("btn-load");

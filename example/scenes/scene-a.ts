@@ -2,8 +2,9 @@
 // 테스트: overlay, sakura effect, character-focus, character-highlight, camera-pan, bg-library
 import config from '../novel.config'
 import { defineScene } from '../../src'
+import { commonInitial } from './common-initial'
 
-export default defineScene({ config }, [
+export default defineScene({ config, initial: commonInitial }, [
 
   // ── 배경 전환 + 벚꽃 효과
   { type: 'background', name: 'bg-library', duration: 800, skip: true },

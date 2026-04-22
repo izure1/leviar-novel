@@ -7,6 +7,7 @@ import sceneA from './scenes/scene-a'
 import sceneCond from './scenes/scene-condition'
 import sceneEffects from './scenes/scene-effects'
 import exploreMap from './scenes/explore-map'
+import sceneZena from './scenes/scene-zena'
 
 // =============================================================
 // SVG 인라인 유틸 (클릭 오브젝트만 SVG 사용)
@@ -66,6 +67,7 @@ async function main() {
       'scene-condition': sceneCond,
       'scene-effects': sceneEffects,
       'explore-map': exploreMap,
+      'scene-zena': sceneZena,
     },
   })
 
@@ -76,7 +78,7 @@ async function main() {
   await novel.loadAssets(OBJECTS)
 
   // ── 시작
-  novel.start('scene-intro')
+  novel.start('scene-zena')
 
   // =============================================================
   // 컨트롤 버튼 연결

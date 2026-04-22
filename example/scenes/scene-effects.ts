@@ -2,8 +2,9 @@
 // 테스트: mood, rain/fog effect, light/flicker, camera-effect, screen-fade/flash/wipe
 import config from '../novel.config'
 import { defineScene } from '../../src'
+import { commonInitial } from './common-initial'
 
-export default defineScene({ config }, [
+export default defineScene({ config, initial: commonInitial }, [
 
   // ── 공원으로 배경 전환
   { type: 'background', name: 'bg-park', duration: 1000, skip: true },

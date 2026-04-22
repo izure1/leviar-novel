@@ -1,24 +1,11 @@
 // example/scenes/scene-intro.ts
 import config from '../novel.config'
 import { defineScene } from '../../src'
+import { commonInitial } from './common-initial'
 
 export default defineScene({
   config,
-  initial: {
-    'dialogue': {
-      bg:      { color: '#00000000', gradientType: 'linear', gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%', height: 168 },
-      speaker: { fontSize: 27, fontWeight: 'bold', color: '#ffd966', borderWidth: 2, borderColor: 'rgb(255,255,255)' },
-      text:    { fontSize: 18, color: '#f0f0f0', lineHeight: 1.65 },
-    },
-    'choices': {
-      background:       'rgba(20,20,50,0.90)',
-      borderColor:      'rgba(255,255,255,0.25)',
-      hoverBackground:  'rgba(80,60,180,0.92)',
-      hoverBorderColor: 'rgba(200,180,255,0.8)',
-      borderRadius:     10,
-      minWidth:         280,
-    },
-  },
+  initial: commonInitial,
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
