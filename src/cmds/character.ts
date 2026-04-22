@@ -135,6 +135,8 @@ export function showCharacter(ctx: SceneContext, name: string, position?: Charac
   const zPos = (ctx.renderer.world.camera as any)?.attribute?.focalLength ?? 100
 
   states[name] = { position: resolvedPosition, imageKey: resolvedKey }
+  // cmdState 동기화 (세이브/로드 일관성)
+  ctx.cmdState.set('characters', { ...states })
 
   const existing = objs[name]
   if (existing) {
@@ -179,6 +181,8 @@ function removeCharacter(ctx: SceneContext, name: string, duration?: number) {
   if (obj) {
     delete objs[name]
     delete states[name]
+    // cmdState 동기화
+    ctx.cmdState.set('characters', { ...states })
     const dur = ctx.renderer.dur(duration ?? 400)
     if (dur > 0) {
       ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {

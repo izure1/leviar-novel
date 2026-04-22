@@ -257,42 +257,11 @@ export class Renderer {
   /**
    * pluginState 데이터를 기반으로 배경, 캐릭터, 무드, 이펙트를 화면에 재생성합니다.
    * restoreState() 이후 호출하여 실제 렌더링을 복원합니다.
+   * @deprecated Novel._rebuildUI()로 이동됨. 직접 호출 시 Novel에서만 사용.
    */
   rebuildFromState(): void {
-    const ctx = _makeRestoreCtx(this)
-
-    // 배경 복원
-    const bgKey = this.state.get('backgroundKey')
-    if (bgKey) {
-      setBackground(ctx, bgKey, 'inherit', 0)
-    }
-
-    // 캐릭터 복원
-    const characters = this.state.get('characters') as Record<string, { position: string; imageKey: string }> | undefined
-    if (characters) {
-      for (const [name, info] of Object.entries(characters)) {
-        showCharacter(ctx, name, info.position, info.imageKey, 0)
-      }
-    }
-
-    // 무드 복원
-    const activeMoods = this.state.get('activeMoods') as Record<string, number> | undefined
-    if (activeMoods) {
-      for (const [mood, intensity] of Object.entries(activeMoods)) {
-        addMood(ctx, mood as any, intensity, 0)
-      }
-    }
-
-    // 이펙트(파티클) 복원
-    const activeEffects = this.state.get('activeEffects') as Record<string, { rate?: number; srcKey?: string }> | undefined
-    if (activeEffects) {
-      for (const [type, info] of Object.entries(activeEffects)) {
-        addEffect(ctx, type as any, info.rate, undefined, info.srcKey)
-      }
-    }
-
-    // 오버레이 텍스트 복원
-    rebuildOverlays(ctx)
+    // 로직이 Novel._rebuildUI()로 이동됨.
+    // 카메라 복원은 restoreState()에서 실행됨.
   }
 
   /**

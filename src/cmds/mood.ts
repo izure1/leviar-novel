@@ -103,6 +103,8 @@ export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, d
       ctx.renderer.animate(existing, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
     }
     activeMoods[mood] = finalIntensity
+    // cmdState 동기화
+    ctx.cmdState.set('mood', { ...activeMoods })
     return
   }
 
@@ -133,6 +135,8 @@ export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, d
 
   objs[mood] = rect
   activeMoods[mood] = finalIntensity
+  // cmdState 동기화
+  ctx.cmdState.set('mood', { ...activeMoods })
 
   if (dur > 0) {
     ctx.renderer.animate(rect, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
@@ -145,6 +149,8 @@ export function removeMood(ctx: SceneContext, mood: MoodType, duration: number =
   const obj = objs[mood]
 
   delete activeMoods[mood]
+  // cmdState 동기화
+  ctx.cmdState.set('mood', { ...activeMoods })
 
   if (obj) {
     delete objs[mood]

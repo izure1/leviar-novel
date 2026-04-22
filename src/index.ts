@@ -65,7 +65,7 @@ export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from 
 export type { UIHandler, UIHandlerMeta } from './define/defineUI'
 
 // ─── UI 시스템 ───────────────────────────────────────────────
-export type { UIRuntimeEntry } from './core/UIRegistry'
+export type { UIRuntimeEntry, UIEntryOptions } from './core/UIRegistry'
 export type { DialogueUIStyle } from './cmds/dialogue'
 export type { ChoiceUIStyle } from './cmds/choice'
 

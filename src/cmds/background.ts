@@ -42,6 +42,8 @@ export function setBackground(ctx: SceneContext, name: string, fit: BackgroundFi
   const useParallax = def.parallax ?? true
   const dur = ctx.renderer.dur(duration)
   ctx.renderer.state.set('backgroundKey', name)
+  // cmdState 저장 (세이브/로드 일관성)
+  ctx.cmdState.set('background', { key: name, fit: fit === 'inherit' ? 'cover' : fit })
 
   const objs = getBgObjs(ctx)
   const existing = objs['main']

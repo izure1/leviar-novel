@@ -109,7 +109,8 @@ export const choiceUISetup = defineUI<ChoiceUIStyle>(
         })
       },
     }
-  }
+  },
+  { hideable: true, attachToCamera: true }
 )
 
 // ─── choice 커맨드 타입 ──────────────────────────────────────

@@ -119,6 +119,8 @@ export function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: n
   }
 
   activeEffects[type] = { rate, overrides, srcKey }
+  // cmdState 동기화
+  ctx.cmdState.set('effect', { ...activeEffects })
 
   const particle = ctx.renderer.world.createParticle({
     attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
@@ -137,6 +139,8 @@ function removeEffect(ctx: SceneContext, type: EffectType, duration: number = 60
   const effect = objs[type]
 
   delete activeEffects[type]
+  // cmdState 동기화
+  ctx.cmdState.set('effect', { ...activeEffects })
 
   if (effect) {
     delete objs[type]

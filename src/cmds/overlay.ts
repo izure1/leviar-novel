@@ -50,7 +50,7 @@ function getOverlayTexts(ctx: SceneContext): Record<string, string> {
 
 // ─── 핵심 로직 ───────────────────────────────────────────────
 
-function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'caption') {
+export function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'caption') {
   const defaults = OVERLAY_PRESETS[preset]
   const p = {
     fontSize:   defaults.fontSize,
@@ -96,7 +96,10 @@ function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'ca
   ctx.renderer.track(textObj as any)
   objs[preset] = textObj
 
-  // 텍스트 데이터 저장 (세이브/복원용)
+  // 텍스트 데이터 저장 (cmdState — 세이브/로드 일관성)
+  const curTexts = ctx.cmdState.get('overlay') ?? {}
+  ctx.cmdState.set('overlay', { ...curTexts, [preset]: text })
+  // renderer.state 동기도 유지 (rebuildOverlays 헬퍼 호환)
   getOverlayTexts(ctx)[preset] = text
 }
 
@@ -107,6 +110,11 @@ function removeOverlay(ctx: SceneContext, preset: OverlayPreset, duration: numbe
   if (obj) {
     delete objs[preset]
     delete texts[preset]
+    // cmdState 동기화
+    const curTexts = ctx.cmdState.get('overlay') ?? {}
+    const newTexts = { ...curTexts }
+    delete newTexts[preset]
+    ctx.cmdState.set('overlay', newTexts)
     const dur = ctx.renderer.dur(duration)
     if (dur > 0) {
       ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {

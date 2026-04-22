@@ -3,7 +3,7 @@
 // =============================================================
 
 import type { SceneContext } from '../core/SceneContext'
-import type { UIRuntimeEntry } from '../core/UIRegistry'
+import type { UIRuntimeEntry, UIEntryOptions } from '../core/UIRegistry'
 import type { CustomCmdHandler } from '../types/config'
 
 /**
@@ -15,6 +15,8 @@ export interface UIHandlerMeta {
   __uiName: string
   /** UI 오브젝트를 생성하는 빌더 함수 */
   __uiBuilder: (style: any, ctx: SceneContext) => UIRuntimeEntry
+  /** UI 동작 옵션 */
+  __uiOptions?: UIEntryOptions
 }
 
 /**
@@ -55,25 +57,25 @@ export type UIHandler<TStyle> =
  */
 export function defineUI<TStyle>(
   name: string,
-  builder: (style: Partial<TStyle>, ctx: SceneContext) => UIRuntimeEntry
+  builder: (style: Partial<TStyle>, ctx: SceneContext) => UIRuntimeEntry,
+  options?: UIEntryOptions
 ): UIHandler<TStyle> {
   const handler: CustomCmdHandler<Partial<TStyle>> = (rawStyle, ctx) => {
     // 1. 스타일을 CmdState에 저장 (세이브/로드용)
     ctx.cmdState.set(`setup-${name}`, rawStyle as Record<string, any>)
 
-    // 2. 빌더로 UI 생성
+    // 2. 빌더로 UI 생성 (엔트리에 options 주입)
     const entry = builder(rawStyle as Partial<TStyle>, ctx)
+    if (options) entry.options = { ...options, ...entry.options }
 
-    // 3. UIRegistry에 등록 (이미 있으면 덮어쓰기)
+    // 3. UIRegistry에 등록
     ctx.ui.register(name, entry)
-
-    // 4. 즉시 완료 (대기 없음)
     return true
   }
 
-  // 메타 부착 (Novel이 자동 감지하여 _uiDefinitions에 등록)
   ;(handler as any).__uiName    = name
   ;(handler as any).__uiBuilder = builder
+  ;(handler as any).__uiOptions = options
 
   return handler as UIHandler<TStyle>
 }

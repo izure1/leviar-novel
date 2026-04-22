@@ -198,7 +198,8 @@ export const dialogueUISetup = defineUI<DialogueUIStyle>(
         _renderText(speaker, text, speed)
       },
     }
-  }
+  },
+  { hideable: true, attachToCamera: true }
 )
 
 // ─── dialogueHandler ─────────────────────────────────────────

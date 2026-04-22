@@ -17,6 +17,8 @@ import { setBackground } from '../cmds/background'
 import { showCharacter } from '../cmds/character'
 import { addMood } from '../cmds/mood'
 import { addEffect } from '../cmds/effect'
+import { addOverlay } from '../cmds/overlay'
+import type { OverlayPreset } from '../cmds/overlay'
 
 // =============================================================
 // 내부 타입
@@ -127,6 +129,10 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       const h = handler as any
       if (h.__uiName && typeof h.__uiBuilder === 'function') {
         this._uiDefinitions.set(h.__uiName, h.__uiBuilder)
+        // options가 있으면 빌더와 함께 저장해두기 위해 메타 보존
+        if (h.__uiOptions) {
+          (this._uiDefinitions as any)[`__opts_${h.__uiName}`] = h.__uiOptions
+        }
       }
     }
   }
@@ -249,6 +255,29 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     }
   }
 
+  /**
+   * hideable:true 로 등록된 모든 UI 요소를 숨깁니다.
+   * 우클릭 UI 숨김 기능 등에 활용합니다.
+   */
+  hideUI(duration?: number): void {
+    for (const entry of this._uiRegistry.values()) {
+      if (entry.options?.hideable !== false) {
+        entry.hide(duration)
+      }
+    }
+  }
+
+  /**
+   * hideUI()로 숨겼던 UI 요소를 다시 표시합니다.
+   */
+  showUI(duration?: number): void {
+    for (const entry of this._uiRegistry.values()) {
+      if (entry.options?.hideable !== false) {
+        entry.show(duration)
+      }
+    }
+  }
+
   // ─── 세이브 / 로드 ───────────────────────────────────────────
 
   /**
@@ -329,10 +358,53 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    * loadSave() 호출 후 실행됩니다.
    */
   private _rebuildUI(): void {
-    const restoreCtx = this._makeRebuildCtx()
+    const ctx = this._makeRebuildCtx()
+
+    // 1. 배경 복원
+    const bgState = this._cmdStateStore.get('background') as { key: string; fit: string } | undefined
+    if (bgState?.key) {
+      setBackground(ctx, bgState.key, bgState.fit as any, 0)
+    }
+
+    // 2. 캠릭터 복원
+    const charState = this._cmdStateStore.get('characters') as Record<string, { position: string; imageKey: string }> | undefined
+    if (charState) {
+      for (const [name, info] of Object.entries(charState)) {
+        showCharacter(ctx, name, info.position as any, info.imageKey, 0)
+      }
+    }
+
+    // 3. 무드 복원
+    const moodState = this._cmdStateStore.get('mood') as Record<string, number> | undefined
+    if (moodState) {
+      for (const [mood, intensity] of Object.entries(moodState)) {
+        addMood(ctx, mood as any, intensity, 0)
+      }
+    }
+
+    // 4. 이펙트 복원
+    const effectState = this._cmdStateStore.get('effect') as Record<string, { rate?: number; srcKey?: string }> | undefined
+    if (effectState) {
+      for (const [type, info] of Object.entries(effectState)) {
+        addEffect(ctx, type as any, info.rate, undefined, info.srcKey)
+      }
+    }
+
+    // 5. 오버레이 복원
+    const overlayState = this._cmdStateStore.get('overlay') as Record<string, string> | undefined
+    if (overlayState) {
+      for (const [preset, text] of Object.entries(overlayState)) {
+        addOverlay(ctx, text, preset as OverlayPreset)
+      }
+    }
+
+    // 6. defineUI 빌더 실행 (dialogue, choice 등)
     for (const [name, builder] of this._uiDefinitions) {
       const style = this._cmdStateStore.get(`setup-${name}`) ?? {}
-      const entry = builder(style, restoreCtx)
+      const entry = builder(style, ctx)
+      // options 복원 (메타에서 읽기)
+      const opts = (this._uiDefinitions as any)[`__opts_${name}`]
+      if (opts) entry.options = { ...opts, ...entry.options }
       this._uiRegistry.set(name, entry)
     }
   }
