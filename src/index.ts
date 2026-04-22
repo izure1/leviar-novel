@@ -13,6 +13,7 @@ export type {
   NovelConfig,
   NovelOption,
   FallbackRule,
+  FallbackRuleOf,
   // UI 스타일
   UIChoiceStyle,
   NovelUIOption,

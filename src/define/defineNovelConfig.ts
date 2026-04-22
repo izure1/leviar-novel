@@ -2,7 +2,7 @@
 // defineNovelConfig.ts — Novel config 헬퍼 함수
 // =============================================================
 
-import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRule, EffectDef, CustomCmdHandler } from '../types/config'
+import type { CharDefs, BgDefs, NovelConfig, NovelUIOption, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
 import type { EffectType } from '../types/dialogue'
 
 /**
@@ -44,7 +44,7 @@ export function defineNovelConfig<
     effects?: Partial<Record<EffectType, EffectDef>>
     ui?: NovelUIOption
     assets?: TAssets
-    fallback?: FallbackRule[]
+    fallback?: FallbackRuleOf<TCmds>[]
     cmds?: TCmds
   }
 ): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds> {

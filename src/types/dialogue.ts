@@ -113,8 +113,14 @@ export type DialogueStep<
 
 type _AnyCmd = _DialogueEntryUnion<any, any, readonly string[], any, any, any, any>
 
-export type FallbackRule = _AnyCmd extends infer E
+/** TCmds를 인식하는 제네릭 FallbackRule. custom cmd 타입도 추론됩니다. */
+export type FallbackRuleOf<
+  TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>
+> = _DialogueEntryUnion<any, any, readonly string[], any, any, any, TCmds> extends infer E
   ? E extends { type: infer Type }
   ? { type: Type } & Partial<Omit<E, 'type' | 'skip'>> & { defaults?: Partial<Omit<E, 'skip'>> }
   : never
   : never
+
+/** @deprecated FallbackRuleOf<TCmds>를 사용하세요. custom cmd 타입이 추론되지 않습니다. */
+export type FallbackRule = FallbackRuleOf<Record<never, never>>

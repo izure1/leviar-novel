@@ -13424,7 +13424,7 @@ ${addLineNumbers(fragment)}`);
   // src/cmds/effect.ts
   var EFFECT_PARTICLE_PRESETS = {
     dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
-    rain: { attribute: { gravityScale: 1 }, style: { width: 30, height: 60, opacity: 1, blendMode: "screen" } },
+    rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: "screen" } },
     snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: "lighter" } },
     sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
     sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
@@ -14992,19 +14992,11 @@ ${addLineNumbers(fragment)}`);
       sakura: "./assets/particle_sakura.png",
       fog: "./assets/particle_fog.png"
     },
-    effects: {
-      rain: {
-        clip: { impulse: 0 },
-        particle: {
-          attribute: { gravityScale: 1.5 },
-          style: { width: 25, height: 100, blendMode: "screen" }
-        }
-      }
-    },
     fallback: [
       { type: "character", action: "show", defaults: { duration: 300 } },
       { type: "character", action: "remove", defaults: { duration: 1e3 } },
-      { type: "dialogue", defaults: { speed: 60 } }
+      { type: "dialogue", defaults: { speed: 60 } },
+      { type: "test-cmd", defaults: {} }
     ]
   });
 

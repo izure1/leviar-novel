@@ -3,7 +3,7 @@
 // =============================================================
 
 import type { World, Style, Attribute } from 'leviar'
-import type { FallbackRule, EffectType } from './dialogue'
+import type { FallbackRule, FallbackRuleOf, EffectType } from './dialogue'
 import type { SceneContext, CommandResult } from '../core/SceneContext'
 
 /** 
@@ -258,7 +258,7 @@ export interface NovelConfig<
    * 스크립트 실행 중 에셋이나 명령어가 누락되었을 때 적용할 기본값(폴백) 규칙 목록입니다. 
    * 배열의 첫 번째부터 순차적으로 매칭되어 적용됩니다.
    */
-  fallback?:   FallbackRule[]
+  fallback?:   FallbackRuleOf<TCmds>[]
   /**
    * 커스텀 명령어 핸들러 목록입니다.
    * 씬에서 지정한 `type`과 매칭되어 실행됩니다.
@@ -266,7 +266,7 @@ export interface NovelConfig<
   cmds?:       TCmds
 }
 
-export type { FallbackRule } from './dialogue'
+export type { FallbackRule, FallbackRuleOf } from './dialogue'
 
 
 /** 
