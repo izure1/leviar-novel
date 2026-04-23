@@ -2,7 +2,7 @@
 // dialogue.ts — 모든 DialogueEntry 유니온 타입 정의
 // =============================================================
 
-import type { CharDefs, BgDefs, CustomCmdHandler } from './config'
+import type { CharDefs, BgDefs, CustomCmdHandler, CmdsOf, VarsOf, SceneNamesOf } from './config'
 import type { ResolvableProps } from '../define/defineCmd'
 
 // 프리셋 타입들 import (필요시 export)
@@ -38,13 +38,12 @@ export type {
   UICmd, ControlCmd
 }
 
-export type CustomCmd<
-  TCmds extends Record<string, CustomCmdHandler<any, any, any>>,
-  TVars = any,
-  TLocalVars = any,
-> = {
-  [K in keyof TCmds & string]: { type: K } & ResolvableProps<Parameters<TCmds[K]>[0], TVars, TLocalVars>
-}[keyof TCmds & string]
+export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
+  [K in keyof CmdsOf<TConfig> & string]:
+    CmdsOf<TConfig>[K] extends CustomCmdHandler<infer TParams, any, any>
+      ? { type: K } & ResolvableProps<TParams, TVars, TLocalVars>
+      : never
+}[keyof CmdsOf<TConfig> & string]
 
 /**
  * T를 ResolvableProps로 감싼 뒤 type 키를 붙이는 헬퍼.
@@ -53,28 +52,19 @@ export type CustomCmd<
 type _WithType<T, K extends string, TVars, TLocalVars> =
   T extends any ? { type: K } & ResolvableProps<T, TVars, TLocalVars> : never
 
-type _DialogueEntryUnion<
-  TVars,
-  TLocalVars,
-  TScenes extends readonly string[],
-  TCharacters extends CharDefs,
-  TBackgrounds extends BgDefs,
-  TAssets extends Record<string, string> = Record<string, string>,
-  TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
-  TPoints extends readonly string[] = readonly string[],
-> =
-  | _WithType<DialogueCmd<TCharacters>, 'dialogue', TVars, TLocalVars>
-  | _WithType<ChoiceCmd<TVars, TLocalVars, TScenes>, 'choice', TVars, TLocalVars>
-  | _WithType<ConditionCmd<TVars, TLocalVars, TScenes>, 'condition', TVars, TLocalVars>
+type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
+  | _WithType<DialogueCmd<TConfig>, 'dialogue', TVars, TLocalVars>
+  | _WithType<ChoiceCmd<TConfig, TLocalVars>, 'choice', TVars, TLocalVars>
+  | _WithType<ConditionCmd<TConfig, TLocalVars>, 'condition', TVars, TLocalVars>
   | _WithType<VarCmd<TVars, TLocalVars>, 'var', TVars, TLocalVars>
   | _WithType<LabelCmd, 'label', TVars, TLocalVars>
-  | _WithType<BackgroundCmd<TBackgrounds>, 'background', TVars, TLocalVars>
+  | _WithType<BackgroundCmd<TConfig>, 'background', TVars, TLocalVars>
   | _WithType<MoodCmd, 'mood', TVars, TLocalVars>
-  | _WithType<EffectCmd<TAssets>, 'effect', TVars, TLocalVars>
+  | _WithType<EffectCmd<TConfig>, 'effect', TVars, TLocalVars>
   | _WithType<OverlayCmd, 'overlay', TVars, TLocalVars>
-  | _WithType<CharacterCmd<TCharacters, TPoints>, 'character', TVars, TLocalVars>
-  | _WithType<CharacterFocusCmd<TCharacters, TPoints>, 'character-focus', TVars, TLocalVars>
-  | _WithType<CharacterHighlightCmd<TCharacters>, 'character-highlight', TVars, TLocalVars>
+  | _WithType<CharacterCmd<TConfig>, 'character', TVars, TLocalVars>
+  | _WithType<CharacterFocusCmd<TConfig>, 'character-focus', TVars, TLocalVars>
+  | _WithType<CharacterHighlightCmd<TConfig>, 'character-highlight', TVars, TLocalVars>
   | _WithType<CameraZoomCmd, 'camera-zoom', TVars, TLocalVars>
   | _WithType<CameraPanCmd, 'camera-pan', TVars, TLocalVars>
   | _WithType<CameraEffectCmd, 'camera-effect', TVars, TLocalVars>
@@ -83,43 +73,29 @@ type _DialogueEntryUnion<
   | _WithType<ScreenWipeCmd, 'screen-wipe', TVars, TLocalVars>
   | _WithType<UICmd, 'ui', TVars, TLocalVars>
   | _WithType<ControlCmd, 'control', TVars, TLocalVars>
-  | CustomCmd<TCmds, TVars, TLocalVars>
+  | CustomCmd<TConfig, TVars, TLocalVars>
 
 type _WithSkip<T> = T extends any ? T & {
   /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */
   skip?: boolean
 } : never
 
-export type DialogueEntry<
-  TVars,
-  TLocalVars,
-  TScenes extends readonly string[],
-  TCharacters extends CharDefs,
-  TBackgrounds extends BgDefs,
-  TAssets extends Record<string, string> = Record<string, string>,
-  TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
-  TPoints extends readonly string[] = readonly string[],
-> = _WithSkip<_DialogueEntryUnion<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TPoints>>
+export type DialogueEntry<TConfig, TVars, TLocalVars> =
+  _WithSkip<_DialogueEntryUnion<TConfig, TVars, TLocalVars>>
 
-export type DialogueStep<
-  TVars,
-  TLocalVars,
-  TScenes extends readonly string[],
-  TCharacters extends CharDefs,
-  TBackgrounds extends BgDefs,
-  TAssets extends Record<string, string> = Record<string, string>,
-  TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
-  TPoints extends readonly string[] = readonly string[],
-> = DialogueEntry<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TPoints>
+export type DialogueStep<TConfig, TLocalVars = Record<never, never>> =
+  DialogueEntry<TConfig, VarsOf<TConfig>, TLocalVars>
 
 // ─── Fallback 룰 ─────────────────────────────────────────────
-
-type _AnyCmd = _DialogueEntryUnion<any, any, readonly string[], any, any, any, any>
 
 /** TCmds를 인식하는 제네릭 FallbackRule. custom cmd 타입도 추론됩니다. */
 export type FallbackRuleOf<
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>
-> = _DialogueEntryUnion<any, any, readonly string[], any, any, any, TCmds> extends infer E
+> = _DialogueEntryUnion<
+    { cmds?: TCmds },
+    any,
+    any
+  > extends infer E
   ? E extends { type: infer Type }
   ? { type: Type } & Partial<Omit<E, 'type' | 'skip'>> & { defaults?: Partial<Omit<E, 'skip'>> }
   : never

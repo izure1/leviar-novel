@@ -1,4 +1,5 @@
 import type { Resolvable } from '../define/defineCmd'
+import type { SceneNamesOf, VarsOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
 
 // ─── 선택지 UI 스타일 + 런타임 상태 스키마 ────────────────────
@@ -183,21 +184,21 @@ export const choiceUISetup = defineUI(
  * }
  * ```
  */
-export interface ChoiceCmd<TVars, TLocalVars, TScenes extends readonly string[]> {
+export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
   /** 사용자에게 제공될 선택지 목록입니다. */
   choices: {
     /** 선택지 버튼에 표시될 텍스트입니다. 함수를 사용하면 변수를 참조할 수 있습니다. */
-    text: Resolvable<string, TVars, TLocalVars>
+    text: Resolvable<string, VarsOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 이동할 씬(Scene)의 이름입니다. */
-    next?: Resolvable<TScenes[number], TVars, TLocalVars>
+    next?: Resolvable<SceneNamesOf<TConfig>, VarsOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 이동할 현재 씬 내의 라벨(Label) 이름입니다. */
-    goto?: Resolvable<string, TVars, TLocalVars>
+    goto?: Resolvable<string, VarsOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
-    var?: Resolvable<Partial<Record<keyof TVars, any>>, TVars, TLocalVars>
+    var?: Resolvable<Partial<Record<keyof VarsOf<TConfig>, any>>, VarsOf<TConfig>, TLocalVars>
   }[]
 }
 
-export const choiceHandler = defineCmd<ChoiceCmd<any, any, any>>((cmd, ctx, _data) => {
+export const choiceHandler = defineCmd<ChoiceCmd<any, any>>((cmd, ctx, _data) => {
   const entry = ctx.ui.get('choices')
 
   if (!entry) {

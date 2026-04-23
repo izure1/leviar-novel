@@ -276,3 +276,115 @@ export interface NovelOption {
    */
   depth?:  number
 }
+
+// =============================================================
+// Config 유틸리티 타입
+// =============================================================
+
+/**
+ * `NovelConfig`에서 캐릭터 키(`characters`의 key) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * import config from './novel.config'
+ * type CharKey = CharacterKeysOf<typeof config>  // 'arisiero' | 'zena'
+ * ```
+ */
+export type CharacterKeysOf<TConfig> =
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
+    ? keyof TChars & string
+    : string
+
+/**
+ * `NovelConfig`에서 특정 캐릭터의 이미지 키(`points`의 key) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type AriImg = ImageKeysOf<typeof config, 'arisiero'>  // 'normal' | 'smile'
+ * ```
+ */
+export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
+    ? TCharKey extends keyof TChars
+      ? keyof TChars[TCharKey]['points'] & string
+      : string
+    : string
+
+/**
+ * `NovelConfig`에서 에셋 키(`assets`의 key) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type Asset = AssetKeysOf<typeof config>  // 'bg_floor' | 'girl_normal' | ...
+ * ```
+ */
+export type AssetKeysOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any, any>
+    ? keyof TAssets & string
+    : string
+
+/**
+ * `NovelConfig`에서 배경 키(`backgrounds`의 key) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type BgKey = BackgroundKeysOf<typeof config>  // 'bg-floor' | 'bg-library' | ...
+ * ```
+ */
+export type BackgroundKeysOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any, any>
+    ? keyof TBgs & string
+    : string
+
+/**
+ * `NovelConfig`에서 씬 이름(`scenes`의 원소) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type Scene = SceneNamesOf<typeof config>  // 'scene-intro' | 'scene-a' | ...
+ * ```
+ */
+export type SceneNamesOf<TConfig> =
+  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any, any>
+    ? TScenes[number]
+    : string
+
+/**
+ * `NovelConfig`에서 전역 변수 타입(`vars`)을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type Vars = VarsOf<typeof config>  // { likeability: number; metHeroine: boolean; ... }
+ * ```
+ */
+export type VarsOf<TConfig> =
+  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any, any>
+    ? TVars
+    : Record<string, any>
+
+/**
+ * `NovelConfig`에서 포인트 키(`points`의 원소) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type Point = PointsOf<typeof config>  // 'face' | 'chest'
+ * ```
+ */
+export type PointsOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, any, any, infer TPoints>
+    ? TPoints[number]
+    : string
+
+/**
+ * `NovelConfig`에서 커스텀 커맨드 핸들러 맵(`cmds`)을 추출합니다.
+ * `CustomCmd` 내부 타입 계산에 사용됩니다.
+ *
+ * @example
+ * ```ts
+ * type Cmds = CmdsOf<typeof config>  // { 'test-cmd': CustomCmdHandler<...> }
+ * ```
+ */
+export type CmdsOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, infer TCmds, any, any>
+    ? TCmds
+    : Record<never, never>

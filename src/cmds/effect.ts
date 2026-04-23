@@ -1,4 +1,5 @@
 import type { SceneContext } from '../core/SceneContext'
+import type { AssetKeysOf } from '../types/config'
 import { defineCmd } from '../define/defineCmd'
 
 export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
@@ -13,14 +14,14 @@ export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog'
  * { type: 'effect', action: 'remove', effect: 'rain', duration: 500 }
  * ```
  */
-export type EffectCmd<TAssets extends Record<string, string> = Record<string, string>> =
+export type EffectCmd<TConfig = any> =
   | {
     /** 'add'는 화면에 새로운 파티클 효과를 추가합니다. */
     action: 'add'
     /** 추가할 이펙트의 프리셋 종류(눈, 비 등)입니다. */
     effect: EffectType
     /** 파티클로 렌더링 할 에셋의 키 (config.assets에 정의된 키)입니다. */
-    src: keyof TAssets & string
+    src: AssetKeysOf<TConfig>
     /** 파티클의 생성 빈도(속도) 배율입니다. 높을수록 많이 생성됩니다. */
     rate?: number
   }

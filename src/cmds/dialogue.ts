@@ -1,5 +1,5 @@
 import type { Style } from 'leviar'
-import type { CharDefs } from '../types/config'
+import type { CharDefs, CharacterKeysOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
 
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
@@ -252,12 +252,12 @@ export const dialogueUISetup = defineUI((data, ctx) => {
  * { type: 'dialogue', text: ['첫 번째 줄', '두 번째 줄'] }
  * ```
  */
-export interface DialogueCmd<TCharacters extends CharDefs> {
+export interface DialogueCmd<TConfig = any> {
   /**
    * 화자의 이름 (config.characters의 키).
    * 생략할 경우 화자 이름 없이 나레이션으로 처리됩니다.
    */
-  speaker?: keyof TCharacters & string
+  speaker?: CharacterKeysOf<TConfig> | (string & {})
   /** 화면에 출력할 텍스트입니다. 배열일 경우 여러 줄로 출력될 수 있습니다. */
   text: string | string[]
   /**

@@ -1,4 +1,4 @@
-import type { BgDefs } from '../types/config'
+import type { BgDefs, BackgroundKeysOf } from '../types/config'
 import type { SceneContext } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
 import { defineCmd } from '../define/defineCmd'
@@ -13,9 +13,9 @@ export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
  * { type: 'background', name: 'classroom', duration: 1500, fit: 'cover' }
  * ```
  */
-export interface BackgroundCmd<TBackgrounds extends BgDefs> {
+export interface BackgroundCmd<TConfig = any> {
   /** 전환할 배경 이미지의 에셋 키(config.backgrounds에 정의됨)입니다. */
-  name: keyof TBackgrounds & string
+  name: BackgroundKeysOf<TConfig>
   /** 배경 이미지의 화면 맞춤 방식(stretch, cover 등)입니다. */
   fit?: BackgroundFitPreset
   /** 배경 전환 시 크로스페이드(Fade)되는 시간(ms 단위)입니다. (기본값: 1000) */

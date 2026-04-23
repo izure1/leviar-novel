@@ -14,6 +14,15 @@ export type {
   NovelOption,
   FallbackRule,
   FallbackRuleOf,
+  // config 유틸리티 타입
+  CharacterKeysOf,
+  ImageKeysOf,
+  AssetKeysOf,
+  BackgroundKeysOf,
+  SceneNamesOf,
+  VarsOf,
+  PointsOf,
+  CmdsOf,
 } from './types/config'
 
 export type {

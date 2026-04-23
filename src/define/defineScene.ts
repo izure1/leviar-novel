@@ -54,7 +54,7 @@ export interface SceneDefinition<
 > {
   readonly kind: 'dialogue'
   name?: string
-  readonly dialogues: DialogueStep<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets>[]
+  readonly dialogues: DialogueStep<any>[]
   readonly localVars?: TLocalVars
   /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
   readonly nextScene?: string
@@ -124,16 +124,7 @@ export function defineScene<
     /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
     next?: TConfig['scenes'][number]
   },
-  dialogues: DialogueStep<
-    TConfig['vars'],
-    TLocalVars,
-    TConfig['scenes'],
-    TConfig['characters'],
-    TConfig['backgrounds'],
-    [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>,
-    [TConfig['cmds']] extends [undefined] ? Record<never, never> : NonNullable<TConfig['cmds']>,
-    [TConfig['points']] extends [undefined] ? readonly string[] : NonNullable<TConfig['points']>
-  >[]
+  dialogues: DialogueStep<TConfig, TLocalVars>[]
 ): SceneDefinition<
   TConfig['vars'],
   TConfig['scenes'],

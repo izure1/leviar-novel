@@ -1,4 +1,4 @@
-import type { CharDefs, CharDefsWithPoints, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
+import type { CharDefsWithPoints, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
 import type { UIHandler } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
 
@@ -25,14 +25,14 @@ import type { EffectType } from '../types/dialogue'
  * ```
  */
 export function defineNovelConfig<
-  TVars        extends Record<string, any>,
+  TVars extends Record<string, any>,
   const TScenes extends readonly string[],
   const TPoints extends readonly string[],
-  TCharacters  extends CharDefsWithPoints<TPoints>,
+  TCharacters extends CharDefsWithPoints<TPoints>,
   TBackgrounds extends BgDefs,
-  TAssets      extends Record<string, string>,
-  TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<never, never>,
-  TUi          extends Record<string, UIHandler<any>> = Record<never, never>,
+  TAssets extends Record<string, string>,
+  TCmds extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<never, never>,
+  TUi extends Record<string, UIHandler<any>> = Record<never, never>,
 >(
   config: {
     vars: TVars
@@ -47,6 +47,6 @@ export function defineNovelConfig<
     cmds?: TCmds
     ui?: TUi
   }
-): NovelConfig<TVars, TScenes, TCharacters & CharDefs, TBackgrounds, TAssets, TCmds, TUi, TPoints> {
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TUi, TPoints> {
   return config as any
 }

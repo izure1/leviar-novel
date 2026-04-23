@@ -127,7 +127,7 @@ export class DialogueScene {
   }
 
   private _buildLabelIndex(): void {
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any>[]
     steps.forEach((step, i) => {
       if (step.type === 'label') {
         const cmd = step as { type: 'label'; name: string }
@@ -266,7 +266,7 @@ export class DialogueScene {
       return
     }
 
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any>[]
     const step = steps[this.cursor] as any
 
     if (step.type === 'dialogue' && Array.isArray(step.text)) {
@@ -286,7 +286,7 @@ export class DialogueScene {
   private _executeNext(): void {
     if (this._ended) return
 
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any>[]
     if (this.cursor >= steps.length) {
       this._ended = true
       this.callbacks.syncUIState()
@@ -294,7 +294,7 @@ export class DialogueScene {
     }
 
     const step = steps[this.cursor]
-    const cmd = step as DialogueEntry<any, any, any, any, any, any, any>
+    const cmd = step as DialogueEntry<any, any, any>
 
     const result = this._executeCmd(cmd)
 
@@ -362,7 +362,7 @@ export class DialogueScene {
   }
 
   /** 단일 커맨드를 실행 */
-  private _executeCmd(originalCmd: DialogueEntry<any, any, any, any, any, any, any>): CommandResult {
+  private _executeCmd(originalCmd: DialogueEntry<any, any, any>): CommandResult {
     const r = this.renderer
     let cmd = originalCmd
 
@@ -439,7 +439,7 @@ export class DialogueScene {
   /** 현재 대기 중인 choice 커맨드를 반환 */
   getCurrentChoice(): { type: 'choice'; choices: any[] } | null {
     if (this._ended) return null
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any>[]
     const current = steps[this.cursor]
     if (current?.type === 'choice') {
       return current as any
@@ -450,7 +450,7 @@ export class DialogueScene {
   /** 현재 대기 중인 dialogue 커맨드를 반환 */
   getCurrentDialogue(): { type: 'dialogue'; speaker?: string; text: string } | null {
     if (this._ended) return null
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any>[]
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
       const cmd = current as any
@@ -517,11 +517,11 @@ export class DialogueScene {
    * 로드 후 화면에 현재 상태를 복원할 때 사용합니다.
    */
   private _redisplayCurrentStep(): void {
-    const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
+    const steps = this.definition.dialogues as DialogueStep<any>[]
     const step = steps[this.cursor]
     if (!step) return
 
-    const cmd = step as DialogueEntry<any, any, any, any, any, any, any>
+    const cmd = step as DialogueEntry<any, any, any>
     if (cmd.type === 'dialogue') {
       // cmdState에 저장된 데이터로 dialogueUI가 복원 처리 (rebuildUI 단계에서 이미 렌더됨)
       this._waitingInput = true

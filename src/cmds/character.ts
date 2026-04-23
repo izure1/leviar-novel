@@ -1,5 +1,5 @@
 import type { SceneContext } from '../core/SceneContext'
-import type { CharDefs } from '../types/config'
+import type { CharDefs, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
 import type { ZoomPreset } from './camera'
 import { Z_INDEX } from '../constants/render'
 import { panCamera, zoomCamera } from './camera'
@@ -19,11 +19,8 @@ type _ImageKeysOf<TCharacters extends CharDefs, Name extends keyof TCharacters &
  * { type: 'character', action: 'show', name: 'hero', position: 'center', image: 'smile', duration: 500 }
  * ```
  */
-export type CharacterCmd<
-  TCharacters extends CharDefs,
-  TPoints extends readonly string[] = readonly string[],
-> = {
-  [Name in keyof TCharacters & string]: {
+export type CharacterCmd<TConfig = any> = {
+  [Name in CharacterKeysOf<TConfig>]: {
     /** 'show'는 캐릭터를 등장/이동, 'remove'는 퇴장시킵니다. */
     action: 'show' | 'remove'
     /** 조작할 캐릭터의 이름(config.characters의 키)입니다. */
@@ -31,16 +28,16 @@ export type CharacterCmd<
     /** 화면 내 캐릭터의 가로 위치입니다. (프리셋 또는 'n/m' 분수) */
     position?: CharacterPositionPreset
     /** 렌더링 할 캐릭터의 이미지 키(config.characters[name]에 정의된 키)입니다. */
-    image?: _ImageKeysOf<TCharacters, Name> | (string & {})
+    image?: ImageKeysOf<TConfig, Name> | (string & {})
     /**
      * 등장과 동시에 카메라 포커스를 수행할지 여부입니다.
      * `true`일 경우 기본 포인트를 사용하며, 문자열 지정 시 config.points에 정의된 포인트 키를 입력합니다.
      */
-    focus?: boolean | TPoints[number] | (string & {})
+    focus?: boolean | PointsOf<TConfig> | (string & {})
     /** 애니메이션 적용 시간(ms 단위)입니다. */
     duration?: number
   }
-}[keyof TCharacters & string]
+}[CharacterKeysOf<TConfig>]
 
 /** 
  * 카메라를 캐릭터에 포커스한다 
@@ -50,25 +47,22 @@ export type CharacterCmd<
  * { type: 'character-focus', name: 'hero', point: 'face', zoom: 'close-up', duration: 600 }
  * ```
  */
-export type CharacterFocusCmd<
-  TCharacters extends CharDefs,
-  TPoints extends readonly string[] = readonly string[],
-> = {
-  [Name in keyof TCharacters & string]: {
+export type CharacterFocusCmd<TConfig = any> = {
+  [Name in CharacterKeysOf<TConfig>]: {
     /** 포커스 할 캐릭터의 이름입니다. */
     name: Name
     /** 맞출 카메라 초점 포인트입니다. (config.points에 정의된 키로 자동완성됩니다) */
-    point?: TPoints[number] | 'inherit' | (string & {})
+    point?: PointsOf<TConfig> | 'inherit' | (string & {})
     /** 포커스 시 적용될 화면 줌(Zoom) 수준입니다. */
     zoom?: ZoomPreset
     /** 카메라 이동에 걸리는 시간(ms 단위)입니다. (기본값: 800) */
     duration?: number
   }
-}[keyof TCharacters & string]
+}[CharacterKeysOf<TConfig>]
 
 /** 캐릭터를 컷인(전면) 레이어로 올리거나 복원한다 */
-export type CharacterHighlightCmd<TCharacters extends CharDefs> = {
-  [Name in keyof TCharacters & string]: {
+export type CharacterHighlightCmd<TConfig = any> = {
+  [Name in CharacterKeysOf<TConfig>]: {
     /** 하이라이트 할 캐릭터의 이름입니다. */
     name: Name
     /** 'on'은 캐릭터를 전경으로 올리고, 'off'는 원래 뎁스로 복구합니다. */
@@ -76,7 +70,7 @@ export type CharacterHighlightCmd<TCharacters extends CharDefs> = {
     /** 전환 시 적용되는 애니메이션 시간(ms 단위)입니다. */
     duration?: number
   }
-}[keyof TCharacters & string]
+}[CharacterKeysOf<TConfig>]
 
 const CHARACTER_X_RATIO: Record<string, number> = {
   'far-left': 0.1,
