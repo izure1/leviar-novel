@@ -34,8 +34,8 @@ function getBgObjs(ctx: SceneContext) {
 }
 
 export function setBackground(ctx: SceneContext, name: string, fit: BackgroundFitPreset, duration: number = 1000, isVideo: boolean = false) {
-  const bgDefs = ctx.renderer.config.backgrounds as any
-  const def = bgDefs?.[name]
+  const bgDefs = ctx.renderer.config.backgrounds as BgDefs
+  const def = bgDefs[name]
   if (!def) return
 
   const src = def.src ?? name
@@ -60,7 +60,7 @@ export function setBackground(ctx: SceneContext, name: string, fit: BackgroundFi
       return
     }
     // parallax 모드 변경 → 기존 제거
-    existing.remove?.()
+    existing.remove()
     ctx.renderer.untrack(existing)
     delete objs['main']
   }
@@ -81,22 +81,21 @@ export function setBackground(ctx: SceneContext, name: string, fit: BackgroundFi
 
   const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world)
   const obj = createFn({
-    attribute: { src } as any,
+    attribute: { src },
     style: {
       width: exactW, height: exactH,
-      objectFit: fit === 'inherit' ? 'cover' : fit,
       zIndex: Z_INDEX.BACKGROUND,
       opacity: dur > 0 ? 0 : 1,
       pointerEvents: false,
-    } as any,
+    },
     transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } },
   })
 
   if (!useParallax) {
-    ctx.renderer.world.camera?.addChild(obj as any)
+    ctx.renderer.world.camera?.addChild(obj)
   }
 
-  ctx.renderer.track(obj as any)
+  ctx.renderer.track(obj)
   objs['main'] = obj
 
   if (dur > 0) {

@@ -87,21 +87,21 @@ export function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: n
   const clipName = `${type}_rate_${finalRate}_${srcKey ?? 'default'}`
   const particleZ = ctx.renderer.depth / 2
 
-  if (!(ctx.renderer.world as any).particleManager.get(clipName)) {
+  if (!ctx.renderer.world.particleManager.get(clipName)) {
     const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip }
-    const cam = ctx.renderer.world.camera as any
+    const cam = ctx.renderer.world.camera
     const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(particleZ, 1) : 1
     const maxPanX = ctx.renderer.width * 0.4
     const maxPanY = ctx.renderer.height * 0.5
     const spanW = (ctx.renderer.width + maxPanX * 2) * ratio
     const spanH = (ctx.renderer.height + maxPanY * 2) * ratio
 
-      ; (ctx.renderer.world as any).particleManager.create({
-        name: clipName, src: srcKey ?? type,
-        ...clipBase,
-        rate: finalRate,
-        spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
-      })
+    ctx.renderer.world.particleManager.create({
+      name: clipName, src: srcKey ?? type,
+      ...clipBase,
+      rate: finalRate,
+      spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
+    } as any)
   }
 
   const objs = getEffectObjs(ctx)
@@ -126,11 +126,11 @@ export function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: n
     attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
     style: { ...preset.style, ...overrides?.style },
     transform: { position: { x: 0, y: 0, z: particleZ }, ...overrides?.transform },
-  } as any)
+  })
 
   objs[type] = particle
-  ctx.renderer.track(particle as any)
-    ; (particle as any).play?.()
+  ctx.renderer.track(particle)
+  particle.play()
 }
 
 function removeEffect(ctx: SceneContext, type: EffectType, duration: number = 600) {
@@ -147,11 +147,11 @@ function removeEffect(ctx: SceneContext, type: EffectType, duration: number = 60
     const dur = ctx.renderer.dur(duration)
     if (dur > 0) {
       ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
-        effect.remove?.()
+        effect.remove()
         ctx.renderer.untrack(effect)
       })
     } else {
-      effect.remove?.()
+      effect.remove()
       ctx.renderer.untrack(effect)
     }
   }

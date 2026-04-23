@@ -133,9 +133,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         const h = handler as any
         if (typeof h === 'function' && h.__isUIHandler) {
           this._uiDefinitions.set(uiKey, h.__uiBuilder)
-          if (h.__uiOptions) {
-            ;(this._uiDefinitions as any)[`__opts_${uiKey}`] = h.__uiOptions
-          }
         }
       }
     }
@@ -146,9 +143,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       const h = handler as any
       if (h.__uiName && typeof h.__uiBuilder === 'function') {
         this._uiDefinitions.set(h.__uiName, h.__uiBuilder)
-        if (h.__uiOptions) {
-          ;(this._uiDefinitions as any)[`__opts_${h.__uiName}`] = h.__uiOptions
-        }
       }
     }
   }
@@ -277,9 +271,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    */
   hideUI(duration?: number): void {
     for (const entry of this._uiRegistry.values()) {
-      if (entry.options?.hideable !== false) {
-        entry.hide(duration)
-      }
+      entry.hide(duration)
     }
   }
 
@@ -288,9 +280,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    */
   showUI(duration?: number): void {
     for (const entry of this._uiRegistry.values()) {
-      if (entry.options?.hideable !== false) {
-        entry.show(duration)
-      }
+      entry.show(duration)
     }
   }
 
@@ -416,11 +406,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
     // 6. config.ui 빌더 실행 (dialogue, choice 등)
     for (const [name, builder] of this._uiDefinitions) {
-      // ui의 룰타임 데이터는 해당 커맨드의 cmdState 키에 저장됨
       const style = this._cmdStateStore.get(name) ?? {}
       const entry = builder(style, ctx)
-      const opts = (this._uiDefinitions as any)[`__opts_${name}`]
-      if (opts) entry.options = { ...opts, ...entry.options }
       this._uiRegistry.set(name, entry)
     }
   }

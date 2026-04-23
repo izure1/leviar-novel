@@ -3,7 +3,7 @@
 // =============================================================
 
 import type { SceneContext, CommandResult } from '../core/SceneContext'
-import type { UIRuntimeEntry, UIEntryOptions } from '../core/UIRegistry'
+import type { UIRuntimeEntry } from '../core/UIRegistry'
 import type { CustomCmdHandler } from '../types/config'
 
 // ─── UIHandler 타입 ──────────────────────────────────────────
@@ -17,7 +17,6 @@ export interface UIHandlerMeta {
   /** 타입 추론용 (런타임 미사용) */
   __schemaDefault: unknown
   __uiBuilder: (data: any, ctx: SceneContext) => UIRuntimeEntry
-  __uiOptions?: UIEntryOptions
 }
 
 /**
@@ -66,8 +65,7 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): {
     handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext, data: TSchema) => CommandResult
   ) => CustomCmdHandler<Omit<TCmd, 'type'>>
   defineUI: (
-    builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry,
-    options?: UIEntryOptions
+    builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
   ) => UIHandler<TSchema>
 } {
   // ─── 반응형 구독자 ────────────────────────────────────────
@@ -134,8 +132,7 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): {
 
   // ─── defineUI ─────────────────────────────────────────────
   function defineUI(
-    builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry,
-    options?: UIEntryOptions
+    builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
   ): UIHandler<TSchema> {
     const handler = (rawStyle: Partial<TSchema>, ctx: SceneContext): CommandResult => {
       if (rawStyle && typeof rawStyle === 'object') {
@@ -176,7 +173,6 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): {
       return entry
     }
 
-    ;(handler as any).__uiOptions = options
 
     return handler as UIHandler<TSchema>
   }

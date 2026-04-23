@@ -76,174 +76,166 @@ const { defineCmd, defineUI } = define<DialogueSchema>({
  * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
  * ```
  */
-export const dialogueUISetup = defineUI(
-  (data, ctx) => {
-    const cam = ctx.world.camera as any
-    const w = ctx.renderer.width
-    const h = ctx.renderer.height
+export const dialogueUISetup = defineUI((data, ctx) => {
+  const cam = ctx.world.camera
+  const w = ctx.renderer.width
+  const h = ctx.renderer.height
 
-    const toLocal = (cx: number, cy: number) =>
-      (cam && typeof cam.canvasToLocal === 'function')
-        ? cam.canvasToLocal(cx, cy)
-        : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
+  const toLocal = (cx: number, cy: number) =>
+    (cam && typeof cam.canvasToLocal === 'function')
+      ? cam.canvasToLocal(cx, cy)
+      : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
-    // 스타일 병합
-    const bgCfg = { ...DEFAULT_BG, ...(data.bg ?? {}) } as any
-    const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as any
-    const txtCfg = { ...DEFAULT_TEXT, ...(data.text ?? {}) } as any
+  // 스타일 병합
+  const bgCfg = { ...DEFAULT_BG, ...(data.bg ?? {}) } as Style
+  const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as Style
+  const txtCfg = { ...DEFAULT_TEXT, ...(data.text ?? {}) } as Style
 
-    const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
-    const BOX_CY = h - (BOX_H / 2)
+  const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
+  const BOX_CY = h - BOX_H / 2
 
-    // 대화창 배경
-    const bgObj = ctx.world.createRectangle({
-      style: {
-        ...bgCfg,
-        width: bgCfg.width ?? w,
-        height: BOX_H,
-        zIndex: bgCfg.zIndex ?? 300,
-        opacity: 0,
-        pointerEvents: false,
-      } as any,
-      transform: { position: toLocal(w / 2, BOX_CY) },
-    })
-    ctx.world.camera?.addChild(bgObj as any)
-    ctx.renderer.track(bgObj)
+  // 대화창 배경
+  const bgObj = ctx.world.createRectangle({
+    style: {
+      ...bgCfg,
+      width: bgCfg.width ?? w,
+      height: BOX_H,
+      zIndex: bgCfg.zIndex ?? 300,
+      opacity: 0,
+      pointerEvents: false,
+    },
+    transform: { position: toLocal(w / 2, BOX_CY) },
+  })
+  ctx.world.camera?.addChild(bgObj)
+  ctx.renderer.track(bgObj)
 
-    // 화자 이름창
-    const spkY = h - BOX_H + 24
-    const speakerObj = ctx.world.createText({
-      attribute: { text: '' } as any,
-      style: {
-        ...spkCfg,
-        width: w * 0.90,
-        zIndex: spkCfg.zIndex ?? 301,
-        opacity: 0,
-        pointerEvents: false,
-      } as any,
-      transform: { position: toLocal(w / 2, spkY) },
-    })
-    ctx.world.camera?.addChild(speakerObj as any)
-    ctx.renderer.track(speakerObj)
+  // 화자 이름창
+  const spkY = h - BOX_H + 24
+  const speakerObj = ctx.world.createText({
+    attribute: { text: '' },
+    style: {
+      ...spkCfg,
+      width: w * 0.90,
+      zIndex: spkCfg.zIndex ?? 301,
+      opacity: 0,
+      pointerEvents: false,
+    },
+    transform: { position: toLocal(w / 2, spkY) },
+  })
+  ctx.world.camera?.addChild(speakerObj)
+  ctx.renderer.track(speakerObj)
 
-    // 대사 텍스트창
-    const spkH = (spkCfg.fontSize ?? 18) * 1.5
-    const textObj = ctx.world.createText({
-      attribute: { text: '' } as any,
-      style: {
-        ...txtCfg,
-        width: txtCfg.width ?? w * 0.90,
-        zIndex: txtCfg.zIndex ?? 301,
-        opacity: 0,
-        pointerEvents: false,
-      } as any,
-      transform: { position: toLocal(w / 2, spkY + spkH + 8) },
-    })
-    ctx.world.camera?.addChild(textObj as any)
-    ctx.renderer.track(textObj)
+  // 대사 텍스트창
+  const spkH = (spkCfg.fontSize ?? 18) * 1.5
+  const textObj = ctx.world.createText({
+    attribute: { text: '' },
+    style: {
+      ...txtCfg,
+      width: txtCfg.width ?? w * 0.90,
+      zIndex: txtCfg.zIndex ?? 301,
+      opacity: 0,
+      pointerEvents: false,
+    } as any,
+    transform: { position: toLocal(w / 2, spkY + spkH + 8) },
+  })
+  ctx.world.camera?.addChild(textObj)
+  ctx.renderer.track(textObj)
 
-    const charDefs = ctx.renderer.config.characters as any
+  const charDefs = ctx.renderer.config.characters
 
-    // 타이핑 상태
-    let _isTyping = false
-    let _fullText = ''
-    let _activeTx: any = null
-    // 반응형 중복 렌더 방지: 이전 lines 참조를 추적
-    let _prevLines: string[] | null = null
+  // 타이핑 상태
+  let _isTyping = false
+  let _fullText = ''
+  let _activeTx: any = null
+  // 반응형 중복 렌더 방지: 이전 lines 참조를 추적
+  let _prevLines: string[] | null = null
 
-    const _show = (dur = 250) => {
-      ; (bgObj as any).animate({ style: { opacity: 1 } }, dur, 'easeOut')
-    }
+  const _renderText = (
+    speaker: string | undefined,
+    text: string,
+    speed?: number,
+    immediate = false
+  ) => {
+    // 배경 페이드인
+    bgObj.fadeIn(200, 'easeOut')
 
-    const _hide = (dur = 300) => {
-      ; (bgObj as any).animate({ style: { opacity: 0 } }, dur, 'easeIn')
-        ; (speakerObj as any).style.opacity = 0
-        ; (textObj as any).animate({ style: { opacity: 0 } }, dur, 'easeIn')
-    }
+    // 화자
+    speakerObj.attribute.text = speaker ?? ''
+    speakerObj.fadeIn(200, 'easeOut')
 
-    const _renderText = (
-      speaker: string | undefined,
-      text: string,
-      speed?: number,
-      immediate = false
-    ) => {
-      _show()
-
-        // 화자
-        ; (speakerObj as any).attribute.text = speaker ?? ''
-        ; (speakerObj as any).style.opacity = speaker ? 1 : 0
-
-      // 대사 — 즉시 or 타이핑
-      if (immediate || speed === 0) {
-        _isTyping = false
-        _fullText = text
-        _activeTx?.stop?.()
-        _activeTx = null
-          ; (textObj as any).attribute.text = text
-          ; (textObj as any).style.opacity = 1
-      } else {
-        const spd = speed ?? 30
-        _isTyping = true
-        _fullText = text
-        if (_activeTx) { _activeTx.stop?.(); _activeTx = null }
-        const anim = (textObj as any).transition(text, spd)
-        _activeTx = anim
-          ; (textObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
-        if (anim && typeof anim.on === 'function') {
-          anim.on('end', () => {
-            _isTyping = false
-            _activeTx = null
-          })
-        }
+    // 대사 — 즉시 or 타이핑
+    if (immediate || speed === 0) {
+      _isTyping = false
+      _fullText = text
+      _activeTx?.stop?.()
+      _activeTx = null
+      textObj.attribute.text = text
+      textObj.fadeIn(200, 'easeOut')
+    } else {
+      const spd = speed ?? 30
+      _isTyping = true
+      _fullText = text
+      if (_activeTx) { _activeTx.stop?.(); _activeTx = null }
+      const anim = textObj.transition(text, spd)
+      _activeTx = anim
+      textObj.fadeIn(200, 'easeOut')
+      if (anim && typeof anim.on === 'function') {
+        anim.on('end', () => {
+          _isTyping = false
+          _activeTx = null
+        })
       }
     }
+  }
 
-    // 복원: 로드 시 저장된 대사 즉시 렌더링
-    if (data.lines?.length) {
-      _prevLines = data.lines
-      const txt = data.lines[data.subIndex ?? 0] as string
-      const spkName = resolveSpeaker(data.speakerKey, charDefs)
-      _renderText(spkName, txt, undefined, true)
-    }
+  // 복원: 로드 시 저장된 대사 즉시 렌더링
+  if (data.lines?.length) {
+    _prevLines = data.lines
+    const txt = data.lines[data.subIndex ?? 0] as string
+    const spkName = resolveSpeaker(data.speakerKey, charDefs)
+    _renderText(spkName, txt, undefined, true)
+  }
 
-    return {
-      show: (dur?: number) => _show(dur),
-      hide: (dur?: number) => _hide(dur),
-      isTyping: () => _isTyping,
-      completeTyping: () => {
-        if (!_isTyping) return
-        _isTyping = false
-        _activeTx?.stop?.()
-        _activeTx = null
-          ; (textObj as any).attribute.text = _fullText
-          ; (textObj as any).style.opacity = 1
-      },
-      /**
-       * data가 변경될 때 Proxy가 자동으로 호출합니다.
-       * - lines가 바뀐 경우: 텍스트 재렌더
-       * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
-       */
-      update: (d: DialogueSchema) => {
-        // 스타일 갱신
-        const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}) } as any
-        const newSpkCfg = { ...DEFAULT_SPEAKER, ...(d.speaker ?? {}) } as any
-        const newTxtCfg = { ...DEFAULT_TEXT, ...(d.text ?? {}) } as any
-        Object.assign((bgObj as any).style, newBgCfg)
-        Object.assign((speakerObj as any).style, newSpkCfg)
-        Object.assign((textObj as any).style, newTxtCfg)
+  return {
+    show: (dur = 250) => { bgObj.fadeIn(dur, 'easeOut') },
+    hide: (dur = 300) => {
+      bgObj.fadeOut(dur, 'easeIn')
+      speakerObj.fadeOut(dur, 'easeIn')
+      textObj.fadeOut(dur, 'easeIn')
+    },
+    isTyping: () => _isTyping,
+    completeTyping: () => {
+      if (!_isTyping) return
+      _isTyping = false
+      _activeTx?.stop?.()
+      _activeTx = null
+      textObj.attribute.text = _fullText
+      textObj.style.opacity = 1
+    },
+    /**
+     * data가 변경될 때 Proxy가 자동으로 호출합니다.
+     * - lines가 바뀐 경우: 텍스트 재렌더
+     * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
+     */
+    update: (d: DialogueSchema) => {
+      // 스타일 갱신
+      const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}) } as Style
+      const newSpkCfg = { ...DEFAULT_SPEAKER, ...(d.speaker ?? {}) } as Style
+      const newTxtCfg = { ...DEFAULT_TEXT, ...(d.text ?? {}) } as Style
+      Object.assign(bgObj.style, newBgCfg)
+      Object.assign(speakerObj.style, newSpkCfg)
+      Object.assign(textObj.style, newTxtCfg)
 
-        // 텍스트 갱신: lines 참조가 바뀐 경우에만 렌더 (중복 방지)
-        if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
-          _prevLines = d.lines
-          const txt = d.lines[d.subIndex ?? 0] as string
-          const spkName = resolveSpeaker(d.speakerKey, charDefs)
-          _renderText(spkName, txt, d.speed)
-        }
-      },
-    }
-  },
-  { hideable: true, attachToCamera: true }
-)
+      // 텍스트 갱신: lines 참조가 바뀐 경우에만 렌더 (중복 방지)
+      if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
+        _prevLines = d.lines
+        const txt = d.lines[d.subIndex ?? 0] as string
+        const spkName = resolveSpeaker(d.speakerKey, charDefs)
+        _renderText(spkName, txt, d.speed)
+      }
+    },
+  }
+})
 
 // ─── dialogueHandler ─────────────────────────────────────────
 

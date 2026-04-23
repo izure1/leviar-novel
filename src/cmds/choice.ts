@@ -52,7 +52,7 @@ export const choiceUISetup = defineUI(
   (data, ctx) => {
     const cfg = { ...DEFAULT_CHOICE, ...data } as Required<ChoiceSchema>
 
-    const cam = ctx.world.camera as any
+    const cam = ctx.world.camera
     const w = ctx.renderer.width
     const h = ctx.renderer.height
 
@@ -70,10 +70,10 @@ export const choiceUISetup = defineUI(
         zIndex: 500, // 다른 UI보다 높게
         opacity: 0,
         pointerEvents: true, // 뒤쪽 이벤트 차단
-      } as any,
+      },
       transform: { position: toLocal(w / 2, h / 2) },
     })
-    ctx.world.camera?.addChild(bgObj as any)
+    ctx.world.camera?.addChild(bgObj)
     ctx.renderer.track(bgObj)
 
     let _btnObjs: any[] = []
@@ -86,13 +86,13 @@ export const choiceUISetup = defineUI(
     }
 
     return {
-      show: () => { (bgObj as any).fadeIn?.(200, 'easeOut') },
+      show: () => { bgObj.fadeIn(200, 'easeOut') },
       hide: () => {
-        (bgObj as any).fadeOut?.(200, 'easeIn')
+        bgObj.fadeOut(200, 'easeIn')
         _clearButtons()
       },
       onChoices: (choices, onSelect) => {
-        (bgObj as any).fadeIn?.(200, 'easeOut')
+        bgObj.fadeIn(200, 'easeOut')
         _clearButtons()
 
         const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize
@@ -121,12 +121,12 @@ export const choiceUISetup = defineUI(
               zIndex: 501,
               pointerEvents: true,
               opacity: 1
-            } as any,
+            },
             transform: { position: toLocal(w / 2, cy) }
           })
 
           const txtObj = ctx.world.createText({
-            attribute: { text: textStr } as any,
+            attribute: { text: textStr },
             style: {
               fontSize: fSize,
               fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
@@ -134,23 +134,23 @@ export const choiceUISetup = defineUI(
               textAlign: 'center',
               zIndex: 502,
               pointerEvents: false
-            } as any,
+            },
             // 버튼을 부모로 가질 것이므로 버튼 중심 기준 (0,0)
             transform: { position: { x: 0, y: 0, z: 0 } }
           })
 
           btnObj.on('mouseover', () => {
-            (btnObj as any).animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150)
+            btnObj.animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150)
           })
           btnObj.on('mouseout', () => {
-            (btnObj as any).animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150)
+            btnObj.animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150)
           })
           btnObj.on('click', () => {
             onSelect(i)
           })
 
-          btnObj.addChild(txtObj as any)
-          ctx.world.camera?.addChild(btnObj as any)
+          btnObj.addChild(txtObj)
+          ctx.world.camera?.addChild(btnObj)
 
           // 리소스 관리를 위해 renderer에 트래킹
           ctx.renderer.track(btnObj)
@@ -164,7 +164,6 @@ export const choiceUISetup = defineUI(
       },
     }
   },
-  { hideable: true, attachToCamera: true }
 )
 
 // ─── choice 커맨드 타입 ──────────────────────────────────────

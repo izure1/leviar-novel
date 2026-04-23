@@ -134,7 +134,7 @@ export function showCharacter(ctx: SceneContext, name: string, position?: Charac
 
   const src = imageDef.src ?? resolvedKey
   const xPos = ctx.renderer.width * (resolvePositionX(resolvedPosition) - 0.5)
-  const zPos = (ctx.renderer.world.camera as any)?.attribute?.focalLength ?? 100
+  const zPos = (ctx.renderer.world.camera)?.attribute?.focalLength ?? 100
 
   states[name] = { position: resolvedPosition, imageKey: resolvedKey }
   // cmdState 동기화 (세이브/로드 일관성)
@@ -155,15 +155,15 @@ export function showCharacter(ctx: SceneContext, name: string, position?: Charac
   }
 
   const obj = ctx.renderer.world.createImage({
-    attribute: { src } as any,
+    attribute: { src },
     style: {
-      width: (imageDef as any).width ?? 500,
+      width: imageDef.width ?? 500,
       opacity: ctx.renderer.dur(duration ?? 400) > 0 ? 0 : 1,
       zIndex: Z_INDEX.CHARACTER_NORMAL,
-      anchor: { x: 0.5, y: 1 }
-    } as any,
+    },
     transform: {
-      position: { x: xPos, y: 0, z: zPos }
+      position: { x: xPos, y: 0, z: zPos },
+      pivot: { x: 0.5, y: 1 }
     }
   })
 
@@ -188,11 +188,11 @@ function removeCharacter(ctx: SceneContext, name: string, duration?: number) {
     const dur = ctx.renderer.dur(duration ?? 400)
     if (dur > 0) {
       ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
-        obj.remove?.()
+        obj.remove()
         ctx.renderer.untrack(obj)
       })
     } else {
-      obj.remove?.()
+      obj.remove()
       ctx.renderer.untrack(obj)
     }
   }
@@ -225,19 +225,19 @@ function focusCharacter(ctx: SceneContext, name: string, focusType?: string, fit
 
 export const characterHandler = defineCmd<CharacterCmd<any>>((cmd, ctx) => {
   if (cmd.action === 'show') {
-    const showCmd = cmd as any
-    showCharacter(ctx, showCmd.name as string, showCmd.position, showCmd.image as string | undefined, showCmd.duration)
+    const showCmd = cmd
+    showCharacter(ctx, showCmd.name, showCmd.position, showCmd.image, showCmd.duration)
     if (showCmd.focus) {
-      focusCharacter(ctx, showCmd.name as string, typeof showCmd.focus === 'string' ? showCmd.focus : undefined, 'inherit', showCmd.duration ?? 800)
+      focusCharacter(ctx, showCmd.name, typeof showCmd.focus === 'string' ? showCmd.focus : undefined, 'inherit', showCmd.duration ?? 800)
     }
   } else {
-    removeCharacter(ctx, cmd.name as string, cmd.duration)
+    removeCharacter(ctx, cmd.name, cmd.duration)
   }
   return false
 })
 
 export const characterFocusHandler = defineCmd<CharacterFocusCmd<any>>((cmd, ctx) => {
-  focusCharacter(ctx, cmd.name as string, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
+  focusCharacter(ctx, cmd.name, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
   return false
 })
 

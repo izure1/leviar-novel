@@ -23,7 +23,7 @@ export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
  * ```
  */
 export type MoodCmd =
-  | { 
+  | {
     /** 'add'는 새로운 무드 효과를 추가합니다. */
     action?: 'add'
     /** 추가할 무드의 타입입니다. */
@@ -33,15 +33,15 @@ export type MoodCmd =
     /** 무드 레이어에 깜빡임(flicker) 애니메이션을 적용할 프리셋입니다. */
     flicker?: FlickerPreset
     /** 효과가 추가되면서 페이드인 되는 시간(ms 단위)입니다. (기본값: 800) */
-    duration?: number 
+    duration?: number
   }
-  | { 
+  | {
     /** 'remove'는 현재 활성화된 무드 효과를 제거합니다. */
     action: 'remove'
     /** 제거할 무드의 타입입니다. */
     mood: MoodType
     /** 효과가 제거되면서 페이드아웃 되는 시간(ms 단위)입니다. (기본값: 800) */
-    duration?: number 
+    duration?: number
   }
 
 const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
@@ -108,7 +108,7 @@ export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, d
     return
   }
 
-  const cam = ctx.renderer.world.camera as any
+  const cam = ctx.renderer.world.camera
   const focalLength = cam?.attribute?.focalLength ?? 100
   const exactW = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(focalLength, ctx.renderer.width) : ctx.renderer.width
   const exactH = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(focalLength, ctx.renderer.height) : ctx.renderer.height
@@ -119,7 +119,7 @@ export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, d
       width: exactW, height: exactH,
       zIndex: Z_INDEX.MOOD,
       pointerEvents: false,
-      blendMode: blendMode as any,
+      blendMode: blendMode,
     },
     transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } },
   }
@@ -129,8 +129,8 @@ export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, d
   }
 
   const rect = ctx.renderer.world.createRectangle(rectOpts)
-  ctx.renderer.track(rect as any)
-  ctx.renderer.world.camera?.addChild(rect as any)
+  ctx.renderer.track(rect)
+  ctx.renderer.world.camera?.addChild(rect)
     ; (rect as any)._currentMood = mood
 
   objs[mood] = rect
@@ -157,11 +157,11 @@ export function removeMood(ctx: SceneContext, mood: MoodType, duration: number =
     const dur = ctx.renderer.dur(duration)
     if (dur > 0) {
       ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
-        obj.remove?.()
+        obj.remove()
         ctx.renderer.untrack(obj)
       })
     } else {
-      obj.remove?.()
+      obj.remove()
       ctx.renderer.untrack(obj)
     }
   }

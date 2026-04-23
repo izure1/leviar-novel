@@ -1,5 +1,5 @@
 import type { SceneContext } from '../core/SceneContext'
-import type { EasingType } from 'leviar'
+import type { EasingType, Rectangle } from 'leviar'
 import { Z_INDEX } from '../constants/render'
 import { defineCmd } from '../define/defineCmd'
 
@@ -54,16 +54,16 @@ const WIPE_PRESETS: Record<Exclude<WipePreset, 'inherit'>, { x: number; y: numbe
   down: { x: 0, y: -1 },
 }
 
-function getTransitionRect(ctx: SceneContext, color: string) {
+function getTransitionRect(ctx: SceneContext, color: string): Rectangle<Record<string, any>> {
   let rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) {
-    const w = (ctx.renderer.world.canvas as any)?.width ?? ctx.renderer.width
-    const h = (ctx.renderer.world.canvas as any)?.height ?? ctx.renderer.height
+    const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
+    const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
     rect = ctx.renderer.world.createRectangle({
       style: {
         color, width: w * 2, height: h * 2,
         opacity: 0, zIndex: Z_INDEX.TRANSITION, pointerEvents: false,
-      } as any,
+      },
       transform: { position: { x: 0, y: 0, z: 10 } },
     })
     ctx.renderer.world.camera?.addChild(rect)
@@ -98,7 +98,6 @@ function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit') {
 
   const rect = getTransitionRect(ctx, cfg.color)
   rect.style.opacity = 1
-
   ctx.renderer.animate(rect, { style: { opacity: 0 } }, cfg.duration, 'easeOut')
 }
 
@@ -108,8 +107,8 @@ function screenWipe(ctx: SceneContext, dir: 'in' | 'out', preset: WipePreset = '
   const cfg = WIPE_PRESETS[resolvedPreset as Exclude<WipePreset, 'inherit'>]
   if (!cfg) return
 
-  const w = (ctx.renderer.world.canvas as any)?.width ?? ctx.renderer.width
-  const h = (ctx.renderer.world.canvas as any)?.height ?? ctx.renderer.height
+  const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
+  const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
   // .bak 기준: w*2 크기로 이동해야 완전히 화면 밖으로 나감
   const dx = cfg.x * w * 2
   const dy = cfg.y * h * 2

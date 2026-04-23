@@ -18,7 +18,7 @@ export interface OverlayCmd {
 
 const OVERLAY_PRESETS: Record<OverlayPreset, { fontSize: number; color: string; opacity: number; zIndex: number; y: 'top' | 'center' | 'bottom' }> = {
   caption: { fontSize: 24, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: 'bottom' },
-  title:   { fontSize: 48, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE,   y: 'center' },
+  title: { fontSize: 48, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: 'center' },
   whisper: { fontSize: 18, color: '#cccccc', opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: 'bottom' },
 }
 
@@ -53,47 +53,47 @@ function getOverlayTexts(ctx: SceneContext): Record<string, string> {
 export function addOverlay(ctx: SceneContext, text: string, preset: OverlayPreset = 'caption') {
   const defaults = OVERLAY_PRESETS[preset]
   const p = {
-    fontSize:   defaults.fontSize,
-    color:      defaults.color,
-    opacity:    defaults.opacity,
-    zIndex:     defaults.zIndex,
-    y:          defaults.y,
-    fontWeight: undefined as any,
-    fontFamily: undefined as any,
-    lineHeight: undefined as any,
+    fontSize: defaults.fontSize,
+    color: defaults.color,
+    opacity: defaults.opacity,
+    zIndex: defaults.zIndex,
+    y: defaults.y,
+    fontWeight: undefined,
+    fontFamily: undefined,
+    lineHeight: undefined,
   }
 
   const objs = getOverlayObjs(ctx)
   if (objs[preset]) removeOverlay(ctx, preset, 0)
 
   const yMap: Record<string, number> = {
-    top:    ctx.renderer.height * 0.1,
+    top: ctx.renderer.height * 0.1,
     center: ctx.renderer.height * 0.5,
     bottom: ctx.renderer.height * 0.85,
   }
 
-  const cam = ctx.renderer.world.camera as any
+  const cam = ctx.renderer.world.camera
   const pos = cam && typeof cam.canvasToLocal === 'function'
     ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[p.y])
     : { x: 0, y: 0, z: 100 }
 
   const textObj = ctx.renderer.world.createText({
-    attribute: { text } as any,
+    attribute: { text },
     style: {
-      fontSize:      p.fontSize,
-      fontWeight:    p.fontWeight,
-      fontFamily:    p.fontFamily,
-      lineHeight:    p.lineHeight,
-      color:         p.color,
-      opacity:       p.opacity,
-      zIndex:        p.zIndex,
+      fontSize: p.fontSize,
+      fontWeight: p.fontWeight,
+      fontFamily: p.fontFamily,
+      lineHeight: p.lineHeight,
+      color: p.color,
+      opacity: p.opacity,
+      zIndex: p.zIndex,
       pointerEvents: false,
-    } as any,
+    },
     transform: { position: pos },
   })
 
-  ctx.renderer.world.camera?.addChild(textObj as any)
-  ctx.renderer.track(textObj as any)
+  ctx.renderer.world.camera?.addChild(textObj)
+  ctx.renderer.track(textObj)
   objs[preset] = textObj
 
   // 텍스트 데이터 저장 (cmdState — 세이브/로드 일관성)
@@ -104,9 +104,9 @@ export function addOverlay(ctx: SceneContext, text: string, preset: OverlayPrese
 }
 
 function removeOverlay(ctx: SceneContext, preset: OverlayPreset, duration: number = 600) {
-  const objs  = getOverlayObjs(ctx)
+  const objs = getOverlayObjs(ctx)
   const texts = getOverlayTexts(ctx)
-  const obj   = objs[preset]
+  const obj = objs[preset]
   if (obj) {
     delete objs[preset]
     delete texts[preset]
@@ -118,11 +118,11 @@ function removeOverlay(ctx: SceneContext, preset: OverlayPreset, duration: numbe
     const dur = ctx.renderer.dur(duration)
     if (dur > 0) {
       ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
-        obj.remove?.()
+        obj.remove()
         ctx.renderer.untrack(obj)
       })
     } else {
-      obj.remove?.()
+      obj.remove()
       ctx.renderer.untrack(obj)
     }
   }
