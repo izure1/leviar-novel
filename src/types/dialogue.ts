@@ -71,7 +71,7 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<ScreenFadeCmd, 'screen-fade', TVars, TLocalVars>
   | _WithType<ScreenFlashCmd, 'screen-flash', TVars, TLocalVars>
   | _WithType<ScreenWipeCmd, 'screen-wipe', TVars, TLocalVars>
-  | _WithType<UICmd, 'ui', TVars, TLocalVars>
+  | _WithType<UICmd<TConfig>, 'ui', TVars, TLocalVars>
   | _WithType<ControlCmd, 'control', TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 

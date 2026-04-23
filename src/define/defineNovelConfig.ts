@@ -1,4 +1,4 @@
-import type { CharDefsWithPoints, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
+import type { CharDefs, CharDefsWithPoints, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
 import type { UIHandler } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
 
@@ -28,7 +28,7 @@ export function defineNovelConfig<
   TVars extends Record<string, any>,
   const TScenes extends readonly string[],
   const TPoints extends readonly string[],
-  TCharacters extends CharDefsWithPoints<TPoints>,
+  TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<never, never>,
@@ -39,7 +39,7 @@ export function defineNovelConfig<
     scenes: TScenes
     /** 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록 */
     points: TPoints
-    characters: NoInfer<TCharacters>
+    characters: TCharacters & CharDefsWithPoints<TPoints>
     backgrounds: TBackgrounds
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets

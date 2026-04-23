@@ -12,10 +12,6 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-intro',
 }, [
-
-  { type: 'character', action: 'show', name: 'should throw error' },
-  { type: 'ui', action: 'show', name: 'should throw error' },
-
   // { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },

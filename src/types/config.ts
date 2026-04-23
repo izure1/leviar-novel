@@ -388,3 +388,16 @@ export type CmdsOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, infer TCmds, any, any>
     ? TCmds
     : Record<never, never>
+
+/**
+ * `NovelConfig`에서 UI 핸들러 키(`ui`의 key) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type UiKey = UiKeysOf<typeof config>  // 'dialogue' | 'choices'
+ * ```
+ */
+export type UiKeysOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TUi, any>
+    ? keyof TUi & string
+    : string
