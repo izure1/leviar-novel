@@ -238,7 +238,7 @@ export interface NovelConfig<
    * }
    * ```
    */
-  ui?:         Record<string, UIHandler<any>>
+  ui?:         TUi
 }
 
 export type { FallbackRule, FallbackRuleOf } from './dialogue'

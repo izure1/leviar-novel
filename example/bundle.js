@@ -13406,72 +13406,98 @@ ${addLineNumbers(fragment)}`);
   var choiceUISetup = defineUI2(
     (data, ctx) => {
       const cfg = { ...DEFAULT_CHOICE, ...data };
-      const canvas = ctx.renderer.world.canvas;
-      const parent = canvas.parentElement ?? document.body;
-      const el = document.createElement("div");
-      el.style.cssText = [
-        "position:absolute",
-        "top:0",
-        "left:0",
-        "right:0",
-        "bottom:0",
-        "display:none",
-        "flex-direction:column",
-        "justify-content:center",
-        "align-items:center",
-        "gap:12px",
-        "background:rgba(0,0,0,0.6)",
-        "pointer-events:auto",
-        `font-family:${cfg.fontFamily}`
-      ].join(";");
-      parent.style.position = "relative";
-      parent.appendChild(el);
-      el.__novelRemove = () => {
-        el.remove();
+      const cam = ctx.world.camera;
+      const w = ctx.renderer.width;
+      const h = ctx.renderer.height;
+      const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+      const bgObj = ctx.world.createRectangle({
+        style: {
+          color: "rgba(0,0,0,0.6)",
+          width: w,
+          height: h,
+          zIndex: 500,
+          // 다른 UI보다 높게
+          opacity: 0,
+          pointerEvents: true
+          // 뒤쪽 이벤트 차단
+        },
+        transform: { position: toLocal(w / 2, h / 2) }
+      });
+      ctx.world.camera?.addChild(bgObj);
+      ctx.renderer.track(bgObj);
+      let _btnObjs = [];
+      const _clearButtons = () => {
+        _btnObjs.forEach((obj) => {
+          obj.remove({ child: true });
+        });
+        _btnObjs = [];
       };
       return {
         show: () => {
-          el.style.display = "flex";
+          bgObj.style.opacity = 1;
         },
         hide: () => {
-          el.style.display = "none";
-          el.innerHTML = "";
+          bgObj.style.opacity = 0;
+          _clearButtons();
         },
         onChoices: (choices, onSelect) => {
-          el.style.display = "flex";
-          el.innerHTML = "";
+          bgObj.style.opacity = 1;
+          _clearButtons();
+          const gap = 12;
+          const paddingY = 12;
+          const btnH = cfg.fontSize * 1.5 + paddingY * 2;
+          const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap;
+          const startY = h / 2 - totalHeight / 2 + btnH / 2;
           choices.forEach((choice, i) => {
-            const btn = document.createElement("button");
-            btn.textContent = choice.text;
-            btn.style.cssText = [
-              "padding:12px 32px",
-              `font-size:${cfg.fontSize}px`,
-              `font-family:${cfg.fontFamily}`,
-              `color:${cfg.color}`,
-              `background:${cfg.background}`,
-              `border:1.5px solid ${cfg.borderColor}`,
-              `border-radius:${cfg.borderRadius}px`,
-              "cursor:pointer",
-              "transition:background 0.15s,border-color 0.15s",
-              `min-width:${cfg.minWidth}px`,
-              "text-align:center"
-            ].join(";");
-            btn.addEventListener("mouseenter", () => {
-              btn.style.background = cfg.hoverBackground;
-              btn.style.borderColor = cfg.hoverBorderColor;
+            const cy = startY + i * (btnH + gap);
+            const textStr = String(choice.text);
+            const estimatedTextW = textStr.length * cfg.fontSize * 0.8;
+            const btnW = Math.max(cfg.minWidth, estimatedTextW + 64);
+            const btnObj = ctx.world.createRectangle({
+              style: {
+                color: cfg.background,
+                borderColor: cfg.borderColor,
+                borderWidth: 1.5,
+                borderRadius: cfg.borderRadius,
+                width: btnW,
+                height: btnH,
+                zIndex: 501,
+                pointerEvents: true,
+                opacity: 1
+              },
+              transform: { position: toLocal(w / 2, cy) }
             });
-            btn.addEventListener("mouseleave", () => {
-              btn.style.background = cfg.background;
-              btn.style.borderColor = cfg.borderColor;
+            const txtObj = ctx.world.createText({
+              attribute: { text: textStr },
+              style: {
+                fontSize: cfg.fontSize,
+                fontFamily: cfg.fontFamily,
+                color: cfg.color,
+                textAlign: "center",
+                zIndex: 502,
+                pointerEvents: false
+              },
+              // 버튼을 부모로 가질 것이므로 버튼 중심 기준 (0,0)
+              transform: { position: { x: 0, y: 0, z: 0 } }
             });
-            btn.addEventListener("click", (e) => {
-              e.stopPropagation();
+            btnObj.on("mouseover", () => {
+              btnObj.style.color = cfg.hoverBackground;
+              btnObj.style.borderColor = cfg.hoverBorderColor;
+            });
+            btnObj.on("mouseout", () => {
+              btnObj.style.color = cfg.background;
+              btnObj.style.borderColor = cfg.borderColor;
+            });
+            btnObj.on("click", () => {
               onSelect(i);
             });
-            el.appendChild(btn);
+            btnObj.addChild(txtObj);
+            ctx.world.camera?.addChild(btnObj);
+            ctx.renderer.track(btnObj);
+            ctx.renderer.track(txtObj);
+            _btnObjs.push(btnObj);
           });
         },
-        /** data 변경 시 내부 cfg를 갱신합니다. 이후 onChoices 호출 시 새 스타일이 적용됩니다. */
         update: (d) => {
           Object.assign(cfg, DEFAULT_CHOICE, d);
         }

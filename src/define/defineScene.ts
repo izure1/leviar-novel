@@ -30,10 +30,15 @@ export type InitialOf<TUi> = {
  * ```
  */
 export function defineInitial<
-  TConfig extends NovelConfig<any, any, any, any, any, any> & { ui?: Record<string, UIHandler<any>> }
+  TConfig extends NovelConfig<any, any, any, any, any, any> & { ui?: Record<string, UIHandler<any>> },
+  TInitial extends ([TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>)
 >(
   config: TConfig,
-  initial: [TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>
+  initial: TInitial & (
+    [TConfig['ui']] extends [undefined]
+      ? unknown
+      : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['ui']> ? unknown : never }
+  )
 ): typeof initial {
   return initial
 }
@@ -100,6 +105,7 @@ export interface SceneDefinition<
 export function defineScene<
   TConfig extends NovelConfig<any, readonly string[], any, any, any, any> & { ui?: Record<string, UIHandler<any>> },
   TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
+  TInitial extends ([TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>) = ([TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>)
 >(
   {
     config,
@@ -110,7 +116,11 @@ export function defineScene<
     config: TConfig
     variables?: keyof TLocalVars extends `_${string}` ? TLocalVars : never
     /** 씬 시작 시 적용할 UI 초기 데이터 (optional). config.ui 키/값 타입 추론. */
-    initial?: [TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>
+    initial?: TInitial & (
+      [TConfig['ui']] extends [undefined]
+        ? unknown
+        : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['ui']> ? unknown : never }
+    )
     /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
     next?: TConfig['scenes'][number]
   },

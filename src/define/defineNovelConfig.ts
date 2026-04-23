@@ -47,6 +47,6 @@ export function defineNovelConfig<
     cmds?: TCmds
     ui?: TUi
   }
-): NovelConfig<TVars, TScenes, TCharacters & CharDefs, TBackgrounds, TAssets, TCmds> & { ui?: TUi; points: TPoints } {
+): NovelConfig<TVars, TScenes, TCharacters & CharDefs, TBackgrounds, TAssets, TCmds, TUi, TPoints> {
   return config as any
 }
