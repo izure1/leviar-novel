@@ -101,7 +101,8 @@ export const dialogueUISetup = defineUI((data, ctx) => {
       width: bgCfg.width ?? w,
       height: BOX_H,
       zIndex: bgCfg.zIndex ?? 300,
-      opacity: 0,
+      opacity: 1,
+      display: 'none',
       pointerEvents: false,
     },
     transform: { position: toLocal(w / 2, BOX_CY) },
@@ -117,7 +118,8 @@ export const dialogueUISetup = defineUI((data, ctx) => {
       ...spkCfg,
       width: w * 0.90,
       zIndex: spkCfg.zIndex ?? 301,
-      opacity: 0,
+      opacity: 1,
+      display: 'none',
       pointerEvents: false,
     },
     transform: { position: toLocal(w / 2, spkY) },
@@ -133,9 +135,10 @@ export const dialogueUISetup = defineUI((data, ctx) => {
       ...txtCfg,
       width: txtCfg.width ?? w * 0.90,
       zIndex: txtCfg.zIndex ?? 301,
-      opacity: 0,
+      opacity: 1,
+      display: 'none',
       pointerEvents: false,
-    } as any,
+    },
     transform: { position: toLocal(w / 2, spkY + spkH + 8) },
   })
   ctx.world.camera?.addChild(textObj)
@@ -275,7 +278,7 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
 
     // 타이핑 중이면 즉시 완료 후 대기 유지
     if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
-      ui.completeTyping?.()
+      ui.completeTyping()
       return false
     }
 

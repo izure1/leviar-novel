@@ -162,8 +162,7 @@ export function showCharacter(ctx: SceneContext, name: string, position?: Charac
       zIndex: Z_INDEX.CHARACTER_NORMAL,
     },
     transform: {
-      position: { x: xPos, y: 0, z: zPos },
-      pivot: { x: 0.5, y: 1 }
+      position: { x: xPos, y: 0, z: zPos }
     }
   })
 

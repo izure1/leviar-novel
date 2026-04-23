@@ -82,7 +82,7 @@
         return handler(resolved, ctx, data);
       };
     }
-    function defineUI4(builder, options) {
+    function defineUI4(builder) {
       const handler = (rawStyle, ctx) => {
         if (rawStyle && typeof rawStyle === "object") {
           for (const key in rawStyle) {
@@ -107,7 +107,6 @@
         ++_version;
         return entry;
       };
-      handler.__uiOptions = options;
       return handler;
     }
     return { defineCmd: defineCmd4, defineUI: defineUI4 };
@@ -8591,13 +8590,14 @@ ${addLineNumbers(fragment)}`);
     start(durationMs, easing, type) {
       if (this._anim) this._anim.stop();
       if (type === "out") {
-        this.target.__fadeOpacity = 1;
+        const fromOpacity = this.target.__fadeOpacity;
         this.target.__dirtyTexture = true;
         this._startTransition(
           durationMs,
           easing,
           (progress) => {
-            this.target.__fadeOpacity = 1 - progress;
+            this.target.__fadeOpacity = fromOpacity * (1 - progress);
+            this.target.__dirtyTexture = true;
           },
           () => {
             this.target.style.display = "none";
@@ -8606,13 +8606,14 @@ ${addLineNumbers(fragment)}`);
         );
       } else {
         this.target.style.display = "block";
-        this.target.__fadeOpacity = 0;
+        const fromOpacity = this.target.__fadeOpacity;
         this.target.__dirtyTexture = true;
         this._startTransition(
           durationMs,
           easing,
           (progress) => {
-            this.target.__fadeOpacity = progress;
+            this.target.__fadeOpacity = fromOpacity + (1 - fromOpacity) * progress;
+            this.target.__dirtyTexture = true;
           },
           () => {
             this.target.__fadeOpacity = 1;
@@ -12959,7 +12960,7 @@ ${addLineNumbers(fragment)}`);
         if (axis === "z") this.renderer.markSortDirty();
       });
       obj.on("cssmodified", (key) => {
-        if (key === "zIndex") this.renderer.markSortDirty();
+        if (key === "zIndex" || key === "display") this.renderer.markSortDirty();
       });
     }
     _tryAddPhysics(obj, w, h) {
@@ -13223,144 +13224,140 @@ ${addLineNumbers(fragment)}`);
     speakerKey: void 0,
     speed: void 0
   });
-  var dialogueUISetup = defineUI(
-    (data, ctx) => {
-      const cam = ctx.world.camera;
-      const w = ctx.renderer.width;
-      const h = ctx.renderer.height;
-      const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-      const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {} };
-      const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
-      const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
-      const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
-      const BOX_CY = h - BOX_H / 2;
-      const bgObj = ctx.world.createRectangle({
-        style: {
-          ...bgCfg,
-          width: bgCfg.width ?? w,
-          height: BOX_H,
-          zIndex: bgCfg.zIndex ?? 300,
-          opacity: 0,
-          pointerEvents: false
-        },
-        transform: { position: toLocal(w / 2, BOX_CY) }
-      });
-      ctx.world.camera?.addChild(bgObj);
-      ctx.renderer.track(bgObj);
-      const spkY = h - BOX_H + 24;
-      const speakerObj = ctx.world.createText({
-        attribute: { text: "" },
-        style: {
-          ...spkCfg,
-          width: w * 0.9,
-          zIndex: spkCfg.zIndex ?? 301,
-          opacity: 0,
-          pointerEvents: false
-        },
-        transform: { position: toLocal(w / 2, spkY) }
-      });
-      ctx.world.camera?.addChild(speakerObj);
-      ctx.renderer.track(speakerObj);
-      const spkH = (spkCfg.fontSize ?? 18) * 1.5;
-      const textObj = ctx.world.createText({
-        attribute: { text: "" },
-        style: {
-          ...txtCfg,
-          width: txtCfg.width ?? w * 0.9,
-          zIndex: txtCfg.zIndex ?? 301,
-          opacity: 0,
-          pointerEvents: false
-        },
-        transform: { position: toLocal(w / 2, spkY + spkH + 8) }
-      });
-      ctx.world.camera?.addChild(textObj);
-      ctx.renderer.track(textObj);
-      const charDefs = ctx.renderer.config.characters;
-      let _isTyping = false;
-      let _fullText = "";
-      let _activeTx = null;
-      let _prevLines = null;
-      const _show = (dur = 250) => {
-        ;
-        bgObj.animate({ style: { opacity: 1 } }, dur, "easeOut");
-      };
-      const _hide = (dur = 300) => {
-        ;
-        bgObj.animate({ style: { opacity: 0 } }, dur, "easeIn");
-        speakerObj.style.opacity = 0;
-        textObj.animate({ style: { opacity: 0 } }, dur, "easeIn");
-      };
-      const _renderText = (speaker, text, speed, immediate = false) => {
-        _show();
-        speakerObj.attribute.text = speaker ?? "";
-        speakerObj.style.opacity = speaker ? 1 : 0;
-        if (immediate || speed === 0) {
-          _isTyping = false;
-          _fullText = text;
-          _activeTx?.stop?.();
+  var dialogueUISetup = defineUI((data, ctx) => {
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {} };
+    const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
+    const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
+    const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
+    const BOX_CY = h - BOX_H / 2;
+    const bgObj = ctx.world.createRectangle({
+      style: {
+        ...bgCfg,
+        width: bgCfg.width ?? w,
+        height: BOX_H,
+        zIndex: bgCfg.zIndex ?? 300,
+        opacity: 1,
+        display: "none",
+        pointerEvents: false
+      },
+      transform: { position: toLocal(w / 2, BOX_CY) }
+    });
+    ctx.world.camera?.addChild(bgObj);
+    ctx.renderer.track(bgObj);
+    const spkY = h - BOX_H + 24;
+    const speakerObj = ctx.world.createText({
+      attribute: { text: "" },
+      style: {
+        ...spkCfg,
+        width: w * 0.9,
+        zIndex: spkCfg.zIndex ?? 301,
+        opacity: 1,
+        display: "none",
+        pointerEvents: false
+      },
+      transform: { position: toLocal(w / 2, spkY) }
+    });
+    ctx.world.camera?.addChild(speakerObj);
+    ctx.renderer.track(speakerObj);
+    const spkH = (spkCfg.fontSize ?? 18) * 1.5;
+    const textObj = ctx.world.createText({
+      attribute: { text: "" },
+      style: {
+        ...txtCfg,
+        width: txtCfg.width ?? w * 0.9,
+        zIndex: txtCfg.zIndex ?? 301,
+        opacity: 1,
+        display: "none",
+        pointerEvents: false
+      },
+      transform: { position: toLocal(w / 2, spkY + spkH + 8) }
+    });
+    ctx.world.camera?.addChild(textObj);
+    ctx.renderer.track(textObj);
+    const charDefs = ctx.renderer.config.characters;
+    let _isTyping = false;
+    let _fullText = "";
+    let _activeTx = null;
+    let _prevLines = null;
+    const _renderText = (speaker, text, speed, immediate = false) => {
+      bgObj.fadeIn(200, "easeOut");
+      speakerObj.attribute.text = speaker ?? "";
+      speakerObj.fadeIn(200, "easeOut");
+      if (immediate || speed === 0) {
+        _isTyping = false;
+        _fullText = text;
+        _activeTx?.stop?.();
+        _activeTx = null;
+        textObj.attribute.text = text;
+        textObj.fadeIn(200, "easeOut");
+      } else {
+        const spd = speed ?? 30;
+        _isTyping = true;
+        _fullText = text;
+        if (_activeTx) {
+          _activeTx.stop?.();
           _activeTx = null;
-          textObj.attribute.text = text;
-          textObj.style.opacity = 1;
-        } else {
-          const spd = speed ?? 30;
-          _isTyping = true;
-          _fullText = text;
-          if (_activeTx) {
-            _activeTx.stop?.();
+        }
+        const anim = textObj.transition(text, spd);
+        _activeTx = anim;
+        textObj.fadeIn(200, "easeOut");
+        if (anim && typeof anim.on === "function") {
+          anim.on("end", () => {
+            _isTyping = false;
             _activeTx = null;
-          }
-          const anim = textObj.transition(text, spd);
-          _activeTx = anim;
-          textObj.animate({ style: { opacity: 1 } }, 200, "easeOut");
-          if (anim && typeof anim.on === "function") {
-            anim.on("end", () => {
-              _isTyping = false;
-              _activeTx = null;
-            });
-          }
+          });
         }
-      };
-      if (data.lines?.length) {
-        _prevLines = data.lines;
-        const txt = data.lines[data.subIndex ?? 0];
-        const spkName = resolveSpeaker(data.speakerKey, charDefs);
-        _renderText(spkName, txt, void 0, true);
       }
-      return {
-        show: (dur) => _show(dur),
-        hide: (dur) => _hide(dur),
-        isTyping: () => _isTyping,
-        completeTyping: () => {
-          if (!_isTyping) return;
-          _isTyping = false;
-          _activeTx?.stop?.();
-          _activeTx = null;
-          textObj.attribute.text = _fullText;
-          textObj.style.opacity = 1;
-        },
-        /**
-         * data가 변경될 때 Proxy가 자동으로 호출합니다.
-         * - lines가 바뀐 경우: 텍스트 재렌더
-         * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
-         */
-        update: (d) => {
-          const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {} };
-          const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
-          const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
-          Object.assign(bgObj.style, newBgCfg);
-          Object.assign(speakerObj.style, newSpkCfg);
-          Object.assign(textObj.style, newTxtCfg);
-          if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
-            _prevLines = d.lines;
-            const txt = d.lines[d.subIndex ?? 0];
-            const spkName = resolveSpeaker(d.speakerKey, charDefs);
-            _renderText(spkName, txt, d.speed);
-          }
+    };
+    if (data.lines?.length) {
+      _prevLines = data.lines;
+      const txt = data.lines[data.subIndex ?? 0];
+      const spkName = resolveSpeaker(data.speakerKey, charDefs);
+      _renderText(spkName, txt, void 0, true);
+    }
+    return {
+      show: (dur = 250) => {
+        bgObj.fadeIn(dur, "easeOut");
+      },
+      hide: (dur = 300) => {
+        bgObj.fadeOut(dur, "easeIn");
+        speakerObj.fadeOut(dur, "easeIn");
+        textObj.fadeOut(dur, "easeIn");
+      },
+      isTyping: () => _isTyping,
+      completeTyping: () => {
+        if (!_isTyping) return;
+        _isTyping = false;
+        _activeTx?.stop?.();
+        _activeTx = null;
+        textObj.attribute.text = _fullText;
+        textObj.style.opacity = 1;
+      },
+      /**
+       * data가 변경될 때 Proxy가 자동으로 호출합니다.
+       * - lines가 바뀐 경우: 텍스트 재렌더
+       * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
+       */
+      update: (d) => {
+        const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {} };
+        const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
+        const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
+        Object.assign(bgObj.style, newBgCfg);
+        Object.assign(speakerObj.style, newSpkCfg);
+        Object.assign(textObj.style, newTxtCfg);
+        if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
+          _prevLines = d.lines;
+          const txt = d.lines[d.subIndex ?? 0];
+          const spkName = resolveSpeaker(d.speakerKey, charDefs);
+          _renderText(spkName, txt, d.speed);
         }
-      };
-    },
-    { hideable: true, attachToCamera: true }
-  );
+      }
+    };
+  });
   var dialogueHandler = defineCmd2((cmd, ctx, data) => {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
@@ -13368,7 +13365,7 @@ ${addLineNumbers(fragment)}`);
     return () => {
       const ui = ctx.ui.get("dialogue");
       if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
-        ui.completeTyping?.();
+        ui.completeTyping();
         return false;
       }
       if (index >= lines.length) {
@@ -13438,14 +13435,14 @@ ${addLineNumbers(fragment)}`);
       };
       return {
         show: () => {
-          bgObj.fadeIn?.(200, "easeOut");
+          bgObj.fadeIn(200, "easeOut");
         },
         hide: () => {
-          bgObj.fadeOut?.(200, "easeIn");
+          bgObj.fadeOut(200, "easeIn");
           _clearButtons();
         },
         onChoices: (choices, onSelect) => {
-          bgObj.fadeIn?.(200, "easeOut");
+          bgObj.fadeIn(200, "easeOut");
           _clearButtons();
           const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize;
           const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth;
@@ -13506,8 +13503,7 @@ ${addLineNumbers(fragment)}`);
           Object.assign(cfg, DEFAULT_CHOICE, d);
         }
       };
-    },
-    { hideable: true, attachToCamera: true }
+    }
   );
   var choiceHandler = defineCmd3((cmd, ctx, _data) => {
     const entry = ctx.ui.get("choices");
@@ -13616,7 +13612,7 @@ ${addLineNumbers(fragment)}`);
   }
   function setBackground(ctx, name, fit, duration = 1e3, isVideo = false) {
     const bgDefs = ctx.renderer.config.backgrounds;
-    const def = bgDefs?.[name];
+    const def = bgDefs[name];
     if (!def) return;
     const src = def.src ?? name;
     const useParallax = def.parallax ?? true;
@@ -13635,7 +13631,7 @@ ${addLineNumbers(fragment)}`);
         }
         return;
       }
-      existing.remove?.();
+      existing.remove();
       ctx.renderer.untrack(existing);
       delete objs["main"];
     }
@@ -13655,7 +13651,6 @@ ${addLineNumbers(fragment)}`);
       style: {
         width: exactW,
         height: exactH,
-        objectFit: fit === "inherit" ? "cover" : fit,
         zIndex: Z_INDEX.BACKGROUND,
         opacity: dur > 0 ? 0 : 1,
         pointerEvents: false
@@ -13781,11 +13776,11 @@ ${addLineNumbers(fragment)}`);
       const dur = ctx.renderer.dur(duration);
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove?.();
+          obj.remove();
           ctx.renderer.untrack(obj);
         });
       } else {
-        obj.remove?.();
+        obj.remove();
         ctx.renderer.untrack(obj);
       }
     }
@@ -13929,7 +13924,7 @@ ${addLineNumbers(fragment)}`);
     });
     objs[type] = particle;
     ctx.renderer.track(particle);
-    particle.play?.();
+    particle.play();
   }
   function removeEffect(ctx, type, duration = 600) {
     const objs = getEffectObjs(ctx);
@@ -13942,11 +13937,11 @@ ${addLineNumbers(fragment)}`);
       const dur = ctx.renderer.dur(duration);
       if (dur > 0) {
         ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          effect.remove?.();
+          effect.remove();
           ctx.renderer.untrack(effect);
         });
       } else {
-        effect.remove?.();
+        effect.remove();
         ctx.renderer.untrack(effect);
       }
     }
@@ -14040,11 +14035,11 @@ ${addLineNumbers(fragment)}`);
       const dur = ctx.renderer.dur(duration);
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove?.();
+          obj.remove();
           ctx.renderer.untrack(obj);
         });
       } else {
-        obj.remove?.();
+        obj.remove();
         ctx.renderer.untrack(obj);
       }
     }
@@ -14278,8 +14273,7 @@ ${addLineNumbers(fragment)}`);
       style: {
         width: imageDef.width ?? 500,
         opacity: ctx.renderer.dur(duration ?? 400) > 0 ? 0 : 1,
-        zIndex: Z_INDEX.CHARACTER_NORMAL,
-        anchor: { x: 0.5, y: 1 }
+        zIndex: Z_INDEX.CHARACTER_NORMAL
       },
       transform: {
         position: { x: xPos, y: 0, z: zPos }
@@ -14303,11 +14297,11 @@ ${addLineNumbers(fragment)}`);
       const dur = ctx.renderer.dur(duration ?? 400);
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove?.();
+          obj.remove();
           ctx.renderer.untrack(obj);
         });
       } else {
-        obj.remove?.();
+        obj.remove();
         ctx.renderer.untrack(obj);
       }
     }
@@ -15016,10 +15010,6 @@ ${addLineNumbers(fragment)}`);
           const h = handler;
           if (typeof h === "function" && h.__isUIHandler) {
             this._uiDefinitions.set(uiKey, h.__uiBuilder);
-            if (h.__uiOptions) {
-              ;
-              this._uiDefinitions[`__opts_${uiKey}`] = h.__uiOptions;
-            }
           }
         }
       }
@@ -15028,10 +15018,6 @@ ${addLineNumbers(fragment)}`);
         const h = handler;
         if (h.__uiName && typeof h.__uiBuilder === "function") {
           this._uiDefinitions.set(h.__uiName, h.__uiBuilder);
-          if (h.__uiOptions) {
-            ;
-            this._uiDefinitions[`__opts_${h.__uiName}`] = h.__uiOptions;
-          }
         }
       }
     }
@@ -15131,9 +15117,7 @@ ${addLineNumbers(fragment)}`);
      */
     hideUI(duration) {
       for (const entry of this._uiRegistry.values()) {
-        if (entry.options?.hideable !== false) {
-          entry.hide(duration);
-        }
+        entry.hide(duration);
       }
     }
     /**
@@ -15141,9 +15125,7 @@ ${addLineNumbers(fragment)}`);
      */
     showUI(duration) {
       for (const entry of this._uiRegistry.values()) {
-        if (entry.options?.hideable !== false) {
-          entry.show(duration);
-        }
+        entry.show(duration);
       }
     }
     // ─── 세이브 / 로드 ───────────────────────────────────────────
@@ -15236,8 +15218,6 @@ ${addLineNumbers(fragment)}`);
       for (const [name, builder] of this._uiDefinitions) {
         const style = this._cmdStateStore.get(name) ?? {};
         const entry = builder(style, ctx);
-        const opts = this._uiDefinitions[`__opts_${name}`];
-        if (opts) entry.options = { ...opts, ...entry.options };
         this._uiRegistry.set(name, entry);
       }
     }
@@ -15450,8 +15430,8 @@ ${addLineNumbers(fragment)}`);
     },
     fallback: [
       { type: "character", action: "show", defaults: { duration: 300 } },
-      { type: "character", action: "remove", defaults: { duration: 1e3 } },
-      { type: "dialogue", defaults: { speed: 60 } }
+      { type: "character", action: "remove", defaults: { duration: 1e3 } }
+      // { type: 'dialogue', defaults: { speed: 60 } },
     ]
   });
 
