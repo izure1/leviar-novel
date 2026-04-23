@@ -24,7 +24,7 @@ export default defineScene({
     ]
   },
 
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'chest', duration: 800 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'zena',

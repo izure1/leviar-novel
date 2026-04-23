@@ -15870,7 +15870,7 @@ ${addLineNumbers(fragment)}`);
         "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
       ]
     },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "chest", duration: 800 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
     {
       type: "dialogue",
       speaker: "zena",

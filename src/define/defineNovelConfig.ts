@@ -10,8 +10,8 @@ import type { EffectType } from '../types/dialogue'
  * ```ts
  * export default defineNovelConfig({
  *   vars: { likeability: 0, metCharacterA: false },
- *   scenes: ['scene-a', 'scene-b'] as const,
- *   points: ['face', 'chest'] as const,
+ *   scenes: ['scene-a', 'scene-b'],
+ *   points: ['face', 'chest'],
  *   characters: { ... },
  *   backgrounds: { ... },
  *   ui: {
@@ -26,8 +26,8 @@ import type { EffectType } from '../types/dialogue'
  */
 export function defineNovelConfig<
   TVars        extends Record<string, any>,
-  TScenes      extends readonly string[],
-  TPoints      extends readonly string[],
+  const TScenes extends readonly string[],
+  const TPoints extends readonly string[],
   TCharacters  extends CharDefsWithPoints<TPoints>,
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string>,
@@ -37,7 +37,7 @@ export function defineNovelConfig<
   config: {
     vars: TVars
     scenes: TScenes
-    /** 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록 (as const 필수) */
+    /** 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록 */
     points: TPoints
     characters: NoInfer<TCharacters>
     backgrounds: TBackgrounds

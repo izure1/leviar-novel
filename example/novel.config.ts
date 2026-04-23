@@ -16,7 +16,7 @@ export default defineNovelConfig({
   },
   ui: {
     'dialogue': dialogueUISetup,
-    'choices':  choiceUISetup,
+    'choices': choiceUISetup,
   },
   cmds: {
     'test-cmd': testCmd,
@@ -29,8 +29,8 @@ export default defineNovelConfig({
     'explore-map',
     'scene-zena',
     'scene-zena-game',
-  ] as const,
-  points: ['face', 'chest'] as const,
+  ],
+  points: ['face', 'chest'],
   characters: {
     'arisiero': {
       name: '아리시에로',
