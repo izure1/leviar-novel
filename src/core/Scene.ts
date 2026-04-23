@@ -172,8 +172,7 @@ export class DialogueScene {
    * `novel.config.ui` 또는 `cmds`에 등록된 핸들러를 키로 찾아 실행합니다.
    */
   private _runInitial(): void {
-    const initial = this.definition.initial
-    if (!initial) return
+    const initial = this.definition.initial || {}
 
     const r = this.renderer
     const uiDefs = (r.config as any).ui as Record<string, any> | undefined
@@ -214,12 +213,8 @@ export class DialogueScene {
       }
     }
 
-    for (const [uiKey, styleData] of Object.entries(initial)) {
-      const handler = uiDefs[uiKey] as any
-      if (!handler) {
-        console.warn(`[leviar-novel] initial: '${uiKey}' ui 핸들러를 찾을 수 없습니다.`)
-        continue
-      }
+    for (const [uiKey, handler] of Object.entries(uiDefs)) {
+      const styleData = initial[uiKey]
 
       // UIHandler(define 팩토리)인 경우: __uiBuilder를 직접 호출하여 정확한 키로 등록
       if (typeof handler.__uiBuilder === 'function') {

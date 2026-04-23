@@ -5,41 +5,41 @@ import { define } from '../define/defineCmdUI'
 
 /** choiceUISetup이 공유하는 데이터 스키마 */
 export interface ChoiceSchema {
-  fontSize?:         number
-  fontFamily?:       string
-  color?:            string
-  background?:       string
-  borderColor?:      string
-  hoverBackground?:  string
+  fontSize?: number
+  fontFamily?: string
+  color?: string
+  background?: string
+  borderColor?: string
+  hoverBackground?: string
   hoverBorderColor?: string
-  borderRadius?:     number
-  minWidth?:         number
+  borderRadius?: number
+  minWidth?: number
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
 const DEFAULT_CHOICE: Required<ChoiceSchema> = {
-  fontSize:         18,
-  fontFamily:       '"Noto Sans KR","Malgun Gothic",sans-serif',
-  color:            '#fff',
-  background:       'rgba(30,30,60,0.85)',
-  borderColor:      'rgba(255,255,255,0.3)',
-  hoverBackground:  'rgba(80,80,180,0.9)',
+  fontSize: 18,
+  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+  color: '#fff',
+  background: 'rgba(30,30,60,0.85)',
+  borderColor: 'rgba(255,255,255,0.3)',
+  hoverBackground: 'rgba(80,80,180,0.9)',
   hoverBorderColor: 'rgba(255,255,255,0.7)',
-  borderRadius:     8,
-  minWidth:         260,
+  borderRadius: 8,
+  minWidth: 260,
 }
 
 const { defineCmd, defineUI } = define<ChoiceSchema>({
-  fontSize:         undefined,
-  fontFamily:       undefined,
-  color:            undefined,
-  background:       undefined,
-  borderColor:      undefined,
-  hoverBackground:  undefined,
+  fontSize: undefined,
+  fontFamily: undefined,
+  color: undefined,
+  background: undefined,
+  borderColor: undefined,
+  hoverBackground: undefined,
   hoverBorderColor: undefined,
-  borderRadius:     undefined,
-  minWidth:         undefined,
+  borderRadius: undefined,
+  minWidth: undefined,
 })
 
 // ─── choiceUISetup ───────────────────────────────────────────
@@ -53,8 +53,8 @@ export const choiceUISetup = defineUI(
     const cfg = { ...DEFAULT_CHOICE, ...data } as Required<ChoiceSchema>
 
     const cam = ctx.world.camera as any
-    const w   = ctx.renderer.width
-    const h   = ctx.renderer.height
+    const w = ctx.renderer.width
+    const h = ctx.renderer.height
 
     const toLocal = (cx: number, cy: number) =>
       (cam && typeof cam.canvasToLocal === 'function')
@@ -86,18 +86,20 @@ export const choiceUISetup = defineUI(
     }
 
     return {
-      show: () => { (bgObj as any).style.opacity = 1 },
-      hide: () => { 
-        (bgObj as any).style.opacity = 0
-        _clearButtons() 
+      show: () => { (bgObj as any).fadeIn?.(200, 'easeOut') },
+      hide: () => {
+        (bgObj as any).fadeOut?.(200, 'easeIn')
+        _clearButtons()
       },
       onChoices: (choices, onSelect) => {
-        (bgObj as any).style.opacity = 1
+        (bgObj as any).fadeIn?.(200, 'easeOut')
         _clearButtons()
 
+        const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize
+        const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth
         const gap = 12
         const paddingY = 12
-        const btnH = cfg.fontSize * 1.5 + paddingY * 2
+        const btnH = fSize * 1.5 + paddingY * 2
         const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap
         const startY = h / 2 - totalHeight / 2 + btnH / 2
 
@@ -105,15 +107,15 @@ export const choiceUISetup = defineUI(
           const cy = startY + i * (btnH + gap)
           const textStr = String(choice.text)
           // 텍스트 길이에 따라 너비 대략적 계산
-          const estimatedTextW = textStr.length * cfg.fontSize * 0.8
-          const btnW = Math.max(cfg.minWidth, estimatedTextW + 64) // padding 32px * 2
+          const estimatedTextW = textStr.length * fSize * 0.8
+          const btnW = Math.max(mWidth, estimatedTextW + 64) // padding 32px * 2
 
           const btnObj = ctx.world.createRectangle({
             style: {
-              color: cfg.background,
-              borderColor: cfg.borderColor,
+              color: cfg.background ?? DEFAULT_CHOICE.background,
+              borderColor: cfg.borderColor ?? DEFAULT_CHOICE.borderColor,
               borderWidth: 1.5,
-              borderRadius: cfg.borderRadius,
+              borderRadius: cfg.borderRadius ?? DEFAULT_CHOICE.borderRadius,
               width: btnW,
               height: btnH,
               zIndex: 501,
@@ -122,13 +124,13 @@ export const choiceUISetup = defineUI(
             } as any,
             transform: { position: toLocal(w / 2, cy) }
           })
-          
+
           const txtObj = ctx.world.createText({
             attribute: { text: textStr } as any,
             style: {
-              fontSize: cfg.fontSize,
-              fontFamily: cfg.fontFamily,
-              color: cfg.color,
+              fontSize: fSize,
+              fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
+              color: cfg.color ?? DEFAULT_CHOICE.color,
               textAlign: 'center',
               zIndex: 502,
               pointerEvents: false
@@ -138,12 +140,10 @@ export const choiceUISetup = defineUI(
           })
 
           btnObj.on('mouseover', () => {
-            (btnObj as any).style.color = cfg.hoverBackground;
-            (btnObj as any).style.borderColor = cfg.hoverBorderColor;
+            (btnObj as any).animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150)
           })
           btnObj.on('mouseout', () => {
-            (btnObj as any).style.color = cfg.background;
-            (btnObj as any).style.borderColor = cfg.borderColor;
+            (btnObj as any).animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150)
           })
           btnObj.on('click', () => {
             onSelect(i)
@@ -151,11 +151,11 @@ export const choiceUISetup = defineUI(
 
           btnObj.addChild(txtObj as any)
           ctx.world.camera?.addChild(btnObj as any)
-          
+
           // 리소스 관리를 위해 renderer에 트래킹
           ctx.renderer.track(btnObj)
           ctx.renderer.track(txtObj)
-          
+
           _btnObjs.push(btnObj)
         })
       },
@@ -201,10 +201,22 @@ export interface ChoiceCmd<TVars, TLocalVars, TScenes extends readonly string[]>
 export const choiceHandler = defineCmd<ChoiceCmd<any, any, any>>((cmd, ctx, _data) => {
   const entry = ctx.ui.get('choices')
 
+  if (!entry) {
+    console.warn('[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts and initial settings.')
+  }
+
   // 대화창 숨김
   ctx.ui.get('dialogue')?.hide?.()
 
-  entry?.onChoices?.(cmd.choices as any, (i: number) => {
+  // 텍스트(resolvable) 평가
+  const resolvedChoices = cmd.choices.map((c: any) => {
+    const textStr = typeof c.text === 'function' ? c.text(ctx.scene.getVars()) : c.text
+    return { ...c, text: ctx.scene.interpolateText(textStr) }
+  })
+
+  console.log('[leviar-novel] choiceHandler: opening choices', resolvedChoices)
+
+  entry?.onChoices?.(resolvedChoices, (i: number) => {
     const selected = (cmd.choices as any[])[i]
     if (!selected) return
 
@@ -224,7 +236,8 @@ export const choiceHandler = defineCmd<ChoiceCmd<any, any, any>>((cmd, ctx, _dat
     } else if (selected.goto) {
       ctx.scene.jumpToLabel(selected.goto)
     } else {
-      // goto/next 없으면 다음 스텝 (Scene.advance 없이 직접 처리 불가 — 기존 방식 유지)
+      // goto/next 없으면 다음 스텝
+      ctx.scene.end() // fallback or handle gracefully
     }
   })
 

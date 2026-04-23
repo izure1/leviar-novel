@@ -12,7 +12,7 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-intro',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
+  // { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },

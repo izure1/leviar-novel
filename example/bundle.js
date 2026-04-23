@@ -13434,31 +13434,33 @@ ${addLineNumbers(fragment)}`);
       };
       return {
         show: () => {
-          bgObj.style.opacity = 1;
+          bgObj.fadeIn?.(200, "easeOut");
         },
         hide: () => {
-          bgObj.style.opacity = 0;
+          bgObj.fadeOut?.(200, "easeIn");
           _clearButtons();
         },
         onChoices: (choices, onSelect) => {
-          bgObj.style.opacity = 1;
+          bgObj.fadeIn?.(200, "easeOut");
           _clearButtons();
+          const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize;
+          const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth;
           const gap = 12;
           const paddingY = 12;
-          const btnH = cfg.fontSize * 1.5 + paddingY * 2;
+          const btnH = fSize * 1.5 + paddingY * 2;
           const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap;
           const startY = h / 2 - totalHeight / 2 + btnH / 2;
           choices.forEach((choice, i) => {
             const cy = startY + i * (btnH + gap);
             const textStr = String(choice.text);
-            const estimatedTextW = textStr.length * cfg.fontSize * 0.8;
-            const btnW = Math.max(cfg.minWidth, estimatedTextW + 64);
+            const estimatedTextW = textStr.length * fSize * 0.8;
+            const btnW = Math.max(mWidth, estimatedTextW + 64);
             const btnObj = ctx.world.createRectangle({
               style: {
-                color: cfg.background,
-                borderColor: cfg.borderColor,
+                color: cfg.background ?? DEFAULT_CHOICE.background,
+                borderColor: cfg.borderColor ?? DEFAULT_CHOICE.borderColor,
                 borderWidth: 1.5,
-                borderRadius: cfg.borderRadius,
+                borderRadius: cfg.borderRadius ?? DEFAULT_CHOICE.borderRadius,
                 width: btnW,
                 height: btnH,
                 zIndex: 501,
@@ -13470,9 +13472,9 @@ ${addLineNumbers(fragment)}`);
             const txtObj = ctx.world.createText({
               attribute: { text: textStr },
               style: {
-                fontSize: cfg.fontSize,
-                fontFamily: cfg.fontFamily,
-                color: cfg.color,
+                fontSize: fSize,
+                fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
+                color: cfg.color ?? DEFAULT_CHOICE.color,
                 textAlign: "center",
                 zIndex: 502,
                 pointerEvents: false
@@ -13481,12 +13483,10 @@ ${addLineNumbers(fragment)}`);
               transform: { position: { x: 0, y: 0, z: 0 } }
             });
             btnObj.on("mouseover", () => {
-              btnObj.style.color = cfg.hoverBackground;
-              btnObj.style.borderColor = cfg.hoverBorderColor;
+              btnObj.animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150);
             });
             btnObj.on("mouseout", () => {
-              btnObj.style.color = cfg.background;
-              btnObj.style.borderColor = cfg.borderColor;
+              btnObj.animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150);
             });
             btnObj.on("click", () => {
               onSelect(i);
@@ -13507,8 +13507,16 @@ ${addLineNumbers(fragment)}`);
   );
   var choiceHandler = defineCmd3((cmd, ctx, _data) => {
     const entry = ctx.ui.get("choices");
+    if (!entry) {
+      console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts and initial settings.");
+    }
     ctx.ui.get("dialogue")?.hide?.();
-    entry?.onChoices?.(cmd.choices, (i) => {
+    const resolvedChoices = cmd.choices.map((c) => {
+      const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
+      return { ...c, text: ctx.scene.interpolateText(textStr) };
+    });
+    console.log("[leviar-novel] choiceHandler: opening choices", resolvedChoices);
+    entry?.onChoices?.(resolvedChoices, (i) => {
       const selected = cmd.choices[i];
       if (!selected) return;
       if (selected.var) {
@@ -13522,6 +13530,7 @@ ${addLineNumbers(fragment)}`);
       } else if (selected.goto) {
         ctx.scene.jumpToLabel(selected.goto);
       } else {
+        ctx.scene.end();
       }
     });
     return "handled";
@@ -14551,8 +14560,7 @@ ${addLineNumbers(fragment)}`);
      * `novel.config.ui` 또는 `cmds`에 등록된 핸들러를 키로 찾아 실행합니다.
      */
     _runInitial() {
-      const initial = this.definition.initial;
-      if (!initial) return;
+      const initial = this.definition.initial || {};
       const r = this.renderer;
       const uiDefs = r.config.ui;
       if (!uiDefs) return;
@@ -14595,12 +14603,8 @@ ${addLineNumbers(fragment)}`);
           }
         }
       };
-      for (const [uiKey, styleData] of Object.entries(initial)) {
-        const handler = uiDefs[uiKey];
-        if (!handler) {
-          console.warn(`[leviar-novel] initial: '${uiKey}' ui \uD578\uB4E4\uB7EC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
-          continue;
-        }
+      for (const [uiKey, handler] of Object.entries(uiDefs)) {
+        const styleData = initial[uiKey];
         if (typeof handler.__uiBuilder === "function") {
           const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {});
           const entry = handler.__uiBuilder(mergedData, ctx);
@@ -15995,7 +15999,7 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-intro"
   }, [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
+    // { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
