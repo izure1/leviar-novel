@@ -105,11 +105,14 @@ export function defineScene<
     config,
     variables = {} as any,
     initial,
+    next,
   }: {
     config: TConfig
     variables?: keyof TLocalVars extends `_${string}` ? TLocalVars : never
     /** 씬 시작 시 적용할 UI 초기 데이터 (optional). config.ui 키/값 타입 추론. */
     initial?: [TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>
+    /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
+    next?: TConfig['scenes'][number]
   },
   dialogues: DialogueStep<
     TConfig['vars'],
@@ -120,11 +123,7 @@ export function defineScene<
     [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>,
     [TConfig['cmds']] extends [undefined] ? Record<never, never> : NonNullable<TConfig['cmds']>,
     [TConfig['points']] extends [undefined] ? readonly string[] : NonNullable<TConfig['points']>
-  >[],
-  options?: {
-    /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
-    next?: TConfig['scenes'][number]
-  }
+  >[]
 ): SceneDefinition<
   TConfig['vars'],
   TConfig['scenes'],
@@ -137,7 +136,7 @@ export function defineScene<
     kind: 'dialogue',
     dialogues: dialogues as any,
     localVars: variables,
-    nextScene: options?.next as string | undefined,
+    nextScene: next as string | undefined,
     initial: initial as Record<string, unknown> | undefined,
   }
 }

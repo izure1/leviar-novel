@@ -9,6 +9,7 @@ export default defineScene({
     _isAnnoyed: false,
   },
   initial: commonInitial,
+  next: 'scene-zena-game',
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-floor', duration: 0 },
@@ -116,4 +117,4 @@ export default defineScene({
   },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 2000 },
   { type: 'dialogue', text: '제나와의 첫 만남이 끝났습니다.' },
-], { next: 'scene-zena-game' })
+])

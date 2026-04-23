@@ -10,6 +10,7 @@ export default defineScene({
     _zenaRage: 0,
   },
   initial: commonInitial,
+  next: 'scene-intro',
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
@@ -101,4 +102,4 @@ export default defineScene({
 
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 2000 },
   { type: 'dialogue', text: '제나와의 기묘한 게임 데이트가 끝났습니다.' },
-], { next: 'scene-intro' })
+])

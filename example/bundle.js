@@ -120,13 +120,14 @@
   function defineScene({
     config,
     variables = {},
-    initial
-  }, dialogues, options) {
+    initial,
+    next
+  }, dialogues) {
     return {
       kind: "dialogue",
       dialogues,
       localVars: variables,
-      nextScene: options?.next,
+      nextScene: next,
       initial
     };
   }
@@ -15856,7 +15857,8 @@ ${addLineNumbers(fragment)}`);
     variables: {
       _isAnnoyed: false
     },
-    initial: commonInitial
+    initial: commonInitial,
+    next: "scene-zena-game"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-floor", duration: 0 },
@@ -15955,7 +15957,7 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
     { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uCCAB \uB9CC\uB0A8\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
-  ], { next: "scene-zena-game" });
+  ]);
 
   // example/scenes/scene-zena-game.ts
   var scene_zena_game_default = defineScene({
@@ -15964,7 +15966,8 @@ ${addLineNumbers(fragment)}`);
       _gameScore: 0,
       _zenaRage: 0
     },
-    initial: commonInitial
+    initial: commonInitial,
+    next: "scene-intro"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
@@ -16047,7 +16050,7 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
     { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uAE30\uBB18\uD55C \uAC8C\uC784 \uB370\uC774\uD2B8\uAC00 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
-  ], { next: "scene-intro" });
+  ]);
 
   // example/main.ts
   var svg = (body, w, h) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
