@@ -55,6 +55,23 @@ export interface CharDef {
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
 
+/**
+ * `config.points`에 선언된 포인트 키만 허용하는 CharDef 제약 타입.
+ * characters 정의 시 각 이미지의 points에 `config.points`의 **모든 키**를 강제합니다.
+ */
+export type CharDefsWithPoints<TPoints extends readonly string[]> = {
+  [CharKey: string]: {
+    name?: string
+    points: {
+      [ImageKey: string]: {
+        src?: string
+        width?: number
+        points: Record<TPoints[number], { x: number; y: number }>
+      }
+    }
+  }
+}
+
 /** 
  * 단일 배경 이미지 정의 
  * 
@@ -168,12 +185,23 @@ export interface NovelConfig<
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string> = Record<string, string>,
   TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>,
-  TUi          extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>
+  TUi          extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>,
+  TPoints      extends readonly string[] = readonly string[],
 > {
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars:        TVars
   /** 게임에 포함된 모든 씬(Scene) 이름 목록입니다. */
   scenes:      TScenes
+  /**
+   * 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록입니다.
+   * 여기에 선언된 키만 `characters`의 각 이미지 `points`에 정의할 수 있습니다.
+   *
+   * @example
+   * ```ts
+   * points: ['face', 'chest', 'hand'] as const
+   * ```
+   */
+  points?:     TPoints
   /** 게임에 등장하는 모든 캐릭터의 정의 목록입니다. */
   characters:  TCharacters
   /** 게임에 사용되는 모든 배경 이미지 정의 목록입니다. */

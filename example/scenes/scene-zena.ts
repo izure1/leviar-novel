@@ -24,7 +24,7 @@ export default defineScene({
     ]
   },
 
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'chest', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -52,7 +52,7 @@ export default defineScene({
   },
 
   // ─── 분기: 일 질문 ───
-  { type: 'label', label: 'ask-job' },
+  { type: 'label', name: 'ask-job' },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -67,10 +67,10 @@ export default defineScene({
     speaker: 'zena',
     text: '근데 님 커피 맛있어 보임. 한 입만? 아, 농담임. 밴(Ban) 당하기 싫으면 조심하셈.'
   },
-  { type: 'control', action: 'goto', next: 'common-end' },
+  { type: 'condition', if: () => true, goto: 'common-end' },
 
   // ─── 분기: 버그 질문 ───
-  { type: 'label', label: 'ask-bug' },
+  { type: 'label', name: 'ask-bug' },
   { type: 'camera-effect', preset: 'shake', duration: 400 },
   {
     type: 'dialogue',
@@ -85,24 +85,22 @@ export default defineScene({
     speaker: 'zena',
     text: '...근데 님 개발자임? 아니면 그냥 훈수 두는 하청 업자임? 말투가 딱 트위치 채팅창인데.'
   },
-  { type: 'control', action: 'goto', next: 'common-end' },
+  { type: 'condition', if: () => true, goto: 'common-end' },
 
   // ─── 분기: 도망 ───
-  { type: 'label', label: 'escape' },
+  { type: 'label', name: 'escape' },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '어? 어딜 도망감? 지금 내 기분이 떡락 중인데 관객도 없이 혼자 빡쳐 있으라고?'
+    text: [
+      '어? 어딜 도망감? 지금 내 기분이 떡락 중인데 관객도 없이 혼자 빡쳐 있으라고?',
+      '님, 앉으셈. 방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계임. 도망 못 감.'
+    ]
   },
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: '님, 앉으셈. 방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계임. 도망 못 감.'
-  },
-  { type: 'control', action: 'goto', next: 'common-end' },
+  { type: 'condition', if: () => true, goto: 'common-end' },
 
   // ─── 공통 엔딩 ───
-  { type: 'label', label: 'common-end' },
+  { type: 'label', name: 'common-end' },
   { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 800 },
   {
     type: 'dialogue',
@@ -118,4 +116,4 @@ export default defineScene({
   },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 2000 },
   { type: 'dialogue', text: '제나와의 첫 만남이 끝났습니다.' },
-])
+], { next: 'scene-zena-game' })

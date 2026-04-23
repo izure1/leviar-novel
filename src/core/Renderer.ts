@@ -299,6 +299,7 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       disableInput: noop as any,
       getCmdStateStore: () => new Map(),
       getUIRegistry: () => new Map(),
+      syncUIState: noop,
     },
     cmdState: {
       set: noop as any,

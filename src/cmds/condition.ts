@@ -46,7 +46,7 @@ export interface ConditionCmd<TVars, TLocalVars, TScenes extends readonly string
 }
 
 export const conditionHandler = defineCmd<ConditionCmd<any, any, any>>((cmd, ctx) => {
-  const result = cmd.if as unknown as boolean
+  const result = typeof cmd.if === 'function' ? cmd.if(ctx.scene.getVars()) : (cmd.if as unknown as boolean)
 
   if (result) {
     if (cmd.goto) {

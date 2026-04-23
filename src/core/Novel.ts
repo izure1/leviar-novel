@@ -437,6 +437,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       disableInput:    (duration)     => { this._inputDisabledUntil = Date.now() + duration },
       getCmdStateStore: ()            => this._cmdStateStore,
       getUIRegistry:    ()            => this._uiRegistry,
+      syncUIState:      ()            => { this._syncUIState() },
     }
   }
 
@@ -508,6 +509,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         disableInput:     noop as any,
         getCmdStateStore: () => cmdStateStore,
         getUIRegistry:    () => uiRegistry,
+        syncUIState:      noop,
       },
       cmdState: {
         set: (name, data) => { cmdStateStore.set(name, data) },

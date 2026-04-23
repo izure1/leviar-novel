@@ -7,19 +7,9 @@ import { defineCmd } from '../define/defineCmd'
 
 export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center' | 'right' | 'far-right' | (string & {})
 
-/** 모든 캐릭터의 모든 이미지 키를 추출 */
-type _AllImageKeys<TCharacters extends CharDefs> = {
-  [K in keyof TCharacters]: keyof TCharacters[K]['points'] & string
-}[keyof TCharacters]
-
-/** 모든 캐릭터의 모든 points 키를 추출 */
-type _AllPointKeys<TCharacters extends CharDefs> = {
-  [K in keyof TCharacters]: {
-    [IK in keyof TCharacters[K]['points']]: TCharacters[K]['points'][IK] extends { points?: Record<string, any> }
-    ? keyof NonNullable<TCharacters[K]['points'][IK]['points']> & string
-    : never
-  }[keyof TCharacters[K]['points']]
-}[keyof TCharacters]
+/** image의 모든 key를 추출 (Name 기반) */
+type _ImageKeysOf<TCharacters extends CharDefs, Name extends keyof TCharacters & string> =
+  keyof TCharacters[Name]['points'] & string
 
 /** 
  * 캐릭터를 등장 또는 이동시키거나 퇴장시킨다 
@@ -29,23 +19,28 @@ type _AllPointKeys<TCharacters extends CharDefs> = {
  * { type: 'character', action: 'show', name: 'hero', position: 'center', image: 'smile', duration: 500 }
  * ```
  */
-export interface CharacterCmd<TCharacters extends CharDefs> {
-  /** 'show'는 캐릭터를 등장/이동, 'remove'는 퇴장시킵니다. */
-  action: 'show' | 'remove'
-  /** 조작할 캐릭터의 이름(config.characters의 키)입니다. */
-  name: keyof TCharacters & string
-  /** 화면 내 캐릭터의 가로 위치입니다. (프리셋 또는 'n/m' 분수) */
-  position?: CharacterPositionPreset
-  /** 렌더링 할 캐릭터의 이미지 키(config.characters[name]에 정의된 키)입니다. */
-  image?: _AllImageKeys<TCharacters> | (string & {})
-  /**
-   * 등장과 동시에 카메라 포커스를 수행할지 여부입니다.
-   * `true`일 경우 기본 포인트를 사용하며, 문자열 지정 시 해당 포인트에 카메라를 맞춥니다.
-   */
-  focus?: boolean | string
-  /** 애니메이션 적용 시간(ms 단위)입니다. */
-  duration?: number
-}
+export type CharacterCmd<
+  TCharacters extends CharDefs,
+  TPoints extends readonly string[] = readonly string[],
+> = {
+  [Name in keyof TCharacters & string]: {
+    /** 'show'는 캐릭터를 등장/이동, 'remove'는 퇴장시킵니다. */
+    action: 'show' | 'remove'
+    /** 조작할 캐릭터의 이름(config.characters의 키)입니다. */
+    name: Name
+    /** 화면 내 캐릭터의 가로 위치입니다. (프리셋 또는 'n/m' 분수) */
+    position?: CharacterPositionPreset
+    /** 렌더링 할 캐릭터의 이미지 키(config.characters[name]에 정의된 키)입니다. */
+    image?: _ImageKeysOf<TCharacters, Name> | (string & {})
+    /**
+     * 등장과 동시에 카메라 포커스를 수행할지 여부입니다.
+     * `true`일 경우 기본 포인트를 사용하며, 문자열 지정 시 config.points에 정의된 포인트 키를 입력합니다.
+     */
+    focus?: boolean | TPoints[number] | (string & {})
+    /** 애니메이션 적용 시간(ms 단위)입니다. */
+    duration?: number
+  }
+}[keyof TCharacters & string]
 
 /** 
  * 카메라를 캐릭터에 포커스한다 
@@ -55,26 +50,33 @@ export interface CharacterCmd<TCharacters extends CharDefs> {
  * { type: 'character-focus', name: 'hero', point: 'face', zoom: 'close-up', duration: 600 }
  * ```
  */
-export interface CharacterFocusCmd<TCharacters extends CharDefs> {
-  /** 포커스 할 캐릭터의 이름입니다. */
-  name: keyof TCharacters & string
-  /** 맞출 카메라 초점 포인트입니다. (config의 points 키로 자동완성됩니다) */
-  point?: _AllPointKeys<TCharacters> | 'inherit' | (string & {})
-  /** 포커스 시 적용될 화면 줌(Zoom) 수준입니다. */
-  zoom?: ZoomPreset
-  /** 카메라 이동에 걸리는 시간(ms 단위)입니다. (기본값: 800) */
-  duration?: number
-}
+export type CharacterFocusCmd<
+  TCharacters extends CharDefs,
+  TPoints extends readonly string[] = readonly string[],
+> = {
+  [Name in keyof TCharacters & string]: {
+    /** 포커스 할 캐릭터의 이름입니다. */
+    name: Name
+    /** 맞출 카메라 초점 포인트입니다. (config.points에 정의된 키로 자동완성됩니다) */
+    point?: TPoints[number] | 'inherit' | (string & {})
+    /** 포커스 시 적용될 화면 줌(Zoom) 수준입니다. */
+    zoom?: ZoomPreset
+    /** 카메라 이동에 걸리는 시간(ms 단위)입니다. (기본값: 800) */
+    duration?: number
+  }
+}[keyof TCharacters & string]
 
 /** 캐릭터를 컷인(전면) 레이어로 올리거나 복원한다 */
-export interface CharacterHighlightCmd<TCharacters extends CharDefs> {
-  /** 하이라이트 할 캐릭터의 이름입니다. */
-  name: keyof TCharacters & string
-  /** 'on'은 캐릭터를 전경으로 올리고, 'off'는 원래 뎁스로 복구합니다. */
-  action: 'on' | 'off'
-  /** 전환 시 적용되는 애니메이션 시간(ms 단위)입니다. */
-  duration?: number
-}
+export type CharacterHighlightCmd<TCharacters extends CharDefs> = {
+  [Name in keyof TCharacters & string]: {
+    /** 하이라이트 할 캐릭터의 이름입니다. */
+    name: Name
+    /** 'on'은 캐릭터를 전경으로 올리고, 'off'는 원래 뎁스로 복구합니다. */
+    action: 'on' | 'off'
+    /** 전환 시 적용되는 애니메이션 시간(ms 단위)입니다. */
+    duration?: number
+  }
+}[keyof TCharacters & string]
 
 const CHARACTER_X_RATIO: Record<string, number> = {
   'far-left': 0.1,

@@ -147,9 +147,8 @@ export const dialogueUISetup = defineUI(
     let _isTyping    = false
     let _fullText    = ''
     let _activeTx: any = null
-    // 반응형 중복 렌더 방지: 이전 lines 참조 + subIndex를 추적
+    // 반응형 중복 렌더 방지: 이전 lines 참조를 추적
     let _prevLines: string[] | null = null
-    let _prevSubIndex: number = -1
 
     const _show = (dur = 250) => {
       ;(bgObj as any).animate({ style: { opacity: 1 } }, dur, 'easeOut')
@@ -201,8 +200,7 @@ export const dialogueUISetup = defineUI(
     // 복원: 로드 시 저장된 대사 즉시 렌더링
     if (data.lines?.length) {
       _prevLines = data.lines
-      _prevSubIndex = data.subIndex ?? 0
-      const txt = data.lines[_prevSubIndex] as string
+      const txt = data.lines[data.subIndex ?? 0] as string
       const spkName = resolveSpeaker(data.speakerKey, charDefs)
       _renderText(spkName, txt, undefined, true)
     }
@@ -221,7 +219,7 @@ export const dialogueUISetup = defineUI(
       },
       /**
        * data가 변경될 때 Proxy가 자동으로 호출합니다.
-       * - lines 참조가 새로워지거나 subIndex가 바뀐 경우: 텍스트 재렌더
+       * - lines가 바뀐 경우: 텍스트 재렌더
        * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */
       update: (d: DialogueSchema) => {
@@ -233,15 +231,10 @@ export const dialogueUISetup = defineUI(
         Object.assign((speakerObj as any).style, newSpkCfg)
         Object.assign((textObj    as any).style, newTxtCfg)
 
-        // 텍스트 갱신:
-        // - lines 참조가 새로워지거나 (= 단일 문자열 케이스)
-        // - 같은 배열이어도 subIndex가 바뀐 경우 (= 배열 케이스 클릭)
-        const linesChanged    = d.lines !== _prevLines
-        const subIndexChanged = d.subIndex !== _prevSubIndex
-        if (d.lines && d.lines.length > 0 && (linesChanged || subIndexChanged)) {
-          _prevLines    = d.lines
-          _prevSubIndex = d.subIndex ?? 0
-          const txt     = d.lines[_prevSubIndex] as string
+        // 텍스트 갱신: lines 참조가 바뀐 경우에만 렌더 (중복 방지)
+        if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
+          _prevLines = d.lines
+          const txt     = d.lines[d.subIndex ?? 0] as string
           const spkName = resolveSpeaker(d.speakerKey, charDefs)
           _renderText(spkName, txt, d.speed)
         }
@@ -279,30 +272,36 @@ export interface DialogueCmd<TCharacters extends CharDefs> {
 }
 
 export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
-  // 단일 문자열
-  if (!Array.isArray(cmd.text)) {
-    const text = ctx.scene.interpolateText(cmd.text)
-    data.subIndex   = 0
-    data.speakerKey = cmd.speaker as string | undefined
-    data.speed      = cmd.speed
-    data.lines      = [text]  // ← Proxy가 감지 → update(data) 자동 호출
-    ctx.cmdState.set('dialogue', { ...data })
-    return false
-  }
-
-  // 배열: TickFn — 클릭마다 다음 줄 출력
-  const lines = (cmd.text as string[]).map(t => ctx.scene.interpolateText(t))
+  // 단일 문자열이든 배열이든 통일하여 처리
+  const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
+  const lines = textArray.map(t => ctx.scene.interpolateText(t))
   let index = 0
 
   return () => {
-    data.subIndex   = index
-    data.speakerKey = cmd.speaker as string | undefined
+    const ui = ctx.ui.get('dialogue') as any
+    
+    // 타이핑 중이면 즉시 완료 후 대기 유지
+    if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
+      ui.completeTyping?.()
+      return false
+    }
+
+    // 대사 출력이 끝났으면 다음 커맨드로 진행
+    if (index >= lines.length) {
+      return true
+    }
+
+    // Proxy 트랩 및 렌더링 갱신을 위해 속도, 화자를 먼저 설정
     data.speed      = cmd.speed
-    data.lines      = lines  // ← 동일 배열 참조 유지 (중복 렌더 방지)
-    // lines는 같은 참조이므로 서브인덱스 변경만 별도 트리거
-    ctx.ui.get('dialogue')?.update?.(data)
+    data.speakerKey = cmd.speaker as string | undefined
+    data.subIndex   = index
+    
+    // 배열 참조를 갱신하여 update 내부의 lines !== _prevLines 체크를 통과시킴
+    data.lines      = [...lines]
+    
     ctx.cmdState.set('dialogue', { ...data })
     index++
-    return index >= lines.length
+    
+    return false
   }
 })

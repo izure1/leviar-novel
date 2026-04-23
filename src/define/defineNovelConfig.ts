@@ -1,8 +1,4 @@
-// =============================================================
-// defineNovelConfig.ts — Novel config 헬퍼 함수
-// =============================================================
-
-import type { CharDefs, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
+import type { CharDefs, CharDefsWithPoints, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
 import type { UIHandler } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
 
@@ -15,6 +11,7 @@ import type { EffectType } from '../types/dialogue'
  * export default defineNovelConfig({
  *   vars: { likeability: 0, metCharacterA: false },
  *   scenes: ['scene-a', 'scene-b'] as const,
+ *   points: ['face', 'chest'] as const,
  *   characters: { ... },
  *   backgrounds: { ... },
  *   ui: {
@@ -30,7 +27,8 @@ import type { EffectType } from '../types/dialogue'
 export function defineNovelConfig<
   TVars        extends Record<string, any>,
   TScenes      extends readonly string[],
-  TCharacters  extends CharDefs,
+  TPoints      extends readonly string[],
+  TCharacters  extends CharDefsWithPoints<TPoints>,
   TBackgrounds extends BgDefs,
   TAssets      extends Record<string, string>,
   TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<never, never>,
@@ -39,7 +37,9 @@ export function defineNovelConfig<
   config: {
     vars: TVars
     scenes: TScenes
-    characters: TCharacters
+    /** 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록 (as const 필수) */
+    points: TPoints
+    characters: NoInfer<TCharacters>
     backgrounds: TBackgrounds
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets
@@ -47,6 +47,6 @@ export function defineNovelConfig<
     cmds?: TCmds
     ui?: TUi
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds> & { ui?: TUi } {
+): NovelConfig<TVars, TScenes, TCharacters & CharDefs, TBackgrounds, TAssets, TCmds> & { ui?: TUi; points: TPoints } {
   return config as any
 }

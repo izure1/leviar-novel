@@ -118,7 +118,8 @@ export function defineScene<
     TConfig['characters'],
     TConfig['backgrounds'],
     [TConfig['assets']] extends [undefined] ? Record<string, string> : NonNullable<TConfig['assets']>,
-    [TConfig['cmds']] extends [undefined] ? Record<never, never> : NonNullable<TConfig['cmds']>
+    [TConfig['cmds']] extends [undefined] ? Record<never, never> : NonNullable<TConfig['cmds']>,
+    [TConfig['points']] extends [undefined] ? readonly string[] : NonNullable<TConfig['points']>
   >[],
   options?: {
     /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */

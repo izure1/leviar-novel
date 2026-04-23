@@ -28,7 +28,9 @@ export default defineNovelConfig({
     'scene-effects',
     'explore-map',
     'scene-zena',
+    'scene-zena-game',
   ] as const,
+  points: ['face', 'chest'] as const,
   characters: {
     'arisiero': {
       name: '아리시에로',
@@ -46,6 +48,7 @@ export default defineNovelConfig({
           width: 350,
           points: {
             face: { x: 0.5, y: 0.18 },
+            chest: { x: 0.5, y: 0.45 },
           },
         },
       }
@@ -58,6 +61,7 @@ export default defineNovelConfig({
           width: 350,
           points: {
             face: { x: 0.5, y: 0.18 },
+            chest: { x: 0.5, y: 0.45 },
           },
         },
         smile: {
@@ -65,6 +69,7 @@ export default defineNovelConfig({
           width: 350,
           points: {
             face: { x: 0.5, y: 0.18 },
+            chest: { x: 0.5, y: 0.45 },
           },
         },
       }

@@ -47,7 +47,7 @@ const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResul
   'control': controlHandler,
   // setup cmds (builtin UI)
   'setup-dialogue': dialogueUISetup,
-  'setup-choice':   choiceUISetup,
+  'setup-choice': choiceUISetup,
 }
 
 // =============================================================
@@ -75,6 +75,8 @@ export interface SceneCallbacks {
   getCmdStateStore(): Map<string, any>
   /** UIRegistry 참조 (ui 네임스페이스용) */
   getUIRegistry(): Map<string, UIRuntimeEntry>
+  /** UI 상태 동기화 (입력 모드 갱신 등)를 엔진에 요청합니다. */
+  syncUIState(): void
 }
 
 // =============================================================
@@ -178,23 +180,23 @@ export class DialogueScene {
     if (!uiDefs) return
 
     const cmdStateStore = this.callbacks.getCmdStateStore()
-    const uiRegistry    = this.callbacks.getUIRegistry()
+    const uiRegistry = this.callbacks.getUIRegistry()
 
     const ctx: SceneContext = {
-      world:      r.world,
+      world: r.world,
       globalVars: this.callbacks.getGlobalVars(),
-      localVars:  this.localVars,
-      renderer:   r,
-      callbacks:  this.callbacks,
+      localVars: this.localVars,
+      renderer: r,
+      callbacks: this.callbacks,
       cmdState: {
         set: (name, data) => { cmdStateStore.set(name, data) },
-        get: (name)       => cmdStateStore.get(name),
+        get: (name) => cmdStateStore.get(name),
       },
       ui: {
         register: (name, entry) => { uiRegistry.set(name, entry) },
-        get:      (name)        => uiRegistry.get(name),
-        show:     (name, dur)   => uiRegistry.get(name)?.show(dur),
-        hide:     (name, dur)   => uiRegistry.get(name)?.hide(dur),
+        get: (name) => uiRegistry.get(name),
+        show: (name, dur) => uiRegistry.get(name)?.show(dur),
+        hide: (name, dur) => uiRegistry.get(name)?.hide(dur),
       },
       scene: {
         getTextSubIndex: () => this.textSubIndex,
@@ -205,7 +207,10 @@ export class DialogueScene {
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
         setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
         loadScene: (name: string) => this.callbacks.loadScene(name),
-        end: () => { this._ended = true }
+        end: () => {
+          this._ended = true
+          this.callbacks.syncUIState()
+        }
       }
     }
 
@@ -254,6 +259,7 @@ export class DialogueScene {
       if (tickResult === 'handled') {
         this._tickFn = null
         this._waitingInput = false
+        this.callbacks.syncUIState()
         return
       }
       if (tickResult === true) {
@@ -291,6 +297,7 @@ export class DialogueScene {
     const steps = this.definition.dialogues as DialogueStep<any, any, any, any, any, any, any>[]
     if (this.cursor >= steps.length) {
       this._ended = true
+      this.callbacks.syncUIState()
       return
     }
 
@@ -305,6 +312,7 @@ export class DialogueScene {
       const firstResult = result()
       if (firstResult === 'handled') {
         this._tickFn = null
+        this.callbacks.syncUIState()
         return
       }
       if (firstResult === true) {
@@ -316,11 +324,15 @@ export class DialogueScene {
       } else {
         // false / void → 입력 대기
         this._waitingInput = true
+        this.callbacks.syncUIState()
       }
       return
     }
 
-    if (result === 'handled') return
+    if (result === 'handled') {
+      this.callbacks.syncUIState()
+      return
+    }
 
     if (result === true || cmd.skip) {
       this.cursor++
@@ -328,6 +340,7 @@ export class DialogueScene {
       this._executeNext()
     } else {
       this._waitingInput = true
+      this.callbacks.syncUIState()
     }
   }
 
@@ -383,7 +396,7 @@ export class DialogueScene {
     const { type, skip, ...params } = cmd as any
 
     const cmdStateStore = this.callbacks.getCmdStateStore()
-    const uiRegistry    = this.callbacks.getUIRegistry()
+    const uiRegistry = this.callbacks.getUIRegistry()
 
     const ctx: SceneContext = {
       world: r.world,
@@ -393,13 +406,13 @@ export class DialogueScene {
       callbacks: this.callbacks,
       cmdState: {
         set: (name, data) => { cmdStateStore.set(name, data) },
-        get: (name)       => cmdStateStore.get(name),
+        get: (name) => cmdStateStore.get(name),
       },
       ui: {
         register: (name, entry) => { uiRegistry.set(name, entry) },
-        get:      (name)        => uiRegistry.get(name),
-        show:     (name, dur)   => uiRegistry.get(name)?.show(dur),
-        hide:     (name, dur)   => uiRegistry.get(name)?.hide(dur),
+        get: (name) => uiRegistry.get(name),
+        show: (name, dur) => uiRegistry.get(name)?.show(dur),
+        hide: (name, dur) => uiRegistry.get(name)?.hide(dur),
       },
       scene: {
         getTextSubIndex: () => this.textSubIndex,
@@ -410,7 +423,10 @@ export class DialogueScene {
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
         setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
         loadScene: (name: string) => this.callbacks.loadScene(name),
-        end: () => { this._ended = true }
+        end: () => {
+          this._ended = true
+          this.callbacks.syncUIState()
+        }
       }
     }
 

@@ -8,6 +8,7 @@ import sceneCond from './scenes/scene-condition'
 import sceneEffects from './scenes/scene-effects'
 import exploreMap from './scenes/explore-map'
 import sceneZena from './scenes/scene-zena'
+import sceneZenaGame from './scenes/scene-zena-game'
 
 // =============================================================
 // SVG 인라인 유틸 (클릭 오브젝트만 SVG 사용)
@@ -68,6 +69,7 @@ async function main() {
       'scene-effects': sceneEffects,
       'explore-map': exploreMap,
       'scene-zena': sceneZena,
+      'scene-zena-game': sceneZenaGame,
     },
   })
 

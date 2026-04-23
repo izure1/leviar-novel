@@ -61,6 +61,7 @@ type _DialogueEntryUnion<
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
+  TPoints extends readonly string[] = readonly string[],
 > =
   | _WithType<DialogueCmd<TCharacters>, 'dialogue', TVars, TLocalVars>
   | _WithType<ChoiceCmd<TVars, TLocalVars, TScenes>, 'choice', TVars, TLocalVars>
@@ -71,8 +72,8 @@ type _DialogueEntryUnion<
   | _WithType<MoodCmd, 'mood', TVars, TLocalVars>
   | _WithType<EffectCmd<TAssets>, 'effect', TVars, TLocalVars>
   | _WithType<OverlayCmd, 'overlay', TVars, TLocalVars>
-  | _WithType<CharacterCmd<TCharacters>, 'character', TVars, TLocalVars>
-  | _WithType<CharacterFocusCmd<TCharacters>, 'character-focus', TVars, TLocalVars>
+  | _WithType<CharacterCmd<TCharacters, TPoints>, 'character', TVars, TLocalVars>
+  | _WithType<CharacterFocusCmd<TCharacters, TPoints>, 'character-focus', TVars, TLocalVars>
   | _WithType<CharacterHighlightCmd<TCharacters>, 'character-highlight', TVars, TLocalVars>
   | _WithType<CameraZoomCmd, 'camera-zoom', TVars, TLocalVars>
   | _WithType<CameraPanCmd, 'camera-pan', TVars, TLocalVars>
@@ -97,7 +98,8 @@ export type DialogueEntry<
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
-> = _WithSkip<_DialogueEntryUnion<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds>>
+  TPoints extends readonly string[] = readonly string[],
+> = _WithSkip<_DialogueEntryUnion<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TPoints>>
 
 export type DialogueStep<
   TVars,
@@ -107,7 +109,8 @@ export type DialogueStep<
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>,
-> = DialogueEntry<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds>
+  TPoints extends readonly string[] = readonly string[],
+> = DialogueEntry<TVars, TLocalVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TPoints>
 
 // ─── Fallback 룰 ─────────────────────────────────────────────
 

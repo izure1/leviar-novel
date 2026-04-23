@@ -13275,7 +13275,6 @@ ${addLineNumbers(fragment)}`);
       let _fullText = "";
       let _activeTx = null;
       let _prevLines = null;
-      let _prevSubIndex = -1;
       const _show = (dur = 250) => {
         ;
         bgObj.animate({ style: { opacity: 1 } }, dur, "easeOut");
@@ -13318,8 +13317,7 @@ ${addLineNumbers(fragment)}`);
       };
       if (data.lines?.length) {
         _prevLines = data.lines;
-        _prevSubIndex = data.subIndex ?? 0;
-        const txt = data.lines[_prevSubIndex];
+        const txt = data.lines[data.subIndex ?? 0];
         const spkName = resolveSpeaker(data.speakerKey, charDefs);
         _renderText(spkName, txt, void 0, true);
       }
@@ -13337,7 +13335,7 @@ ${addLineNumbers(fragment)}`);
         },
         /**
          * data가 변경될 때 Proxy가 자동으로 호출합니다.
-         * - lines 참조가 새로워지거나 subIndex가 바뀐 경우: 텍스트 재렌더
+         * - lines가 바뀐 경우: 텍스트 재렌더
          * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
          */
         update: (d) => {
@@ -13347,12 +13345,9 @@ ${addLineNumbers(fragment)}`);
           Object.assign(bgObj.style, newBgCfg);
           Object.assign(speakerObj.style, newSpkCfg);
           Object.assign(textObj.style, newTxtCfg);
-          const linesChanged = d.lines !== _prevLines;
-          const subIndexChanged = d.subIndex !== _prevSubIndex;
-          if (d.lines && d.lines.length > 0 && (linesChanged || subIndexChanged)) {
+          if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
             _prevLines = d.lines;
-            _prevSubIndex = d.subIndex ?? 0;
-            const txt = d.lines[_prevSubIndex];
+            const txt = d.lines[d.subIndex ?? 0];
             const spkName = resolveSpeaker(d.speakerKey, charDefs);
             _renderText(spkName, txt, d.speed);
           }
@@ -13362,26 +13357,25 @@ ${addLineNumbers(fragment)}`);
     { hideable: true, attachToCamera: true }
   );
   var dialogueHandler = defineCmd2((cmd, ctx, data) => {
-    if (!Array.isArray(cmd.text)) {
-      const text = ctx.scene.interpolateText(cmd.text);
-      data.subIndex = 0;
-      data.speakerKey = cmd.speaker;
-      data.speed = cmd.speed;
-      data.lines = [text];
-      ctx.cmdState.set("dialogue", { ...data });
-      return false;
-    }
-    const lines = cmd.text.map((t) => ctx.scene.interpolateText(t));
+    const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
+    const lines = textArray.map((t) => ctx.scene.interpolateText(t));
     let index = 0;
     return () => {
-      data.subIndex = index;
-      data.speakerKey = cmd.speaker;
+      const ui = ctx.ui.get("dialogue");
+      if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
+        ui.completeTyping?.();
+        return false;
+      }
+      if (index >= lines.length) {
+        return true;
+      }
       data.speed = cmd.speed;
-      data.lines = lines;
-      ctx.ui.get("dialogue")?.update?.(data);
+      data.speakerKey = cmd.speaker;
+      data.subIndex = index;
+      data.lines = [...lines];
       ctx.cmdState.set("dialogue", { ...data });
       index++;
-      return index >= lines.length;
+      return false;
     };
   });
 
@@ -13508,7 +13502,7 @@ ${addLineNumbers(fragment)}`);
 
   // src/cmds/condition.ts
   var conditionHandler = defineCmd((cmd, ctx) => {
-    const result = cmd.if;
+    const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
     if (result) {
       if (cmd.goto) {
         ctx.scene.jumpToLabel(cmd.goto);
@@ -14570,6 +14564,7 @@ ${addLineNumbers(fragment)}`);
           loadScene: (name) => this.callbacks.loadScene(name),
           end: () => {
             this._ended = true;
+            this.callbacks.syncUIState();
           }
         }
       };
@@ -14610,6 +14605,7 @@ ${addLineNumbers(fragment)}`);
         if (tickResult === "handled") {
           this._tickFn = null;
           this._waitingInput = false;
+          this.callbacks.syncUIState();
           return;
         }
         if (tickResult === true) {
@@ -14639,6 +14635,7 @@ ${addLineNumbers(fragment)}`);
       const steps = this.definition.dialogues;
       if (this.cursor >= steps.length) {
         this._ended = true;
+        this.callbacks.syncUIState();
         return;
       }
       const step = steps[this.cursor];
@@ -14649,6 +14646,7 @@ ${addLineNumbers(fragment)}`);
         const firstResult = result();
         if (firstResult === "handled") {
           this._tickFn = null;
+          this.callbacks.syncUIState();
           return;
         }
         if (firstResult === true) {
@@ -14658,16 +14656,21 @@ ${addLineNumbers(fragment)}`);
           this._executeNext();
         } else {
           this._waitingInput = true;
+          this.callbacks.syncUIState();
         }
         return;
       }
-      if (result === "handled") return;
+      if (result === "handled") {
+        this.callbacks.syncUIState();
+        return;
+      }
       if (result === true || cmd.skip) {
         this.cursor++;
         this.textSubIndex = 0;
         this._executeNext();
       } else {
         this._waitingInput = true;
+        this.callbacks.syncUIState();
       }
     }
     _jumpToLabel(label) {
@@ -14748,6 +14751,7 @@ ${addLineNumbers(fragment)}`);
           loadScene: (name) => this.callbacks.loadScene(name),
           end: () => {
             this._ended = true;
+            this.callbacks.syncUIState();
           }
         }
       };
@@ -15221,7 +15225,10 @@ ${addLineNumbers(fragment)}`);
           this._inputDisabledUntil = Date.now() + duration;
         },
         getCmdStateStore: () => this._cmdStateStore,
-        getUIRegistry: () => this._uiRegistry
+        getUIRegistry: () => this._uiRegistry,
+        syncUIState: () => {
+          this._syncUIState();
+        }
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
@@ -15285,7 +15292,8 @@ ${addLineNumbers(fragment)}`);
           isSkipping: () => true,
           disableInput: noop,
           getCmdStateStore: () => cmdStateStore,
-          getUIRegistry: () => uiRegistry
+          getUIRegistry: () => uiRegistry,
+          syncUIState: noop
         },
         cmdState: {
           set: (name, data) => {
@@ -15340,8 +15348,10 @@ ${addLineNumbers(fragment)}`);
       "scene-condition",
       "scene-effects",
       "explore-map",
-      "scene-zena"
+      "scene-zena",
+      "scene-zena-game"
     ],
+    points: ["face", "chest"],
     characters: {
       "arisiero": {
         name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
@@ -15358,7 +15368,8 @@ ${addLineNumbers(fragment)}`);
             src: "girl_smile",
             width: 350,
             points: {
-              face: { x: 0.5, y: 0.18 }
+              face: { x: 0.5, y: 0.18 },
+              chest: { x: 0.5, y: 0.45 }
             }
           }
         }
@@ -15370,14 +15381,16 @@ ${addLineNumbers(fragment)}`);
             src: "girl_normal",
             width: 350,
             points: {
-              face: { x: 0.5, y: 0.18 }
+              face: { x: 0.5, y: 0.18 },
+              chest: { x: 0.5, y: 0.45 }
             }
           },
           smile: {
             src: "girl_smile",
             width: 350,
             points: {
-              face: { x: 0.5, y: 0.18 }
+              face: { x: 0.5, y: 0.18 },
+              chest: { x: 0.5, y: 0.45 }
             }
           }
         }
@@ -15857,7 +15870,7 @@ ${addLineNumbers(fragment)}`);
         "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
       ]
     },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "chest", duration: 800 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -15881,7 +15894,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 분기: 일 질문 ───
-    { type: "label", label: "ask-job" },
+    { type: "label", name: "ask-job" },
     {
       type: "dialogue",
       speaker: "zena",
@@ -15896,9 +15909,9 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uADFC\uB370 \uB2D8 \uCEE4\uD53C \uB9DB\uC788\uC5B4 \uBCF4\uC784. \uD55C \uC785\uB9CC? \uC544, \uB18D\uB2F4\uC784. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD558\uC148."
     },
-    { type: "control", action: "goto", next: "common-end" },
+    { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 버그 질문 ───
-    { type: "label", label: "ask-bug" },
+    { type: "label", name: "ask-bug" },
     { type: "camera-effect", preset: "shake", duration: 400 },
     {
       type: "dialogue",
@@ -15913,22 +15926,20 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "...\uADFC\uB370 \uB2D8 \uAC1C\uBC1C\uC790\uC784? \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uD6C8\uC218 \uB450\uB294 \uD558\uCCAD \uC5C5\uC790\uC784? \uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
     },
-    { type: "control", action: "goto", next: "common-end" },
+    { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 도망 ───
-    { type: "label", label: "escape" },
+    { type: "label", name: "escape" },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC10? \uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uBE61\uCCD0 \uC788\uC73C\uB77C\uACE0?"
+      text: [
+        "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC10? \uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uBE61\uCCD0 \uC788\uC73C\uB77C\uACE0?",
+        "\uB2D8, \uC549\uC73C\uC148. \uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC784. \uB3C4\uB9DD \uBABB \uAC10."
+      ]
     },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: "\uB2D8, \uC549\uC73C\uC148. \uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC784. \uB3C4\uB9DD \uBABB \uAC10."
-    },
-    { type: "control", action: "goto", next: "common-end" },
+    { type: "condition", if: () => true, goto: "common-end" },
     // ─── 공통 엔딩 ───
-    { type: "label", label: "common-end" },
+    { type: "label", name: "common-end" },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 800 },
     {
       type: "dialogue",
@@ -15944,7 +15955,99 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
     { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uCCAB \uB9CC\uB0A8\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
-  ]);
+  ], { next: "scene-zena-game" });
+
+  // example/scenes/scene-zena-game.ts
+  var scene_zena_game_default = defineScene({
+    config: novel_config_default,
+    variables: {
+      _gameScore: 0,
+      _zenaRage: 0
+    },
+    initial: commonInitial
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
+    { type: "background", name: "bg-library", duration: 0 },
+    { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    {
+      type: "dialogue",
+      text: [
+        "\uC81C\uB098\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4.",
+        "\uD654\uBA74 \uC18D\uC5D0\uC11C\uB294 \uC815\uCCB4\uBD88\uBA85\uC758 \uBAAC\uC2A4\uD130\uAC00 \uAE30\uAD34\uD55C \uD3F4\uB9AC\uACE4\uC744 \uD769\uBFCC\uB9AC\uBA70 \uCDA4\uC744 \uCD94\uACE0 \uC788\uB2E4."
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC790, \uBD10\uBD10. \uC774 \uAC8C\uC784\uC774 \uC5BC\uB9C8\uB098 \uAC13\uAC9C\uC774\uB0D0\uBA74...",
+        "\uC5EC\uAE30\uC11C \uC810\uD504\uD0A4\uB97C \uC138 \uBC88 \uC5F0\uD0C0\uD558\uACE0 \uC549\uAE30\uB97C \uB204\uB974\uBA74 \uD558\uB298\uC744 \uB0A0 \uC218 \uC788\uC74C."
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBB3C\uB860 \uCC29\uC9C0\uD560 \uB550 \uB9F5\uC744 \uB6AB\uACE0 \uC9C0\uD558\uC2E4\uB85C \uB5A8\uC5B4\uC9C0\uC9C0\uB9CC. \uC644\uC804 \uC544\uD2B8 \uC544\uB2D8?"
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: '"\uBC84\uADF8\uAC00 \uC544\uB2C8\uB77C \uAE30\uB2A5\uC774\uB124\uC694."', goto: "agree" },
+        { text: '"\uADF8\uB0E5 \uB9DD\uAC9C \uC544\uB2C8\uC57C?"', goto: "disagree" }
+      ]
+    },
+    // ─── 분기: 동의 ───
+    { type: "label", name: "agree" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC624, \uB2D8 \uAF64 \uBC30\uC6B0\uC2E0 \uBD84\uC774\uB124. \uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC74C."
+    },
+    { type: "var", name: "likeability", value: 10 },
+    { type: "condition", if: () => true, goto: "play-game" },
+    // ─── 분기: 반대 ───
+    { type: "label", name: "disagree" },
+    { type: "camera-effect", preset: "shake", duration: 300 },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uB9DD\uAC9C\uC774\uB77C\uB2C8! \uC774\uAC74 \uC5B8\uB354\uB3C5\uC758 \uBC18\uB780\uC774\uC790 \uD3EC\uC2A4\uD2B8\uBAA8\uB354\uB2C8\uC998 \uC608\uC220\uC774\uB77C\uACE0!",
+        "\uD558... \uB2D8\uC740 \uC544\uC9C1 \uC774 \uC138\uACC4\uB97C \uC774\uD574\uD560 \uC900\uBE44\uAC00 \uC548 \uB41C \uAC70\uC784."
+      ]
+    },
+    { type: "condition", if: () => true, goto: "play-game" },
+    // ─── 게임 플레이 ───
+    { type: "label", name: "play-game" },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC790, \uD328\uB4DC \uC7A1\uC73C\uC148. \uBCF4\uC2A4\uC804\uC784."
+    },
+    { type: "screen-flash", preset: "red" },
+    { type: "camera-effect", preset: "shake", duration: 800 },
+    {
+      type: "dialogue",
+      text: "\uD654\uBA74\uC774 \uAE30\uAD34\uD558\uAC8C \uC77C\uADF8\uB7EC\uC9C0\uB354\uB2C8, \uAC8C\uC784 \uCE90\uB9AD\uD130\uAC00 T\uD3EC\uC988\uB97C \uCDE8\uD558\uBA70 \uD558\uB298\uB85C \uC19F\uAD6C\uCCE4\uB2E4."
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544... \uB610 \uD295\uACBC\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uD5C8\uD0C8\uD558\uAC8C \uD328\uB4DC\uB97C \uB0B4\uB824\uB193\uC558\uB2E4."
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
+    { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uAE30\uBB18\uD55C \uAC8C\uC784 \uB370\uC774\uD2B8\uAC00 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
+  ], { next: "scene-intro" });
 
   // example/main.ts
   var svg = (body, w, h) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
@@ -15987,7 +16090,8 @@ ${addLineNumbers(fragment)}`);
         "scene-condition": scene_condition_default,
         "scene-effects": scene_effects_default,
         "explore-map": explore_map_default,
-        "scene-zena": scene_zena_default
+        "scene-zena": scene_zena_default,
+        "scene-zena-game": scene_zena_game_default
       }
     });
     await novel.load();
