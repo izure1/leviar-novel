@@ -13204,7 +13204,11 @@ ${addLineNumbers(fragment)}`);
     color: "#ffffff",
     lineHeight: 1.6,
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    textAlign: "left"
+    textAlign: "left",
+    textShadowBlur: 1,
+    textShadowColor: "#000000",
+    textShadowOffsetX: 1,
+    textShadowOffsetY: 1
   };
   function resolveSpeaker(speakerKey, charDefs) {
     if (!speakerKey) return void 0;
@@ -14488,10 +14492,7 @@ ${addLineNumbers(fragment)}`);
     "screen-flash": screenFlashHandler,
     "screen-wipe": screenWipeHandler,
     "ui": uiHandler,
-    "control": controlHandler,
-    // setup cmds (builtin UI)
-    "setup-dialogue": dialogueUISetup,
-    "setup-choice": choiceUISetup
+    "control": controlHandler
   };
   var DialogueScene = class {
     renderer;

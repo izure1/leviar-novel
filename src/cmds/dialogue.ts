@@ -7,43 +7,44 @@ import { define } from '../define/defineCmdUI'
 /** dialogueUISetup이 공유하는 데이터 스키마 */
 export interface DialogueSchema {
   /** 대화창 배경 패널 스타일 */
-  bg?:        Partial<Style> & { height?: number }
+  bg?: Partial<Style> & { height?: number }
   /** 화자(캐릭터 이름) 텍스트 스타일 */
-  speaker?:   Partial<Style>
+  speaker?: Partial<Style>
   /** 대사 텍스트 스타일 */
-  text?:      Partial<Style>
+  text?: Partial<Style>
   // ─── 런타임 상태 ───────────────────────────────────────────
   /** 현재 텍스트 서브 인덱스 */
-  subIndex:   number
+  subIndex: number
   /** 현재 대사 줄 목록 */
-  lines:      string[]
+  lines: string[]
   /** 현재 화자 키 */
   speakerKey: string | undefined
   /** 현재 타이핑 속도(ms). dialogueHandler가 설정합니다 */
-  speed:      number | undefined
+  speed: number | undefined
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_BG: Record<string, any> = {
+const DEFAULT_BG: Partial<Style> = {
   color: 'rgba(0,0,0,0.82)',
 }
 
-const DEFAULT_SPEAKER: Record<string, any> = {
+const DEFAULT_SPEAKER: Partial<Style> = {
   fontSize: 18, fontWeight: 'bold', color: '#ffe066',
   fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
   textAlign: 'left',
 }
 
-const DEFAULT_TEXT: Record<string, any> = {
+const DEFAULT_TEXT: Partial<Style> = {
   fontSize: 20, color: '#ffffff', lineHeight: 1.6,
   fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
   textAlign: 'left',
+  textShadowBlur: 1, textShadowColor: '#000000', textShadowOffsetX: 1, textShadowOffsetY: 1,
 }
 
 // ─── 화자 이름 해석 헬퍼 ────────────────────────────────────
 
-function resolveSpeaker(speakerKey: string | undefined, charDefs: any): string | undefined {
+function resolveSpeaker(speakerKey: string | undefined, charDefs: CharDefs): string | undefined {
   if (!speakerKey) return undefined
   return charDefs?.[speakerKey]?.name ?? speakerKey
 }
@@ -51,13 +52,13 @@ function resolveSpeaker(speakerKey: string | undefined, charDefs: any): string |
 // ─── define(schema) 팩토리 ───────────────────────────────────
 
 const { defineCmd, defineUI } = define<DialogueSchema>({
-  bg:         undefined,
-  speaker:    undefined,
-  text:       undefined,
-  subIndex:   0,
-  lines:      [],
+  bg: undefined,
+  speaker: undefined,
+  text: undefined,
+  subIndex: 0,
+  lines: [],
   speakerKey: undefined,
-  speed:      undefined,
+  speed: undefined,
 })
 
 // ─── dialogueUISetup ─────────────────────────────────────────
@@ -78,8 +79,8 @@ const { defineCmd, defineUI } = define<DialogueSchema>({
 export const dialogueUISetup = defineUI(
   (data, ctx) => {
     const cam = ctx.world.camera as any
-    const w   = ctx.renderer.width
-    const h   = ctx.renderer.height
+    const w = ctx.renderer.width
+    const h = ctx.renderer.height
 
     const toLocal = (cx: number, cy: number) =>
       (cam && typeof cam.canvasToLocal === 'function')
@@ -87,21 +88,21 @@ export const dialogueUISetup = defineUI(
         : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
     // 스타일 병합
-    const bgCfg  = { ...DEFAULT_BG,      ...(data.bg      ?? {}) } as any
+    const bgCfg = { ...DEFAULT_BG, ...(data.bg ?? {}) } as any
     const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as any
-    const txtCfg = { ...DEFAULT_TEXT,    ...(data.text    ?? {}) } as any
+    const txtCfg = { ...DEFAULT_TEXT, ...(data.text ?? {}) } as any
 
-    const BOX_H  = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
+    const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
     const BOX_CY = h - (BOX_H / 2)
 
     // 대화창 배경
     const bgObj = ctx.world.createRectangle({
       style: {
         ...bgCfg,
-        width:         bgCfg.width ?? w,
-        height:        BOX_H,
-        zIndex:        bgCfg.zIndex ?? 300,
-        opacity:       0,
+        width: bgCfg.width ?? w,
+        height: BOX_H,
+        zIndex: bgCfg.zIndex ?? 300,
+        opacity: 0,
         pointerEvents: false,
       } as any,
       transform: { position: toLocal(w / 2, BOX_CY) },
@@ -115,9 +116,9 @@ export const dialogueUISetup = defineUI(
       attribute: { text: '' } as any,
       style: {
         ...spkCfg,
-        width:         w * 0.90,
-        zIndex:        spkCfg.zIndex ?? 301,
-        opacity:       0,
+        width: w * 0.90,
+        zIndex: spkCfg.zIndex ?? 301,
+        opacity: 0,
         pointerEvents: false,
       } as any,
       transform: { position: toLocal(w / 2, spkY) },
@@ -131,9 +132,9 @@ export const dialogueUISetup = defineUI(
       attribute: { text: '' } as any,
       style: {
         ...txtCfg,
-        width:         txtCfg.width ?? w * 0.90,
-        zIndex:        txtCfg.zIndex ?? 301,
-        opacity:       0,
+        width: txtCfg.width ?? w * 0.90,
+        zIndex: txtCfg.zIndex ?? 301,
+        opacity: 0,
         pointerEvents: false,
       } as any,
       transform: { position: toLocal(w / 2, spkY + spkH + 8) },
@@ -144,20 +145,20 @@ export const dialogueUISetup = defineUI(
     const charDefs = ctx.renderer.config.characters as any
 
     // 타이핑 상태
-    let _isTyping    = false
-    let _fullText    = ''
+    let _isTyping = false
+    let _fullText = ''
     let _activeTx: any = null
     // 반응형 중복 렌더 방지: 이전 lines 참조를 추적
     let _prevLines: string[] | null = null
 
     const _show = (dur = 250) => {
-      ;(bgObj as any).animate({ style: { opacity: 1 } }, dur, 'easeOut')
+      ; (bgObj as any).animate({ style: { opacity: 1 } }, dur, 'easeOut')
     }
 
     const _hide = (dur = 300) => {
-      ;(bgObj  as any).animate({ style: { opacity: 0 } }, dur, 'easeIn')
-      ;(speakerObj as any).style.opacity = 0
-      ;(textObj as any).animate({ style: { opacity: 0 } }, dur, 'easeIn')
+      ; (bgObj as any).animate({ style: { opacity: 0 } }, dur, 'easeIn')
+        ; (speakerObj as any).style.opacity = 0
+        ; (textObj as any).animate({ style: { opacity: 0 } }, dur, 'easeIn')
     }
 
     const _renderText = (
@@ -168,26 +169,26 @@ export const dialogueUISetup = defineUI(
     ) => {
       _show()
 
-      // 화자
-      ;(speakerObj as any).attribute.text = speaker ?? ''
-      ;(speakerObj as any).style.opacity  = speaker ? 1 : 0
+        // 화자
+        ; (speakerObj as any).attribute.text = speaker ?? ''
+        ; (speakerObj as any).style.opacity = speaker ? 1 : 0
 
       // 대사 — 즉시 or 타이핑
       if (immediate || speed === 0) {
-        _isTyping  = false
-        _fullText  = text
+        _isTyping = false
+        _fullText = text
         _activeTx?.stop?.()
-        _activeTx  = null
-        ;(textObj as any).attribute.text = text
-        ;(textObj as any).style.opacity  = 1
+        _activeTx = null
+          ; (textObj as any).attribute.text = text
+          ; (textObj as any).style.opacity = 1
       } else {
         const spd = speed ?? 30
-        _isTyping  = true
-        _fullText  = text
+        _isTyping = true
+        _fullText = text
         if (_activeTx) { _activeTx.stop?.(); _activeTx = null }
         const anim = (textObj as any).transition(text, spd)
-        _activeTx  = anim
-        ;(textObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
+        _activeTx = anim
+          ; (textObj as any).animate({ style: { opacity: 1 } }, 200, 'easeOut')
         if (anim && typeof anim.on === 'function') {
           anim.on('end', () => {
             _isTyping = false
@@ -206,16 +207,16 @@ export const dialogueUISetup = defineUI(
     }
 
     return {
-      show:    (dur?: number) => _show(dur),
-      hide:    (dur?: number) => _hide(dur),
-      isTyping:       () => _isTyping,
+      show: (dur?: number) => _show(dur),
+      hide: (dur?: number) => _hide(dur),
+      isTyping: () => _isTyping,
       completeTyping: () => {
         if (!_isTyping) return
         _isTyping = false
         _activeTx?.stop?.()
         _activeTx = null
-        ;(textObj as any).attribute.text = _fullText
-        ;(textObj as any).style.opacity  = 1
+          ; (textObj as any).attribute.text = _fullText
+          ; (textObj as any).style.opacity = 1
       },
       /**
        * data가 변경될 때 Proxy가 자동으로 호출합니다.
@@ -224,17 +225,17 @@ export const dialogueUISetup = defineUI(
        */
       update: (d: DialogueSchema) => {
         // 스타일 갱신
-        const newBgCfg  = { ...DEFAULT_BG,      ...(d.bg      ?? {}) } as any
+        const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}) } as any
         const newSpkCfg = { ...DEFAULT_SPEAKER, ...(d.speaker ?? {}) } as any
-        const newTxtCfg = { ...DEFAULT_TEXT,    ...(d.text    ?? {}) } as any
-        Object.assign((bgObj      as any).style, newBgCfg)
+        const newTxtCfg = { ...DEFAULT_TEXT, ...(d.text ?? {}) } as any
+        Object.assign((bgObj as any).style, newBgCfg)
         Object.assign((speakerObj as any).style, newSpkCfg)
-        Object.assign((textObj    as any).style, newTxtCfg)
+        Object.assign((textObj as any).style, newTxtCfg)
 
         // 텍스트 갱신: lines 참조가 바뀐 경우에만 렌더 (중복 방지)
         if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
           _prevLines = d.lines
-          const txt     = d.lines[d.subIndex ?? 0] as string
+          const txt = d.lines[d.subIndex ?? 0] as string
           const spkName = resolveSpeaker(d.speakerKey, charDefs)
           _renderText(spkName, txt, d.speed)
         }
@@ -279,7 +280,7 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
 
   return () => {
     const ui = ctx.ui.get('dialogue') as any
-    
+
     // 타이핑 중이면 즉시 완료 후 대기 유지
     if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
       ui.completeTyping?.()
@@ -292,16 +293,16 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
     }
 
     // Proxy 트랩 및 렌더링 갱신을 위해 속도, 화자를 먼저 설정
-    data.speed      = cmd.speed
+    data.speed = cmd.speed
     data.speakerKey = cmd.speaker as string | undefined
-    data.subIndex   = index
-    
+    data.subIndex = index
+
     // 배열 참조를 갱신하여 update 내부의 lines !== _prevLines 체크를 통과시킴
-    data.lines      = [...lines]
-    
+    data.lines = [...lines]
+
     ctx.cmdState.set('dialogue', { ...data })
     index++
-    
+
     return false
   }
 })

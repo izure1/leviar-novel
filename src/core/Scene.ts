@@ -8,8 +8,8 @@ import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExpl
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
 import type { SceneContext, CommandResult, SimpleCommandResult } from './SceneContext'
 import type { UIRuntimeEntry } from './UIRegistry'
-import { dialogueHandler, dialogueUISetup } from '../cmds/dialogue'
-import { choiceHandler, choiceUISetup } from '../cmds/choice'
+import { dialogueHandler } from '../cmds/dialogue'
+import { choiceHandler } from '../cmds/choice'
 import { conditionHandler } from '../cmds/condition'
 import { varHandler } from '../cmds/var'
 import { labelHandler } from '../cmds/label'
@@ -45,9 +45,6 @@ const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResul
   'screen-wipe': screenWipeHandler,
   'ui': uiHandler,
   'control': controlHandler,
-  // setup cmds (builtin UI)
-  'setup-dialogue': dialogueUISetup,
-  'setup-choice': choiceUISetup,
 }
 
 // =============================================================
