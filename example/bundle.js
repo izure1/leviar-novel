@@ -15431,7 +15431,6 @@ ${addLineNumbers(fragment)}`);
     fallback: [
       { type: "character", action: "show", defaults: { duration: 300 } },
       { type: "character", action: "remove", defaults: { duration: 1e3 } }
-      // { type: 'dialogue', defaults: { speed: 60 } },
     ]
   });
 

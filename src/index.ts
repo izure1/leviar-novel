@@ -60,13 +60,14 @@ export { defineExploreScene } from './define/defineExploreScene'
 export { defineCmd } from './define/defineCmd'
 export { defineUI } from './define/defineUI'
 export { define } from './define/defineCmdUI'
+export { defineCharacter } from './define/defineCharacter'
 export { defineScene, defineInitial } from './define/defineScene'
 export type { SceneDefinition } from './define/defineScene'
 export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
 export type { UIHandler, UIHandlerMeta } from './define/defineCmdUI'
 
 // ─── UI 시스템 ───────────────────────────────────────────────
-export type { UIRuntimeEntry, UIEntryOptions } from './core/UIRegistry'
+export type { UIRuntimeEntry } from './core/UIRegistry'
 export type { DialogueSchema } from './cmds/dialogue'
 export type { ChoiceSchema } from './cmds/choice'
 

@@ -2,6 +2,8 @@
 import { defineNovelConfig, defineCmd } from '../src'
 import { dialogueUISetup } from '../src/cmds/dialogue'
 import { choiceUISetup } from '../src/cmds/choice'
+import arisiero from './characters/arisiero'
+import zena from './characters/zena'
 
 const testCmd = defineCmd<{ message: string }>((cmd, ctx) => {
   console.log('[test-cmd]', cmd.message, ctx.globalVars)
@@ -32,48 +34,8 @@ export default defineNovelConfig({
   ],
   points: ['face', 'chest'],
   characters: {
-    'arisiero': {
-      name: '아리시에로',
-      points: {
-        normal: {
-          src: 'girl_normal',
-          width: 350,
-          points: {
-            face: { x: 0.5, y: 0.18 },
-            chest: { x: 0.5, y: 0.45 },
-          },
-        },
-        smile: {
-          src: 'girl_smile',
-          width: 350,
-          points: {
-            face: { x: 0.5, y: 0.18 },
-            chest: { x: 0.5, y: 0.45 },
-          },
-        },
-      }
-    },
-    'zena': {
-      name: '제나',
-      points: {
-        normal: {
-          src: 'girl_normal',
-          width: 350,
-          points: {
-            face: { x: 0.5, y: 0.18 },
-            chest: { x: 0.5, y: 0.45 },
-          },
-        },
-        smile: {
-          src: 'girl_smile',
-          width: 350,
-          points: {
-            face: { x: 0.5, y: 0.18 },
-            chest: { x: 0.5, y: 0.45 },
-          },
-        },
-      }
-    },
+    'arisiero': arisiero,
+    'zena': zena,
   },
   backgrounds: {
     'bg-floor': { src: 'bg_floor', parallax: true },
@@ -98,6 +60,5 @@ export default defineNovelConfig({
   fallback: [
     { type: 'character', action: 'show', defaults: { duration: 300 } },
     { type: 'character', action: 'remove', defaults: { duration: 1000 } },
-    // { type: 'dialogue', defaults: { speed: 60 } },
   ],
 })
