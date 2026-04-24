@@ -1,34 +1,5 @@
 "use strict";
 (() => {
-  // src/define/defineNovelConfig.ts
-  function defineNovelConfig(config) {
-    return config;
-  }
-
-  // src/define/defineCharacter.ts
-  function defineCharacter(def) {
-    return def;
-  }
-
-  // src/define/defineScene.ts
-  function defineInitial(config, initial) {
-    return initial;
-  }
-  function defineScene({
-    config,
-    variables = {},
-    initial,
-    next
-  }, dialogues) {
-    return {
-      kind: "dialogue",
-      dialogues,
-      localVars: variables,
-      nextScene: next,
-      initial
-    };
-  }
-
   // src/define/defineCmdUI.ts
   function resolveVal(val, vars) {
     if (typeof val === "function") return val(vars);
@@ -111,7 +82,7 @@
     return module;
   }
 
-  // src/cmds/dialogue.ts
+  // src/modules/dialogue.ts
   var DEFAULT_BG = {
     color: "rgba(0,0,0,0.82)"
   };
@@ -301,7 +272,7 @@
   });
   var dialogue_default = dialogueModule;
 
-  // src/cmds/choice.ts
+  // src/modules/choice.ts
   var DEFAULT_CHOICE = {
     fontSize: 18,
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
@@ -467,7 +438,7 @@
     TRANSITION: 999
   };
 
-  // src/cmds/background.ts
+  // src/modules/background.ts
   var backgroundModule = define2({
     key: void 0,
     fit: "cover",
@@ -570,7 +541,7 @@
     backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx);
   }
 
-  // src/cmds/camera.ts
+  // src/modules/camera.ts
   var ZOOM_PRESETS = {
     "close-up": { scale: 1.5, duration: 800 },
     "medium": { scale: 1.2, duration: 600 },
@@ -733,7 +704,7 @@
     return true;
   });
 
-  // src/cmds/character.ts
+  // src/modules/character.ts
   var CHARACTER_X_RATIO = {
     "far-left": 0.1,
     "left": 0.25,
@@ -910,7 +881,7 @@
     return true;
   });
 
-  // src/cmds/mood.ts
+  // src/modules/mood.ts
   var MOOD_PRESETS = {
     day: { color: "rgba(255,230,180,0.1)", vignette: "transparent 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
     night: { color: "rgba(10,15,60,0.5)", vignette: "transparent 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
@@ -1066,7 +1037,7 @@
   }
   var mood_default = moodModule;
 
-  // src/cmds/effect.ts
+  // src/modules/effect.ts
   var EFFECT_PARTICLE_PRESETS = {
     dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
     rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: "screen" } },
@@ -1192,7 +1163,7 @@
   });
   var effect_default = effectModule;
 
-  // src/cmds/overlay.ts
+  // src/modules/overlay.ts
   var OVERLAY_PRESETS = {
     caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
     title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
@@ -1285,7 +1256,7 @@
   });
   var overlay_default = overlayModule;
 
-  // src/cmds/screen.ts
+  // src/modules/screen.ts
   var FADE_PRESETS = {
     black: { color: "rgba(0,0,0,1)", easing: "linear" },
     white: { color: "rgba(255,255,255,1)", easing: "linear" },
@@ -1408,7 +1379,7 @@
     return true;
   });
 
-  // src/cmds/condition.ts
+  // src/modules/condition.ts
   var conditionModule = define2({});
   conditionModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
@@ -1446,7 +1417,7 @@
   });
   var condition_default = conditionModule;
 
-  // src/cmds/var.ts
+  // src/modules/var.ts
   var varModule = define2({});
   varModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
@@ -1463,7 +1434,7 @@
   });
   var var_default = varModule;
 
-  // src/cmds/label.ts
+  // src/modules/label.ts
   var labelModule = define2({});
   labelModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
@@ -1473,7 +1444,7 @@
   });
   var label_default = labelModule;
 
-  // src/cmds/ui.ts
+  // src/modules/ui.ts
   var uiModule = define2({});
   uiModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
@@ -1488,7 +1459,7 @@
   });
   var ui_default = uiModule;
 
-  // src/cmds/control.ts
+  // src/modules/control.ts
   var controlModule = define2({ expireAt: 0 });
   controlModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
@@ -1509,6 +1480,58 @@
     return true;
   });
   var control_default = controlModule;
+
+  // src/define/defineNovelConfig.ts
+  var BUILTIN_MODULES = {
+    "dialogue": dialogue_default,
+    "choice": choice_default,
+    "background": background_default,
+    "character": character_default,
+    "character-focus": characterFocusModule,
+    "character-highlight": characterHighlightModule,
+    "mood": mood_default,
+    "effect": effect_default,
+    "overlay": overlay_default,
+    "screen-fade": screenFadeModule,
+    "screen-flash": screenFlashModule,
+    "screen-wipe": screenWipeModule,
+    "camera-zoom": cameraZoomModule,
+    "camera-pan": cameraPanModule,
+    "camera-effect": cameraEffectModule,
+    "condition": condition_default,
+    "var": var_default,
+    "label": label_default,
+    "ui": ui_default,
+    "control": control_default
+  };
+  function defineNovelConfig(config) {
+    const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
+    return { ...config, modules: mergedModules };
+  }
+
+  // src/define/defineCharacter.ts
+  function defineCharacter(def) {
+    return def;
+  }
+
+  // src/define/defineScene.ts
+  function defineInitial(config, initial) {
+    return initial;
+  }
+  function defineScene({
+    config,
+    variables = {},
+    initial,
+    next
+  }, dialogues) {
+    return {
+      kind: "dialogue",
+      dialogues,
+      localVars: variables,
+      nextScene: next,
+      initial
+    };
+  }
 
   // node_modules/leviar/dist/index.js
   var __create = Object.create;
@@ -15398,26 +15421,6 @@ ${addLineNumbers(fragment)}`);
       endingReached: false
     },
     modules: {
-      "dialogue": dialogue_default,
-      "choice": choice_default,
-      "background": background_default,
-      "character": character_default,
-      "character-focus": characterFocusModule,
-      "character-highlight": characterHighlightModule,
-      "mood": mood_default,
-      "effect": effect_default,
-      "overlay": overlay_default,
-      "screen-fade": screenFadeModule,
-      "screen-flash": screenFlashModule,
-      "screen-wipe": screenWipeModule,
-      "camera-zoom": cameraZoomModule,
-      "camera-pan": cameraPanModule,
-      "camera-effect": cameraEffectModule,
-      "condition": condition_default,
-      "var": var_default,
-      "label": label_default,
-      "ui": ui_default,
-      "control": control_default,
       "test-cmd": testModule
     },
     scenes: [

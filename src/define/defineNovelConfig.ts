@@ -1,10 +1,61 @@
 import type { CharDefs, BgDefs, NovelConfig, FallbackRule, EffectDef } from '../types/config'
 import type { NovelModule } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
+import dialogueModule from '../modules/dialogue'
+import choiceModule from '../modules/choice'
+import backgroundModule from '../modules/background'
+import characterModule, { characterFocusModule, characterHighlightModule } from '../modules/character'
+import moodModule from '../modules/mood'
+import effectModule from '../modules/effect'
+import overlayModule from '../modules/overlay'
+import { screenFadeModule, screenFlashModule, screenWipeModule } from '../modules/screen'
+import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../modules/camera'
+import conditionModule from '../modules/condition'
+import varModule from '../modules/var'
+import labelModule from '../modules/label'
+import uiModule from '../modules/ui'
+import controlModule from '../modules/control'
+
+// ─── 내장 모듈 맵 ────────────────────────────────────────────
+
+/**
+ * 엔진이 자동으로 포함하는 내장 모듈 목록.
+ * `defineNovelConfig`의 `modules`에 명시하지 않아도 자동으로 등록됩니다.
+ */
+export const BUILTIN_MODULES = {
+  'dialogue':            dialogueModule,
+  'choice':              choiceModule,
+  'background':          backgroundModule,
+  'character':           characterModule,
+  'character-focus':     characterFocusModule,
+  'character-highlight': characterHighlightModule,
+  'mood':                moodModule,
+  'effect':              effectModule,
+  'overlay':             overlayModule,
+  'screen-fade':         screenFadeModule,
+  'screen-flash':        screenFlashModule,
+  'screen-wipe':         screenWipeModule,
+  'camera-zoom':         cameraZoomModule,
+  'camera-pan':          cameraPanModule,
+  'camera-effect':       cameraEffectModule,
+  'condition':           conditionModule,
+  'var':                 varModule,
+  'label':               labelModule,
+  'ui':                  uiModule,
+  'control':             controlModule,
+} as const
+
+/** 내장 모듈 타입 */
+export type BuiltinModules = typeof BUILTIN_MODULES
+
+// ─── defineNovelConfig ───────────────────────────────────────
 
 /**
  * Novel config를 정의합니다. 제네릭으로 리터럴 타입을 보존하여
  * defineScene에서 타입 힌트를 자동으로 제공합니다.
+ *
+ * 내장 모듈(dialogue, choice, background 등)은 `modules`에 명시하지 않아도
+ * 자동으로 등록됩니다. 커스텀 모듈만 `modules`에 추가하면 됩니다.
  *
  * @example
  * ```ts
@@ -13,10 +64,9 @@ import type { EffectType } from '../types/dialogue'
  *   scenes: ['scene-a', 'scene-b'],
  *   characters: { ... },
  *   backgrounds: { ... },
+ *   // 커스텀 모듈만 추가
  *   modules: {
- *     'dialogue': dialogueModule,
- *     'choices':  choiceModule,
- *     'background': backgroundModule,
+ *     'test-cmd': testModule,
  *   },
  * })
  * ```
@@ -39,6 +89,8 @@ export function defineNovelConfig<
     fallback?: FallbackRule[]
     modules?: TModules
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TModules> {
-  return config as any
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, BuiltinModules & TModules> {
+  // 내장 모듈 + 유저 모듈 merge (유저 모듈이 덮어쓸 수 있음)
+  const mergedModules = { ...BUILTIN_MODULES, ...(config.modules ?? {}) }
+  return { ...config, modules: mergedModules } as any
 }
