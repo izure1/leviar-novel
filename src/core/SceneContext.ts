@@ -3,6 +3,7 @@ import type { Renderer } from './Renderer'
 import type { SceneCallbacks } from './Scene'
 import type { CustomCmdContext } from '../types/config'
 import type { UIRuntimeEntry } from './UIRegistry'
+import type { DialogueEntry } from '../types/dialogue'
 
 /**
  * 커맨드 핸들러 실행 시 제공되는 씬(Scene)의 컨텍스트 정보
@@ -67,6 +68,38 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
     /** 등록된 UI를 페이드아웃하여 숨깁니다 */
     hide(name: string, duration?: number): void
   }
+  /**
+   * 현재 ctx 컨텍스트 위에서 다른 커맨드를 즉시 실행합니다.
+   * builtin 커맨드와 커스텀 커맨드 모두 실행 가능합니다.
+   * fallback 규칙도 동일하게 적용됩니다.
+   *
+   * ## 반환값 (`CommandResult`)
+   * - `true` : 해당 cmd 즉시 완료
+   * - `false` / `void` : 해당 cmd가 입력 대기 상태
+   * - `'handled'` : 씬 이동 등으로 즉시 중단됨
+   * - `() => SimpleCommandResult` (TickFn) : do-while 루프 모드
+   *
+   * 반환값을 caller가 그대로 `return`하면 해당 cmd의 실행 흐름(TickFn 포함)이
+   * Scene으로 전파됩니다. 무시하고 caller가 별도의 값을 반환해도 됩니다.
+   *
+   * @example side-effect 목적 (반환값 무시)
+   * ```ts
+   * export const myHandler = defineCmd<{ name: string }>((cmd, ctx) => {
+   *   ctx.execute({ type: 'character', name: cmd.name, image: 'normal', position: 'center' })
+   *   ctx.execute({ type: 'screen-flash', color: '#ffffff', duration: 200 })
+   *   return true // caller 자신은 즉시 완료
+   * })
+   * ```
+   *
+   * @example 반환값 전파 (TickFn 위임)
+   * ```ts
+   * export const myHandler = defineCmd<{ text: string }>((cmd, ctx) => {
+   *   // dialogue cmd의 TickFn을 그대로 Scene에 전파
+   *   return ctx.execute({ type: 'dialogue', text: cmd.text })
+   * })
+   * ```
+   */
+  execute: (cmd: DialogueEntry<any, any, any>) => CommandResult
 }
 
 /**

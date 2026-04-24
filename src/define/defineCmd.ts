@@ -3,6 +3,7 @@
 // =============================================================
 
 import type { SceneContext, CommandResult } from '../core/SceneContext'
+import type { CustomCmdHandler } from '../types/config'
 
 // ─── Resolvable 유틸리티 타입 ────────────────────────────────
 
@@ -16,10 +17,10 @@ import type { SceneContext, CommandResult } from '../core/SceneContext'
  */
 type _StrictOf<T> =
   T extends string
-    ? string extends T
-      ? never  // 순수 string (= string & {}) → 제거
-      : T      // 리터럴 / keyof 제약 → 유지
-    : T        // 비string 타입 → 그대로
+  ? string extends T
+  ? never  // 순수 string (= string & {}) → 제거
+  : T      // 리터럴 / keyof 제약 → 유지
+  : T        // 비string 타입 → 그대로
 
 /** 유니온 멤버별 분산 적용: escape 제거 후 never이면 원본 멤버 유지 */
 type _ReturnOf<T> = T extends any
@@ -50,12 +51,12 @@ export type Resolvable<T, TVars = any, TLocalVars = any> =
  */
 export type ResolvableItem<T, TVars, TLocalVars> =
   T extends Array<infer U>
-    ? Resolvable<
-        Array<U extends object ? ResolvableProps<U, TVars, TLocalVars> : Resolvable<U, TVars, TLocalVars>>,
-        TVars,
-        TLocalVars
-      >
-    : Resolvable<T, TVars, TLocalVars>
+  ? Resolvable<
+    Array<U extends object ? ResolvableProps<U, TVars, TLocalVars> : Resolvable<U, TVars, TLocalVars>>,
+    TVars,
+    TLocalVars
+  >
+  : Resolvable<T, TVars, TLocalVars>
 
 /**
  * `type` 키를 제외한 모든 Cmd 속성을 Resolvable로 변환합니다.
@@ -126,9 +127,17 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  *   }
  * })
  * ```
+ *
+ * @example ctx.execute로 다른 커맨드 실행
+ * ```ts
+ * export const showCharacterHandler = defineCmd<{ name: string }>((cmd, ctx) => {
+ *   // builtin 'character' 커맨드를 내부에서 즉시 실행
+ *   ctx.execute({ type: 'character', name: cmd.name, image: 'normal', position: 'center' })
+ *   // 반환값을 그대로 전파할 수도 있음 (TickFn 포함)
+ *   return ctx.execute({ type: 'dialogue', text: `${cmd.name} 등장!` })
+ * })
+ * ```
  */
-import type { CustomCmdHandler } from '../types/config'
-
 export function defineCmd<TCmd>(
   handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult
 ): CustomCmdHandler<Omit<TCmd, 'type'>, any, any> {

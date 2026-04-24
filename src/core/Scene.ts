@@ -208,7 +208,8 @@ export class DialogueScene {
           this._ended = true
           this.callbacks.syncUIState()
         }
-      }
+      },
+      execute: (cmd) => this._executeCmd(cmd as any),
     }
 
     for (const [uiKey, handler] of Object.entries(uiDefs)) {
@@ -421,7 +422,8 @@ export class DialogueScene {
           this._ended = true
           this.callbacks.syncUIState()
         }
-      }
+      },
+      execute: (cmd) => this._executeCmd(cmd as any),
     }
 
     // 커스텀 cmds 우선 (builtin보다 먼저 확인)

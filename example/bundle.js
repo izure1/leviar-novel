@@ -14608,7 +14608,8 @@ ${addLineNumbers(fragment)}`);
             this._ended = true;
             this.callbacks.syncUIState();
           }
-        }
+        },
+        execute: (cmd) => this._executeCmd(cmd)
       };
       for (const [uiKey, handler] of Object.entries(uiDefs)) {
         const styleData = initial[uiKey];
@@ -14794,7 +14795,8 @@ ${addLineNumbers(fragment)}`);
             this._ended = true;
             this.callbacks.syncUIState();
           }
-        }
+        },
+        execute: (cmd2) => this._executeCmd(cmd2)
       };
       const cmds = r.config.cmds;
       if (cmds && typeof cmds[type] === "function") {
@@ -15367,7 +15369,8 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: noop,
           loadScene: noop,
           end: noop
-        }
+        },
+        execute: () => false
       };
     }
   };
@@ -15407,6 +15410,9 @@ ${addLineNumbers(fragment)}`);
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
+  var anotherCmd = defineCmd((cmd, ctx) => {
+    return true;
+  });
   var novel_config_default = defineNovelConfig({
     vars: {
       likeability: 0,
@@ -15418,7 +15424,8 @@ ${addLineNumbers(fragment)}`);
       "choices": choiceUISetup
     },
     cmds: {
-      "test-cmd": testCmd
+      "test-cmd": testCmd,
+      "another-cmd": anotherCmd
     },
     scenes: [
       "scene-zena",
