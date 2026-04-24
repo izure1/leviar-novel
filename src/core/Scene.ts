@@ -1,50 +1,48 @@
-// =============================================================
-// Scene.ts — DialogueScene / ExploreScene 실행기
-// =============================================================
-
 import type { Renderer, RendererState } from './Renderer'
 import type { SceneDefinition } from '../define/defineScene'
 import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
 import type { SceneContext, CommandResult } from './SceneContext'
 import type { UIRuntimeEntry } from './UIRegistry'
-import { dialogueHandler } from '../cmds/dialogue'
-import { choiceHandler } from '../cmds/choice'
-import { conditionHandler } from '../cmds/condition'
-import { varHandler } from '../cmds/var'
-import { labelHandler } from '../cmds/label'
-import { backgroundHandler } from '../cmds/background'
-import { moodHandler } from '../cmds/mood'
-import { effectHandler } from '../cmds/effect'
-import { overlayHandler } from '../cmds/overlay'
-import { characterHandler, characterFocusHandler, characterHighlightHandler } from '../cmds/character'
-import { cameraZoomHandler, cameraPanHandler, cameraEffectHandler } from '../cmds/camera'
-import { screenFadeHandler, screenFlashHandler, screenWipeHandler } from '../cmds/screen'
-import { uiHandler } from '../cmds/ui'
-import { controlHandler } from '../cmds/control'
+import dialogueModule from '../cmds/dialogue'
+import choiceModule from '../cmds/choice'
+import conditionModule from '../cmds/condition'
+import varModule from '../cmds/var'
+import labelModule from '../cmds/label'
+import backgroundModule from '../cmds/background'
+import moodModule from '../cmds/mood'
+import effectModule from '../cmds/effect'
+import overlayModule from '../cmds/overlay'
+import characterModule, { characterFocusModule, characterHighlightModule } from '../cmds/character'
+import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../cmds/camera'
+import { screenFadeModule, screenFlashModule, screenWipeModule } from '../cmds/screen'
+import uiModule from '../cmds/ui'
+import controlModule from '../cmds/control'
 import { setBackground } from '../cmds/background'
+import type { NovelModule } from '../define/defineCmdUI'
 
-const BUILTIN_CMDS: Record<string, (cmd: any, ctx: SceneContext) => CommandResult> = {
-  'dialogue': dialogueHandler,
-  'choice': choiceHandler,
-  'condition': conditionHandler,
-  'var': varHandler,
-  'label': labelHandler,
-  'background': backgroundHandler,
-  'mood': moodHandler,
-  'effect': effectHandler,
-  'overlay': overlayHandler,
-  'character': characterHandler,
-  'character-focus': characterFocusHandler,
-  'character-highlight': characterHighlightHandler,
-  'camera-zoom': cameraZoomHandler,
-  'camera-pan': cameraPanHandler,
-  'camera-effect': cameraEffectHandler,
-  'screen-fade': screenFadeHandler,
-  'screen-flash': screenFlashHandler,
-  'screen-wipe': screenWipeHandler,
-  'ui': uiHandler,
-  'control': controlHandler,
+// 내장 모듈 핸들러 테이블
+const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => CommandResult> = {
+  'dialogue':             (p, c) => dialogueModule.__handler!(p, c),
+  'choice':               (p, c) => choiceModule.__handler!(p, c),
+  'condition':            (p, c) => conditionModule.__handler!(p, c),
+  'var':                  (p, c) => varModule.__handler!(p, c),
+  'label':                (p, c) => labelModule.__handler!(p, c),
+  'background':           (p, c) => backgroundModule.__handler!(p, c),
+  'mood':                 (p, c) => moodModule.__handler!(p, c),
+  'effect':               (p, c) => effectModule.__handler!(p, c),
+  'overlay':              (p, c) => overlayModule.__handler!(p, c),
+  'character':            (p, c) => characterModule.__handler!(p, c),
+  'character-focus':      (p, c) => characterFocusModule.__handler!(p, c),
+  'character-highlight':  (p, c) => characterHighlightModule.__handler!(p, c),
+  'camera-zoom':          (p, c) => cameraZoomModule.__handler!(p, c),
+  'camera-pan':           (p, c) => cameraPanModule.__handler!(p, c),
+  'camera-effect':        (p, c) => cameraEffectModule.__handler!(p, c),
+  'screen-fade':          (p, c) => screenFadeModule.__handler!(p, c),
+  'screen-flash':         (p, c) => screenFlashModule.__handler!(p, c),
+  'screen-wipe':          (p, c) => screenWipeModule.__handler!(p, c),
+  'ui':                   (p, c) => uiModule.__handler!(p, c),
+  'control':              (p, c) => controlModule.__handler!(p, c),
 }
 
 // =============================================================
@@ -159,15 +157,15 @@ export class DialogueScene {
   }
 
   /**
-   * `definition.initial`에 정의된 UI 초기 데이터를 자동으로 setup 합니다.
-   * `novel.config.ui` 또는 `cmds`에 등록된 핸들러를 키로 찾아 실행합니다.
+   * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
+   * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
    */
   private _runInitial(): void {
     const initial = this.definition.initial || {}
 
     const r = this.renderer
-    const uiDefs = (r.config as any).ui as Record<string, any> | undefined
-    if (!uiDefs) return
+    const modules = (r.config as any).modules as Record<string, NovelModule<any>> | undefined
+    if (!modules) return
 
     const cmdStateStore = this.callbacks.getCmdStateStore()
     const uiRegistry = this.callbacks.getUIRegistry()
@@ -206,23 +204,13 @@ export class DialogueScene {
       execute: (cmd) => this._executeCmd(cmd as any),
     }
 
-    for (const [uiKey, handler] of Object.entries(uiDefs)) {
-      const styleData = initial[uiKey]
-
-      // UIHandler(define 팩토리)인 경우: __uiBuilder를 직접 호출하여 정확한 키로 등록
-      if (typeof handler.__uiBuilder === 'function') {
-        // schema 기본값 + 전달된 스타일로 data 준비
-        const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {})
-        const entry = handler.__uiBuilder(mergedData, ctx)
-        if (handler.__uiOptions) entry.options = { ...handler.__uiOptions, ...entry.options }
-        uiRegistry.set(uiKey, entry)
-      } else if (typeof handler === 'function') {
-        // 일반 함수인 경우 (하위 호환)
-        const result = handler(styleData ?? {}, ctx)
-        if (result && typeof result === 'object' && typeof result.show === 'function') {
-          uiRegistry.set(uiKey, result)
-        }
-      }
+    for (const [moduleKey, module] of Object.entries(modules)) {
+      if (typeof module.__viewBuilder !== 'function') continue
+      const initialData = initial[moduleKey]
+      // schema 기본값 + 전달된 initial 데이터로 mergedData 준비
+      const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {})
+      const entry = module.__viewBuilder(mergedData, ctx)
+      uiRegistry.set(moduleKey, entry)
     }
   }
 
@@ -365,14 +353,14 @@ export class DialogueScene {
       execute: (cmd) => this._executeCmd(cmd as any),
     }
 
-    // 커스텀 cmds 우선 (builtin보다 먼저 확인)
-    const cmds = r.config.cmds
-    if (cmds && typeof cmds[type] === 'function') {
-      return cmds[type](params, ctx)
+    // config.modules 우선 확인
+    const modules = r.config.modules as Record<string, NovelModule<any>> | undefined
+    if (modules && typeof modules[type]?.__handler === 'function') {
+      return modules[type].__handler!(params, ctx)
     }
 
-    if (BUILTIN_CMDS[type]) {
-      return BUILTIN_CMDS[type](params, ctx)
+    if (BUILTIN_HANDLERS[type]) {
+      return BUILTIN_HANDLERS[type](params, ctx)
     }
 
     console.warn(`[leviar-novel] 알 수 없는 커맨드 타입:`, type)

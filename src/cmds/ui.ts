@@ -1,17 +1,19 @@
-import { defineCmd } from '../define/defineCmd'
-import type { UiKeysOf } from '../types/config'
+import type { ModuleKeysOf } from '../types/config'
+import { define } from '../define/defineCmdUI'
 
-/** 정의된 UI 요소를 페이드인/아웃한다 */
+/** UI 모듈을 show/hide 한다 */
 export interface UICmd<TConfig = any> {
-  /** 조작할 UI 요소의 이름(아이디)입니다. */
-  name: UiKeysOf<TConfig>
-  /** 'show'는 UI를 표시하고, 'hide'는 숨깁니다. */
+  /** 조작할 모듈의 이름(modules의 key)입니다. */
+  name: ModuleKeysOf<TConfig>
   action: 'show' | 'hide'
-  /** UI 표시/숨김 시 적용되는 페이드 시간(ms 단위)입니다. (기본값: 800) */
   duration?: number
 }
 
-export const uiHandler = defineCmd<UICmd>((cmd, ctx) => {
+const uiModule = define<Record<never, never>>({})
+
+uiModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+
+uiModule.defineCommand<UICmd<any>>((cmd, ctx) => {
   if (cmd.action === 'show') {
     ctx.ui.show(cmd.name, cmd.duration)
   } else {
@@ -19,3 +21,8 @@ export const uiHandler = defineCmd<UICmd>((cmd, ctx) => {
   }
   return true
 })
+
+export default uiModule
+
+/** @internal */
+export const uiHandler = (p: any, ctx: any) => uiModule.__handler!(p, ctx)

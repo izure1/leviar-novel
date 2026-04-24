@@ -1,36 +1,21 @@
-import type { SceneContext } from '../core/SceneContext'
 import type { AssetKeysOf } from '../types/config'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
 export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog' | 'leaves' | 'fireflies'
 
 /** 
  * 파티클 이펙트를 추가하거나 제거한다 
- * 
- * @example
- * ```ts
- * { type: 'effect', action: 'add', effect: 'rain', src: 'raindrop', rate: 10 }
- * // 또는 제거
- * { type: 'effect', action: 'remove', effect: 'rain', duration: 500 }
- * ```
  */
 export type EffectCmd<TConfig = any> =
   | {
-    /** 'add'는 화면에 새로운 파티클 효과를 추가합니다. */
     action: 'add'
-    /** 추가할 이펙트의 프리셋 종류(눈, 비 등)입니다. */
     effect: EffectType
-    /** 파티클로 렌더링 할 에셋의 키 (config.assets에 정의된 키)입니다. */
     src: AssetKeysOf<TConfig>
-    /** 파티클의 생성 빈도(속도) 배율입니다. 높을수록 많이 생성됩니다. */
     rate?: number
   }
   | {
-    /** 'remove'는 현재 활성화된 파티클 효과를 중단하고 제거합니다. */
     action: 'remove'
-    /** 제거할 이펙트의 프리셋 종류입니다. */
     effect: EffectType
-    /** 이펙트가 서서히 사라지는 페이드아웃 시간(ms 단위)입니다. */
     duration?: number
   }
 
@@ -60,111 +45,129 @@ const DEFAULT_EFFECT_RATES: Partial<Record<EffectType, number>> = {
   dust: 5, rain: 200, snow: 8, sakura: 8, sparkle: 10, fog: 4, leaves: 5, fireflies: 5,
 }
 
-function getEffectObjs(ctx: SceneContext) {
-  let objs = ctx.renderer.state.get('_effectObjs')
-  if (!objs) {
-    objs = {}
-    ctx.renderer.state.set('_effectObjs', objs)
-  }
-  return objs
+// ─── 스키마 ──────────────────────────────────────────────────
+
+export interface EffectSchema {
+  /** effect → { rate, srcKey } 맵 */
+  activeEffects: Record<string, { rate?: number; srcKey?: string }>
 }
 
-function getActiveEffects(ctx: SceneContext) {
-  let states = ctx.renderer.state.get('activeEffects')
-  if (!states) {
-    states = {}
-    ctx.renderer.state.set('activeEffects', states)
-  }
-  return states
-}
+// ─── 모듈 정의 ───────────────────────────────────────────────
 
-export function addEffect(ctx: SceneContext, type: EffectType = 'dust', rate?: number, overrides?: Record<string, any>, srcKey?: string) {
-  const configEffect = ctx.renderer.config.effects?.[type]
-  const preset = {
-    attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
-    style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style },
-  }
-  const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10
-  const clipName = `${type}_rate_${finalRate}_${srcKey ?? 'default'}`
-  const particleZ = ctx.renderer.depth / 2
+/**
+ * 이펙트 모듈. `novel.config`의 `modules: { 'effect': effectModule }` 형태로 등록합니다.
+ */
+const effectModule = define<EffectSchema>({
+  activeEffects: {},
+})
 
-  if (!ctx.renderer.world.particleManager.get(clipName)) {
-    const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip }
-    const cam = ctx.renderer.world.camera
-    const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(particleZ, 1) : 1
-    const maxPanX = ctx.renderer.width * 0.4
-    const maxPanY = ctx.renderer.height * 0.5
-    const spanW = (ctx.renderer.width + maxPanX * 2) * ratio
-    const spanH = (ctx.renderer.height + maxPanY * 2) * ratio
+effectModule.defineView((data, ctx) => {
+  const _effectObjs: Record<string, any> = {}
 
-    ctx.renderer.world.particleManager.create({
-      name: clipName, src: srcKey ?? type,
-      ...clipBase,
-      rate: finalRate,
-      spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
-    } as any)
-  }
-
-  const objs = getEffectObjs(ctx)
-  const activeEffects = getActiveEffects(ctx)
-  const existing = objs[type]
-
-  if (existing) {
-    if (rate !== undefined || srcKey !== undefined) {
-      existing.attribute.src = clipName
+  const _addEffect = (
+    type: EffectType,
+    rate?: number,
+    srcKey?: string,
+    immediate = false
+  ) => {
+    const configEffect = ctx.renderer.config.effects?.[type]
+    const preset = {
+      attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
+      style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style },
     }
-    if (overrides?.style) {
-      Object.assign(existing.style, overrides.style)
+    const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10
+    const clipName = `${type}_rate_${finalRate}_${srcKey ?? 'default'}`
+    const particleZ = ctx.renderer.depth / 2
+
+    if (!ctx.renderer.world.particleManager.get(clipName)) {
+      const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip }
+      const cam = ctx.renderer.world.camera
+      const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(particleZ, 1) : 1
+      const maxPanX = ctx.renderer.width * 0.4
+      const maxPanY = ctx.renderer.height * 0.5
+      const spanW = (ctx.renderer.width + maxPanX * 2) * ratio
+      const spanH = (ctx.renderer.height + maxPanY * 2) * ratio
+
+      ctx.renderer.world.particleManager.create({
+        name: clipName, src: srcKey ?? type,
+        ...clipBase,
+        rate: finalRate,
+        spawnX: spanW, spawnY: spanH, spawnZ: particleZ,
+      } as any)
     }
-    return
+
+    if (_effectObjs[type]) return
+
+    const particle = ctx.renderer.world.createParticle({
+      attribute: { ...preset.attribute, src: clipName },
+      style: { ...preset.style },
+      transform: { position: { x: 0, y: 0, z: particleZ } },
+    })
+    _effectObjs[type] = particle
+    ctx.renderer.track(particle)
+    particle.play()
   }
 
-  activeEffects[type] = { rate, overrides, srcKey }
-  // cmdState 동기화
-  ctx.cmdState.set('effect', { ...activeEffects })
-
-  const particle = ctx.renderer.world.createParticle({
-    attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
-    style: { ...preset.style, ...overrides?.style },
-    transform: { position: { x: 0, y: 0, z: particleZ }, ...overrides?.transform },
-  })
-
-  objs[type] = particle
-  ctx.renderer.track(particle)
-  particle.play()
-}
-
-function removeEffect(ctx: SceneContext, type: EffectType, duration: number = 600) {
-  const objs = getEffectObjs(ctx)
-  const activeEffects = getActiveEffects(ctx)
-  const effect = objs[type]
-
-  delete activeEffects[type]
-  // cmdState 동기화
-  ctx.cmdState.set('effect', { ...activeEffects })
-
-  if (effect) {
-    delete objs[type]
-    const dur = ctx.renderer.dur(duration)
-    if (dur > 0) {
-      ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+  const _removeEffect = (type: EffectType, duration: number, immediate = false) => {
+    const effect = _effectObjs[type]
+    if (effect) {
+      delete _effectObjs[type]
+      const dur = immediate ? 0 : ctx.renderer.dur(duration)
+      if (dur > 0) {
+        ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+          effect.remove()
+          ctx.renderer.untrack(effect)
+        })
+      } else {
         effect.remove()
         ctx.renderer.untrack(effect)
-      })
-    } else {
-      effect.remove()
-      ctx.renderer.untrack(effect)
+      }
     }
   }
-}
 
-export const effectHandler = defineCmd<EffectCmd<any>>((cmd, ctx) => {
-  if (cmd.action === 'add') {
-    const addCmd = cmd as Extract<EffectCmd<any>, { action: 'add' }>
-    addEffect(ctx, addCmd.effect, addCmd.rate, undefined, addCmd.src)
-  } else {
-    const rmCmd = cmd as Extract<EffectCmd<any>, { action: 'remove' }>
-    removeEffect(ctx, rmCmd.effect, rmCmd.duration)
+  // 복원: 저장된 이펙트들 즉시 렌더
+  for (const [type, info] of Object.entries(data.activeEffects)) {
+    _addEffect(type as EffectType, info.rate, info.srcKey, true)
   }
+
+  return {
+    show: () => {},
+    hide: () => {
+      for (const obj of Object.values(_effectObjs)) {
+        obj?.fadeOut?.(300, 'easeIn')
+      }
+    },
+    update: (d: EffectSchema) => {
+      const newTypes = new Set(Object.keys(d.activeEffects))
+      for (const type of Object.keys(_effectObjs)) {
+        if (!newTypes.has(type)) _removeEffect(type as EffectType, 600)
+      }
+      for (const [type, info] of Object.entries(d.activeEffects)) {
+        if (!_effectObjs[type]) {
+          _addEffect(type as EffectType, info.rate, info.srcKey)
+        }
+      }
+    },
+  }
+})
+
+effectModule.defineCommand<EffectCmd<any>>((rawCmd, ctx, data) => {
+  const cmd = rawCmd as any
+  const newEffects = { ...data.activeEffects }
+
+  if (cmd.action === 'add') {
+    newEffects[cmd.effect] = { rate: cmd.rate, srcKey: cmd.src as string }
+  } else {
+    delete newEffects[cmd.effect]
+  }
+
+  data.activeEffects = newEffects
   return true
 })
+
+export default effectModule
+
+/** @internal */
+export function addEffect(ctx: any, type: EffectType = 'dust', rate?: number, _overrides?: any, srcKey?: string) {
+  effectModule.__handler?.({ action: 'add', effect: type, rate, src: srcKey ?? type }, ctx)
+}

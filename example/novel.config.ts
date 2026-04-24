@@ -1,11 +1,25 @@
 // example/novel.config.ts
-import { defineNovelConfig, defineCmd } from '../src'
-import { dialogueUISetup } from '../src/cmds/dialogue'
-import { choiceUISetup } from '../src/cmds/choice'
+import { defineNovelConfig, define } from '../src'
+import dialogueModule from '../src/cmds/dialogue'
+import choiceModule from '../src/cmds/choice'
+import backgroundModule from '../src/cmds/background'
+import characterModule, { characterFocusModule, characterHighlightModule } from '../src/cmds/character'
+import moodModule from '../src/cmds/mood'
+import effectModule from '../src/cmds/effect'
+import overlayModule from '../src/cmds/overlay'
+import { screenFadeModule, screenFlashModule, screenWipeModule } from '../src/cmds/screen'
+import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../src/cmds/camera'
+import conditionModule from '../src/cmds/condition'
+import varModule from '../src/cmds/var'
+import labelModule from '../src/cmds/label'
+import uiModule from '../src/cmds/ui'
+import controlModule from '../src/cmds/control'
 import chat from './characters/chat'
 import zena from './characters/zena'
 
-const testCmd = defineCmd<{ message: string }>((cmd, ctx) => {
+const testModule = define<{ message?: string }>({ message: undefined })
+testModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+testModule.defineCommand<{ message: string }>((cmd, ctx) => {
   console.log('[test-cmd]', cmd.message, ctx.globalVars)
   return true
 })
@@ -16,12 +30,28 @@ export default defineNovelConfig({
     metHeroine: false,
     endingReached: false,
   },
-  ui: {
-    'dialogue': dialogueUISetup,
-    'choices': choiceUISetup,
-  },
-  cmds: {
-    'test-cmd': testCmd,
+  modules: {
+    'dialogue': dialogueModule,
+    'choice': choiceModule,
+    'background': backgroundModule,
+    'character': characterModule,
+    'character-focus': characterFocusModule,
+    'character-highlight': characterHighlightModule,
+    'mood': moodModule,
+    'effect': effectModule,
+    'overlay': overlayModule,
+    'screen-fade': screenFadeModule,
+    'screen-flash': screenFlashModule,
+    'screen-wipe': screenWipeModule,
+    'camera-zoom': cameraZoomModule,
+    'camera-pan': cameraPanModule,
+    'camera-effect': cameraEffectModule,
+    'condition': conditionModule,
+    'var': varModule,
+    'label': labelModule,
+    'ui': uiModule,
+    'control': controlModule,
+    'test-cmd': testModule,
   },
   scenes: [
     'scene-zena',

@@ -13,12 +13,7 @@ import type { ExploreSceneDefinition } from '../define/defineExploreScene'
 import type { NovelConfig, NovelOption } from '../types/config'
 import type { UIRuntimeEntry } from './UIRegistry'
 import type { SceneContext } from './SceneContext'
-import { setBackground } from '../cmds/background'
-import { showCharacter } from '../cmds/character'
-import { addMood } from '../cmds/mood'
-import { addEffect } from '../cmds/effect'
-import { addOverlay } from '../cmds/overlay'
-import type { OverlayPreset } from '../cmds/overlay'
+import type { NovelModule } from '../define/defineCmdUI'
 
 // =============================================================
 // 내부 타입
@@ -45,9 +40,9 @@ export interface SaveData {
   /** 렌더러 상태 (배경, 캐릭터, 카메라 등) 스냅샷 */
   rendererState: RendererState
   /**
-   * 각 cmd가 저장하는 상태 스냅샷.
+   * 각 모듈이 저장하는 상태 스냅샷.
    * 'dialogue' → { subIndex, lines, speaker }
-   * 'setup-dialogue' → { bg, speaker, text } 등
+   * 'background' → { key, fit } 등
    */
   cmdStates:     Record<string, any>
 }
@@ -70,12 +65,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private readonly _cmdStateStore: Map<string, any> = new Map()
 
   /**
-   * UI 정의 레지스트리 — Novel 생성 시 config.cmds에서 자동 수집.
-   * rebuildUI 시 여기서 빌더를 꺼내 UI 오브젝트를 재생성합니다.
+   * 모듈 레지스트리 — Novel 생성 시 config.modules에서 자동 수집.
+   * key: 모듈 이름, value: NovelModule 객체
    */
-  private readonly _uiDefinitions: Map<string, (style: any, ctx: SceneContext) => UIRuntimeEntry> = new Map()
+  private readonly _modules: Map<string, NovelModule<any>> = new Map()
 
-  /** UI 런타임 레지스트리 — scene 실행 중 setup-* 커맨드가 등록 */
+  /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
   private readonly _uiRegistry: Map<string, UIRuntimeEntry> = new Map()
 
   private _currentScene:    ActiveScene | null    = null
@@ -108,8 +103,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
     this.vars = { ...(config.vars as object) } as TConfig['vars']
 
-    // config.cmds에서 UIHandler 자동 감지 → _uiDefinitions 등록
-    this._collectUIDefinitions(config.cmds)
+    // config.modules 수집 및 key 주입
+    this._collectModules(config.modules)
 
     this._world.start()
 
@@ -120,29 +115,14 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   }
 
   /**
-   * config.ui 및 config.cmds를 순회하며 UIHandler를 _uiDefinitions에 등록합니다.
-   * config.ui 우선, 이후 config.cmds에서 __uiName 메타 부착 항목 수집 (하위 호환).
+   * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
    */
-  private _collectUIDefinitions(cmds?: Record<string, any>): void {
-    const config = this._config as any
-
-    // 1. config.ui: { 'dialogue': dialogueUISetup, ... }
-    const uiDefs = config.ui as Record<string, any> | undefined
-    if (uiDefs) {
-      for (const [uiKey, handler] of Object.entries(uiDefs)) {
-        const h = handler as any
-        if (typeof h === 'function' && h.__isUIHandler) {
-          this._uiDefinitions.set(uiKey, h.__uiBuilder)
-        }
-      }
-    }
-
-    // 2. config.cmds: 하위 호환 (__uiName 메타 부착 핸들러)
-    if (!cmds) return
-    for (const handler of Object.values(cmds)) {
-      const h = handler as any
-      if (h.__uiName && typeof h.__uiBuilder === 'function') {
-        this._uiDefinitions.set(h.__uiName, h.__uiBuilder)
+  private _collectModules(modules?: Record<string, NovelModule<any>>): void {
+    if (!modules) return
+    for (const [key, module] of Object.entries(modules)) {
+      if (module && typeof module.__setKey === 'function') {
+        module.__setKey(key)
+        this._modules.set(key, module)
       }
     }
   }
@@ -196,7 +176,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       this._renderer.restoreState(prevState)
     }
 
-    // UI 레지스트리 초기화 (새 씬에서 setup-* 명령어가 재등록)
+    // UI 레지스트리 초기화 (새 씬에서 view 빌더가 재등록)
     this._uiRegistry.clear()
 
     const callbacks = this._buildCallbacks()
@@ -267,7 +247,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   /**
    * hideable:true 로 등록된 모든 UI 요소를 숨깁니다.
-   * 우클릭 UI 숨김 기능 등에 활용합니다.
    */
   hideUI(duration?: number): void {
     for (const entry of this._uiRegistry.values()) {
@@ -288,8 +267,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   /**
    * 현재 진행 상태를 SaveData로 반환합니다.
-   * 반환된 객체를 JSON.stringify() 하여 localStorage 등에 저장하세요.
-   * @throws 대화 씬이 진행 중이지 않을 때 오류 발생
    */
   save(): SaveData {
     if (
@@ -312,7 +289,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   /**
    * SaveData로부터 진행 상태를 복원합니다.
-   * 렌더러 상태(배경/캐릭터/카메라)와 변수를 모두 복원한 뒤 cursor 위치에서 재개합니다.
    */
   loadSave(data: SaveData): void {
     const def = this._scenes.get(data.sceneName)
@@ -342,8 +318,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._renderer.restoreState(data.rendererState)
     this._renderer.rebuildFromState()
 
-    // UI 재생성 (cmdState에서 스타일 읽어 빌더 실행)
-    this._rebuildUI()
+    // 모듈 View 재생성 (cmdState에서 스키마 읽어 빌더 실행)
+    this._rebuildModuleViews()
 
     // 새 씬 인스턴스 생성 (start() 호출 없이)
     const callbacks = this._buildCallbacks()
@@ -360,54 +336,17 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   }
 
   /**
-   * _uiDefinitions를 순회하며 저장된 스타일(cmdState)로 UI를 재생성합니다.
+   * 모든 등록된 모듈의 View 빌더를 실행하여 UI를 재생성합니다.
    * loadSave() 호출 후 실행됩니다.
+   * 저장된 cmdState를 각 모듈의 View에 주입하여 상태를 복원합니다.
    */
-  private _rebuildUI(): void {
+  private _rebuildModuleViews(): void {
     const ctx = this._makeRebuildCtx()
 
-    // 1. 배경 복원
-    const bgState = this._cmdStateStore.get('background') as { key: string; fit: string } | undefined
-    if (bgState?.key) {
-      setBackground(ctx, bgState.key, bgState.fit as any, 0)
-    }
-
-    // 2. 캠릭터 복원
-    const charState = this._cmdStateStore.get('characters') as Record<string, { position: string; imageKey: string }> | undefined
-    if (charState) {
-      for (const [name, info] of Object.entries(charState)) {
-        showCharacter(ctx, name, info.position as any, info.imageKey, 0)
-      }
-    }
-
-    // 3. 무드 복원
-    const moodState = this._cmdStateStore.get('mood') as Record<string, number> | undefined
-    if (moodState) {
-      for (const [mood, intensity] of Object.entries(moodState)) {
-        addMood(ctx, mood as any, intensity, 0)
-      }
-    }
-
-    // 4. 이펙트 복원
-    const effectState = this._cmdStateStore.get('effect') as Record<string, { rate?: number; srcKey?: string }> | undefined
-    if (effectState) {
-      for (const [type, info] of Object.entries(effectState)) {
-        addEffect(ctx, type as any, info.rate, undefined, info.srcKey)
-      }
-    }
-
-    // 5. 오버레이 복원
-    const overlayState = this._cmdStateStore.get('overlay') as Record<string, string> | undefined
-    if (overlayState) {
-      for (const [preset, text] of Object.entries(overlayState)) {
-        addOverlay(ctx, text, preset as OverlayPreset)
-      }
-    }
-
-    // 6. config.ui 빌더 실행 (dialogue, choice 등)
-    for (const [name, builder] of this._uiDefinitions) {
-      const style = this._cmdStateStore.get(name) ?? {}
-      const entry = builder(style, ctx)
+    for (const [name, module] of this._modules) {
+      if (!module.__viewBuilder) continue
+      const savedState = this._cmdStateStore.get(name) ?? {}
+      const entry = module.__viewBuilder(savedState, ctx)
       this._uiRegistry.set(name, entry)
     }
   }
@@ -432,8 +371,6 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   /**
    * 대화를 한 단계 진행합니다.
-   * - 텍스트 타이핑 중이면 즉시 완성
-   * - 대기 중이면 다음 대사/단계로 이동
    */
   next(): void {
     if (Date.now() < this._inputDisabledUntil) return

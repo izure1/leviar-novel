@@ -1,7 +1,6 @@
-import type { SceneContext } from '../core/SceneContext'
 import type { EasingType, Rectangle } from 'leviar'
 import { Z_INDEX } from '../constants/render'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
 export type FadeColorPreset = 'black' | 'white' | 'red' | 'dream' | 'sepia' | 'inherit'
 export type FlashPreset = 'white' | 'red' | 'yellow' | 'inherit'
@@ -9,33 +8,26 @@ export type WipePreset = 'left' | 'right' | 'up' | 'down' | 'inherit'
 
 /** 화면을 페이드인/아웃한다 */
 export interface ScreenFadeCmd {
-  /** 'in'은 화면이 밝아지는 것, 'out'은 화면이 지정된 색으로 덮이는 것을 의미합니다. */
   dir: 'in' | 'out'
-  /** 페이드에 사용될 색상 프리셋(black, white 등)입니다. */
   preset?: FadeColorPreset
-  /** 페이드 애니메이션 시간(ms 단위)입니다. (기본값: 600) */
   duration?: number
 }
 
 /** 화면을 순간 플래시한다 */
 export interface ScreenFlashCmd {
-  /** 플래시 효과에 사용될 색상 프리셋입니다. */
   preset?: FlashPreset
-  /** 애니메이션 지속 시간(ms 단위)입니다. (기본값: 프리셋 설정값) */
   duration?: number
-  /** 반복 횟수입니다. 음수일 경우 무한 반복합니다. (기본값: 1) */
   repeat?: number
 }
 
 /** 화면을 와이프 전환한다 */
 export interface ScreenWipeCmd {
-  /** 'in'은 새 화면이 덮는 것, 'out'은 현재 화면이 벗겨지는 것을 의미합니다. */
   dir: 'in' | 'out'
-  /** 와이프 애니메이션 방향 프리셋(left, up 등)입니다. */
   preset?: WipePreset
-  /** 와이프 애니메이션 시간(ms 단위)입니다. (기본값: 800) */
   duration?: number
 }
+
+// ─── 프리셋 테이블 ───────────────────────────────────────────
 
 const FADE_PRESETS: Record<Exclude<FadeColorPreset, 'inherit'>, { color: string; easing: EasingType }> = {
   black: { color: 'rgba(0,0,0,1)', easing: 'linear' },
@@ -58,7 +50,9 @@ const WIPE_PRESETS: Record<Exclude<WipePreset, 'inherit'>, { x: number; y: numbe
   down: { x: 0, y: -1 },
 }
 
-function getTransitionRect(ctx: SceneContext, color: string): Rectangle<Record<string, any>> {
+// ─── 공유 transition rect 헬퍼 ──────────────────────────────
+
+function getTransitionRect(ctx: any, color: string): Rectangle<Record<string, any>> {
   let rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) {
     const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
@@ -81,29 +75,63 @@ function getTransitionRect(ctx: SceneContext, color: string): Rectangle<Record<s
   return rect
 }
 
-function screenFade(ctx: SceneContext, dir: 'in' | 'out', preset: FadeColorPreset = 'inherit', duration: number = 600) {
-  const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastFadePreset') ?? 'black' : preset
-  ctx.renderer.state.set('_lastFadePreset', resolvedPreset)
-  const cfg = FADE_PRESETS[resolvedPreset as Exclude<FadeColorPreset, 'inherit'>]
+// ─── screen-fade 모듈 ────────────────────────────────────────
 
-  if (!cfg) return
-
-  const rect = getTransitionRect(ctx, cfg.color)
-  const startOpacity = dir === 'in' ? 1 : 0
-  const endOpacity = dir === 'in' ? 0 : 1
-  rect.style.opacity = startOpacity
-
-  ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, duration, cfg.easing)
+export interface ScreenFadeSchema {
+  lastPreset: string
 }
 
-function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit', duration?: number, repeat: number = 1) {
-  const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastFlashPreset') ?? 'white' : preset
-  ctx.renderer.state.set('_lastFlashPreset', resolvedPreset)
-  const cfg = FLASH_PRESETS[resolvedPreset as Exclude<FlashPreset, 'inherit'>]
-  if (!cfg) return
+const screenFadeModule = define<ScreenFadeSchema>({ lastPreset: 'black' })
+
+screenFadeModule.defineView((_data, _ctx) => ({
+  show: () => {},
+  hide: () => {},
+}))
+
+screenFadeModule.defineCommand<ScreenFadeCmd>((cmd, ctx, data) => {
+  const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
+    ? data.lastPreset
+    : cmd.preset
+  data.lastPreset = resolvedPreset
+
+  const cfg = FADE_PRESETS[resolvedPreset as Exclude<FadeColorPreset, 'inherit'>]
+  if (!cfg) return true
 
   const rect = getTransitionRect(ctx, cfg.color)
-  const flashDuration = duration ?? cfg.duration
+  const startOpacity = cmd.dir === 'in' ? 1 : 0
+  const endOpacity = cmd.dir === 'in' ? 0 : 1
+  rect.style.opacity = startOpacity
+  ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, cmd.duration ?? 600, cfg.easing)
+  return true
+})
+
+export { screenFadeModule }
+
+// ─── screen-flash 모듈 ───────────────────────────────────────
+
+export interface ScreenFlashSchema {
+  lastPreset: string
+}
+
+const screenFlashModule = define<ScreenFlashSchema>({ lastPreset: 'white' })
+
+screenFlashModule.defineView((_data, _ctx) => ({
+  show: () => {},
+  hide: () => {},
+}))
+
+screenFlashModule.defineCommand<ScreenFlashCmd>((cmd, ctx, data) => {
+  const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
+    ? data.lastPreset
+    : cmd.preset
+  data.lastPreset = resolvedPreset
+
+  const cfg = FLASH_PRESETS[resolvedPreset as Exclude<FlashPreset, 'inherit'>]
+  if (!cfg) return true
+
+  const rect = getTransitionRect(ctx, cfg.color)
+  const flashDuration = cmd.duration ?? cfg.duration
+  const repeat = cmd.repeat ?? 1
 
   let count = 0
   const doFlash = () => {
@@ -111,55 +139,59 @@ function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit', duratio
     count++
     rect.style.opacity = 1
     const anim = ctx.renderer.animate(rect, { style: { opacity: 0 } }, flashDuration, 'easeOut')
-    if (anim) {
-      anim.on('end', doFlash)
-    }
+    if (anim) anim.on('end', doFlash)
   }
-
   doFlash()
+  return true
+})
+
+export { screenFlashModule }
+
+// ─── screen-wipe 모듈 ────────────────────────────────────────
+
+export interface ScreenWipeSchema {
+  lastPreset: string
+  lastFadePreset: string
 }
 
-function screenWipe(ctx: SceneContext, dir: 'in' | 'out', preset: WipePreset = 'inherit', duration: number = 800) {
-  const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastWipePreset') ?? 'left' : preset
-  ctx.renderer.state.set('_lastWipePreset', resolvedPreset)
+const screenWipeModule = define<ScreenWipeSchema>({ lastPreset: 'left', lastFadePreset: 'black' })
+
+screenWipeModule.defineView((_data, _ctx) => ({
+  show: () => {},
+  hide: () => {},
+}))
+
+screenWipeModule.defineCommand<ScreenWipeCmd>((cmd, ctx, data) => {
+  const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
+    ? data.lastPreset
+    : cmd.preset
+  data.lastPreset = resolvedPreset
+
   const cfg = WIPE_PRESETS[resolvedPreset as Exclude<WipePreset, 'inherit'>]
-  if (!cfg) return
+  if (!cfg) return true
 
   const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
   const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
-  // .bak 기준: w*2 크기로 이동해야 완전히 화면 밖으로 나감
   const dx = cfg.x * w * 2
   const dy = cfg.y * h * 2
 
-  const colorPreset = ctx.renderer.state.get('_lastFadePreset') ?? 'black'
+  // 페이드 색상은 screen-fade 모듈의 state에서 가져옴 (renderer.state 공유)
+  const fadeState = ctx.cmdState.get('screen-fade') as ScreenFadeSchema | undefined
+  const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset
   const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.color ?? 'rgba(0,0,0,1)'
   const rect = getTransitionRect(ctx, color)
   rect.style.opacity = 1
 
-  if (dir === 'out') {
-    // 바깥에서 시작해 중앙으로 → 화면 덮음
+  if (cmd.dir === 'out') {
     rect.transform.position.x = dx
     rect.transform.position.y = dy
-    ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, duration, 'easeInOutQuad')
+    ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, cmd.duration ?? 800, 'easeInOutQuad')
   } else {
-    // 중앙에서 시작해 바깥으로 → 화면 벗겨냄
     rect.transform.position.x = 0
     rect.transform.position.y = 0
-    ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, duration, 'easeInOutQuad')
+    ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, cmd.duration ?? 800, 'easeInOutQuad')
   }
-}
-
-export const screenFadeHandler = defineCmd<ScreenFadeCmd>((cmd, ctx) => {
-  screenFade(ctx, cmd.dir, cmd.preset ?? 'inherit', cmd.duration ?? 600)
   return true
 })
 
-export const screenFlashHandler = defineCmd<ScreenFlashCmd>((cmd, ctx) => {
-  screenFlash(ctx, cmd.preset ?? 'inherit', cmd.duration, cmd.repeat ?? 1)
-  return true
-})
-
-export const screenWipeHandler = defineCmd<ScreenWipeCmd>((cmd, ctx) => {
-  screenWipe(ctx, cmd.dir, cmd.preset ?? 'inherit', cmd.duration ?? 800)
-  return true
-})
+export { screenWipeModule }

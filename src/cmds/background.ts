@@ -1,7 +1,6 @@
 import type { BgDefs, BackgroundKeysOf } from '../types/config'
-import type { SceneContext } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
 export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
 
@@ -24,92 +23,145 @@ export interface BackgroundCmd<TConfig = any> {
   isVideo?: boolean
 }
 
-function getBgObjs(ctx: SceneContext) {
-  let objs = ctx.renderer.state.get('_bgObjs')
-  if (!objs) {
-    objs = {}
-    ctx.renderer.state.set('_bgObjs', objs)
-  }
-  return objs
+// ─── 스키마 ──────────────────────────────────────────────────
+
+export interface BackgroundSchema {
+  /** 현재 배경 키 */
+  key: string | undefined
+  /** 현재 fit 모드 */
+  fit: string
+  /** 최근 전환 시간 */
+  duration: number
+  /** parallax 여부 */
+  parallax: boolean
+  /** 비디오 여부 */
+  isVideo: boolean
 }
 
-export function setBackground(ctx: SceneContext, name: string, fit: BackgroundFitPreset, duration: number = 1000, isVideo: boolean = false) {
-  const bgDefs = ctx.renderer.config.backgrounds as BgDefs
-  const def = bgDefs[name]
-  if (!def) return
+// ─── 모듈 정의 ───────────────────────────────────────────────
 
-  const src = def.src ?? name
-  const useParallax = def.parallax ?? true
-  const dur = ctx.renderer.dur(duration)
-  ctx.renderer.state.set('backgroundKey', name)
-  // cmdState 저장 (세이브/로드 일관성)
-  ctx.cmdState.set('background', { key: name, fit: fit === 'inherit' ? 'cover' : fit })
+/**
+ * 배경 모듈. `novel.config`의 `modules: { 'background': backgroundModule }` 형태로 등록합니다.
+ */
+const backgroundModule = define<BackgroundSchema>({
+  key: undefined,
+  fit: 'cover',
+  duration: 1000,
+  parallax: true,
+  isVideo: false,
+})
 
-  const objs = getBgObjs(ctx)
-  const existing = objs['main']
+backgroundModule.defineView((data, ctx) => {
+  // 배경 오브젝트 참조
+  let _bgObj: any = null
+  let _bgParallax: boolean | null = null
 
-  if (existing) {
-    // parallax 모드가 같을 때만 crossfade; 다르면 제거 후 재생성
-    const existingParallax = ctx.renderer.state.get('_bgParallax') ?? true
-    if (existingParallax === useParallax) {
-      if (dur > 0 && typeof existing.transition === 'function') {
-        existing.transition(src, dur)
-      } else {
-        if (existing.attribute) existing.attribute.src = src
-      }
-      return
+  const _createBg = (key: string, fit: string, parallax: boolean, isVideo: boolean, opacity = 1) => {
+    const bgDefs = ctx.renderer.config.backgrounds as BgDefs
+    const def = bgDefs[key]
+    if (!def) return null
+
+    const src = def.src ?? key
+    const cam = ctx.renderer.world.camera as any
+    const zPos = ctx.renderer.depth
+    const baseW = ctx.renderer.width
+    const baseH = ctx.renderer.height
+    const maxPanX = baseW * 0.4
+    const maxPanY = baseH * 0.5
+    const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
+    const exactW = baseW + maxPanX * 2
+    const exactH = baseH + maxPanY * 2
+
+    const createFn = isVideo
+      ? ctx.renderer.world.createVideo.bind(ctx.renderer.world)
+      : ctx.renderer.world.createImage.bind(ctx.renderer.world)
+
+    const obj = createFn({
+      attribute: { src },
+      style: {
+        width: exactW, height: exactH,
+        zIndex: Z_INDEX.BACKGROUND,
+        opacity,
+        pointerEvents: false,
+      },
+      transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } },
+    })
+
+    if (!parallax) {
+      ctx.renderer.world.camera?.addChild(obj)
     }
-    // parallax 모드 변경 → 기존 제거
-    existing.remove()
-    ctx.renderer.untrack(existing)
-    delete objs['main']
+    ctx.renderer.track(obj)
+    return obj
   }
 
-  ctx.renderer.state.set('_bgParallax', useParallax)
+  // 복원: 저장된 배경이 있으면 즉시 렌더
+  if (data.key) {
+    _bgObj = _createBg(data.key, data.fit, data.parallax, data.isVideo)
+    _bgParallax = data.parallax
+  }
 
-  const cam = ctx.renderer.world.camera as any
-  const zPos = ctx.renderer.depth
+  return {
+    show: (dur = 250) => { _bgObj?.fadeIn?.(dur, 'easeOut') },
+    hide: (dur = 300) => { _bgObj?.fadeOut?.(dur, 'easeIn') },
+    update: (d: BackgroundSchema) => {
+      if (!d.key) return
+      const bgDefs = ctx.renderer.config.backgrounds as BgDefs
+      const def = bgDefs[d.key]
+      if (!def) return
 
-  const baseW = ctx.renderer.width
-  const baseH = ctx.renderer.height
-  const maxPanX = baseW * 0.4
-  const maxPanY = baseH * 0.5
-  const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
+      const src = def.src ?? d.key
+      const useParallax = def.parallax ?? true
+      const dur = ctx.renderer.dur(d.duration)
 
-  const exactW = baseW + maxPanX * 2
-  const exactH = baseH + maxPanY * 2
+      ctx.renderer.state.set('backgroundKey', d.key)
 
-  const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world)
-  const obj = createFn({
-    attribute: { src },
-    style: {
-      width: exactW, height: exactH,
-      zIndex: Z_INDEX.BACKGROUND,
-      opacity: dur > 0 ? 0 : 1,
-      pointerEvents: false,
+      if (_bgObj) {
+        const sameParallax = _bgParallax === useParallax
+        if (sameParallax) {
+          if (dur > 0 && typeof _bgObj.transition === 'function') {
+            _bgObj.transition(src, dur)
+          } else {
+            if (_bgObj.attribute) _bgObj.attribute.src = src
+          }
+          _bgParallax = useParallax
+          return
+        }
+        // parallax 모드 변경 → 기존 제거
+        _bgObj.remove()
+        ctx.renderer.untrack(_bgObj)
+        _bgObj = null
+      }
+
+      _bgParallax = useParallax
+      _bgObj = _createBg(d.key, d.fit, useParallax, d.isVideo, dur > 0 ? 0 : 1)
+      if (dur > 0 && _bgObj) {
+        ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, 'easeInOutQuad')
+      }
     },
-    transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } },
-  })
-
-  if (!useParallax) {
-    ctx.renderer.world.camera?.addChild(obj)
   }
+})
 
-  ctx.renderer.track(obj)
-  objs['main'] = obj
+backgroundModule.defineCommand<BackgroundCmd<any>>((cmd, ctx, data) => {
+  const bgDefs = ctx.renderer.config.backgrounds as BgDefs
+  const def = bgDefs[cmd.name as string]
+  if (!def) return true
 
-  if (dur > 0) {
-    ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur, 'easeInOutQuad')
-  }
-}
+  const fit = cmd.fit === 'inherit' || !cmd.fit ? 'cover' : cmd.fit
+  data.key = cmd.name as string
+  data.fit = fit
+  data.duration = cmd.duration ?? 1000
+  data.parallax = def.parallax ?? true
+  data.isVideo = cmd.isVideo ?? false
 
-export const backgroundHandler = defineCmd<BackgroundCmd<any>>((cmd, ctx) => {
-  setBackground(
-    ctx,
-    cmd.name as string,
-    (cmd.fit ?? 'inherit') as BackgroundFitPreset,
-    cmd.duration ?? 1000,
-    cmd.isVideo ?? false,
-  )
   return true
 })
+
+export default backgroundModule
+
+// ─── 하위 호환용 헬퍼 (Novel.ts rebuildUI에서 사용) ──────────
+
+/** @internal */
+export function setBackground(ctx: any, name: string, fit: BackgroundFitPreset, duration: number = 1000, isVideo: boolean = false) {
+  // 모듈의 __handler를 직접 호출하여 호환성 유지
+  backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx)
+}

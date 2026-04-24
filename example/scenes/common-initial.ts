@@ -28,7 +28,7 @@ export const commonInitial = defineInitial(config, {
       lineHeight: 1.65,
     },
   },
-  'choices': {
+  'choice': {
     background: 'rgba(20,20,50,0.90)',
     borderColor: 'rgba(255,255,255,0.25)',
     hoverBackground: 'rgba(80,60,180,0.92)',

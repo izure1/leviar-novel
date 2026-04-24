@@ -4,7 +4,7 @@ import { define } from '../define/defineCmdUI'
 
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
 
-/** dialogueUISetup이 공유하는 데이터 스키마 */
+/** dialogueModule이 공유하는 데이터 스키마 */
 export interface DialogueSchema {
   /** 대화창 배경 패널 스타일 */
   bg?: Partial<Style> & { height?: number }
@@ -19,7 +19,7 @@ export interface DialogueSchema {
   lines: string[]
   /** 현재 화자 키 */
   speakerKey: string | undefined
-  /** 현재 타이핑 속도(ms). dialogueHandler가 설정합니다 */
+  /** 현재 타이핑 속도(ms). dialogueCommand가 설정합니다 */
   speed: number | undefined
 }
 
@@ -49,9 +49,48 @@ function resolveSpeaker(speakerKey: string | undefined, charDefs: CharDefs): str
   return charDefs?.[speakerKey]?.name ?? speakerKey
 }
 
-// ─── define(schema) 팩토리 ───────────────────────────────────
+// ─── DialogueCmd 타입 ─────────────────────────────────────
 
-const { defineCmd, defineUI } = define<DialogueSchema>({
+/**
+ * 대사 또는 나레이션 출력
+ *
+ * @example
+ * ```ts
+ * { type: 'dialogue', speaker: 'hero', text: 'Hello world!', speed: 50 }
+ * // 또는 나레이션
+ * { type: 'dialogue', text: ['첫 번째 줄', '두 번째 줄'] }
+ * ```
+ */
+export interface DialogueCmd<TConfig = any> {
+  /**
+   * 화자의 이름 (config.characters의 키).
+   * 생략할 경우 화자 이름 없이 나레이션으로 처리됩니다.
+   */
+  speaker?: CharacterKeysOf<TConfig> | (string & {})
+  /** 화면에 출력할 텍스트입니다. 배열일 경우 여러 줄로 출력될 수 있습니다. */
+  text: string | string[]
+  /**
+   * 텍스트가 한 글자씩 출력되는 속도(ms 단위)입니다.
+   * 미지정 시 시스템 설정 속도 또는 기본값(예: 30ms)이 사용됩니다.
+   */
+  speed?: number
+}
+
+// ─── 모듈 정의 ───────────────────────────────────────────────
+
+/**
+ * 대화 모듈. `novel.config`의 `modules: { 'dialogue': dialogueModule }` 형태로 등록합니다.
+ *
+ * @example
+ * ```ts
+ * // novel.config.ts
+ * modules: { 'dialogue': dialogueModule }
+ *
+ * // scene (initial 사용)
+ * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
+ * ```
+ */
+const dialogueModule = define<DialogueSchema>({
   bg: undefined,
   speaker: undefined,
   text: undefined,
@@ -61,22 +100,7 @@ const { defineCmd, defineUI } = define<DialogueSchema>({
   speed: undefined,
 })
 
-// ─── dialogueUISetup ─────────────────────────────────────────
-
-/**
- * 대화 UI(배경/화자/텍스트)를 생성하고 레지스트리에 등록하는 셋업 핸들러.
- * `novel.config`의 `ui: { 'dialogue': dialogueUISetup }` 형태로 등록합니다.
- *
- * @example
- * ```ts
- * // novel.config.ts
- * ui: { 'dialogue': dialogueUISetup }
- *
- * // scene (initial 사용)
- * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
- * ```
- */
-export const dialogueUISetup = defineUI((data, ctx) => {
+dialogueModule.defineView((data, ctx) => {
   const cam = ctx.world.camera
   const w = ctx.renderer.width
   const h = ctx.renderer.height
@@ -240,34 +264,7 @@ export const dialogueUISetup = defineUI((data, ctx) => {
   }
 })
 
-// ─── dialogueHandler ─────────────────────────────────────────
-
-/**
- * 대사 또는 나레이션 출력
- *
- * @example
- * ```ts
- * { type: 'dialogue', speaker: 'hero', text: 'Hello world!', speed: 50 }
- * // 또는 나레이션
- * { type: 'dialogue', text: ['첫 번째 줄', '두 번째 줄'] }
- * ```
- */
-export interface DialogueCmd<TConfig = any> {
-  /**
-   * 화자의 이름 (config.characters의 키).
-   * 생략할 경우 화자 이름 없이 나레이션으로 처리됩니다.
-   */
-  speaker?: CharacterKeysOf<TConfig> | (string & {})
-  /** 화면에 출력할 텍스트입니다. 배열일 경우 여러 줄로 출력될 수 있습니다. */
-  text: string | string[]
-  /**
-   * 텍스트가 한 글자씩 출력되는 속도(ms 단위)입니다.
-   * 미지정 시 시스템 설정 속도 또는 기본값(예: 30ms)이 사용됩니다.
-   */
-  speed?: number
-}
-
-export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
+dialogueModule.defineCommand<DialogueCmd<any>>((cmd, ctx, data) => {
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
   const index = ctx.scene.getTextSubIndex()
@@ -291,8 +288,9 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
   data.subIndex = index
   data.lines = [...lines]
 
-  ctx.cmdState.set('dialogue', { ...data })
   ctx.scene.setTextSubIndex(index + 1)
 
   return false
 })
+
+export default dialogueModule

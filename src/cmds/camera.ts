@@ -1,5 +1,5 @@
 import type { SceneContext } from '../core/SceneContext'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
 export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
 export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit' | (string & {})
@@ -7,38 +7,32 @@ export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x'
 
 /** 카메라를 줌한다 */
 export interface CameraZoomCmd {
-  /** 목표 줌 레벨 프리셋(close-up, wide 등)입니다. */
   preset: ZoomPreset
-  /** 줌 애니메이션에 걸리는 시간(ms 단위)입니다. */
   duration?: number
 }
 
 /** 카메라를 패닝한다 */
 export interface CameraPanCmd {
-  /** 목표 패닝 방향/위치 프리셋(left, center 등)입니다. */
   position: PanPreset
-  /** 패닝 애니메이션에 걸리는 시간(ms 단위)입니다. */
   duration?: number
 }
 
-/** 
- * 카메라 흔들림 등 연출 효과를 재생한다 
- * 
+/**
+ * 카메라 흔들림 등 연출 효과를 재생한다
+ *
  * @example
  * ```ts
  * { type: 'camera-effect', preset: 'shake', duration: 500, intensity: 5, repeat: 3 }
  * ```
  */
 export interface CameraEffectCmd {
-  /** 재생할 카메라 효과 프리셋(흔들림, 반동 등)입니다. */
   preset: CameraEffectPreset
-  /** 효과가 한 번 재생되는 데 걸리는 시간(ms 단위)입니다. */
   duration?: number
-  /** 효과의 강도/진폭입니다. 클수록 크게 요동칩니다. */
   intensity?: number
-  /** 효과를 반복할 횟수입니다. 음수일 경우 무한히 반복됩니다. (기본값: 1) */
   repeat?: number
 }
+
+// ─── 프리셋 테이블 ───────────────────────────────────────────
 
 const ZOOM_PRESETS: Record<Exclude<ZoomPreset, 'inherit'>, { scale: number; duration: number }> = {
   'close-up': { scale: 1.5, duration: 800 },
@@ -64,6 +58,7 @@ const CAMERA_EFFECT_PRESETS: Record<Exclude<CameraEffectPreset, 'reset'>, { inte
   fall: { intensity: 15, duration: 800 },
 }
 
+// ─── 공유 헬퍼 ───────────────────────────────────────────────
 
 export function zoomCamera(ctx: SceneContext, preset: ZoomPreset, duration?: number) {
   const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastZoomPreset') ?? 'reset' : preset
@@ -150,7 +145,6 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
       return
     }
 
-    // 단순 효과 시뮬레이션 (LeviarWorld 애니메이션 엔진이 아닌 JS 타이머로 구현)
     let elapsed = 0
     const stepTime = 16
     const tick = () => {
@@ -197,17 +191,58 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
   loop()
 }
 
-export const cameraZoomHandler = defineCmd<CameraZoomCmd>((cmd, ctx) => {
-  zoomCamera(ctx, cmd.preset, cmd.duration)
+// ─── camera-zoom 모듈 ────────────────────────────────────────
+
+export interface CameraZoomSchema { lastPreset: string }
+
+const cameraZoomModule = define<CameraZoomSchema>({ lastPreset: 'reset' })
+
+cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+
+cameraZoomModule.defineCommand<CameraZoomCmd>((cmd, ctx, data) => {
+  const resolved = cmd.preset === 'inherit' ? data.lastPreset : cmd.preset
+  data.lastPreset = resolved
+  zoomCamera(ctx, resolved as ZoomPreset, cmd.duration)
   return true
 })
 
-export const cameraPanHandler = defineCmd<CameraPanCmd>((cmd, ctx) => {
-  panCamera(ctx, cmd.position, cmd.duration)
+export { cameraZoomModule }
+
+// ─── camera-pan 모듈 ────────────────────────────────────────
+
+export interface CameraPanSchema { lastPreset: string }
+
+const cameraPanModule = define<CameraPanSchema>({ lastPreset: 'center' })
+
+cameraPanModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+
+cameraPanModule.defineCommand<CameraPanCmd>((cmd, ctx, data) => {
+  const resolved = cmd.position === 'inherit' ? data.lastPreset : cmd.position
+  data.lastPreset = resolved
+  panCamera(ctx, resolved as PanPreset, cmd.duration)
   return true
 })
 
-export const cameraEffectHandler = defineCmd<CameraEffectCmd>((cmd, ctx) => {
+export { cameraPanModule }
+
+// ─── camera-effect 모듈 ─────────────────────────────────────
+
+export interface CameraEffectSchema { lastPreset: string }
+
+const cameraEffectModule = define<CameraEffectSchema>({ lastPreset: 'shake' })
+
+cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+
+cameraEffectModule.defineCommand<CameraEffectCmd>((cmd, ctx, data) => {
+  data.lastPreset = cmd.preset
   cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat)
   return true
 })
+
+export { cameraEffectModule }
+
+// ─── @internal 하위 호환 aliases ─────────────────────────────
+
+export const cameraZoomHandler = (p: any, ctx: any) => cameraZoomModule.__handler!(p, ctx)
+export const cameraPanHandler = (p: any, ctx: any) => cameraPanModule.__handler!(p, ctx)
+export const cameraEffectHandler = (p: any, ctx: any) => cameraEffectModule.__handler!(p, ctx)

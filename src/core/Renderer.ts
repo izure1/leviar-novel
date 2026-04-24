@@ -6,11 +6,6 @@ import { World, Animation } from 'leviar'
 import type { LeviarObject, EasingType } from 'leviar'
 import type { NovelConfig } from '../types/config'
 import type { SceneContext } from './SceneContext'
-import { setBackground } from '../cmds/background'
-import { showCharacter } from '../cmds/character'
-import { addMood } from '../cmds/mood'
-import { addEffect } from '../cmds/effect'
-import { rebuildOverlays } from '../cmds/overlay'
 
 // ─── 내부 헬퍼 ─────────────────────────────────────────────────
 
@@ -64,7 +59,7 @@ export interface RendererOption {
 
 export class Renderer {
   readonly world: World
-  public readonly config: NovelConfig<any, any, any, any, any, any>
+  public readonly config: NovelConfig<any, any, any, any>
   public readonly width: number
   public readonly height: number
   public readonly depth: number
@@ -80,7 +75,7 @@ export class Renderer {
   public camOffsetObj: LeviarObject | null = null
   private _camSyncRafId: number | null = null
 
-  constructor(world: World, config: NovelConfig<any, any, any, any, any, any>, option: RendererOption) {
+  constructor(world: World, config: NovelConfig<any, any, any, any>, option: RendererOption) {
     this.world = world
     this.config = config
     this.width = option.width

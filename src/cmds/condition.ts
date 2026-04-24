@@ -1,52 +1,32 @@
-import type { SceneContext } from '../core/SceneContext'
 import type { SceneNamesOf, VarsOf } from '../types/config'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
-/** 
- * 변수 조건에 따라 분기한다 
- * 
+/**
+ * 변수 조건에 따라 분기한다
+ *
  * @example
  * ```ts
  * {
  *   type: 'condition',
- *   if: 'courage >= 10 and hasSword',
+ *   if: ({ courage }) => courage >= 10,
  *   next: 'boss_battle',
  *   else: 'bad_ending'
  * }
  * ```
  */
 export interface ConditionCmd<TConfig = any, TLocalVars = any> {
-  /**
-   * 평가할 조건 함수 또는 값입니다.
-   * `vars` 인자를 통해 전역변수와 지역변수(`_` 접두사)를 구조 분해 할당하여 사용할 수 있습니다.
-   * 직접 `boolean` 값을 전달하는 것도 가능합니다.
-   * 
-   * @example
-   * ```ts
-   * // 함수 형태
-   * if: ({ likeability, _tries }) => likeability >= 10 && _tries >= 1
-   * // 직접 값
-   * if: true
-   * ```
-   */
   if: (vars: VarsOf<TConfig> & TLocalVars) => boolean
-  /** 조건 충족 시(true) 이동할 씬 이름입니다. */
   next?: SceneNamesOf<TConfig>
-  /** 조건 충족 시(true) 이동할 현재 씬 내의 라벨 이름입니다. */
   goto?: string
-  /**
-   * 조건 미충족 시(false) 이동할 라벨 이름 또는 씬 이름입니다.
-   * 현재 씬의 라벨 이름으로 먼저 검색하고, 없으면 씬 이름으로 처리합니다.
-   */
   else?: string
-  /** 
-   * 조건 미충족 시(false) 명시적으로 이동할 씬 이름입니다. 
-   * (라벨 이동과 씬 이동을 명확히 구분해야 할 때 사용합니다)
-   */
   'else-next'?: SceneNamesOf<TConfig>
 }
 
-export const conditionHandler = defineCmd<ConditionCmd<any, any>>((cmd, ctx) => {
+const conditionModule = define<Record<never, never>>({})
+
+conditionModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+
+conditionModule.defineCommand<ConditionCmd<any, any>>((cmd, ctx) => {
   const result = typeof cmd.if === 'function' ? cmd.if(ctx.scene.getVars()) : (cmd.if as unknown as boolean)
 
   if (result) {
@@ -78,3 +58,8 @@ export const conditionHandler = defineCmd<ConditionCmd<any, any>>((cmd, ctx) => 
     }
   }
 })
+
+export default conditionModule
+
+/** @internal Scene.ts BUILTIN_HANDLERS 하위 호환 */
+export const conditionHandler = (p: any, ctx: any) => conditionModule.__handler!(p, ctx)

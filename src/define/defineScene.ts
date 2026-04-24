@@ -3,17 +3,17 @@
 // =============================================================
 
 import type { NovelConfig, CharDefs, BgDefs } from '../types/config'
-import type { UIHandler } from '../define/defineCmdUI'
+import type { NovelModule } from '../define/defineCmdUI'
 import type { DialogueStep } from '../types/dialogue'
 
 // ─── UI initial 타입 헬퍼 ────────────────────────────────────
 
 /**
- * `config.ui` 타입에서 `initial` 허용 값 구조를 추출합니다.
- * key: `keyof TUi`, value: 해당 `UIHandler`의 스키마(`TSchema`)의 `Partial`
+ * `config.modules` 타입에서 `initial` 허용 값 구조를 추출합니다.
+ * key: `keyof TModules`, value: 해당 `NovelModule`의 스키마(`TSchema`)의 `Partial`
  */
-export type InitialOf<TUi> = {
-  [K in keyof TUi]?: TUi[K] extends UIHandler<infer TSchema> ? Partial<TSchema> : never
+export type InitialOf<TModules> = {
+  [K in keyof TModules]?: TModules[K] extends NovelModule<infer TSchema> ? Partial<TSchema> : never
 }
 
 /**
@@ -30,14 +30,14 @@ export type InitialOf<TUi> = {
  * ```
  */
 export function defineInitial<
-  TConfig extends NovelConfig<any, any, any, any, any, any> & { ui?: Record<string, UIHandler<any>> },
-  TInitial extends ([TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>)
+  TConfig extends NovelConfig<any, any, any, any, any> & { modules?: Record<string, NovelModule<any>> },
+  TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
 >(
   config: TConfig,
   initial: TInitial & (
-    [TConfig['ui']] extends [undefined]
+    [TConfig['modules']] extends [undefined]
       ? unknown
-      : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['ui']> ? unknown : never }
+      : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
   )
 ): typeof initial {
   return initial
@@ -59,9 +59,8 @@ export interface SceneDefinition<
   /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
   readonly nextScene?: string
   /**
-   * 씬 시작 시 자동으로 초기화할 UI 설정.
-   * `novel.config`의 `ui` 키를 기반으로 타입이 추론됩니다.
-   * `setup-*` 커맨드를 씬 스크립트에 추가하는 대신 이 옵션을 사용하세요.
+   * 씬 시작 시 자동으로 초기화할 모듈 데이터.
+   * `novel.config`의 `modules` 키를 기반으로 타입이 추론됩니다.
    */
   readonly initial?: Record<string, unknown>
 }
@@ -70,8 +69,8 @@ export interface SceneDefinition<
  * DialogueScene을 정의합니다.
  *
  * - `variables`에 씬 **지역변수** 초깃값을 전달합니다 (키에 `_` 접두사 필수).
- * - `initial`에 씬 시작 시 적용할 UI 초기 데이터를 전달합니다 (optional).
- *   `novel.config`의 `ui` 키를 기반으로 키/값 타입이 추론됩니다.
+ * - `initial`에 씬 시작 시 적용할 모듈 초기 데이터를 전달합니다 (optional).
+ *   `novel.config`의 `modules` 키를 기반으로 키/값 타입이 추론됩니다.
  *
  * @example 지역변수 없음
  * ```ts
@@ -81,12 +80,12 @@ export interface SceneDefinition<
  * ])
  * ```
  *
- * @example initial 사용 (setup-* 커맨드 대체)
+ * @example initial 사용
  * ```ts
  * export default defineScene({
  *   config,
  *   initial: {
- *     'dialogue': { bg: { color: '#00000000', height: 168 }, text: { fontSize: 18 } },
+ *     'dialogue': { bg: { color: '#00000000', height: 168 } },
  *     'choices':  { background: 'rgba(20,20,50,0.90)', minWidth: 280 },
  *   },
  * }, [
@@ -103,9 +102,9 @@ export interface SceneDefinition<
  * ```
  */
 export function defineScene<
-  TConfig extends NovelConfig<any, readonly string[], any, any, any, any> & { ui?: Record<string, UIHandler<any>> },
+  TConfig extends NovelConfig<any, readonly string[], any, any, any> & { modules?: Record<string, NovelModule<any>> },
   TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
-  TInitial extends ([TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>) = ([TConfig['ui']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['ui']>>)
+  TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>) = ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
 >(
   {
     config,
@@ -115,11 +114,11 @@ export function defineScene<
   }: {
     config: TConfig
     variables?: keyof TLocalVars extends `_${string}` ? TLocalVars : never
-    /** 씬 시작 시 적용할 UI 초기 데이터 (optional). config.ui 키/값 타입 추론. */
+    /** 씬 시작 시 적용할 모듈 초기 데이터 (optional). config.modules 키/값 타입 추론. */
     initial?: TInitial & (
-      [TConfig['ui']] extends [undefined]
+      [TConfig['modules']] extends [undefined]
         ? unknown
-        : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['ui']> ? unknown : never }
+        : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
     )
     /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
     next?: TConfig['scenes'][number]

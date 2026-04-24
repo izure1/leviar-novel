@@ -5,105 +5,6 @@
     return config;
   }
 
-  // src/define/defineCmd.ts
-  function resolveVal(val, vars) {
-    if (typeof val === "function") return val(vars);
-    if (Array.isArray(val)) {
-      return val.map(
-        (item) => item && typeof item === "object" && !Array.isArray(item) ? resolveObj(item, vars) : resolveVal(item, vars)
-      );
-    }
-    return val;
-  }
-  function resolveObj(obj, vars) {
-    const result = {};
-    for (const key in obj) {
-      result[key] = resolveVal(obj[key], vars);
-    }
-    return result;
-  }
-  function resolveParams(params, ctx) {
-    return resolveObj(params, ctx.scene.getVars());
-  }
-  function defineCmd(handler) {
-    return (rawParams, ctx) => {
-      const resolved = resolveParams(rawParams, ctx);
-      return handler(resolved, ctx);
-    };
-  }
-
-  // src/define/defineCmdUI.ts
-  function define2(schema) {
-    let _onUpdate = null;
-    let _version = 0;
-    const _raw = { ...schema };
-    const data = new Proxy(_raw, {
-      set(target, key, value) {
-        target[key] = value;
-        const v = ++_version;
-        Promise.resolve().then(() => {
-          if (_version === v) {
-            _onUpdate?.(data);
-          }
-        });
-        return true;
-      }
-    });
-    function resolveVal2(val, vars) {
-      if (typeof val === "function") return val(vars);
-      if (Array.isArray(val)) {
-        return val.map(
-          (item) => item && typeof item === "object" && !Array.isArray(item) ? resolveObj2(item, vars) : resolveVal2(item, vars)
-        );
-      }
-      return val;
-    }
-    function resolveObj2(obj, vars) {
-      const result = {};
-      for (const key in obj) {
-        result[key] = resolveVal2(obj[key], vars);
-      }
-      return result;
-    }
-    function resolveParams2(params, ctx) {
-      return resolveObj2(params, ctx.scene.getVars());
-    }
-    function defineCmd4(handler) {
-      return (rawParams, ctx) => {
-        const resolved = resolveParams2(rawParams, ctx);
-        return handler(resolved, ctx, data);
-      };
-    }
-    function defineUI4(builder) {
-      const handler = (rawStyle, ctx) => {
-        if (rawStyle && typeof rawStyle === "object") {
-          for (const key in rawStyle) {
-            if (rawStyle[key] !== void 0) {
-              data[key] = rawStyle[key];
-            }
-          }
-        }
-        builder(data, ctx);
-        return true;
-      };
-      handler.__isUIHandler = true;
-      handler.__schemaDefault = schema;
-      handler.__uiBuilder = (mergedData, ctx) => {
-        for (const key in mergedData) {
-          if (mergedData[key] !== void 0) {
-            data[key] = mergedData[key];
-          }
-        }
-        const entry = builder(data, ctx);
-        _onUpdate = (d) => entry.update?.(d);
-        ++_version;
-        return entry;
-      };
-      return handler;
-    }
-    return { defineCmd: defineCmd4, defineUI: defineUI4 };
-  }
-
   // src/define/defineCharacter.ts
   function defineCharacter(def) {
     return def;
@@ -127,6 +28,1487 @@
       initial
     };
   }
+
+  // src/define/defineCmdUI.ts
+  function resolveVal(val, vars) {
+    if (typeof val === "function") return val(vars);
+    if (Array.isArray(val)) {
+      return val.map(
+        (item) => item && typeof item === "object" && !Array.isArray(item) ? resolveObj(item, vars) : resolveVal(item, vars)
+      );
+    }
+    return val;
+  }
+  function resolveObj(obj, vars) {
+    const result = {};
+    for (const key in obj) {
+      result[key] = resolveVal(obj[key], vars);
+    }
+    return result;
+  }
+  function resolveParams(params, ctx) {
+    return resolveObj(params, ctx.scene.getVars());
+  }
+  function define2(schema) {
+    let _onUpdate = null;
+    let _version = 0;
+    let _moduleKey = null;
+    const _raw = { ...schema };
+    const data = new Proxy(_raw, {
+      set(target, key, value) {
+        ;
+        target[key] = value;
+        const v = ++_version;
+        Promise.resolve().then(() => {
+          if (_version === v) {
+            _onUpdate?.(data);
+          }
+        });
+        return true;
+      }
+    });
+    let _handlerFn = null;
+    let _viewBuilderFn = null;
+    const module = {
+      __isModule: true,
+      __schemaDefault: schema,
+      get __handler() {
+        return _handlerFn;
+      },
+      get __viewBuilder() {
+        return _viewBuilderFn;
+      },
+      __setKey(key) {
+        _moduleKey = key;
+      },
+      defineCommand(handler) {
+        _handlerFn = (rawParams, ctx) => {
+          const resolved = resolveParams(rawParams, ctx);
+          const result = handler(resolved, ctx, data);
+          if (_moduleKey) {
+            ctx.cmdState.set(_moduleKey, { ..._raw });
+          }
+          return result;
+        };
+        return module;
+      },
+      defineView(builder) {
+        _viewBuilderFn = (mergedData, ctx) => {
+          for (const key in mergedData) {
+            if (mergedData[key] !== void 0) {
+              ;
+              data[key] = mergedData[key];
+            }
+          }
+          const entry = builder(data, ctx);
+          _onUpdate = (d) => entry.update?.(d);
+          ++_version;
+          return entry;
+        };
+        return module;
+      }
+    };
+    return module;
+  }
+
+  // src/cmds/dialogue.ts
+  var DEFAULT_BG = {
+    color: "rgba(0,0,0,0.82)"
+  };
+  var DEFAULT_SPEAKER = {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#ffe066",
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    textAlign: "left"
+  };
+  var DEFAULT_TEXT = {
+    fontSize: 20,
+    color: "#ffffff",
+    lineHeight: 1.6,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    textAlign: "left",
+    textShadowBlur: 1,
+    textShadowColor: "#000000",
+    textShadowOffsetX: 1,
+    textShadowOffsetY: 1
+  };
+  function resolveSpeaker(speakerKey, charDefs) {
+    if (!speakerKey) return void 0;
+    return charDefs?.[speakerKey]?.name ?? speakerKey;
+  }
+  var dialogueModule = define2({
+    bg: void 0,
+    speaker: void 0,
+    text: void 0,
+    subIndex: 0,
+    lines: [],
+    speakerKey: void 0,
+    speed: void 0
+  });
+  dialogueModule.defineView((data, ctx) => {
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {} };
+    const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
+    const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
+    const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
+    const BOX_CY = h - BOX_H / 2;
+    const bgObj = ctx.world.createRectangle({
+      style: {
+        ...bgCfg,
+        width: bgCfg.width ?? w,
+        height: BOX_H,
+        zIndex: bgCfg.zIndex ?? 300,
+        opacity: 1,
+        display: "none",
+        pointerEvents: false
+      },
+      transform: { position: toLocal(w / 2, BOX_CY) }
+    });
+    ctx.world.camera?.addChild(bgObj);
+    ctx.renderer.track(bgObj);
+    const spkY = h - BOX_H + 24;
+    const speakerObj = ctx.world.createText({
+      attribute: { text: "" },
+      style: {
+        ...spkCfg,
+        width: w * 0.9,
+        zIndex: spkCfg.zIndex ?? 301,
+        opacity: 1,
+        display: "none",
+        pointerEvents: false
+      },
+      transform: { position: toLocal(w / 2, spkY) }
+    });
+    ctx.world.camera?.addChild(speakerObj);
+    ctx.renderer.track(speakerObj);
+    const spkH = (spkCfg.fontSize ?? 18) * 1.5;
+    const textObj = ctx.world.createText({
+      attribute: { text: "" },
+      style: {
+        ...txtCfg,
+        width: txtCfg.width ?? w * 0.9,
+        zIndex: txtCfg.zIndex ?? 301,
+        opacity: 1,
+        display: "none",
+        pointerEvents: false
+      },
+      transform: { position: toLocal(w / 2, spkY + spkH + 8) }
+    });
+    ctx.world.camera?.addChild(textObj);
+    ctx.renderer.track(textObj);
+    const charDefs = ctx.renderer.config.characters;
+    let _isTyping = false;
+    let _fullText = "";
+    let _activeTx = null;
+    let _prevLines = null;
+    const _renderText = (speaker, text, speed, immediate = false) => {
+      bgObj.fadeIn(200, "easeOut");
+      speakerObj.attribute.text = speaker ?? "";
+      speakerObj.fadeIn(200, "easeOut");
+      if (immediate || speed === 0) {
+        _isTyping = false;
+        _fullText = text;
+        _activeTx?.stop?.();
+        _activeTx = null;
+        textObj.attribute.text = text;
+        textObj.fadeIn(200, "easeOut");
+      } else {
+        const spd = speed ?? 30;
+        _isTyping = true;
+        _fullText = text;
+        if (_activeTx) {
+          _activeTx.stop?.();
+          _activeTx = null;
+        }
+        const anim = textObj.transition(text, spd);
+        _activeTx = anim;
+        textObj.fadeIn(200, "easeOut");
+        if (anim && typeof anim.on === "function") {
+          anim.on("end", () => {
+            _isTyping = false;
+            _activeTx = null;
+          });
+        }
+      }
+    };
+    if (data.lines?.length) {
+      _prevLines = data.lines;
+      const txt = data.lines[data.subIndex ?? 0];
+      const spkName = resolveSpeaker(data.speakerKey, charDefs);
+      _renderText(spkName, txt, void 0, true);
+    }
+    return {
+      show: (dur = 250) => {
+        bgObj.fadeIn(dur, "easeOut");
+      },
+      hide: (dur = 300) => {
+        bgObj.fadeOut(dur, "easeIn");
+        speakerObj.fadeOut(dur, "easeIn");
+        textObj.fadeOut(dur, "easeIn");
+      },
+      isTyping: () => _isTyping,
+      completeTyping: () => {
+        if (!_isTyping) return;
+        _isTyping = false;
+        _activeTx?.stop?.();
+        _activeTx = null;
+        textObj.attribute.text = _fullText;
+        textObj.style.opacity = 1;
+      },
+      /**
+       * data가 변경될 때 Proxy가 자동으로 호출합니다.
+       * - lines가 바뀐 경우: 텍스트 재렌더
+       * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
+       */
+      update: (d) => {
+        const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {} };
+        const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
+        const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
+        Object.assign(bgObj.style, newBgCfg);
+        Object.assign(speakerObj.style, newSpkCfg);
+        Object.assign(textObj.style, newTxtCfg);
+        if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
+          _prevLines = d.lines;
+          const txt = d.lines[d.subIndex ?? 0];
+          const spkName = resolveSpeaker(d.speakerKey, charDefs);
+          _renderText(spkName, txt, d.speed);
+        }
+      }
+    };
+  });
+  dialogueModule.defineCommand((cmd, ctx, data) => {
+    const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
+    const lines = textArray.map((t) => ctx.scene.interpolateText(t));
+    const index = ctx.scene.getTextSubIndex();
+    const ui = ctx.ui.get("dialogue");
+    if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
+      ui.completeTyping();
+      return false;
+    }
+    if (index >= lines.length) {
+      return true;
+    }
+    data.speed = cmd.speed;
+    data.speakerKey = cmd.speaker;
+    data.subIndex = index;
+    data.lines = [...lines];
+    ctx.scene.setTextSubIndex(index + 1);
+    return false;
+  });
+  var dialogue_default = dialogueModule;
+
+  // src/cmds/choice.ts
+  var DEFAULT_CHOICE = {
+    fontSize: 18,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    color: "#fff",
+    background: "rgba(30,30,60,0.85)",
+    borderColor: "rgba(255,255,255,0.3)",
+    hoverBackground: "rgba(80,80,180,0.9)",
+    hoverBorderColor: "rgba(255,255,255,0.7)",
+    borderRadius: 8,
+    minWidth: 260
+  };
+  var choiceModule = define2({
+    fontSize: void 0,
+    fontFamily: void 0,
+    color: void 0,
+    background: void 0,
+    borderColor: void 0,
+    hoverBackground: void 0,
+    hoverBorderColor: void 0,
+    borderRadius: void 0,
+    minWidth: void 0
+  });
+  choiceModule.defineView((data, ctx) => {
+    const cfg = { ...DEFAULT_CHOICE, ...data };
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const bgObj = ctx.world.createRectangle({
+      style: {
+        color: "rgba(0,0,0,0.6)",
+        width: w,
+        height: h,
+        zIndex: 500,
+        opacity: 0,
+        pointerEvents: true
+      },
+      transform: { position: toLocal(w / 2, h / 2) }
+    });
+    ctx.world.camera?.addChild(bgObj);
+    ctx.renderer.track(bgObj);
+    let _btnObjs = [];
+    const _clearButtons = () => {
+      _btnObjs.forEach((obj) => {
+        obj.remove({ child: true });
+      });
+      _btnObjs = [];
+    };
+    return {
+      show: () => {
+        bgObj.fadeIn(200, "easeOut");
+      },
+      hide: () => {
+        bgObj.fadeOut(200, "easeIn");
+        _clearButtons();
+      },
+      onChoices: (choices, onSelect) => {
+        bgObj.fadeIn(200, "easeOut");
+        _clearButtons();
+        const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize;
+        const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth;
+        const gap = 12;
+        const paddingY = 12;
+        const btnH = fSize * 1.5 + paddingY * 2;
+        const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap;
+        const startY = h / 2 - totalHeight / 2 + btnH / 2;
+        choices.forEach((choice, i) => {
+          const cy = startY + i * (btnH + gap);
+          const textStr = String(choice.text);
+          const estimatedTextW = textStr.length * fSize * 0.8;
+          const btnW = Math.max(mWidth, estimatedTextW + 64);
+          const btnObj = ctx.world.createRectangle({
+            style: {
+              color: cfg.background ?? DEFAULT_CHOICE.background,
+              borderColor: cfg.borderColor ?? DEFAULT_CHOICE.borderColor,
+              borderWidth: 1.5,
+              borderRadius: cfg.borderRadius ?? DEFAULT_CHOICE.borderRadius,
+              width: btnW,
+              height: btnH,
+              zIndex: 501,
+              pointerEvents: true,
+              opacity: 1
+            },
+            transform: { position: toLocal(w / 2, cy) }
+          });
+          const txtObj = ctx.world.createText({
+            attribute: { text: textStr },
+            style: {
+              fontSize: fSize,
+              fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
+              color: cfg.color ?? DEFAULT_CHOICE.color,
+              textAlign: "center",
+              zIndex: 502,
+              pointerEvents: false
+            },
+            transform: { position: { x: 0, y: 0, z: 0 } }
+          });
+          btnObj.on("mouseover", () => {
+            btnObj.animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150);
+          });
+          btnObj.on("mouseout", () => {
+            btnObj.animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150);
+          });
+          btnObj.on("click", () => {
+            onSelect(i);
+          });
+          btnObj.addChild(txtObj);
+          ctx.world.camera?.addChild(btnObj);
+          ctx.renderer.track(btnObj);
+          ctx.renderer.track(txtObj);
+          _btnObjs.push(btnObj);
+        });
+      },
+      update: (d) => {
+        Object.assign(cfg, DEFAULT_CHOICE, d);
+      }
+    };
+  });
+  choiceModule.defineCommand((cmd, ctx) => {
+    const entry = ctx.ui.get("choice");
+    if (!entry) {
+      console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
+    }
+    ctx.ui.get("dialogue")?.hide?.();
+    const resolvedChoices = cmd.choices.map((c) => {
+      const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
+      return { ...c, text: ctx.scene.interpolateText(textStr) };
+    });
+    console.log("[leviar-novel] choiceHandler: opening choices", resolvedChoices);
+    entry?.onChoices?.(resolvedChoices, (i) => {
+      const selected = cmd.choices[i];
+      if (!selected) return;
+      if (selected.var) {
+        for (const [key, value] of Object.entries(selected.var)) {
+          ctx.scene.setGlobalVar(key, value);
+        }
+      }
+      entry.hide?.();
+      if (selected.next) {
+        ctx.scene.loadScene(selected.next);
+      } else if (selected.goto) {
+        ctx.scene.jumpToLabel(selected.goto);
+      } else {
+        ctx.scene.end();
+      }
+    });
+    return "handled";
+  });
+  var choice_default = choiceModule;
+
+  // src/constants/render.ts
+  var Z_INDEX = {
+    BACKGROUND: -1,
+    CHARACTER_NORMAL: 10,
+    CHARACTER_HIGHLIGHT: 100,
+    MOOD: 100,
+    LIGHT: 200,
+    UI_BASE: 300,
+    OVERLAY_WHISPER: 400,
+    OVERLAY_CAPTION: 410,
+    OVERLAY_TITLE: 420,
+    CHARACTER_CUTIN: 500,
+    TRANSITION: 999
+  };
+
+  // src/cmds/background.ts
+  var backgroundModule = define2({
+    key: void 0,
+    fit: "cover",
+    duration: 1e3,
+    parallax: true,
+    isVideo: false
+  });
+  backgroundModule.defineView((data, ctx) => {
+    let _bgObj = null;
+    let _bgParallax = null;
+    const _createBg = (key, fit, parallax, isVideo, opacity = 1) => {
+      const bgDefs = ctx.renderer.config.backgrounds;
+      const def = bgDefs[key];
+      if (!def) return null;
+      const src = def.src ?? key;
+      const cam = ctx.renderer.world.camera;
+      const zPos = ctx.renderer.depth;
+      const baseW = ctx.renderer.width;
+      const baseH = ctx.renderer.height;
+      const maxPanX = baseW * 0.4;
+      const maxPanY = baseH * 0.5;
+      const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
+      const exactW = baseW + maxPanX * 2;
+      const exactH = baseH + maxPanY * 2;
+      const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world);
+      const obj = createFn({
+        attribute: { src },
+        style: {
+          width: exactW,
+          height: exactH,
+          zIndex: Z_INDEX.BACKGROUND,
+          opacity,
+          pointerEvents: false
+        },
+        transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } }
+      });
+      if (!parallax) {
+        ctx.renderer.world.camera?.addChild(obj);
+      }
+      ctx.renderer.track(obj);
+      return obj;
+    };
+    if (data.key) {
+      _bgObj = _createBg(data.key, data.fit, data.parallax, data.isVideo);
+      _bgParallax = data.parallax;
+    }
+    return {
+      show: (dur = 250) => {
+        _bgObj?.fadeIn?.(dur, "easeOut");
+      },
+      hide: (dur = 300) => {
+        _bgObj?.fadeOut?.(dur, "easeIn");
+      },
+      update: (d) => {
+        if (!d.key) return;
+        const bgDefs = ctx.renderer.config.backgrounds;
+        const def = bgDefs[d.key];
+        if (!def) return;
+        const src = def.src ?? d.key;
+        const useParallax = def.parallax ?? true;
+        const dur = ctx.renderer.dur(d.duration);
+        ctx.renderer.state.set("backgroundKey", d.key);
+        if (_bgObj) {
+          const sameParallax = _bgParallax === useParallax;
+          if (sameParallax) {
+            if (dur > 0 && typeof _bgObj.transition === "function") {
+              _bgObj.transition(src, dur);
+            } else {
+              if (_bgObj.attribute) _bgObj.attribute.src = src;
+            }
+            _bgParallax = useParallax;
+            return;
+          }
+          _bgObj.remove();
+          ctx.renderer.untrack(_bgObj);
+          _bgObj = null;
+        }
+        _bgParallax = useParallax;
+        _bgObj = _createBg(d.key, d.fit, useParallax, d.isVideo, dur > 0 ? 0 : 1);
+        if (dur > 0 && _bgObj) {
+          ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
+        }
+      }
+    };
+  });
+  backgroundModule.defineCommand((cmd, ctx, data) => {
+    const bgDefs = ctx.renderer.config.backgrounds;
+    const def = bgDefs[cmd.name];
+    if (!def) return true;
+    const fit = cmd.fit === "inherit" || !cmd.fit ? "cover" : cmd.fit;
+    data.key = cmd.name;
+    data.fit = fit;
+    data.duration = cmd.duration ?? 1e3;
+    data.parallax = def.parallax ?? true;
+    data.isVideo = cmd.isVideo ?? false;
+    return true;
+  });
+  var background_default = backgroundModule;
+  function setBackground(ctx, name, fit, duration = 1e3, isVideo = false) {
+    backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx);
+  }
+
+  // src/cmds/camera.ts
+  var ZOOM_PRESETS = {
+    "close-up": { scale: 1.5, duration: 800 },
+    "medium": { scale: 1.2, duration: 600 },
+    "wide": { scale: 0.8, duration: 800 },
+    "reset": { scale: 1, duration: 600 }
+  };
+  var PAN_PRESETS = {
+    left: { x: -200, y: 0, duration: 1e3 },
+    right: { x: 200, y: 0, duration: 1e3 },
+    up: { x: 0, y: 200, duration: 1e3 },
+    down: { x: 0, y: -200, duration: 1e3 },
+    center: { x: 0, y: 0, duration: 1e3 }
+  };
+  var CAMERA_EFFECT_PRESETS = {
+    shake: { intensity: 10, duration: 500 },
+    bounce: { intensity: 15, duration: 600 },
+    wave: { intensity: 20, duration: 1e3 },
+    nod: { intensity: 10, duration: 400 },
+    "shake-x": { intensity: 15, duration: 500 },
+    fall: { intensity: 15, duration: 800 }
+  };
+  function zoomCamera(ctx, preset, duration) {
+    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
+    ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
+    const cfg = ZOOM_PRESETS[resolvedPreset];
+    if (!cfg) return;
+    const focalLength = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
+    const targetZ = focalLength * (1 - 1 / cfg.scale);
+    if (ctx.renderer.camBaseObj) {
+      const dur = ctx.renderer.dur(duration ?? cfg.duration);
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
+    }
+  }
+  function panCamera(ctx, position, duration, customX, customY) {
+    if (position === "inherit") return;
+    const resolvedPreset = position;
+    ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
+    const cfg = PAN_PRESETS[resolvedPreset];
+    let targetX = customX ?? 0;
+    let targetY = customY ?? 0;
+    let finalDur = duration ?? 1e3;
+    if (cfg && customX === void 0 && customY === void 0) {
+      targetX = cfg.x;
+      targetY = cfg.y;
+      if (duration === void 0) finalDur = cfg.duration;
+    } else if (typeof resolvedPreset === "string" && customX === void 0) {
+      let ratio = 0.5;
+      const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        const d = parseInt(m[2], 10);
+        if (d > 0) ratio = n / (d + 1);
+      }
+      targetX = ctx.renderer.width * (ratio - 0.5);
+      targetY = 0;
+    }
+    if (ctx.renderer.camBaseObj) {
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { x: targetX, y: targetY } } }, finalDur, "easeInOutQuad");
+    }
+  }
+  function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
+    if (preset === "reset") {
+      const stopFn2 = ctx.renderer.state.get("_activeCamEffectStop");
+      if (stopFn2) stopFn2();
+      return;
+    }
+    const stopFn = ctx.renderer.state.get("_activeCamEffectStop");
+    if (stopFn) stopFn();
+    const cfg = CAMERA_EFFECT_PRESETS[preset];
+    if (!cfg) return;
+    const finalIntensity = intensity ?? cfg.intensity;
+    const finalDuration = ctx.renderer.dur(duration ?? cfg.duration);
+    if (finalDuration <= 0) return;
+    const offsetObj = ctx.renderer.camOffsetObj;
+    if (!offsetObj) return;
+    let active = true;
+    let frame = 0;
+    const stop = () => {
+      active = false;
+      ctx.renderer.state.set("_activeCamEffectStop", null);
+      offsetObj.transform.position.x = 0;
+      offsetObj.transform.position.y = 0;
+      if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = 0;
+    };
+    ctx.renderer.state.set("_activeCamEffectStop", stop);
+    const loop = () => {
+      if (!active || frame++ >= repeat) {
+        stop();
+        return;
+      }
+      let elapsed = 0;
+      const stepTime = 16;
+      const tick = () => {
+        if (!active) return;
+        elapsed += stepTime;
+        if (elapsed > finalDuration) {
+          loop();
+          return;
+        }
+        const progress = elapsed / finalDuration;
+        let dx = 0, dy = 0, dz = 0;
+        switch (preset) {
+          case "shake":
+            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "shake-x":
+            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "bounce":
+            dy = Math.sin(progress * Math.PI) * finalIntensity;
+            break;
+          case "wave":
+            dx = Math.sin(progress * Math.PI * 2) * finalIntensity;
+            dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2);
+            break;
+          case "nod":
+            dy = Math.sin(progress * Math.PI) * finalIntensity;
+            break;
+          case "fall":
+            dy = Math.pow(progress, 2) * finalIntensity * 5;
+            break;
+        }
+        offsetObj.transform.position.x = dx;
+        offsetObj.transform.position.y = dy;
+        if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = dz;
+        setTimeout(tick, stepTime);
+      };
+      tick();
+    };
+    loop();
+  }
+  var cameraZoomModule = define2({ lastPreset: "reset" });
+  cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  cameraZoomModule.defineCommand((cmd, ctx, data) => {
+    const resolved = cmd.preset === "inherit" ? data.lastPreset : cmd.preset;
+    data.lastPreset = resolved;
+    zoomCamera(ctx, resolved, cmd.duration);
+    return true;
+  });
+  var cameraPanModule = define2({ lastPreset: "center" });
+  cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  cameraPanModule.defineCommand((cmd, ctx, data) => {
+    const resolved = cmd.position === "inherit" ? data.lastPreset : cmd.position;
+    data.lastPreset = resolved;
+    panCamera(ctx, resolved, cmd.duration);
+    return true;
+  });
+  var cameraEffectModule = define2({ lastPreset: "shake" });
+  cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  cameraEffectModule.defineCommand((cmd, ctx, data) => {
+    data.lastPreset = cmd.preset;
+    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
+    return true;
+  });
+
+  // src/cmds/character.ts
+  var CHARACTER_X_RATIO = {
+    "far-left": 0.1,
+    "left": 0.25,
+    "center": 0.5,
+    "right": 0.75,
+    "far-right": 0.9
+  };
+  function resolvePositionX(position) {
+    if (CHARACTER_X_RATIO[position] !== void 0) return CHARACTER_X_RATIO[position];
+    const m = position.match(/^(\d+)\/(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      const d = parseInt(m[2], 10);
+      if (d > 0) return n / (d + 1);
+    }
+    return 0.5;
+  }
+  var characterModule = define2({
+    characters: {}
+  });
+  characterModule.defineView((data, ctx) => {
+    const _charObjs = {};
+    const _showCharacter = (name, position, imageKey, duration, immediate = false) => {
+      const charDefs = ctx.renderer.config.characters;
+      const def = charDefs[name];
+      if (!def) return;
+      const resolvedKey = imageKey || Object.keys(def.images)[0];
+      const imageDef = def.images[resolvedKey];
+      if (!imageDef) return;
+      const src = imageDef.src ?? resolvedKey;
+      const xPos = ctx.renderer.width * (resolvePositionX(position) - 0.5);
+      const zPos = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
+      const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 400);
+      const existing = _charObjs[name];
+      if (existing) {
+        ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, "easeInOutQuad");
+        if (imageKey && imageKey !== existing._currentImageKey) {
+          if (dur > 0 && typeof existing.transition === "function") {
+            existing.transition(src, dur);
+          } else {
+            if (existing.attribute) existing.attribute.src = src;
+          }
+        }
+        existing._currentImageKey = resolvedKey;
+        return;
+      }
+      const obj = ctx.renderer.world.createImage({
+        attribute: { src },
+        style: {
+          width: imageDef.width ?? 500,
+          opacity: dur > 0 ? 0 : 1,
+          zIndex: Z_INDEX.CHARACTER_NORMAL
+        },
+        transform: { position: { x: xPos, y: 0, z: zPos } }
+      });
+      ctx.renderer.track(obj);
+      obj._currentImageKey = resolvedKey;
+      _charObjs[name] = obj;
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur);
+      }
+    };
+    const _removeCharacter = (name, duration) => {
+      const obj = _charObjs[name];
+      if (obj) {
+        delete _charObjs[name];
+        const dur = ctx.renderer.dur(duration ?? 400);
+        if (dur > 0) {
+          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+            obj.remove();
+            ctx.renderer.untrack(obj);
+          });
+        } else {
+          obj.remove();
+          ctx.renderer.untrack(obj);
+        }
+      }
+    };
+    for (const [name, info] of Object.entries(data.characters)) {
+      _showCharacter(name, info.position, info.imageKey, void 0, true);
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+        for (const obj of Object.values(_charObjs)) {
+          obj?.fadeOut?.(300, "easeIn");
+        }
+      },
+      // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
+      getObj: (name) => _charObjs[name],
+      update: (d) => {
+        const newNames = new Set(Object.keys(d.characters));
+        for (const name of Object.keys(_charObjs)) {
+          if (!newNames.has(name)) {
+            _removeCharacter(name);
+          }
+        }
+        for (const [name, info] of Object.entries(d.characters)) {
+          _showCharacter(name, info.position, info.imageKey);
+        }
+      }
+    };
+  });
+  characterModule.defineCommand((cmd, ctx, data) => {
+    const newChars = { ...data.characters };
+    if (cmd.action === "show") {
+      const showCmd = cmd;
+      const charDefs = ctx.renderer.config.characters;
+      const def = charDefs[showCmd.name];
+      if (!def) return true;
+      const existingState = newChars[showCmd.name];
+      const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
+      const resolvedKey = showCmd.image ?? Object.keys(def.images)[0];
+      newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
+      data.characters = newChars;
+      if (showCmd.focus) {
+        const focusType = typeof showCmd.focus === "string" ? showCmd.focus : void 0;
+        const focusDuration = showCmd.duration ?? 800;
+        Promise.resolve().then(() => {
+          const entry = ctx.ui.get("character");
+          const charObj = entry?.getObj?.(showCmd.name);
+          if (charObj) {
+            _focusCharacter(ctx, showCmd.name, charObj, def, focusType, "inherit", focusDuration);
+          }
+        });
+      }
+    } else {
+      delete newChars[cmd.name];
+      data.characters = newChars;
+    }
+    return true;
+  });
+  var character_default = characterModule;
+  function _focusCharacter(ctx, name, target, def, focusType, fit = "inherit", duration = 800) {
+    if (!target) return;
+    const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0];
+    const imageDef = def.images[activeImgKey];
+    const fp = focusType && imageDef?.points ? imageDef.points[focusType] : { x: 0.5, y: 0.5 };
+    const targetX = target.transform?.position?.x ?? 0;
+    const charW = target.style?.width ?? 500;
+    const rendH = target.__renderedSize?.h;
+    const charH = rendH && rendH > 0 ? rendH : charW * 2;
+    const panX = targetX + charW * (fp.x - 0.5);
+    const panY = charH * (0.5 - fp.y);
+    panCamera(ctx, "center", duration, panX, panY);
+    zoomCamera(ctx, fit, duration);
+  }
+  var characterFocusModule = define2({ _unused: void 0 });
+  characterFocusModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    }
+  }));
+  characterFocusModule.defineCommand((cmd, ctx) => {
+    const entry = ctx.ui.get("character");
+    const charObj = entry?.getObj?.(cmd.name);
+    if (!charObj) return true;
+    const charDefs = ctx.renderer.config.characters;
+    const def = charDefs[cmd.name];
+    if (!def) return true;
+    _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
+    return true;
+  });
+  var characterHighlightModule = define2({ _unused: void 0 });
+  characterHighlightModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    }
+  }));
+  characterHighlightModule.defineCommand((_cmd, _ctx) => {
+    return true;
+  });
+
+  // src/cmds/mood.ts
+  var MOOD_PRESETS = {
+    day: { color: "rgba(255,230,180,0.1)", vignette: "transparent 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
+    night: { color: "rgba(10,15,60,0.5)", vignette: "transparent 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
+    dawn: { color: "rgba(25,35,70,0.4)", vignette: "transparent 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
+    sunset: { color: "rgba(255,120,50,0.25)", vignette: "transparent 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
+    foggy: { color: "rgba(200,210,220,0.4)", vignette: "rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%", blendMode: "screen" },
+    sepia: { color: "rgba(160,110,50,0.3)", vignette: "transparent 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
+    cold: { color: "rgba(80,130,220,0.25)", vignette: "transparent 50%, rgba(20,40,100,0.4) 100%", blendMode: "hard-light" },
+    noir: { color: "rgba(0,0,0,0.1)", vignette: "transparent 50%, rgba(0,0,0,0.6) 100%", blendMode: "luminosity" },
+    horror: { color: "rgba(150,0,0,0.3)", vignette: "transparent 40%, rgba(0,0,0,0.7) 100%", blendMode: "multiply" },
+    flashback: { color: "rgba(200,200,200,0.2)", vignette: "transparent 60%, rgba(255,255,255,0.5) 100%", blendMode: "screen" },
+    dream: { color: "rgba(180,150,255,0.2)", vignette: "transparent 60%, rgba(255,200,255,0.4) 100%", blendMode: "screen" },
+    danger: { color: "rgba(255,0,0,0.1)", vignette: "transparent 50%, rgba(200,0,0,0.5) 100%", blendMode: "color-burn" },
+    none: { color: "transparent" },
+    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)", blendMode: "screen", defaultIntensity: 0.6 },
+    ambient: { color: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
+    warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
+  };
+  var moodModule = define2({
+    activeMoods: {}
+  });
+  moodModule.defineView((data, ctx) => {
+    const _moodObjs = {};
+    const _addMoodObj = (mood, intensity, duration, immediate = false) => {
+      if (mood === "none") {
+        for (const m of Object.keys(_moodObjs)) {
+          _removeMoodObj(m, duration, immediate);
+        }
+        return;
+      }
+      const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
+      const finalIntensity = intensity ?? defaultIntensity ?? 1;
+      const dur = immediate ? 0 : ctx.renderer.dur(duration);
+      const cam = ctx.renderer.world.camera;
+      const focalLength = cam?.attribute?.focalLength ?? 100;
+      const exactW = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, ctx.renderer.width) : ctx.renderer.width;
+      const exactH = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, ctx.renderer.height) : ctx.renderer.height;
+      const existing = _moodObjs[mood];
+      if (existing) {
+        ctx.renderer.animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+        return;
+      }
+      const rectOpts = {
+        style: {
+          color,
+          opacity: dur > 0 ? 0 : finalIntensity,
+          width: exactW,
+          height: exactH,
+          zIndex: Z_INDEX.MOOD,
+          pointerEvents: false,
+          blendMode
+        },
+        transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } }
+      };
+      if (vignette) {
+        rectOpts.style.gradient = vignette;
+        rectOpts.style.gradientType = "circular";
+      }
+      const rect = ctx.renderer.world.createRectangle(rectOpts);
+      ctx.renderer.track(rect);
+      ctx.renderer.world.camera?.addChild(rect);
+      rect._currentMood = mood;
+      _moodObjs[mood] = rect;
+      if (dur > 0) {
+        ctx.renderer.animate(rect, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
+      }
+    };
+    const _removeMoodObj = (mood, duration, immediate = false) => {
+      const obj = _moodObjs[mood];
+      if (obj) {
+        delete _moodObjs[mood];
+        const dur = immediate ? 0 : ctx.renderer.dur(duration);
+        if (dur > 0) {
+          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+            obj.remove();
+            ctx.renderer.untrack(obj);
+          });
+        } else {
+          obj.remove();
+          ctx.renderer.untrack(obj);
+        }
+      }
+    };
+    for (const [mood, intensity] of Object.entries(data.activeMoods)) {
+      _addMoodObj(mood, intensity, 800, true);
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+        for (const obj of Object.values(_moodObjs)) {
+          obj?.fadeOut?.(300, "easeIn");
+        }
+      },
+      // flicker용 오브젝트 접근
+      getObj: (mood) => _moodObjs[mood],
+      update: (d) => {
+        const newMoods = new Set(Object.keys(d.activeMoods));
+        for (const mood of Object.keys(_moodObjs)) {
+          if (!newMoods.has(mood)) {
+            _removeMoodObj(mood, 800);
+          }
+        }
+        for (const [mood, intensity] of Object.entries(d.activeMoods)) {
+          _addMoodObj(mood, intensity, 800);
+        }
+      }
+    };
+  });
+  moodModule.defineCommand((cmd, ctx, data) => {
+    const newMoods = { ...data.activeMoods };
+    if (cmd.action === "remove") {
+      delete newMoods[cmd.mood];
+    } else {
+      const addCmd = cmd;
+      if (addCmd.mood === "none") {
+        for (const k of Object.keys(newMoods)) delete newMoods[k];
+      } else {
+        const preset = MOOD_PRESETS[addCmd.mood];
+        newMoods[addCmd.mood] = addCmd.intensity ?? preset?.defaultIntensity ?? 1;
+      }
+      if (addCmd.flicker) {
+        const entry = ctx.ui.get("mood");
+        const obj = entry?.getObj?.(addCmd.mood);
+        if (obj) {
+          _setFlicker(ctx, obj, addCmd.mood, data.activeMoods[addCmd.mood] ?? 1, addCmd.flicker);
+        }
+      }
+    }
+    data.activeMoods = newMoods;
+    return true;
+  });
+  function _setFlicker(ctx, target, mood, baseOpacity, flickerPreset) {
+    target._flickerBaseOpacity = baseOpacity;
+    const configs = {
+      candle: { interval: 120, range: [0.6, 1] },
+      flicker: { interval: 80, range: [0.3, 1] },
+      strobe: { interval: 60, range: [0, 1] }
+    };
+    const cfg = configs[flickerPreset];
+    ctx.renderer.state.set("_flickerObj", target);
+    ctx.renderer.state.set("_flickerState", { mood, preset: flickerPreset });
+    const step = () => {
+      if (ctx.renderer.state.get("_flickerObj") !== target) {
+        ctx.renderer.animate(target, { style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
+        return;
+      }
+      const [min, max] = cfg.range;
+      const next = baseOpacity * (min + Math.random() * (max - min));
+      ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear", step);
+    };
+    step();
+  }
+  var mood_default = moodModule;
+
+  // src/cmds/effect.ts
+  var EFFECT_PARTICLE_PRESETS = {
+    dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
+    rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: "screen" } },
+    snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: "lighter" } },
+    sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
+    sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
+    fog: { attribute: { frictionAir: 0, gravityScale: 3e-3 }, style: { width: 120, height: 120, blendMode: "screen" } },
+    leaves: { attribute: { gravityScale: 0.1, frictionAir: 0.05, strictPhysics: true }, style: { width: 20, height: 20, opacity: 0.9 } },
+    fireflies: { attribute: { gravityScale: -0.02, frictionAir: 0.05, strictPhysics: true }, style: { width: 8, height: 8, opacity: 0.8, blendMode: "lighter" } }
+  };
+  var EFFECT_CLIP_PRESETS = {
+    dust: { impulse: 0.05, lifespan: 1e4, interval: 250, size: [[0.5, 1], [0, 0.5]], opacity: [[0, 0], [1, 1], [0, 0]], loop: true },
+    rain: { impulse: 0, lifespan: 3e3, interval: 40, size: [[0.1, 0.3], [0.1, 0.3]], opacity: [[1, 1], [1, 1]], loop: true },
+    snow: { impulse: 0.01, lifespan: 1e4, interval: 100, size: [[0.3, 0.8], [0, 0]], opacity: [[1, 1], [0, 0]], loop: true, angularImpulse: 1e-3 },
+    sakura: { impulse: 0.02, lifespan: 6e3, interval: 300, size: [[0.5, 0.8], [0.3, 0.5]], loop: true, angularImpulse: 1e-3 },
+    sparkle: { impulse: 0.02, lifespan: 1500, interval: 150, size: [[0.5, 1], [0, 0.1]], loop: true },
+    fog: { impulse: 0.01, lifespan: 15e3, interval: 800, size: [[2, 2], [5, 10]], opacity: [[0, 0], [0.1, 0.2], [0, 0]], loop: true, angularImpulse: 1e-4 },
+    leaves: { impulse: 0.08, lifespan: 7e3, interval: 350, size: [[0.8, 1.2], [0.8, 1.2]], loop: true, angularImpulse: 0.05 },
+    fireflies: { impulse: 0.03, lifespan: 5e3, interval: 300, size: [[0.5, 1.5], [0, 0.5]], loop: true }
+  };
+  var DEFAULT_EFFECT_RATES = {
+    dust: 5,
+    rain: 200,
+    snow: 8,
+    sakura: 8,
+    sparkle: 10,
+    fog: 4,
+    leaves: 5,
+    fireflies: 5
+  };
+  var effectModule = define2({
+    activeEffects: {}
+  });
+  effectModule.defineView((data, ctx) => {
+    const _effectObjs = {};
+    const _addEffect = (type, rate, srcKey, immediate = false) => {
+      const configEffect = ctx.renderer.config.effects?.[type];
+      const preset = {
+        attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
+        style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style }
+      };
+      const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
+      const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
+      const particleZ = ctx.renderer.depth / 2;
+      if (!ctx.renderer.world.particleManager.get(clipName)) {
+        const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip };
+        const cam = ctx.renderer.world.camera;
+        const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(particleZ, 1) : 1;
+        const maxPanX = ctx.renderer.width * 0.4;
+        const maxPanY = ctx.renderer.height * 0.5;
+        const spanW = (ctx.renderer.width + maxPanX * 2) * ratio;
+        const spanH = (ctx.renderer.height + maxPanY * 2) * ratio;
+        ctx.renderer.world.particleManager.create({
+          name: clipName,
+          src: srcKey ?? type,
+          ...clipBase,
+          rate: finalRate,
+          spawnX: spanW,
+          spawnY: spanH,
+          spawnZ: particleZ
+        });
+      }
+      if (_effectObjs[type]) return;
+      const particle = ctx.renderer.world.createParticle({
+        attribute: { ...preset.attribute, src: clipName },
+        style: { ...preset.style },
+        transform: { position: { x: 0, y: 0, z: particleZ } }
+      });
+      _effectObjs[type] = particle;
+      ctx.renderer.track(particle);
+      particle.play();
+    };
+    const _removeEffect = (type, duration, immediate = false) => {
+      const effect = _effectObjs[type];
+      if (effect) {
+        delete _effectObjs[type];
+        const dur = immediate ? 0 : ctx.renderer.dur(duration);
+        if (dur > 0) {
+          ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+            effect.remove();
+            ctx.renderer.untrack(effect);
+          });
+        } else {
+          effect.remove();
+          ctx.renderer.untrack(effect);
+        }
+      }
+    };
+    for (const [type, info] of Object.entries(data.activeEffects)) {
+      _addEffect(type, info.rate, info.srcKey, true);
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+        for (const obj of Object.values(_effectObjs)) {
+          obj?.fadeOut?.(300, "easeIn");
+        }
+      },
+      update: (d) => {
+        const newTypes = new Set(Object.keys(d.activeEffects));
+        for (const type of Object.keys(_effectObjs)) {
+          if (!newTypes.has(type)) _removeEffect(type, 600);
+        }
+        for (const [type, info] of Object.entries(d.activeEffects)) {
+          if (!_effectObjs[type]) {
+            _addEffect(type, info.rate, info.srcKey);
+          }
+        }
+      }
+    };
+  });
+  effectModule.defineCommand((rawCmd, ctx, data) => {
+    const cmd = rawCmd;
+    const newEffects = { ...data.activeEffects };
+    if (cmd.action === "add") {
+      newEffects[cmd.effect] = { rate: cmd.rate, srcKey: cmd.src };
+    } else {
+      delete newEffects[cmd.effect];
+    }
+    data.activeEffects = newEffects;
+    return true;
+  });
+  var effect_default = effectModule;
+
+  // src/cmds/overlay.ts
+  var OVERLAY_PRESETS = {
+    caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
+    title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
+    whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
+  };
+  var overlayModule = define2({
+    overlays: {}
+  });
+  overlayModule.defineView((data, ctx) => {
+    const _overlayObjs = {};
+    const _addOverlay = (preset, text, immediate = false) => {
+      const defaults = OVERLAY_PRESETS[preset];
+      if (!defaults) return;
+      if (_overlayObjs[preset]) {
+        _removeOverlay(preset, 0, true);
+      }
+      const yMap = {
+        top: ctx.renderer.height * 0.1,
+        center: ctx.renderer.height * 0.5,
+        bottom: ctx.renderer.height * 0.85
+      };
+      const cam = ctx.renderer.world.camera;
+      const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[defaults.y]) : { x: 0, y: 0, z: 100 };
+      const textObj = ctx.renderer.world.createText({
+        attribute: { text },
+        style: {
+          fontSize: defaults.fontSize,
+          color: defaults.color,
+          opacity: defaults.opacity,
+          zIndex: defaults.zIndex,
+          pointerEvents: false
+        },
+        transform: { position: pos }
+      });
+      ctx.renderer.world.camera?.addChild(textObj);
+      ctx.renderer.track(textObj);
+      _overlayObjs[preset] = textObj;
+    };
+    const _removeOverlay = (preset, duration, immediate = false) => {
+      const obj = _overlayObjs[preset];
+      if (obj) {
+        delete _overlayObjs[preset];
+        const dur = immediate ? 0 : ctx.renderer.dur(duration);
+        if (dur > 0) {
+          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+            obj.remove();
+            ctx.renderer.untrack(obj);
+          });
+        } else {
+          obj.remove();
+          ctx.renderer.untrack(obj);
+        }
+      }
+    };
+    for (const [preset, text] of Object.entries(data.overlays)) {
+      _addOverlay(preset, text, true);
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+        for (const obj of Object.values(_overlayObjs)) {
+          obj?.fadeOut?.(300, "easeIn");
+        }
+      },
+      update: (d) => {
+        const newPresets = new Set(Object.keys(d.overlays));
+        for (const preset of Object.keys(_overlayObjs)) {
+          if (!newPresets.has(preset)) _removeOverlay(preset, 600);
+        }
+        for (const [preset, text] of Object.entries(d.overlays)) {
+          if (!_overlayObjs[preset]) {
+            _addOverlay(preset, text);
+          }
+        }
+      }
+    };
+  });
+  overlayModule.defineCommand((cmd, ctx, data) => {
+    const newOverlays = { ...data.overlays };
+    if (cmd.action === "add") {
+      if (cmd.text) newOverlays[cmd.preset ?? "caption"] = cmd.text;
+    } else if (cmd.action === "remove") {
+      delete newOverlays[cmd.preset ?? "caption"];
+    } else if (cmd.action === "clear") {
+      for (const k of Object.keys(newOverlays)) delete newOverlays[k];
+    }
+    data.overlays = newOverlays;
+    return true;
+  });
+  var overlay_default = overlayModule;
+
+  // src/cmds/screen.ts
+  var FADE_PRESETS = {
+    black: { color: "rgba(0,0,0,1)", easing: "linear" },
+    white: { color: "rgba(255,255,255,1)", easing: "linear" },
+    red: { color: "rgba(200,0,0,1)", easing: "easeIn" },
+    dream: { color: "rgba(200,180,255,1)", easing: "easeInOut" },
+    sepia: { color: "rgba(150,100,50,1)", easing: "easeIn" }
+  };
+  var FLASH_PRESETS = {
+    white: { color: "rgba(255,255,255,1)", duration: 300 },
+    red: { color: "rgba(255,0,0,1)", duration: 300 },
+    yellow: { color: "rgba(255,220,0,1)", duration: 250 }
+  };
+  var WIPE_PRESETS = {
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+    up: { x: 0, y: 1 },
+    down: { x: 0, y: -1 }
+  };
+  function getTransitionRect(ctx, color) {
+    let rect = ctx.renderer.state.get("_transitionObj");
+    if (!rect) {
+      const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
+      const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
+      rect = ctx.renderer.world.createRectangle({
+        style: {
+          color,
+          width: w * 2,
+          height: h * 2,
+          opacity: 0,
+          zIndex: Z_INDEX.TRANSITION,
+          pointerEvents: false
+        },
+        transform: { position: { x: 0, y: 0, z: 10 } }
+      });
+      ctx.renderer.world.camera?.addChild(rect);
+      ctx.renderer.track(rect);
+      ctx.renderer.state.set("_transitionObj", rect);
+    } else {
+      rect.style.color = color;
+      rect.transform.position.x = 0;
+      rect.transform.position.y = 0;
+    }
+    return rect;
+  }
+  var screenFadeModule = define2({ lastPreset: "black" });
+  screenFadeModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    }
+  }));
+  screenFadeModule.defineCommand((cmd, ctx, data) => {
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
+    data.lastPreset = resolvedPreset;
+    const cfg = FADE_PRESETS[resolvedPreset];
+    if (!cfg) return true;
+    const rect = getTransitionRect(ctx, cfg.color);
+    const startOpacity = cmd.dir === "in" ? 1 : 0;
+    const endOpacity = cmd.dir === "in" ? 0 : 1;
+    rect.style.opacity = startOpacity;
+    ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, cmd.duration ?? 600, cfg.easing);
+    return true;
+  });
+  var screenFlashModule = define2({ lastPreset: "white" });
+  screenFlashModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    }
+  }));
+  screenFlashModule.defineCommand((cmd, ctx, data) => {
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
+    data.lastPreset = resolvedPreset;
+    const cfg = FLASH_PRESETS[resolvedPreset];
+    if (!cfg) return true;
+    const rect = getTransitionRect(ctx, cfg.color);
+    const flashDuration = cmd.duration ?? cfg.duration;
+    const repeat = cmd.repeat ?? 1;
+    let count = 0;
+    const doFlash = () => {
+      if (repeat >= 0 && count >= repeat) return;
+      count++;
+      rect.style.opacity = 1;
+      const anim = ctx.renderer.animate(rect, { style: { opacity: 0 } }, flashDuration, "easeOut");
+      if (anim) anim.on("end", doFlash);
+    };
+    doFlash();
+    return true;
+  });
+  var screenWipeModule = define2({ lastPreset: "left", lastFadePreset: "black" });
+  screenWipeModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    }
+  }));
+  screenWipeModule.defineCommand((cmd, ctx, data) => {
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
+    data.lastPreset = resolvedPreset;
+    const cfg = WIPE_PRESETS[resolvedPreset];
+    if (!cfg) return true;
+    const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
+    const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
+    const dx = cfg.x * w * 2;
+    const dy = cfg.y * h * 2;
+    const fadeState = ctx.cmdState.get("screen-fade");
+    const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset;
+    const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
+    const rect = getTransitionRect(ctx, color);
+    rect.style.opacity = 1;
+    if (cmd.dir === "out") {
+      rect.transform.position.x = dx;
+      rect.transform.position.y = dy;
+      ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, cmd.duration ?? 800, "easeInOutQuad");
+    } else {
+      rect.transform.position.x = 0;
+      rect.transform.position.y = 0;
+      ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, cmd.duration ?? 800, "easeInOutQuad");
+    }
+    return true;
+  });
+
+  // src/cmds/condition.ts
+  var conditionModule = define2({});
+  conditionModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  conditionModule.defineCommand((cmd, ctx) => {
+    const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
+    if (result) {
+      if (cmd.goto) {
+        ctx.scene.jumpToLabel(cmd.goto);
+        return "handled";
+      } else if (cmd.next) {
+        ctx.scene.end();
+        ctx.scene.loadScene(cmd.next);
+        return "handled";
+      } else {
+        return true;
+      }
+    } else {
+      if (cmd.else) {
+        if (ctx.scene.hasLabel(cmd.else)) {
+          ctx.scene.jumpToLabel(cmd.else);
+        } else {
+          ctx.scene.end();
+          ctx.scene.loadScene(cmd.else);
+        }
+        return "handled";
+      } else if (cmd["else-next"]) {
+        ctx.scene.end();
+        ctx.scene.loadScene(cmd["else-next"]);
+        return "handled";
+      } else {
+        return true;
+      }
+    }
+  });
+  var condition_default = conditionModule;
+
+  // src/cmds/var.ts
+  var varModule = define2({});
+  varModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  varModule.defineCommand((cmd, ctx) => {
+    const nameStr = cmd.name;
+    const val = cmd.value;
+    if (nameStr.startsWith("_")) {
+      ctx.scene.setLocalVar(nameStr, val);
+    } else {
+      ctx.scene.setGlobalVar(nameStr, val);
+    }
+    return true;
+  });
+  var var_default = varModule;
+
+  // src/cmds/label.ts
+  var labelModule = define2({});
+  labelModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  labelModule.defineCommand((_cmd, _ctx) => {
+    return true;
+  });
+  var label_default = labelModule;
+
+  // src/cmds/ui.ts
+  var uiModule = define2({});
+  uiModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  uiModule.defineCommand((cmd, ctx) => {
+    if (cmd.action === "show") {
+      ctx.ui.show(cmd.name, cmd.duration);
+    } else {
+      ctx.ui.hide(cmd.name, cmd.duration);
+    }
+    return true;
+  });
+  var ui_default = uiModule;
+
+  // src/cmds/control.ts
+  var controlModule = define2({ expireAt: 0 });
+  controlModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  controlModule.defineCommand((cmd, ctx, data) => {
+    if (cmd.action === "disable" && typeof cmd.duration === "number") {
+      const expireAt = data.expireAt > Date.now() ? data.expireAt : Date.now() + cmd.duration;
+      if (data.expireAt <= Date.now()) {
+        data.expireAt = expireAt;
+        ctx.callbacks.disableInput(cmd.duration);
+      }
+      if (Date.now() >= expireAt) {
+        data.expireAt = 0;
+        return true;
+      }
+      return false;
+    }
+    return true;
+  });
+  var control_default = controlModule;
 
   // node_modules/leviar/dist/index.js
   var __create = Object.create;
@@ -13186,1321 +14568,28 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
-  // src/cmds/dialogue.ts
-  var DEFAULT_BG = {
-    color: "rgba(0,0,0,0.82)"
-  };
-  var DEFAULT_SPEAKER = {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#ffe066",
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    textAlign: "left"
-  };
-  var DEFAULT_TEXT = {
-    fontSize: 20,
-    color: "#ffffff",
-    lineHeight: 1.6,
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    textAlign: "left",
-    textShadowBlur: 1,
-    textShadowColor: "#000000",
-    textShadowOffsetX: 1,
-    textShadowOffsetY: 1
-  };
-  function resolveSpeaker(speakerKey, charDefs) {
-    if (!speakerKey) return void 0;
-    return charDefs?.[speakerKey]?.name ?? speakerKey;
-  }
-  var { defineCmd: defineCmd2, defineUI } = define2({
-    bg: void 0,
-    speaker: void 0,
-    text: void 0,
-    subIndex: 0,
-    lines: [],
-    speakerKey: void 0,
-    speed: void 0
-  });
-  var dialogueUISetup = defineUI((data, ctx) => {
-    const cam = ctx.world.camera;
-    const w = ctx.renderer.width;
-    const h = ctx.renderer.height;
-    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {} };
-    const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
-    const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
-    const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
-    const BOX_CY = h - BOX_H / 2;
-    const bgObj = ctx.world.createRectangle({
-      style: {
-        ...bgCfg,
-        width: bgCfg.width ?? w,
-        height: BOX_H,
-        zIndex: bgCfg.zIndex ?? 300,
-        opacity: 1,
-        display: "none",
-        pointerEvents: false
-      },
-      transform: { position: toLocal(w / 2, BOX_CY) }
-    });
-    ctx.world.camera?.addChild(bgObj);
-    ctx.renderer.track(bgObj);
-    const spkY = h - BOX_H + 24;
-    const speakerObj = ctx.world.createText({
-      attribute: { text: "" },
-      style: {
-        ...spkCfg,
-        width: w * 0.9,
-        zIndex: spkCfg.zIndex ?? 301,
-        opacity: 1,
-        display: "none",
-        pointerEvents: false
-      },
-      transform: { position: toLocal(w / 2, spkY) }
-    });
-    ctx.world.camera?.addChild(speakerObj);
-    ctx.renderer.track(speakerObj);
-    const spkH = (spkCfg.fontSize ?? 18) * 1.5;
-    const textObj = ctx.world.createText({
-      attribute: { text: "" },
-      style: {
-        ...txtCfg,
-        width: txtCfg.width ?? w * 0.9,
-        zIndex: txtCfg.zIndex ?? 301,
-        opacity: 1,
-        display: "none",
-        pointerEvents: false
-      },
-      transform: { position: toLocal(w / 2, spkY + spkH + 8) }
-    });
-    ctx.world.camera?.addChild(textObj);
-    ctx.renderer.track(textObj);
-    const charDefs = ctx.renderer.config.characters;
-    let _isTyping = false;
-    let _fullText = "";
-    let _activeTx = null;
-    let _prevLines = null;
-    const _renderText = (speaker, text, speed, immediate = false) => {
-      bgObj.fadeIn(200, "easeOut");
-      speakerObj.attribute.text = speaker ?? "";
-      speakerObj.fadeIn(200, "easeOut");
-      if (immediate || speed === 0) {
-        _isTyping = false;
-        _fullText = text;
-        _activeTx?.stop?.();
-        _activeTx = null;
-        textObj.attribute.text = text;
-        textObj.fadeIn(200, "easeOut");
-      } else {
-        const spd = speed ?? 30;
-        _isTyping = true;
-        _fullText = text;
-        if (_activeTx) {
-          _activeTx.stop?.();
-          _activeTx = null;
-        }
-        const anim = textObj.transition(text, spd);
-        _activeTx = anim;
-        textObj.fadeIn(200, "easeOut");
-        if (anim && typeof anim.on === "function") {
-          anim.on("end", () => {
-            _isTyping = false;
-            _activeTx = null;
-          });
-        }
-      }
-    };
-    if (data.lines?.length) {
-      _prevLines = data.lines;
-      const txt = data.lines[data.subIndex ?? 0];
-      const spkName = resolveSpeaker(data.speakerKey, charDefs);
-      _renderText(spkName, txt, void 0, true);
-    }
-    return {
-      show: (dur = 250) => {
-        bgObj.fadeIn(dur, "easeOut");
-      },
-      hide: (dur = 300) => {
-        bgObj.fadeOut(dur, "easeIn");
-        speakerObj.fadeOut(dur, "easeIn");
-        textObj.fadeOut(dur, "easeIn");
-      },
-      isTyping: () => _isTyping,
-      completeTyping: () => {
-        if (!_isTyping) return;
-        _isTyping = false;
-        _activeTx?.stop?.();
-        _activeTx = null;
-        textObj.attribute.text = _fullText;
-        textObj.style.opacity = 1;
-      },
-      /**
-       * data가 변경될 때 Proxy가 자동으로 호출합니다.
-       * - lines가 바뀐 경우: 텍스트 재렌더
-       * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
-       */
-      update: (d) => {
-        const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {} };
-        const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
-        const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
-        Object.assign(bgObj.style, newBgCfg);
-        Object.assign(speakerObj.style, newSpkCfg);
-        Object.assign(textObj.style, newTxtCfg);
-        if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
-          _prevLines = d.lines;
-          const txt = d.lines[d.subIndex ?? 0];
-          const spkName = resolveSpeaker(d.speakerKey, charDefs);
-          _renderText(spkName, txt, d.speed);
-        }
-      }
-    };
-  });
-  var dialogueHandler = defineCmd2((cmd, ctx, data) => {
-    const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
-    const lines = textArray.map((t) => ctx.scene.interpolateText(t));
-    const index = ctx.scene.getTextSubIndex();
-    const ui = ctx.ui.get("dialogue");
-    if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
-      ui.completeTyping();
-      return false;
-    }
-    if (index >= lines.length) {
-      return true;
-    }
-    data.speed = cmd.speed;
-    data.speakerKey = cmd.speaker;
-    data.subIndex = index;
-    data.lines = [...lines];
-    ctx.cmdState.set("dialogue", { ...data });
-    ctx.scene.setTextSubIndex(index + 1);
-    return false;
-  });
-
-  // src/cmds/choice.ts
-  var DEFAULT_CHOICE = {
-    fontSize: 18,
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    color: "#fff",
-    background: "rgba(30,30,60,0.85)",
-    borderColor: "rgba(255,255,255,0.3)",
-    hoverBackground: "rgba(80,80,180,0.9)",
-    hoverBorderColor: "rgba(255,255,255,0.7)",
-    borderRadius: 8,
-    minWidth: 260
-  };
-  var { defineCmd: defineCmd3, defineUI: defineUI2 } = define2({
-    fontSize: void 0,
-    fontFamily: void 0,
-    color: void 0,
-    background: void 0,
-    borderColor: void 0,
-    hoverBackground: void 0,
-    hoverBorderColor: void 0,
-    borderRadius: void 0,
-    minWidth: void 0
-  });
-  var choiceUISetup = defineUI2(
-    (data, ctx) => {
-      const cfg = { ...DEFAULT_CHOICE, ...data };
-      const cam = ctx.world.camera;
-      const w = ctx.renderer.width;
-      const h = ctx.renderer.height;
-      const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-      const bgObj = ctx.world.createRectangle({
-        style: {
-          color: "rgba(0,0,0,0.6)",
-          width: w,
-          height: h,
-          zIndex: 500,
-          // 다른 UI보다 높게
-          opacity: 0,
-          pointerEvents: true
-          // 뒤쪽 이벤트 차단
-        },
-        transform: { position: toLocal(w / 2, h / 2) }
-      });
-      ctx.world.camera?.addChild(bgObj);
-      ctx.renderer.track(bgObj);
-      let _btnObjs = [];
-      const _clearButtons = () => {
-        _btnObjs.forEach((obj) => {
-          obj.remove({ child: true });
-        });
-        _btnObjs = [];
-      };
-      return {
-        show: () => {
-          bgObj.fadeIn(200, "easeOut");
-        },
-        hide: () => {
-          bgObj.fadeOut(200, "easeIn");
-          _clearButtons();
-        },
-        onChoices: (choices, onSelect) => {
-          bgObj.fadeIn(200, "easeOut");
-          _clearButtons();
-          const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize;
-          const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth;
-          const gap = 12;
-          const paddingY = 12;
-          const btnH = fSize * 1.5 + paddingY * 2;
-          const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap;
-          const startY = h / 2 - totalHeight / 2 + btnH / 2;
-          choices.forEach((choice, i) => {
-            const cy = startY + i * (btnH + gap);
-            const textStr = String(choice.text);
-            const estimatedTextW = textStr.length * fSize * 0.8;
-            const btnW = Math.max(mWidth, estimatedTextW + 64);
-            const btnObj = ctx.world.createRectangle({
-              style: {
-                color: cfg.background ?? DEFAULT_CHOICE.background,
-                borderColor: cfg.borderColor ?? DEFAULT_CHOICE.borderColor,
-                borderWidth: 1.5,
-                borderRadius: cfg.borderRadius ?? DEFAULT_CHOICE.borderRadius,
-                width: btnW,
-                height: btnH,
-                zIndex: 501,
-                pointerEvents: true,
-                opacity: 1
-              },
-              transform: { position: toLocal(w / 2, cy) }
-            });
-            const txtObj = ctx.world.createText({
-              attribute: { text: textStr },
-              style: {
-                fontSize: fSize,
-                fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
-                color: cfg.color ?? DEFAULT_CHOICE.color,
-                textAlign: "center",
-                zIndex: 502,
-                pointerEvents: false
-              },
-              // 버튼을 부모로 가질 것이므로 버튼 중심 기준 (0,0)
-              transform: { position: { x: 0, y: 0, z: 0 } }
-            });
-            btnObj.on("mouseover", () => {
-              btnObj.animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150);
-            });
-            btnObj.on("mouseout", () => {
-              btnObj.animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150);
-            });
-            btnObj.on("click", () => {
-              onSelect(i);
-            });
-            btnObj.addChild(txtObj);
-            ctx.world.camera?.addChild(btnObj);
-            ctx.renderer.track(btnObj);
-            ctx.renderer.track(txtObj);
-            _btnObjs.push(btnObj);
-          });
-        },
-        update: (d) => {
-          Object.assign(cfg, DEFAULT_CHOICE, d);
-        }
-      };
-    }
-  );
-  var choiceHandler = defineCmd3((cmd, ctx, _data) => {
-    const entry = ctx.ui.get("choices");
-    if (!entry) {
-      console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts and initial settings.");
-    }
-    ctx.ui.get("dialogue")?.hide?.();
-    const resolvedChoices = cmd.choices.map((c) => {
-      const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
-      return { ...c, text: ctx.scene.interpolateText(textStr) };
-    });
-    console.log("[leviar-novel] choiceHandler: opening choices", resolvedChoices);
-    entry?.onChoices?.(resolvedChoices, (i) => {
-      const selected = cmd.choices[i];
-      if (!selected) return;
-      if (selected.var) {
-        for (const [key, value] of Object.entries(selected.var)) {
-          ctx.scene.setGlobalVar(key, value);
-        }
-      }
-      entry.hide?.();
-      if (selected.next) {
-        ctx.scene.loadScene(selected.next);
-      } else if (selected.goto) {
-        ctx.scene.jumpToLabel(selected.goto);
-      } else {
-        ctx.scene.end();
-      }
-    });
-    return "handled";
-  });
-
-  // src/cmds/condition.ts
-  var conditionHandler = defineCmd((cmd, ctx) => {
-    const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
-    if (result) {
-      if (cmd.goto) {
-        ctx.scene.jumpToLabel(cmd.goto);
-        return "handled";
-      } else if (cmd.next) {
-        ctx.scene.end();
-        ctx.scene.loadScene(cmd.next);
-        return "handled";
-      } else {
-        return true;
-      }
-    } else {
-      if (cmd.else) {
-        if (ctx.scene.hasLabel(cmd.else)) {
-          ctx.scene.jumpToLabel(cmd.else);
-        } else {
-          ctx.scene.end();
-          ctx.scene.loadScene(cmd.else);
-        }
-        return "handled";
-      } else if (cmd["else-next"]) {
-        ctx.scene.end();
-        ctx.scene.loadScene(cmd["else-next"]);
-        return "handled";
-      } else {
-        return true;
-      }
-    }
-  });
-
-  // src/cmds/var.ts
-  var varHandler = defineCmd((cmd, ctx) => {
-    const nameStr = cmd.name;
-    const val = cmd.value;
-    if (nameStr.startsWith("_")) {
-      ctx.scene.setLocalVar(nameStr, val);
-    } else {
-      ctx.scene.setGlobalVar(nameStr, val);
-    }
-    return true;
-  });
-
-  // src/cmds/label.ts
-  var labelHandler = defineCmd((_cmd, _ctx) => {
-    return true;
-  });
-
-  // src/constants/render.ts
-  var Z_INDEX = {
-    BACKGROUND: -1,
-    CHARACTER_NORMAL: 10,
-    CHARACTER_HIGHLIGHT: 100,
-    MOOD: 100,
-    LIGHT: 200,
-    UI_BASE: 300,
-    OVERLAY_WHISPER: 400,
-    OVERLAY_CAPTION: 410,
-    OVERLAY_TITLE: 420,
-    CHARACTER_CUTIN: 500,
-    TRANSITION: 999
-  };
-
-  // src/cmds/background.ts
-  function getBgObjs(ctx) {
-    let objs = ctx.renderer.state.get("_bgObjs");
-    if (!objs) {
-      objs = {};
-      ctx.renderer.state.set("_bgObjs", objs);
-    }
-    return objs;
-  }
-  function setBackground(ctx, name, fit, duration = 1e3, isVideo = false) {
-    const bgDefs = ctx.renderer.config.backgrounds;
-    const def = bgDefs[name];
-    if (!def) return;
-    const src = def.src ?? name;
-    const useParallax = def.parallax ?? true;
-    const dur = ctx.renderer.dur(duration);
-    ctx.renderer.state.set("backgroundKey", name);
-    ctx.cmdState.set("background", { key: name, fit: fit === "inherit" ? "cover" : fit });
-    const objs = getBgObjs(ctx);
-    const existing = objs["main"];
-    if (existing) {
-      const existingParallax = ctx.renderer.state.get("_bgParallax") ?? true;
-      if (existingParallax === useParallax) {
-        if (dur > 0 && typeof existing.transition === "function") {
-          existing.transition(src, dur);
-        } else {
-          if (existing.attribute) existing.attribute.src = src;
-        }
-        return;
-      }
-      existing.remove();
-      ctx.renderer.untrack(existing);
-      delete objs["main"];
-    }
-    ctx.renderer.state.set("_bgParallax", useParallax);
-    const cam = ctx.renderer.world.camera;
-    const zPos = ctx.renderer.depth;
-    const baseW = ctx.renderer.width;
-    const baseH = ctx.renderer.height;
-    const maxPanX = baseW * 0.4;
-    const maxPanY = baseH * 0.5;
-    const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
-    const exactW = baseW + maxPanX * 2;
-    const exactH = baseH + maxPanY * 2;
-    const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world);
-    const obj = createFn({
-      attribute: { src },
-      style: {
-        width: exactW,
-        height: exactH,
-        zIndex: Z_INDEX.BACKGROUND,
-        opacity: dur > 0 ? 0 : 1,
-        pointerEvents: false
-      },
-      transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } }
-    });
-    if (!useParallax) {
-      ctx.renderer.world.camera?.addChild(obj);
-    }
-    ctx.renderer.track(obj);
-    objs["main"] = obj;
-    if (dur > 0) {
-      ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
-    }
-  }
-  var backgroundHandler = defineCmd((cmd, ctx) => {
-    setBackground(
-      ctx,
-      cmd.name,
-      cmd.fit ?? "inherit",
-      cmd.duration ?? 1e3,
-      cmd.isVideo ?? false
-    );
-    return true;
-  });
-
-  // src/cmds/mood.ts
-  var MOOD_PRESETS = {
-    day: { color: "rgba(255,230,180,0.1)", vignette: "transparent 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
-    night: { color: "rgba(10,15,60,0.5)", vignette: "transparent 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
-    dawn: { color: "rgba(25,35,70,0.4)", vignette: "transparent 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
-    sunset: { color: "rgba(255,120,50,0.25)", vignette: "transparent 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
-    foggy: { color: "rgba(200,210,220,0.4)", vignette: "rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%", blendMode: "screen" },
-    sepia: { color: "rgba(160,110,50,0.3)", vignette: "transparent 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
-    cold: { color: "rgba(80,130,220,0.25)", vignette: "transparent 50%, rgba(20,40,100,0.4) 100%", blendMode: "hard-light" },
-    noir: { color: "rgba(0,0,0,0.1)", vignette: "transparent 50%, rgba(0,0,0,0.6) 100%", blendMode: "luminosity" },
-    horror: { color: "rgba(150,0,0,0.3)", vignette: "transparent 40%, rgba(0,0,0,0.7) 100%", blendMode: "multiply" },
-    flashback: { color: "rgba(200,200,200,0.2)", vignette: "transparent 60%, rgba(255,255,255,0.5) 100%", blendMode: "screen" },
-    dream: { color: "rgba(180,150,255,0.2)", vignette: "transparent 60%, rgba(255,200,255,0.4) 100%", blendMode: "screen" },
-    danger: { color: "rgba(255,0,0,0.1)", vignette: "transparent 50%, rgba(200,0,0,0.5) 100%", blendMode: "color-burn" },
-    none: { color: "transparent" },
-    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)", blendMode: "screen", defaultIntensity: 0.6 },
-    ambient: { color: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
-    warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
-  };
-  function getMoodObjs(ctx) {
-    let objs = ctx.renderer.state.get("_moodObjs");
-    if (!objs) {
-      objs = {};
-      ctx.renderer.state.set("_moodObjs", objs);
-    }
-    return objs;
-  }
-  function getActiveMoods(ctx) {
-    let moods = ctx.renderer.state.get("activeMoods");
-    if (!moods) {
-      moods = {};
-      ctx.renderer.state.set("activeMoods", moods);
-    }
-    return moods;
-  }
-  function addMood(ctx, mood, intensity, duration = 800) {
-    if (mood === "none") {
-      clearMoods(ctx, duration);
-      return;
-    }
-    const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
-    const finalIntensity = intensity ?? defaultIntensity ?? 1;
-    const dur = ctx.renderer.dur(duration);
-    const objs = getMoodObjs(ctx);
-    const activeMoods = getActiveMoods(ctx);
-    const existing = objs[mood];
-    if (existing) {
-      const flickerState = ctx.renderer.state.get("_flickerState");
-      if (flickerState && flickerState.mood === mood) {
-        existing._flickerBaseOpacity = finalIntensity;
-      } else {
-        ctx.renderer.animate(existing, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
-      }
-      activeMoods[mood] = finalIntensity;
-      ctx.cmdState.set("mood", { ...activeMoods });
-      return;
-    }
-    const cam = ctx.renderer.world.camera;
-    const focalLength = cam?.attribute?.focalLength ?? 100;
-    const exactW = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, ctx.renderer.width) : ctx.renderer.width;
-    const exactH = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(focalLength, ctx.renderer.height) : ctx.renderer.height;
-    const rectOpts = {
-      style: {
-        color,
-        opacity: dur > 0 ? 0 : finalIntensity,
-        width: exactW,
-        height: exactH,
-        zIndex: Z_INDEX.MOOD,
-        pointerEvents: false,
-        blendMode
-      },
-      transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } }
-    };
-    if (vignette) {
-      rectOpts.style.gradient = vignette;
-      rectOpts.style.gradientType = "circular";
-    }
-    const rect = ctx.renderer.world.createRectangle(rectOpts);
-    ctx.renderer.track(rect);
-    ctx.renderer.world.camera?.addChild(rect);
-    rect._currentMood = mood;
-    objs[mood] = rect;
-    activeMoods[mood] = finalIntensity;
-    ctx.cmdState.set("mood", { ...activeMoods });
-    if (dur > 0) {
-      ctx.renderer.animate(rect, { style: { opacity: finalIntensity } }, dur, "easeInOutQuad");
-    }
-  }
-  function removeMood(ctx, mood, duration = 800) {
-    const objs = getMoodObjs(ctx);
-    const activeMoods = getActiveMoods(ctx);
-    const obj = objs[mood];
-    delete activeMoods[mood];
-    ctx.cmdState.set("mood", { ...activeMoods });
-    if (obj) {
-      delete objs[mood];
-      const dur = ctx.renderer.dur(duration);
-      if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove();
-          ctx.renderer.untrack(obj);
-        });
-      } else {
-        obj.remove();
-        ctx.renderer.untrack(obj);
-      }
-    }
-  }
-  function clearMoods(ctx, duration = 800) {
-    const objs = getMoodObjs(ctx);
-    Object.keys(objs).forEach((m) => removeMood(ctx, m, duration));
-  }
-  function setFlicker(ctx, mood, flickerPreset = "candle") {
-    const objs = getMoodObjs(ctx);
-    const activeMoods = getActiveMoods(ctx);
-    const target = objs[mood];
-    if (!target) return;
-    const finalIntensity = activeMoods[mood] ?? 1;
-    const baseOpacity = finalIntensity;
-    target._flickerBaseOpacity = baseOpacity;
-    const configs = {
-      candle: { interval: 120, range: [0.6, 1] },
-      flicker: { interval: 80, range: [0.3, 1] },
-      strobe: { interval: 60, range: [0, 1] }
-    };
-    const cfg = configs[flickerPreset];
-    ctx.renderer.state.set("_flickerObj", target);
-    ctx.renderer.state.set("_flickerState", { mood, preset: flickerPreset });
-    const step = () => {
-      if (ctx.renderer.state.get("_flickerObj") !== target) {
-        ctx.renderer.animate(target, { style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
-        return;
-      }
-      const [min, max] = cfg.range;
-      const next = baseOpacity * (min + Math.random() * (max - min));
-      ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear", step);
-    };
-    step();
-  }
-  var moodHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "remove") {
-      removeMood(ctx, cmd.mood, cmd.duration);
-    } else {
-      const addCmd = cmd;
-      addMood(ctx, addCmd.mood, addCmd.intensity, addCmd.duration ?? 800);
-      if (addCmd.flicker) {
-        setFlicker(ctx, addCmd.mood, addCmd.flicker);
-      }
-    }
-    return true;
-  });
-
-  // src/cmds/effect.ts
-  var EFFECT_PARTICLE_PRESETS = {
-    dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
-    rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: "screen" } },
-    snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: "lighter" } },
-    sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
-    sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
-    fog: { attribute: { frictionAir: 0, gravityScale: 3e-3 }, style: { width: 120, height: 120, blendMode: "screen" } },
-    leaves: { attribute: { gravityScale: 0.1, frictionAir: 0.05, strictPhysics: true }, style: { width: 20, height: 20, opacity: 0.9 } },
-    fireflies: { attribute: { gravityScale: -0.02, frictionAir: 0.05, strictPhysics: true }, style: { width: 8, height: 8, opacity: 0.8, blendMode: "lighter" } }
-  };
-  var EFFECT_CLIP_PRESETS = {
-    dust: { impulse: 0.05, lifespan: 1e4, interval: 250, size: [[0.5, 1], [0, 0.5]], opacity: [[0, 0], [1, 1], [0, 0]], loop: true },
-    rain: { impulse: 0, lifespan: 3e3, interval: 40, size: [[0.1, 0.3], [0.1, 0.3]], opacity: [[1, 1], [1, 1]], loop: true },
-    snow: { impulse: 0.01, lifespan: 1e4, interval: 100, size: [[0.3, 0.8], [0, 0]], opacity: [[1, 1], [0, 0]], loop: true, angularImpulse: 1e-3 },
-    sakura: { impulse: 0.02, lifespan: 6e3, interval: 300, size: [[0.5, 0.8], [0.3, 0.5]], loop: true, angularImpulse: 1e-3 },
-    sparkle: { impulse: 0.02, lifespan: 1500, interval: 150, size: [[0.5, 1], [0, 0.1]], loop: true },
-    fog: { impulse: 0.01, lifespan: 15e3, interval: 800, size: [[2, 2], [5, 10]], opacity: [[0, 0], [0.1, 0.2], [0, 0]], loop: true, angularImpulse: 1e-4 },
-    leaves: { impulse: 0.08, lifespan: 7e3, interval: 350, size: [[0.8, 1.2], [0.8, 1.2]], loop: true, angularImpulse: 0.05 },
-    fireflies: { impulse: 0.03, lifespan: 5e3, interval: 300, size: [[0.5, 1.5], [0, 0.5]], loop: true }
-  };
-  var DEFAULT_EFFECT_RATES = {
-    dust: 5,
-    rain: 200,
-    snow: 8,
-    sakura: 8,
-    sparkle: 10,
-    fog: 4,
-    leaves: 5,
-    fireflies: 5
-  };
-  function getEffectObjs(ctx) {
-    let objs = ctx.renderer.state.get("_effectObjs");
-    if (!objs) {
-      objs = {};
-      ctx.renderer.state.set("_effectObjs", objs);
-    }
-    return objs;
-  }
-  function getActiveEffects(ctx) {
-    let states = ctx.renderer.state.get("activeEffects");
-    if (!states) {
-      states = {};
-      ctx.renderer.state.set("activeEffects", states);
-    }
-    return states;
-  }
-  function addEffect(ctx, type = "dust", rate, overrides, srcKey) {
-    const configEffect = ctx.renderer.config.effects?.[type];
-    const preset = {
-      attribute: { ...EFFECT_PARTICLE_PRESETS[type]?.attribute, ...configEffect?.particle?.attribute },
-      style: { ...EFFECT_PARTICLE_PRESETS[type]?.style, ...configEffect?.particle?.style }
-    };
-    const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
-    const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
-    const particleZ = ctx.renderer.depth / 2;
-    if (!ctx.renderer.world.particleManager.get(clipName)) {
-      const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip };
-      const cam = ctx.renderer.world.camera;
-      const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(particleZ, 1) : 1;
-      const maxPanX = ctx.renderer.width * 0.4;
-      const maxPanY = ctx.renderer.height * 0.5;
-      const spanW = (ctx.renderer.width + maxPanX * 2) * ratio;
-      const spanH = (ctx.renderer.height + maxPanY * 2) * ratio;
-      ctx.renderer.world.particleManager.create({
-        name: clipName,
-        src: srcKey ?? type,
-        ...clipBase,
-        rate: finalRate,
-        spawnX: spanW,
-        spawnY: spanH,
-        spawnZ: particleZ
-      });
-    }
-    const objs = getEffectObjs(ctx);
-    const activeEffects = getActiveEffects(ctx);
-    const existing = objs[type];
-    if (existing) {
-      if (rate !== void 0 || srcKey !== void 0) {
-        existing.attribute.src = clipName;
-      }
-      if (overrides?.style) {
-        Object.assign(existing.style, overrides.style);
-      }
-      return;
-    }
-    activeEffects[type] = { rate, overrides, srcKey };
-    ctx.cmdState.set("effect", { ...activeEffects });
-    const particle = ctx.renderer.world.createParticle({
-      attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
-      style: { ...preset.style, ...overrides?.style },
-      transform: { position: { x: 0, y: 0, z: particleZ }, ...overrides?.transform }
-    });
-    objs[type] = particle;
-    ctx.renderer.track(particle);
-    particle.play();
-  }
-  function removeEffect(ctx, type, duration = 600) {
-    const objs = getEffectObjs(ctx);
-    const activeEffects = getActiveEffects(ctx);
-    const effect = objs[type];
-    delete activeEffects[type];
-    ctx.cmdState.set("effect", { ...activeEffects });
-    if (effect) {
-      delete objs[type];
-      const dur = ctx.renderer.dur(duration);
-      if (dur > 0) {
-        ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          effect.remove();
-          ctx.renderer.untrack(effect);
-        });
-      } else {
-        effect.remove();
-        ctx.renderer.untrack(effect);
-      }
-    }
-  }
-  var effectHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "add") {
-      const addCmd = cmd;
-      addEffect(ctx, addCmd.effect, addCmd.rate, void 0, addCmd.src);
-    } else {
-      const rmCmd = cmd;
-      removeEffect(ctx, rmCmd.effect, rmCmd.duration);
-    }
-    return true;
-  });
-
-  // src/cmds/overlay.ts
-  var OVERLAY_PRESETS = {
-    caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
-    title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
-    whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
-  };
-  function getOverlayObjs(ctx) {
-    let objs = ctx.renderer.state.get("_overlayObjs");
-    if (!objs) {
-      objs = {};
-      ctx.renderer.state.set("_overlayObjs", objs);
-    }
-    return objs;
-  }
-  function getOverlayTexts(ctx) {
-    let texts = ctx.renderer.state.get("overlayTexts");
-    if (!texts) {
-      texts = {};
-      ctx.renderer.state.set("overlayTexts", texts);
-    }
-    return texts;
-  }
-  function addOverlay(ctx, text, preset = "caption") {
-    const defaults = OVERLAY_PRESETS[preset];
-    const p = {
-      fontSize: defaults.fontSize,
-      color: defaults.color,
-      opacity: defaults.opacity,
-      zIndex: defaults.zIndex,
-      y: defaults.y,
-      fontWeight: void 0,
-      fontFamily: void 0,
-      lineHeight: void 0
-    };
-    const objs = getOverlayObjs(ctx);
-    if (objs[preset]) removeOverlay(ctx, preset, 0);
-    const yMap = {
-      top: ctx.renderer.height * 0.1,
-      center: ctx.renderer.height * 0.5,
-      bottom: ctx.renderer.height * 0.85
-    };
-    const cam = ctx.renderer.world.camera;
-    const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[p.y]) : { x: 0, y: 0, z: 100 };
-    const textObj = ctx.renderer.world.createText({
-      attribute: { text },
-      style: {
-        fontSize: p.fontSize,
-        fontWeight: p.fontWeight,
-        fontFamily: p.fontFamily,
-        lineHeight: p.lineHeight,
-        color: p.color,
-        opacity: p.opacity,
-        zIndex: p.zIndex,
-        pointerEvents: false
-      },
-      transform: { position: pos }
-    });
-    ctx.renderer.world.camera?.addChild(textObj);
-    ctx.renderer.track(textObj);
-    objs[preset] = textObj;
-    const curTexts = ctx.cmdState.get("overlay") ?? {};
-    ctx.cmdState.set("overlay", { ...curTexts, [preset]: text });
-    getOverlayTexts(ctx)[preset] = text;
-  }
-  function removeOverlay(ctx, preset, duration = 600) {
-    const objs = getOverlayObjs(ctx);
-    const texts = getOverlayTexts(ctx);
-    const obj = objs[preset];
-    if (obj) {
-      delete objs[preset];
-      delete texts[preset];
-      const curTexts = ctx.cmdState.get("overlay") ?? {};
-      const newTexts = { ...curTexts };
-      delete newTexts[preset];
-      ctx.cmdState.set("overlay", newTexts);
-      const dur = ctx.renderer.dur(duration);
-      if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove();
-          ctx.renderer.untrack(obj);
-        });
-      } else {
-        obj.remove();
-        ctx.renderer.untrack(obj);
-      }
-    }
-  }
-  function clearOverlay(ctx, duration = 400) {
-    const objs = getOverlayObjs(ctx);
-    Object.keys(objs).forEach((k) => removeOverlay(ctx, k, duration));
-  }
-  var overlayHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "add") {
-      if (cmd.text) addOverlay(ctx, cmd.text, cmd.preset ?? "caption");
-    } else if (cmd.action === "remove") {
-      removeOverlay(ctx, cmd.preset ?? "caption", cmd.duration);
-    } else if (cmd.action === "clear") {
-      clearOverlay(ctx, cmd.duration);
-    }
-    return true;
-  });
-
-  // src/cmds/camera.ts
-  var ZOOM_PRESETS = {
-    "close-up": { scale: 1.5, duration: 800 },
-    "medium": { scale: 1.2, duration: 600 },
-    "wide": { scale: 0.8, duration: 800 },
-    "reset": { scale: 1, duration: 600 }
-  };
-  var PAN_PRESETS = {
-    left: { x: -200, y: 0, duration: 1e3 },
-    right: { x: 200, y: 0, duration: 1e3 },
-    up: { x: 0, y: 200, duration: 1e3 },
-    down: { x: 0, y: -200, duration: 1e3 },
-    center: { x: 0, y: 0, duration: 1e3 }
-  };
-  var CAMERA_EFFECT_PRESETS = {
-    shake: { intensity: 10, duration: 500 },
-    bounce: { intensity: 15, duration: 600 },
-    wave: { intensity: 20, duration: 1e3 },
-    nod: { intensity: 10, duration: 400 },
-    "shake-x": { intensity: 15, duration: 500 },
-    fall: { intensity: 15, duration: 800 }
-  };
-  function zoomCamera(ctx, preset, duration) {
-    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
-    ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
-    const cfg = ZOOM_PRESETS[resolvedPreset];
-    if (!cfg) return;
-    const focalLength = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
-    const targetZ = focalLength * (1 - 1 / cfg.scale);
-    if (ctx.renderer.camBaseObj) {
-      const dur = ctx.renderer.dur(duration ?? cfg.duration);
-      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
-    }
-  }
-  function panCamera(ctx, position, duration, customX, customY) {
-    if (position === "inherit") return;
-    const resolvedPreset = position;
-    ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
-    const cfg = PAN_PRESETS[resolvedPreset];
-    let targetX = customX ?? 0;
-    let targetY = customY ?? 0;
-    let finalDur = duration ?? 1e3;
-    if (cfg && customX === void 0 && customY === void 0) {
-      targetX = cfg.x;
-      targetY = cfg.y;
-      if (duration === void 0) finalDur = cfg.duration;
-    } else if (typeof resolvedPreset === "string" && customX === void 0) {
-      let ratio = 0.5;
-      const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
-      if (m) {
-        const n = parseInt(m[1], 10);
-        const d = parseInt(m[2], 10);
-        if (d > 0) ratio = n / (d + 1);
-      }
-      targetX = ctx.renderer.width * (ratio - 0.5);
-      targetY = 0;
-    }
-    if (ctx.renderer.camBaseObj) {
-      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { x: targetX, y: targetY } } }, finalDur, "easeInOutQuad");
-    }
-  }
-  function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
-    if (preset === "reset") {
-      const stopFn2 = ctx.renderer.state.get("_activeCamEffectStop");
-      if (stopFn2) stopFn2();
-      return;
-    }
-    const stopFn = ctx.renderer.state.get("_activeCamEffectStop");
-    if (stopFn) stopFn();
-    const cfg = CAMERA_EFFECT_PRESETS[preset];
-    if (!cfg) return;
-    const finalIntensity = intensity ?? cfg.intensity;
-    const finalDuration = ctx.renderer.dur(duration ?? cfg.duration);
-    if (finalDuration <= 0) return;
-    const offsetObj = ctx.renderer.camOffsetObj;
-    if (!offsetObj) return;
-    let active = true;
-    let frame = 0;
-    const stop = () => {
-      active = false;
-      ctx.renderer.state.set("_activeCamEffectStop", null);
-      offsetObj.transform.position.x = 0;
-      offsetObj.transform.position.y = 0;
-      if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = 0;
-    };
-    ctx.renderer.state.set("_activeCamEffectStop", stop);
-    const loop = () => {
-      if (!active || frame++ >= repeat) {
-        stop();
-        return;
-      }
-      let elapsed = 0;
-      const stepTime = 16;
-      const tick = () => {
-        if (!active) return;
-        elapsed += stepTime;
-        if (elapsed > finalDuration) {
-          loop();
-          return;
-        }
-        const progress = elapsed / finalDuration;
-        let dx = 0, dy = 0, dz = 0;
-        switch (preset) {
-          case "shake":
-            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            break;
-          case "shake-x":
-            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            break;
-          case "bounce":
-            dy = Math.sin(progress * Math.PI) * finalIntensity;
-            break;
-          case "wave":
-            dx = Math.sin(progress * Math.PI * 2) * finalIntensity;
-            dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2);
-            break;
-          case "nod":
-            dy = Math.sin(progress * Math.PI) * finalIntensity;
-            break;
-          case "fall":
-            dy = Math.pow(progress, 2) * finalIntensity * 5;
-            break;
-        }
-        offsetObj.transform.position.x = dx;
-        offsetObj.transform.position.y = dy;
-        if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = dz;
-        setTimeout(tick, stepTime);
-      };
-      tick();
-    };
-    loop();
-  }
-  var cameraZoomHandler = defineCmd((cmd, ctx) => {
-    zoomCamera(ctx, cmd.preset, cmd.duration);
-    return true;
-  });
-  var cameraPanHandler = defineCmd((cmd, ctx) => {
-    panCamera(ctx, cmd.position, cmd.duration);
-    return true;
-  });
-  var cameraEffectHandler = defineCmd((cmd, ctx) => {
-    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
-    return true;
-  });
-
-  // src/cmds/character.ts
-  var CHARACTER_X_RATIO = {
-    "far-left": 0.1,
-    "left": 0.25,
-    "center": 0.5,
-    "right": 0.75,
-    "far-right": 0.9
-  };
-  function resolvePositionX(position) {
-    if (CHARACTER_X_RATIO[position] !== void 0) return CHARACTER_X_RATIO[position];
-    const m = position.match(/^(\d+)\/(\d+)$/);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      const d = parseInt(m[2], 10);
-      if (d > 0) return n / (d + 1);
-    }
-    return 0.5;
-  }
-  function getCharStates(ctx) {
-    let states = ctx.renderer.state.get("characters");
-    if (!states) {
-      states = {};
-      ctx.renderer.state.set("characters", states);
-    }
-    return states;
-  }
-  function getCharObjects(ctx) {
-    let objs = ctx.renderer.state.get("_charObjs");
-    if (!objs) {
-      objs = {};
-      ctx.renderer.state.set("_charObjs", objs);
-    }
-    return objs;
-  }
-  function showCharacter(ctx, name, position, imageKey, duration) {
-    const charDefs = ctx.renderer.config.characters;
-    const def = charDefs[name];
-    if (!def) return;
-    const resolvedKey = imageKey ?? Object.keys(def.images)[0];
-    const imageDef = def.images[resolvedKey];
-    if (!imageDef) return;
-    const states = getCharStates(ctx);
-    const objs = getCharObjects(ctx);
-    const existingState = states[name];
-    const resolvedPosition = !position || position === "inherit" ? existingState?.position ?? "center" : position;
-    const src = imageDef.src ?? resolvedKey;
-    const xPos = ctx.renderer.width * (resolvePositionX(resolvedPosition) - 0.5);
-    const zPos = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
-    states[name] = { position: resolvedPosition, imageKey: resolvedKey };
-    ctx.cmdState.set("characters", { ...states });
-    const existing = objs[name];
-    if (existing) {
-      ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, ctx.renderer.dur(duration ?? 400), "easeInOutQuad");
-      if (imageKey) {
-        if (ctx.renderer.dur(duration ?? 300) > 0 && typeof existing.transition === "function") {
-          existing.transition(src, ctx.renderer.dur(duration ?? 300));
-        } else {
-          if (existing.attribute) existing.attribute.src = src;
-        }
-      }
-      existing._currentImageKey = resolvedKey;
-      return;
-    }
-    const obj = ctx.renderer.world.createImage({
-      attribute: { src },
-      style: {
-        width: imageDef.width ?? 500,
-        opacity: ctx.renderer.dur(duration ?? 400) > 0 ? 0 : 1,
-        zIndex: Z_INDEX.CHARACTER_NORMAL
-      },
-      transform: {
-        position: { x: xPos, y: 0, z: zPos }
-      }
-    });
-    ctx.renderer.track(obj);
-    obj._currentImageKey = resolvedKey;
-    objs[name] = obj;
-    if (ctx.renderer.dur(duration ?? 400) > 0) {
-      ctx.renderer.animate(obj, { style: { opacity: 1 } }, duration ?? 400);
-    }
-  }
-  function removeCharacter(ctx, name, duration) {
-    const objs = getCharObjects(ctx);
-    const states = getCharStates(ctx);
-    const obj = objs[name];
-    if (obj) {
-      delete objs[name];
-      delete states[name];
-      ctx.cmdState.set("characters", { ...states });
-      const dur = ctx.renderer.dur(duration ?? 400);
-      if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-          obj.remove();
-          ctx.renderer.untrack(obj);
-        });
-      } else {
-        obj.remove();
-        ctx.renderer.untrack(obj);
-      }
-    }
-  }
-  function focusCharacter(ctx, name, focusType, fit = "inherit", duration = 800) {
-    const objs = getCharObjects(ctx);
-    const target = objs[name];
-    if (!target) return;
-    const charDefs = ctx.renderer.config.characters;
-    const def = charDefs[name];
-    if (!def) return;
-    const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0];
-    const imageDef = def.images[activeImgKey];
-    const fp = focusType && imageDef?.points ? imageDef.points[focusType] : { x: 0.5, y: 0.5 };
-    const targetX = target.transform?.position?.x ?? 0;
-    const charW = target.style?.width ?? 500;
-    const rendH = target.__renderedSize?.h;
-    const charH = rendH && rendH > 0 ? rendH : charW * 2;
-    const panX = targetX + charW * (fp.x - 0.5);
-    const panY = charH * (0.5 - fp.y);
-    panCamera(ctx, "center", duration, panX, panY);
-    zoomCamera(ctx, fit, duration);
-  }
-  var characterHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "show") {
-      const showCmd = cmd;
-      showCharacter(ctx, showCmd.name, showCmd.position, showCmd.image, showCmd.duration);
-      if (showCmd.focus) {
-        focusCharacter(ctx, showCmd.name, typeof showCmd.focus === "string" ? showCmd.focus : void 0, "inherit", showCmd.duration ?? 800);
-      }
-    } else {
-      removeCharacter(ctx, cmd.name, cmd.duration);
-    }
-    return true;
-  });
-  var characterFocusHandler = defineCmd((cmd, ctx) => {
-    focusCharacter(ctx, cmd.name, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
-    return true;
-  });
-  var characterHighlightHandler = defineCmd((_cmd, _ctx) => {
-    return true;
-  });
-
-  // src/cmds/screen.ts
-  var FADE_PRESETS = {
-    black: { color: "rgba(0,0,0,1)", easing: "linear" },
-    white: { color: "rgba(255,255,255,1)", easing: "linear" },
-    red: { color: "rgba(200,0,0,1)", easing: "easeIn" },
-    dream: { color: "rgba(200,180,255,1)", easing: "easeInOut" },
-    sepia: { color: "rgba(150,100,50,1)", easing: "easeIn" }
-  };
-  var FLASH_PRESETS = {
-    white: { color: "rgba(255,255,255,1)", duration: 300 },
-    red: { color: "rgba(255,0,0,1)", duration: 300 },
-    yellow: { color: "rgba(255,220,0,1)", duration: 250 }
-  };
-  var WIPE_PRESETS = {
-    left: { x: -1, y: 0 },
-    right: { x: 1, y: 0 },
-    up: { x: 0, y: 1 },
-    down: { x: 0, y: -1 }
-  };
-  function getTransitionRect(ctx, color) {
-    let rect = ctx.renderer.state.get("_transitionObj");
-    if (!rect) {
-      const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
-      const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
-      rect = ctx.renderer.world.createRectangle({
-        style: {
-          color,
-          width: w * 2,
-          height: h * 2,
-          opacity: 0,
-          zIndex: Z_INDEX.TRANSITION,
-          pointerEvents: false
-        },
-        transform: { position: { x: 0, y: 0, z: 10 } }
-      });
-      ctx.renderer.world.camera?.addChild(rect);
-      ctx.renderer.track(rect);
-      ctx.renderer.state.set("_transitionObj", rect);
-    } else {
-      rect.style.color = color;
-      rect.transform.position.x = 0;
-      rect.transform.position.y = 0;
-    }
-    return rect;
-  }
-  function screenFade(ctx, dir, preset = "inherit", duration = 600) {
-    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastFadePreset") ?? "black" : preset;
-    ctx.renderer.state.set("_lastFadePreset", resolvedPreset);
-    const cfg = FADE_PRESETS[resolvedPreset];
-    if (!cfg) return;
-    const rect = getTransitionRect(ctx, cfg.color);
-    const startOpacity = dir === "in" ? 1 : 0;
-    const endOpacity = dir === "in" ? 0 : 1;
-    rect.style.opacity = startOpacity;
-    ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, duration, cfg.easing);
-  }
-  function screenFlash(ctx, preset = "inherit", duration, repeat = 1) {
-    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastFlashPreset") ?? "white" : preset;
-    ctx.renderer.state.set("_lastFlashPreset", resolvedPreset);
-    const cfg = FLASH_PRESETS[resolvedPreset];
-    if (!cfg) return;
-    const rect = getTransitionRect(ctx, cfg.color);
-    const flashDuration = duration ?? cfg.duration;
-    let count = 0;
-    const doFlash = () => {
-      if (repeat >= 0 && count >= repeat) return;
-      count++;
-      rect.style.opacity = 1;
-      const anim = ctx.renderer.animate(rect, { style: { opacity: 0 } }, flashDuration, "easeOut");
-      if (anim) {
-        anim.on("end", doFlash);
-      }
-    };
-    doFlash();
-  }
-  function screenWipe(ctx, dir, preset = "inherit", duration = 800) {
-    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastWipePreset") ?? "left" : preset;
-    ctx.renderer.state.set("_lastWipePreset", resolvedPreset);
-    const cfg = WIPE_PRESETS[resolvedPreset];
-    if (!cfg) return;
-    const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
-    const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
-    const dx = cfg.x * w * 2;
-    const dy = cfg.y * h * 2;
-    const colorPreset = ctx.renderer.state.get("_lastFadePreset") ?? "black";
-    const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
-    const rect = getTransitionRect(ctx, color);
-    rect.style.opacity = 1;
-    if (dir === "out") {
-      rect.transform.position.x = dx;
-      rect.transform.position.y = dy;
-      ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, duration, "easeInOutQuad");
-    } else {
-      rect.transform.position.x = 0;
-      rect.transform.position.y = 0;
-      ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, duration, "easeInOutQuad");
-    }
-  }
-  var screenFadeHandler = defineCmd((cmd, ctx) => {
-    screenFade(ctx, cmd.dir, cmd.preset ?? "inherit", cmd.duration ?? 600);
-    return true;
-  });
-  var screenFlashHandler = defineCmd((cmd, ctx) => {
-    screenFlash(ctx, cmd.preset ?? "inherit", cmd.duration, cmd.repeat ?? 1);
-    return true;
-  });
-  var screenWipeHandler = defineCmd((cmd, ctx) => {
-    screenWipe(ctx, cmd.dir, cmd.preset ?? "inherit", cmd.duration ?? 800);
-    return true;
-  });
-
-  // src/cmds/ui.ts
-  var uiHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "show") {
-      ctx.ui.show(cmd.name, cmd.duration);
-    } else {
-      ctx.ui.hide(cmd.name, cmd.duration);
-    }
-    return true;
-  });
-
-  // src/cmds/control.ts
-  var controlHandler = defineCmd((cmd, ctx) => {
-    if (cmd.action === "disable" && typeof cmd.duration === "number") {
-      const saved = ctx.cmdState.get("control");
-      const expireAt = saved?.expireAt ?? Date.now() + cmd.duration;
-      if (!saved?.expireAt) {
-        ctx.cmdState.set("control", { expireAt });
-        ctx.callbacks.disableInput(cmd.duration);
-      }
-      if (Date.now() >= expireAt) {
-        ctx.cmdState.set("control", {});
-        return true;
-      }
-      return false;
-    }
-    return true;
-  });
-
   // src/core/Scene.ts
-  var BUILTIN_CMDS = {
-    "dialogue": dialogueHandler,
-    "choice": choiceHandler,
-    "condition": conditionHandler,
-    "var": varHandler,
-    "label": labelHandler,
-    "background": backgroundHandler,
-    "mood": moodHandler,
-    "effect": effectHandler,
-    "overlay": overlayHandler,
-    "character": characterHandler,
-    "character-focus": characterFocusHandler,
-    "character-highlight": characterHighlightHandler,
-    "camera-zoom": cameraZoomHandler,
-    "camera-pan": cameraPanHandler,
-    "camera-effect": cameraEffectHandler,
-    "screen-fade": screenFadeHandler,
-    "screen-flash": screenFlashHandler,
-    "screen-wipe": screenWipeHandler,
-    "ui": uiHandler,
-    "control": controlHandler
+  var BUILTIN_HANDLERS = {
+    "dialogue": (p, c) => dialogue_default.__handler(p, c),
+    "choice": (p, c) => choice_default.__handler(p, c),
+    "condition": (p, c) => condition_default.__handler(p, c),
+    "var": (p, c) => var_default.__handler(p, c),
+    "label": (p, c) => label_default.__handler(p, c),
+    "background": (p, c) => background_default.__handler(p, c),
+    "mood": (p, c) => mood_default.__handler(p, c),
+    "effect": (p, c) => effect_default.__handler(p, c),
+    "overlay": (p, c) => overlay_default.__handler(p, c),
+    "character": (p, c) => character_default.__handler(p, c),
+    "character-focus": (p, c) => characterFocusModule.__handler(p, c),
+    "character-highlight": (p, c) => characterHighlightModule.__handler(p, c),
+    "camera-zoom": (p, c) => cameraZoomModule.__handler(p, c),
+    "camera-pan": (p, c) => cameraPanModule.__handler(p, c),
+    "camera-effect": (p, c) => cameraEffectModule.__handler(p, c),
+    "screen-fade": (p, c) => screenFadeModule.__handler(p, c),
+    "screen-flash": (p, c) => screenFlashModule.__handler(p, c),
+    "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
+    "ui": (p, c) => ui_default.__handler(p, c),
+    "control": (p, c) => control_default.__handler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -14560,14 +14649,14 @@ ${addLineNumbers(fragment)}`);
       this._executeNext();
     }
     /**
-     * `definition.initial`에 정의된 UI 초기 데이터를 자동으로 setup 합니다.
-     * `novel.config.ui` 또는 `cmds`에 등록된 핸들러를 키로 찾아 실행합니다.
+     * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
+     * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
      */
     _runInitial() {
       const initial = this.definition.initial || {};
       const r = this.renderer;
-      const uiDefs = r.config.ui;
-      if (!uiDefs) return;
+      const modules = r.config.modules;
+      if (!modules) return;
       const cmdStateStore = this.callbacks.getCmdStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
       const ctx = {
@@ -14611,19 +14700,12 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd) => this._executeCmd(cmd)
       };
-      for (const [uiKey, handler] of Object.entries(uiDefs)) {
-        const styleData = initial[uiKey];
-        if (typeof handler.__uiBuilder === "function") {
-          const mergedData = Object.assign({}, handler.__schemaDefault, styleData ?? {});
-          const entry = handler.__uiBuilder(mergedData, ctx);
-          if (handler.__uiOptions) entry.options = { ...handler.__uiOptions, ...entry.options };
-          uiRegistry.set(uiKey, entry);
-        } else if (typeof handler === "function") {
-          const result = handler(styleData ?? {}, ctx);
-          if (result && typeof result === "object" && typeof result.show === "function") {
-            uiRegistry.set(uiKey, result);
-          }
-        }
+      for (const [moduleKey, module] of Object.entries(modules)) {
+        if (typeof module.__viewBuilder !== "function") continue;
+        const initialData = initial[moduleKey];
+        const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {});
+        const entry = module.__viewBuilder(mergedData, ctx);
+        uiRegistry.set(moduleKey, entry);
       }
     }
     /** 캐릭터 키를 실제 이름으로 변환 */
@@ -14752,12 +14834,12 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd2) => this._executeCmd(cmd2)
       };
-      const cmds = r.config.cmds;
-      if (cmds && typeof cmds[type] === "function") {
-        return cmds[type](params, ctx);
+      const modules = r.config.modules;
+      if (modules && typeof modules[type]?.__handler === "function") {
+        return modules[type].__handler(params, ctx);
       }
-      if (BUILTIN_CMDS[type]) {
-        return BUILTIN_CMDS[type](params, ctx);
+      if (BUILTIN_HANDLERS[type]) {
+        return BUILTIN_HANDLERS[type](params, ctx);
       }
       console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
       return false;
@@ -14938,11 +15020,11 @@ ${addLineNumbers(fragment)}`);
     /** CmdState — 씬 전환 후에도 유지, 세이브/로드 대상 */
     _cmdStateStore = /* @__PURE__ */ new Map();
     /**
-     * UI 정의 레지스트리 — Novel 생성 시 config.cmds에서 자동 수집.
-     * rebuildUI 시 여기서 빌더를 꺼내 UI 오브젝트를 재생성합니다.
+     * 모듈 레지스트리 — Novel 생성 시 config.modules에서 자동 수집.
+     * key: 모듈 이름, value: NovelModule 객체
      */
-    _uiDefinitions = /* @__PURE__ */ new Map();
-    /** UI 런타임 레지스트리 — scene 실행 중 setup-* 커맨드가 등록 */
+    _modules = /* @__PURE__ */ new Map();
+    /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
     _uiRegistry = /* @__PURE__ */ new Map();
     _currentScene = null;
     _currentSceneDef = null;
@@ -14966,7 +15048,7 @@ ${addLineNumbers(fragment)}`);
         depth: this._option.depth
       });
       this.vars = { ...config.vars };
-      this._collectUIDefinitions(config.cmds);
+      this._collectModules(config.modules);
       this._world.start();
       for (const [name, scene] of Object.entries(option.scenes)) {
         scene.name = name;
@@ -14974,25 +15056,14 @@ ${addLineNumbers(fragment)}`);
       }
     }
     /**
-     * config.ui 및 config.cmds를 순회하며 UIHandler를 _uiDefinitions에 등록합니다.
-     * config.ui 우선, 이후 config.cmds에서 __uiName 메타 부착 항목 수집 (하위 호환).
+     * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
      */
-    _collectUIDefinitions(cmds) {
-      const config = this._config;
-      const uiDefs = config.ui;
-      if (uiDefs) {
-        for (const [uiKey, handler] of Object.entries(uiDefs)) {
-          const h = handler;
-          if (typeof h === "function" && h.__isUIHandler) {
-            this._uiDefinitions.set(uiKey, h.__uiBuilder);
-          }
-        }
-      }
-      if (!cmds) return;
-      for (const handler of Object.values(cmds)) {
-        const h = handler;
-        if (h.__uiName && typeof h.__uiBuilder === "function") {
-          this._uiDefinitions.set(h.__uiName, h.__uiBuilder);
+    _collectModules(modules) {
+      if (!modules) return;
+      for (const [key, module] of Object.entries(modules)) {
+        if (module && typeof module.__setKey === "function") {
+          module.__setKey(key);
+          this._modules.set(key, module);
         }
       }
     }
@@ -15088,7 +15159,6 @@ ${addLineNumbers(fragment)}`);
     }
     /**
      * hideable:true 로 등록된 모든 UI 요소를 숨깁니다.
-     * 우클릭 UI 숨김 기능 등에 활용합니다.
      */
     hideUI(duration) {
       for (const entry of this._uiRegistry.values()) {
@@ -15106,8 +15176,6 @@ ${addLineNumbers(fragment)}`);
     // ─── 세이브 / 로드 ───────────────────────────────────────────
     /**
      * 현재 진행 상태를 SaveData로 반환합니다.
-     * 반환된 객체를 JSON.stringify() 하여 localStorage 등에 저장하세요.
-     * @throws 대화 씬이 진행 중이지 않을 때 오류 발생
      */
     save() {
       if (!this._currentScene || !(this._currentScene instanceof DialogueScene) || !this._currentSceneDef) {
@@ -15124,7 +15192,6 @@ ${addLineNumbers(fragment)}`);
     }
     /**
      * SaveData로부터 진행 상태를 복원합니다.
-     * 렌더러 상태(배경/캐릭터/카메라)와 변수를 모두 복원한 뒤 cursor 위치에서 재개합니다.
      */
     loadSave(data) {
       const def = this._scenes.get(data.sceneName);
@@ -15146,7 +15213,7 @@ ${addLineNumbers(fragment)}`);
       this._renderer.clear();
       this._renderer.restoreState(data.rendererState);
       this._renderer.rebuildFromState();
-      this._rebuildUI();
+      this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
       const subIndex = data.cmdStates?.["dialogue"]?.subIndex ?? 0;
@@ -15157,42 +15224,16 @@ ${addLineNumbers(fragment)}`);
       this._syncUIState();
     }
     /**
-     * _uiDefinitions를 순회하며 저장된 스타일(cmdState)로 UI를 재생성합니다.
+     * 모든 등록된 모듈의 View 빌더를 실행하여 UI를 재생성합니다.
      * loadSave() 호출 후 실행됩니다.
+     * 저장된 cmdState를 각 모듈의 View에 주입하여 상태를 복원합니다.
      */
-    _rebuildUI() {
+    _rebuildModuleViews() {
       const ctx = this._makeRebuildCtx();
-      const bgState = this._cmdStateStore.get("background");
-      if (bgState?.key) {
-        setBackground(ctx, bgState.key, bgState.fit, 0);
-      }
-      const charState = this._cmdStateStore.get("characters");
-      if (charState) {
-        for (const [name, info] of Object.entries(charState)) {
-          showCharacter(ctx, name, info.position, info.imageKey, 0);
-        }
-      }
-      const moodState = this._cmdStateStore.get("mood");
-      if (moodState) {
-        for (const [mood, intensity] of Object.entries(moodState)) {
-          addMood(ctx, mood, intensity, 0);
-        }
-      }
-      const effectState = this._cmdStateStore.get("effect");
-      if (effectState) {
-        for (const [type, info] of Object.entries(effectState)) {
-          addEffect(ctx, type, info.rate, void 0, info.srcKey);
-        }
-      }
-      const overlayState = this._cmdStateStore.get("overlay");
-      if (overlayState) {
-        for (const [preset, text] of Object.entries(overlayState)) {
-          addOverlay(ctx, text, preset);
-        }
-      }
-      for (const [name, builder] of this._uiDefinitions) {
-        const style = this._cmdStateStore.get(name) ?? {};
-        const entry = builder(style, ctx);
+      for (const [name, module] of this._modules) {
+        if (!module.__viewBuilder) continue;
+        const savedState = this._cmdStateStore.get(name) ?? {};
+        const entry = module.__viewBuilder(savedState, ctx);
         this._uiRegistry.set(name, entry);
       }
     }
@@ -15221,8 +15262,6 @@ ${addLineNumbers(fragment)}`);
     // ─── 사용자 입력 ─────────────────────────────────────────────
     /**
      * 대화를 한 단계 진행합니다.
-     * - 텍스트 타이핑 중이면 즉시 완성
-     * - 대기 중이면 다음 대사/단계로 이동
      */
     next() {
       if (Date.now() < this._inputDisabledUntil) return;
@@ -15344,7 +15383,11 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/novel.config.ts
-  var testCmd = defineCmd((cmd, ctx) => {
+  var testModule = define2({ message: void 0 });
+  testModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  testModule.defineCommand((cmd, ctx) => {
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
@@ -15354,12 +15397,28 @@ ${addLineNumbers(fragment)}`);
       metHeroine: false,
       endingReached: false
     },
-    ui: {
-      "dialogue": dialogueUISetup,
-      "choices": choiceUISetup
-    },
-    cmds: {
-      "test-cmd": testCmd
+    modules: {
+      "dialogue": dialogue_default,
+      "choice": choice_default,
+      "background": background_default,
+      "character": character_default,
+      "character-focus": characterFocusModule,
+      "character-highlight": characterHighlightModule,
+      "mood": mood_default,
+      "effect": effect_default,
+      "overlay": overlay_default,
+      "screen-fade": screenFadeModule,
+      "screen-flash": screenFlashModule,
+      "screen-wipe": screenWipeModule,
+      "camera-zoom": cameraZoomModule,
+      "camera-pan": cameraPanModule,
+      "camera-effect": cameraEffectModule,
+      "condition": condition_default,
+      "var": var_default,
+      "label": label_default,
+      "ui": ui_default,
+      "control": control_default,
+      "test-cmd": testModule
     },
     scenes: [
       "scene-zena",
@@ -15428,7 +15487,7 @@ ${addLineNumbers(fragment)}`);
         lineHeight: 1.65
       }
     },
-    "choices": {
+    "choice": {
       background: "rgba(20,20,50,0.90)",
       borderColor: "rgba(255,255,255,0.25)",
       hoverBackground: "rgba(80,60,180,0.92)",

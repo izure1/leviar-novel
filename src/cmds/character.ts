@@ -1,61 +1,31 @@
-import type { SceneContext } from '../core/SceneContext'
 import type { CharDefs, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
 import type { ZoomPreset } from './camera'
 import { Z_INDEX } from '../constants/render'
 import { panCamera, zoomCamera } from './camera'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
 export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center' | 'right' | 'far-right' | (string & {})
 
-/** image의 모든 key를 추출 (Name 기반) */
-type _ImageKeysOf<TCharacters extends CharDefs, Name extends keyof TCharacters & string> =
-  keyof TCharacters[Name]['images'] & string
-
 /** 
  * 캐릭터를 등장 또는 이동시키거나 퇴장시킨다 
- * 
- * @example
- * ```ts
- * { type: 'character', action: 'show', name: 'hero', position: 'center', image: 'smile', duration: 500 }
- * ```
  */
 export type CharacterCmd<TConfig = any> = {
   [Name in CharacterKeysOf<TConfig>]: {
-    /** 'show'는 캐릭터를 등장/이동, 'remove'는 퇴장시킵니다. */
     action: 'show' | 'remove'
-    /** 조작할 캐릭터의 이름(config.characters의 키)입니다. */
     name: Name
-    /** 화면 내 캐릭터의 가로 위치입니다. (프리셋 또는 'n/m' 분수) */
     position?: CharacterPositionPreset
-    /** 렌더링 할 캐릭터의 이미지 키(config.characters[name]에 정의된 키)입니다. */
     image?: ImageKeysOf<TConfig, Name> | (string & {})
-    /**
-     * 등장과 동시에 카메라 포커스를 수행할지 여부입니다.
-     * `true`일 경우 기본 포인트를 사용하며, 문자열 지정 시 config.points에 정의된 포인트 키를 입력합니다.
-     */
     focus?: boolean | PointsOf<TConfig, Name> | (string & {})
-    /** 애니메이션 적용 시간(ms 단위)입니다. */
     duration?: number
   }
 }[CharacterKeysOf<TConfig>]
 
-/** 
- * 카메라를 캐릭터에 포커스한다 
- * 
- * @example
- * ```ts
- * { type: 'character-focus', name: 'hero', point: 'face', zoom: 'close-up', duration: 600 }
- * ```
- */
+/** 카메라를 캐릭터에 포커스한다 */
 export type CharacterFocusCmd<TConfig = any> = {
   [Name in CharacterKeysOf<TConfig>]: {
-    /** 포커스 할 캐릭터의 이름입니다. */
     name: Name
-    /** 맞출 카메라 초점 포인트입니다. (config.points에 정의된 키로 자동완성됩니다) */
     point?: PointsOf<TConfig, Name> | 'inherit' | (string & {})
-    /** 포커스 시 적용될 화면 줌(Zoom) 수준입니다. */
     zoom?: ZoomPreset
-    /** 카메라 이동에 걸리는 시간(ms 단위)입니다. (기본값: 800) */
     duration?: number
   }
 }[CharacterKeysOf<TConfig>]
@@ -63,14 +33,20 @@ export type CharacterFocusCmd<TConfig = any> = {
 /** 캐릭터를 컷인(전면) 레이어로 올리거나 복원한다 */
 export type CharacterHighlightCmd<TConfig = any> = {
   [Name in CharacterKeysOf<TConfig>]: {
-    /** 하이라이트 할 캐릭터의 이름입니다. */
     name: Name
-    /** 'on'은 캐릭터를 전경으로 올리고, 'off'는 원래 뎁스로 복구합니다. */
     action: 'on' | 'off'
-    /** 전환 시 적용되는 애니메이션 시간(ms 단위)입니다. */
     duration?: number
   }
 }[CharacterKeysOf<TConfig>]
+
+// ─── 스키마 ──────────────────────────────────────────────────
+
+export interface CharacterSchema {
+  /** name → { position, imageKey } 맵 */
+  characters: Record<string, { position: string; imageKey: string }>
+}
+
+// ─── 위치/포커스 헬퍼 ────────────────────────────────────────
 
 const CHARACTER_X_RATIO: Record<string, number> = {
   'far-left': 0.1,
@@ -91,115 +67,172 @@ function resolvePositionX(position: string): number {
   return 0.5
 }
 
-function getCharStates(ctx: SceneContext) {
-  let states = ctx.renderer.state.get('characters')
-  if (!states) {
-    states = {}
-    ctx.renderer.state.set('characters', states)
-  }
-  return states
-}
+// ─── 모듈 정의 ───────────────────────────────────────────────
 
-function getCharObjects(ctx: SceneContext) {
-  let objs = ctx.renderer.state.get('_charObjs')
-  if (!objs) {
-    objs = {}
-    ctx.renderer.state.set('_charObjs', objs)
-  }
-  return objs
-}
+/**
+ * 캐릭터 모듈. `novel.config`의 `modules: { 'character': characterModule }` 형태로 등록합니다.
+ */
+const characterModule = define<CharacterSchema>({
+  characters: {},
+})
 
-export function showCharacter(ctx: SceneContext, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
-  const charDefs = ctx.renderer.config.characters as CharDefs
-  const def = charDefs[name]
-  if (!def) return
+characterModule.defineView((data, ctx) => {
+  // 내부 canvas 오브젝트 맵
+  const _charObjs: Record<string, any> = {}
 
-  const resolvedKey = imageKey ?? Object.keys(def.images)[0]
-  const imageDef = def.images[resolvedKey]
-  if (!imageDef) return
+  const _showCharacter = (
+    name: string,
+    position: string,
+    imageKey: string,
+    duration?: number,
+    immediate = false
+  ) => {
+    const charDefs = ctx.renderer.config.characters as CharDefs
+    const def = charDefs[name]
+    if (!def) return
 
-  const states = getCharStates(ctx)
-  const objs = getCharObjects(ctx)
+    const resolvedKey = imageKey || Object.keys(def.images)[0]
+    const imageDef = def.images[resolvedKey]
+    if (!imageDef) return
 
-  const existingState = states[name]
-  const resolvedPosition = (!position || position === 'inherit')
-    ? (existingState?.position ?? 'center')
-    : position
+    const src = imageDef.src ?? resolvedKey
+    const xPos = ctx.renderer.width * (resolvePositionX(position) - 0.5)
+    const zPos = (ctx.renderer.world.camera)?.attribute?.focalLength ?? 100
+    const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 400)
 
-  const src = imageDef.src ?? resolvedKey
-  const xPos = ctx.renderer.width * (resolvePositionX(resolvedPosition) - 0.5)
-  const zPos = (ctx.renderer.world.camera)?.attribute?.focalLength ?? 100
-
-  states[name] = { position: resolvedPosition, imageKey: resolvedKey }
-  // cmdState 동기화 (세이브/로드 일관성)
-  ctx.cmdState.set('characters', { ...states })
-
-  const existing = objs[name]
-  if (existing) {
-    ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, ctx.renderer.dur(duration ?? 400), 'easeInOutQuad')
-    if (imageKey) {
-      if (ctx.renderer.dur(duration ?? 300) > 0 && typeof existing.transition === 'function') {
-        existing.transition(src, ctx.renderer.dur(duration ?? 300))
-      } else {
-        if (existing.attribute) existing.attribute.src = src
+    const existing = _charObjs[name]
+    if (existing) {
+      ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, 'easeInOutQuad')
+      if (imageKey && imageKey !== existing._currentImageKey) {
+        if (dur > 0 && typeof existing.transition === 'function') {
+          existing.transition(src, dur)
+        } else {
+          if (existing.attribute) existing.attribute.src = src
+        }
       }
+      existing._currentImageKey = resolvedKey
+      return
     }
-    existing._currentImageKey = resolvedKey
-    return
-  }
 
-  const obj = ctx.renderer.world.createImage({
-    attribute: { src },
-    style: {
-      width: imageDef.width ?? 500,
-      opacity: ctx.renderer.dur(duration ?? 400) > 0 ? 0 : 1,
-      zIndex: Z_INDEX.CHARACTER_NORMAL,
-    },
-    transform: {
-      position: { x: xPos, y: 0, z: zPos }
-    }
-  })
+    const obj = ctx.renderer.world.createImage({
+      attribute: { src },
+      style: {
+        width: imageDef.width ?? 500,
+        opacity: dur > 0 ? 0 : 1,
+        zIndex: Z_INDEX.CHARACTER_NORMAL,
+      },
+      transform: { position: { x: xPos, y: 0, z: zPos } }
+    })
+    ctx.renderer.track(obj)
+    ;(obj as any)._currentImageKey = resolvedKey
+    _charObjs[name] = obj
 
-  ctx.renderer.track(obj)
-    ; (obj as any)._currentImageKey = resolvedKey
-  objs[name] = obj
-
-  if (ctx.renderer.dur(duration ?? 400) > 0) {
-    ctx.renderer.animate(obj, { style: { opacity: 1 } }, duration ?? 400)
-  }
-}
-
-function removeCharacter(ctx: SceneContext, name: string, duration?: number) {
-  const objs = getCharObjects(ctx)
-  const states = getCharStates(ctx)
-  const obj = objs[name]
-  if (obj) {
-    delete objs[name]
-    delete states[name]
-    // cmdState 동기화
-    ctx.cmdState.set('characters', { ...states })
-    const dur = ctx.renderer.dur(duration ?? 400)
     if (dur > 0) {
-      ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+      ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur)
+    }
+  }
+
+  const _removeCharacter = (name: string, duration?: number) => {
+    const obj = _charObjs[name]
+    if (obj) {
+      delete _charObjs[name]
+      const dur = ctx.renderer.dur(duration ?? 400)
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+          obj.remove()
+          ctx.renderer.untrack(obj)
+        })
+      } else {
         obj.remove()
         ctx.renderer.untrack(obj)
-      })
-    } else {
-      obj.remove()
-      ctx.renderer.untrack(obj)
+      }
     }
   }
-}
 
-function focusCharacter(ctx: SceneContext, name: string, focusType?: string, fit: string = 'inherit', duration: number = 800) {
-  const objs = getCharObjects(ctx)
-  const target = objs[name]
+  // 복원: 저장된 캐릭터들 즉시 렌더
+  for (const [name, info] of Object.entries(data.characters)) {
+    _showCharacter(name, info.position, info.imageKey, undefined, true)
+  }
+
+  return {
+    show: () => { /* 개별 캐릭터는 _charObjs 관리 */ },
+    hide: () => {
+      for (const obj of Object.values(_charObjs)) {
+        obj?.fadeOut?.(300, 'easeIn')
+      }
+    },
+    // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
+    getObj: (name: string) => _charObjs[name],
+    update: (d: CharacterSchema) => {
+      const newNames = new Set(Object.keys(d.characters))
+      // 제거된 캐릭터
+      for (const name of Object.keys(_charObjs)) {
+        if (!newNames.has(name)) {
+          _removeCharacter(name)
+        }
+      }
+      // 추가/변경된 캐릭터
+      for (const [name, info] of Object.entries(d.characters)) {
+        _showCharacter(name, info.position, info.imageKey)
+      }
+    },
+  }
+})
+
+characterModule.defineCommand<CharacterCmd<any>>((cmd, ctx, data) => {
+  const newChars = { ...data.characters }
+
+  if (cmd.action === 'show') {
+    const showCmd = cmd
+    const charDefs = ctx.renderer.config.characters as CharDefs
+    const def = charDefs[showCmd.name]
+    if (!def) return true
+
+    const existingState = newChars[showCmd.name]
+    const resolvedPosition = (!showCmd.position || showCmd.position === 'inherit')
+      ? (existingState?.position ?? 'center')
+      : showCmd.position
+    const resolvedKey = showCmd.image ?? Object.keys(def.images)[0]
+
+    newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey as string }
+    data.characters = newChars
+
+    // focus 처리 (view의 getObj 사용)
+    // data.characters 변경 → proxy microtask로 update() 예약됨
+    // → 동기 호출 시 _charObjs 미갱신 → Promise.resolve().then()으로 연기
+    if (showCmd.focus) {
+      const focusType = typeof showCmd.focus === 'string' ? showCmd.focus : undefined
+      const focusDuration = showCmd.duration ?? 800
+      Promise.resolve().then(() => {
+        const entry = ctx.ui.get('character') as any
+        const charObj = entry?.getObj?.(showCmd.name)
+        if (charObj) {
+          _focusCharacter(ctx, showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
+        }
+      })
+    }
+  } else {
+    delete newChars[cmd.name]
+    data.characters = newChars
+  }
+
+  return true
+})
+
+export default characterModule
+
+// ─── character-focus 모듈 ────────────────────────────────────
+
+function _focusCharacter(
+  ctx: any,
+  name: string,
+  target: any,
+  def: any,
+  focusType?: string,
+  fit: string = 'inherit',
+  duration: number = 800
+) {
   if (!target) return
-
-  const charDefs = ctx.renderer.config.characters
-  const def = charDefs[name]
-  if (!def) return
-
   const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0]
   const imageDef = def.images[activeImgKey]
   const fp = (focusType && imageDef?.points) ? imageDef.points[focusType] : { x: 0.5, y: 0.5 }
@@ -216,25 +249,51 @@ function focusCharacter(ctx: SceneContext, name: string, focusType?: string, fit
   zoomCamera(ctx, fit as any, duration)
 }
 
-export const characterHandler = defineCmd<CharacterCmd<any>>((cmd, ctx) => {
-  if (cmd.action === 'show') {
-    const showCmd = cmd
-    showCharacter(ctx, showCmd.name, showCmd.position, showCmd.image, showCmd.duration)
-    if (showCmd.focus) {
-      focusCharacter(ctx, showCmd.name, typeof showCmd.focus === 'string' ? showCmd.focus : undefined, 'inherit', showCmd.duration ?? 800)
-    }
-  } else {
-    removeCharacter(ctx, cmd.name, cmd.duration)
-  }
+export interface CharacterFocusSchema { _unused: undefined }
+
+const characterFocusModule = define<CharacterFocusSchema>({ _unused: undefined })
+
+characterFocusModule.defineView((_data, _ctx) => ({
+  show: () => {},
+  hide: () => {},
+}))
+
+characterFocusModule.defineCommand<CharacterFocusCmd<any>>((cmd, ctx) => {
+  const entry = ctx.ui.get('character') as any
+  const charObj = entry?.getObj?.(cmd.name)
+  if (!charObj) return true
+
+  const charDefs = ctx.renderer.config.characters as CharDefs
+  const def = charDefs[cmd.name]
+  if (!def) return true
+
+  _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
   return true
 })
 
-export const characterFocusHandler = defineCmd<CharacterFocusCmd<any>>((cmd, ctx) => {
-  focusCharacter(ctx, cmd.name, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
+export { characterFocusModule }
+
+// ─── character-highlight 모듈 ────────────────────────────────
+
+export interface CharacterHighlightSchema { _unused: undefined }
+
+const characterHighlightModule = define<CharacterHighlightSchema>({ _unused: undefined })
+
+characterHighlightModule.defineView((_data, _ctx) => ({
+  show: () => {},
+  hide: () => {},
+}))
+
+characterHighlightModule.defineCommand<CharacterHighlightCmd<any>>((_cmd, _ctx) => {
+  // 구현 미완, skip
   return true
 })
 
-export const characterHighlightHandler = defineCmd<CharacterHighlightCmd<any>>((_cmd, _ctx) => {
-  // highlight 기능은 현재 구현 미완, skip 처리
-  return true
-})
+export { characterHighlightModule }
+
+// ─── 하위 호환 헬퍼 ──────────────────────────────────────────
+
+/** @internal Novel.ts rebuildUI 하위 호환용 */
+export function showCharacter(ctx: any, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
+  characterModule.__handler?.({ action: 'show', name, position, image: imageKey, duration }, ctx)
+}

@@ -1,6 +1,5 @@
-import type { SceneContext } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
-import { defineCmd } from '../define/defineCmd'
+import { define } from '../define/defineCmdUI'
 
 export type MoodType =
   | 'none' | 'day' | 'night' | 'dawn' | 'sunset' | 'foggy'
@@ -11,36 +10,18 @@ export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
 
 /** 
  * 화면 분위기 오버레이(무드, 조명)를 추가하거나 제거한다 
- * 
- * @example
- * ```ts
- * // 무드 추가
- * { type: 'mood', action: 'add', mood: 'sunset', intensity: 0.8, duration: 1000 }
- * // 무드 제거
- * { type: 'mood', action: 'remove', mood: 'sunset' }
- * // action이 없을 경우 모든 무드를 제거하고 현재 지정된 값으로 덮어쓰기
- * { type: 'mood', mood: 'sunset', intensity: 0.9 }
- * ```
  */
 export type MoodCmd =
   | {
-    /** 'add'는 새로운 무드 효과를 추가합니다. */
     action?: 'add'
-    /** 추가할 무드의 타입입니다. */
     mood: MoodType
-    /** 무드 레이어의 불투명도(0~1)입니다. (기본값: 1) */
     intensity?: number
-    /** 무드 레이어에 깜빡임(flicker) 애니메이션을 적용할 프리셋입니다. */
     flicker?: FlickerPreset
-    /** 효과가 추가되면서 페이드인 되는 시간(ms 단위)입니다. (기본값: 800) */
     duration?: number
   }
   | {
-    /** 'remove'는 현재 활성화된 무드 효과를 제거합니다. */
     action: 'remove'
-    /** 제거할 무드의 타입입니다. */
     mood: MoodType
-    /** 효과가 제거되면서 페이드아웃 되는 시간(ms 단위)입니다. (기본값: 800) */
     duration?: number
   }
 
@@ -63,125 +44,154 @@ const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMo
   warm: { color: 'rgba(255,160,50,1)', blendMode: 'screen', defaultIntensity: 0.25 },
 }
 
-function getMoodObjs(ctx: SceneContext) {
-  let objs = ctx.renderer.state.get('_moodObjs')
-  if (!objs) {
-    objs = {}
-    ctx.renderer.state.set('_moodObjs', objs)
-  }
-  return objs
+// ─── 스키마 ──────────────────────────────────────────────────
+
+export interface MoodSchema {
+  /** mood → intensity 맵 */
+  activeMoods: Record<string, number>
 }
 
-function getActiveMoods(ctx: SceneContext) {
-  let moods = ctx.renderer.state.get('activeMoods')
-  if (!moods) {
-    moods = {}
-    ctx.renderer.state.set('activeMoods', moods)
-  }
-  return moods
-}
+// ─── 모듈 정의 ───────────────────────────────────────────────
 
-export function addMood(ctx: SceneContext, mood: MoodType, intensity?: number, duration: number = 800) {
-  if (mood === 'none') {
-    clearMoods(ctx, duration)
-    return
-  }
+/**
+ * 무드 모듈. `novel.config`의 `modules: { 'mood': moodModule }` 형태로 등록합니다.
+ */
+const moodModule = define<MoodSchema>({
+  activeMoods: {},
+})
 
-  const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood]
-  const finalIntensity = intensity ?? defaultIntensity ?? 1
-  const dur = ctx.renderer.dur(duration)
+moodModule.defineView((data, ctx) => {
+  // 내부 canvas 오브젝트 맵
+  const _moodObjs: Record<string, any> = {}
 
-  const objs = getMoodObjs(ctx)
-  const activeMoods = getActiveMoods(ctx)
-  const existing = objs[mood]
-
-  if (existing) {
-    const flickerState = ctx.renderer.state.get('_flickerState')
-    if (flickerState && flickerState.mood === mood) {
-      existing._flickerBaseOpacity = finalIntensity
-    } else {
-      ctx.renderer.animate(existing, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+  const _addMoodObj = (mood: MoodType, intensity: number, duration: number, immediate = false) => {
+    if (mood === 'none') {
+      for (const m of Object.keys(_moodObjs)) {
+        _removeMoodObj(m as MoodType, duration, immediate)
+      }
+      return
     }
-    activeMoods[mood] = finalIntensity
-    // cmdState 동기화
-    ctx.cmdState.set('mood', { ...activeMoods })
-    return
-  }
 
-  const cam = ctx.renderer.world.camera
-  const focalLength = cam?.attribute?.focalLength ?? 100
-  const exactW = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(focalLength, ctx.renderer.width) : ctx.renderer.width
-  const exactH = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(focalLength, ctx.renderer.height) : ctx.renderer.height
+    const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood]
+    const finalIntensity = intensity ?? defaultIntensity ?? 1
+    const dur = immediate ? 0 : ctx.renderer.dur(duration)
 
-  const rectOpts: any = {
-    style: {
-      color, opacity: dur > 0 ? 0 : finalIntensity,
-      width: exactW, height: exactH,
-      zIndex: Z_INDEX.MOOD,
-      pointerEvents: false,
-      blendMode: blendMode,
-    },
-    transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } },
-  }
-  if (vignette) {
-    rectOpts.style.gradient = vignette
-    rectOpts.style.gradientType = 'circular'
-  }
+    const cam = ctx.renderer.world.camera
+    const focalLength = cam?.attribute?.focalLength ?? 100
+    const exactW = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(focalLength, ctx.renderer.width) : ctx.renderer.width
+    const exactH = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(focalLength, ctx.renderer.height) : ctx.renderer.height
 
-  const rect = ctx.renderer.world.createRectangle(rectOpts)
-  ctx.renderer.track(rect)
-  ctx.renderer.world.camera?.addChild(rect)
-    ; (rect as any)._currentMood = mood
+    const existing = _moodObjs[mood]
+    if (existing) {
+      ctx.renderer.animate(existing, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+      return
+    }
 
-  objs[mood] = rect
-  activeMoods[mood] = finalIntensity
-  // cmdState 동기화
-  ctx.cmdState.set('mood', { ...activeMoods })
+    const rectOpts: any = {
+      style: {
+        color, opacity: dur > 0 ? 0 : finalIntensity,
+        width: exactW, height: exactH,
+        zIndex: Z_INDEX.MOOD,
+        pointerEvents: false,
+        blendMode,
+      },
+      transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } },
+    }
+    if (vignette) {
+      rectOpts.style.gradient = vignette
+      rectOpts.style.gradientType = 'circular'
+    }
 
-  if (dur > 0) {
-    ctx.renderer.animate(rect, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
-  }
-}
+    const rect = ctx.renderer.world.createRectangle(rectOpts)
+    ctx.renderer.track(rect)
+    ctx.renderer.world.camera?.addChild(rect)
+    ;(rect as any)._currentMood = mood
+    _moodObjs[mood] = rect
 
-export function removeMood(ctx: SceneContext, mood: MoodType, duration: number = 800) {
-  const objs = getMoodObjs(ctx)
-  const activeMoods = getActiveMoods(ctx)
-  const obj = objs[mood]
-
-  delete activeMoods[mood]
-  // cmdState 동기화
-  ctx.cmdState.set('mood', { ...activeMoods })
-
-  if (obj) {
-    delete objs[mood]
-    const dur = ctx.renderer.dur(duration)
     if (dur > 0) {
-      ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+      ctx.renderer.animate(rect, { style: { opacity: finalIntensity } }, dur, 'easeInOutQuad')
+    }
+  }
+
+  const _removeMoodObj = (mood: MoodType, duration: number, immediate = false) => {
+    const obj = _moodObjs[mood]
+    if (obj) {
+      delete _moodObjs[mood]
+      const dur = immediate ? 0 : ctx.renderer.dur(duration)
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+          obj.remove()
+          ctx.renderer.untrack(obj)
+        })
+      } else {
         obj.remove()
         ctx.renderer.untrack(obj)
-      })
-    } else {
-      obj.remove()
-      ctx.renderer.untrack(obj)
+      }
     }
   }
-}
 
-export function clearMoods(ctx: SceneContext, duration: number = 800) {
-  const objs = getMoodObjs(ctx)
-  Object.keys(objs).forEach(m => removeMood(ctx, m as MoodType, duration))
-}
+  // 복원: 저장된 무드들 즉시 렌더
+  for (const [mood, intensity] of Object.entries(data.activeMoods)) {
+    _addMoodObj(mood as MoodType, intensity, 800, true)
+  }
 
-export function setFlicker(ctx: SceneContext, mood: MoodType, flickerPreset: FlickerPreset = 'candle') {
-  const objs = getMoodObjs(ctx)
-  const activeMoods = getActiveMoods(ctx)
-  const target = objs[mood]
-  if (!target) return
+  return {
+    show: () => {},
+    hide: () => {
+      for (const obj of Object.values(_moodObjs)) {
+        obj?.fadeOut?.(300, 'easeIn')
+      }
+    },
+    // flicker용 오브젝트 접근
+    getObj: (mood: string) => _moodObjs[mood],
+    update: (d: MoodSchema) => {
+      const newMoods = new Set(Object.keys(d.activeMoods))
+      // 제거된 무드
+      for (const mood of Object.keys(_moodObjs)) {
+        if (!newMoods.has(mood)) {
+          _removeMoodObj(mood as MoodType, 800)
+        }
+      }
+      // 추가/변경된 무드
+      for (const [mood, intensity] of Object.entries(d.activeMoods)) {
+        _addMoodObj(mood as MoodType, intensity, 800)
+      }
+    },
+  }
+})
 
-  const finalIntensity = activeMoods[mood] ?? 1
-  const baseOpacity = finalIntensity
+moodModule.defineCommand<MoodCmd>((cmd, ctx, data) => {
+  const newMoods = { ...data.activeMoods }
+
+  if (cmd.action === 'remove') {
+    delete newMoods[cmd.mood]
+  } else {
+    const addCmd = cmd as Extract<MoodCmd, { action?: 'add' }>
+    if (addCmd.mood === 'none') {
+      // 전체 제거
+      for (const k of Object.keys(newMoods)) delete newMoods[k]
+    } else {
+      const preset = MOOD_PRESETS[addCmd.mood]
+      newMoods[addCmd.mood] = addCmd.intensity ?? preset?.defaultIntensity ?? 1
+    }
+
+    // flicker 처리
+    if (addCmd.flicker) {
+      // flicker는 view에 직접 접근
+      const entry = ctx.ui.get('mood') as any
+      const obj = entry?.getObj?.(addCmd.mood)
+      if (obj) {
+        _setFlicker(ctx, obj, addCmd.mood, data.activeMoods[addCmd.mood] ?? 1, addCmd.flicker)
+      }
+    }
+  }
+
+  data.activeMoods = newMoods
+  return true
+})
+
+function _setFlicker(ctx: any, target: any, mood: string, baseOpacity: number, flickerPreset: FlickerPreset) {
   target._flickerBaseOpacity = baseOpacity
-
   const configs: Record<FlickerPreset, { interval: number; range: [number, number] }> = {
     candle: { interval: 120, range: [0.6, 1.0] },
     flicker: { interval: 80, range: [0.3, 1.0] },
@@ -203,15 +213,9 @@ export function setFlicker(ctx: SceneContext, mood: MoodType, flickerPreset: Fli
   step()
 }
 
-export const moodHandler = defineCmd<MoodCmd>((cmd, ctx) => {
-  if (cmd.action === 'remove') {
-    removeMood(ctx, cmd.mood, cmd.duration)
-  } else {
-    const addCmd = cmd as Extract<MoodCmd, { action?: 'add' }>
-    addMood(ctx, addCmd.mood, addCmd.intensity, addCmd.duration ?? 800)
-    if (addCmd.flicker) {
-      setFlicker(ctx, addCmd.mood, addCmd.flicker)
-    }
-  }
-  return true
-})
+export default moodModule
+
+/** @internal */
+export function addMood(ctx: any, mood: MoodType, intensity?: number, duration: number = 800) {
+  moodModule.__handler?.({ action: 'add', mood, intensity, duration }, ctx)
+}

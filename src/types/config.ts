@@ -5,7 +5,7 @@
 import type { World, Style, Attribute } from 'leviar'
 import type { FallbackRule, FallbackRuleOf, EffectType } from './dialogue'
 import type { SceneContext, CommandResult } from '../core/SceneContext'
-import type { UIHandler } from '../define/defineCmdUI'
+import type { NovelModule } from '../define/defineCmdUI'
 
 /** 
  * 단일 캐릭터 이미지 변형 정의 
@@ -140,8 +140,7 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
 
 /** 
  * 명령어의 실행 로직을 정의하는 핸들러 함수입니다.
- * - `SimpleCommandResult` 반환: 대사 진행 등을 대기하지 않고 다음 스텝으로 즉시 넘어갑니다 (skip).
- * - `TickFn` 반환: 1회 즉시 실행된 후, 사용자 입력마다 함수가 재호출되며 `true` 반환 시에 다음 스텝으로 진행됩니다.
+ * @deprecated NovelModule을 사용하세요. define()으로 생성된 모듈의 defineCommand 참조.
  */
 export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
   params: TParams,
@@ -150,16 +149,17 @@ export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
 
 /** 
  * Novel 시스템의 최상위 설정 객체 타입입니다.
- * 게임 내 모든 변수, 씬, 캐릭터, 배경, 효과, UI 스타일 및 폴백 규칙을 정의합니다.
+ * 게임 내 모든 변수, 씬, 캐릭터, 배경, 효과, 모듈 및 폴백 규칙을 정의합니다.
  * 
  * @example
  * ```ts
  * const config: NovelConfig<MyVars, MyScenes, MyChars, MyBgs> = {
  *   vars: { score: 0, flags: [] },
  *   scenes: ['intro', 'chapter1'],
- *   characters: { hero: { normal: { src: 'hero_img' } } },
+ *   characters: { hero: { images: { normal: { src: 'hero_img' } } } },
  *   backgrounds: { classroom: { src: 'class_img' } },
- *   assets: { hero_img: './assets/hero.png' }
+ *   assets: { hero_img: './assets/hero.png' },
+ *   modules: { 'dialogue': dialogueModule, 'character': characterModule },
  * }
  * ```
  */
@@ -169,8 +169,7 @@ export interface NovelConfig<
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
-  TCmds extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>,
-  TUi extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>,
+  TModules extends Record<string, NovelModule<any>> = Record<string, NovelModule<any>>,
 > {
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars: TVars
@@ -194,28 +193,25 @@ export interface NovelConfig<
    * 스크립트 실행 중 에셋이나 명령어가 누락되었을 때 적용할 기본값(폴백) 규칙 목록입니다. 
    * 배열의 첫 번째부터 순차적으로 매칭되어 적용됩니다.
    */
-  fallback?: FallbackRuleOf<TCmds>[]
+  fallback?: FallbackRule[]
   /**
-   * 커스텀 명령어 핸들러 목록입니다.
-   * 씬에서 지정한 `type`과 매칭되어 실행됩니다.
-   */
-  cmds?: TCmds
-  /**
-   * UI 핸들러 목록입니다. key가 UIRegistry 등록 키가 됩니다.
-   * `defineScene`의 `initial`에서 키/값 타입 추론에 사용됩니다.
+   * Novel 모듈 목록입니다. key가 커맨드 타입(`type`)과 UIRegistry 등록 키가 됩니다.
+   * `define()`으로 생성된 모듈을 등록하세요.
    *
    * @example
    * ```ts
-   * ui: {
-   *   'dialogue': dialogueUISetup,
-   *   'choices':  choiceUISetup,
+   * modules: {
+   *   'dialogue': dialogueModule,
+   *   'choices':  choiceModule,
+   *   'background': backgroundModule,
    * }
    * ```
    */
-  ui?: TUi
+  modules?: TModules
 }
 
 export type { FallbackRule, FallbackRuleOf } from './dialogue'
+export type { NovelModule, NovelModuleMeta } from '../define/defineCmdUI'
 
 
 
@@ -265,7 +261,7 @@ export interface NovelOption {
  * ```
  */
 export type CharacterKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
   ? keyof TChars & string
   : string
 
@@ -278,9 +274,11 @@ export type CharacterKeysOf<TConfig> =
  * ```
  */
 export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
   ? TCharKey extends keyof TChars
-  ? keyof TChars[TCharKey]['images'] & string
+  ? TChars[TCharKey] extends { images: infer TImgs }
+    ? keyof TImgs & string
+    : string
   : string
   : string
 
@@ -293,7 +291,7 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
  * ```
  */
 export type AssetKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any>
+  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any>
   ? keyof TAssets & string
   : string
 
@@ -306,7 +304,7 @@ export type AssetKeysOf<TConfig> =
  * ```
  */
 export type BackgroundKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any>
+  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any>
   ? keyof TBgs & string
   : string
 
@@ -319,7 +317,7 @@ export type BackgroundKeysOf<TConfig> =
  * ```
  */
 export type SceneNamesOf<TConfig> =
-  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any>
+  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any>
   ? TScenes[number]
   : string
 
@@ -332,7 +330,7 @@ export type SceneNamesOf<TConfig> =
  * ```
  */
 export type VarsOf<TConfig> =
-  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any>
+  TConfig extends NovelConfig<infer TVars, any, any, any, any, any>
   ? TVars
   : Record<string, any>
 
@@ -346,7 +344,7 @@ export type VarsOf<TConfig> =
  * ```
  */
 export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
   ? TName extends keyof TChars
     ? TChars[TName] extends { images: infer TImgs }
       ? TImgs[keyof TImgs] extends { points?: infer P }
@@ -357,28 +355,32 @@ export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = Character
   : string
 
 /**
- * `NovelConfig`에서 커스텀 커맨드 핸들러 맵(`cmds`)을 추출합니다.
- * `CustomCmd` 내부 타입 계산에 사용됩니다.
+ * `NovelConfig`에서 모듈 맵(`modules`)을 추출합니다.
  *
  * @example
  * ```ts
- * type Cmds = CmdsOf<typeof config>  // { 'test-cmd': CustomCmdHandler<...> }
+ * type Mods = ModulesOf<typeof config>  // { 'dialogue': NovelModule<...>, ... }
  * ```
  */
-export type CmdsOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, infer TCmds, any>
-  ? TCmds
+export type ModulesOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, infer TMods>
+  ? TMods
   : Record<never, never>
 
 /**
- * `NovelConfig`에서 UI 핸들러 키(`ui`의 key) 유니온을 추출합니다.
+ * `NovelConfig`에서 모듈 키(`modules`의 key) 유니온을 추출합니다.
  *
  * @example
  * ```ts
- * type UiKey = UiKeysOf<typeof config>  // 'dialogue' | 'choices'
+ * type ModKey = ModuleKeysOf<typeof config>  // 'dialogue' | 'choices' | 'background'
  * ```
  */
-export type UiKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, any, infer TUi>
-  ? keyof TUi & string
+export type ModuleKeysOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, infer TMods>
+  ? keyof TMods & string
   : string
+
+/** @deprecated CmdsOf → ModulesOf 로 대체 */
+export type CmdsOf<TConfig> = ModulesOf<TConfig>
+/** @deprecated UiKeysOf → ModuleKeysOf 로 대체 */
+export type UiKeysOf<TConfig> = ModuleKeysOf<TConfig>
