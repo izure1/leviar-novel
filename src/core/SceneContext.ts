@@ -94,12 +94,12 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    * @example 반환값 전파 (TickFn 위임)
    * ```ts
    * export const myHandler = defineCmd<{ text: string }>((cmd, ctx) => {
-   *   // dialogue cmd의 TickFn을 그대로 Scene에 전파
-   *   return ctx.execute({ type: 'dialogue', text: cmd.text })
+   *   // 반환값을 그대로 전파할 수도 있음 (TickFn 포함)
+   *   return ctx.execute({ type: 'dialogue', text: `${cmd.name} 등장!` })
    * })
    * ```
    */
-  execute: (cmd: DialogueEntry<any, any, any>) => CommandResult
+  execute: (cmd: DialogueEntry<any, any, any> | { type: string; [key: string]: any }) => CommandResult
 }
 
 /**

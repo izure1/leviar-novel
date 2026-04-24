@@ -15410,9 +15410,6 @@ ${addLineNumbers(fragment)}`);
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
-  var anotherCmd = defineCmd((cmd, ctx) => {
-    return true;
-  });
   var novel_config_default = defineNovelConfig({
     vars: {
       likeability: 0,
@@ -15424,8 +15421,7 @@ ${addLineNumbers(fragment)}`);
       "choices": choiceUISetup
     },
     cmds: {
-      "test-cmd": testCmd,
-      "another-cmd": anotherCmd
+      "test-cmd": testCmd
     },
     scenes: [
       "scene-zena",

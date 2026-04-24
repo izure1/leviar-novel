@@ -10,10 +10,6 @@ const testCmd = defineCmd<{ message: string }>((cmd, ctx) => {
   return true
 })
 
-const anotherCmd = defineCmd<{ message: string }>((cmd, ctx) => {
-  return true
-})
-
 export default defineNovelConfig({
   vars: {
     likeability: 0,
@@ -26,7 +22,6 @@ export default defineNovelConfig({
   },
   cmds: {
     'test-cmd': testCmd,
-    'another-cmd': anotherCmd,
   },
   scenes: [
     'scene-zena',
