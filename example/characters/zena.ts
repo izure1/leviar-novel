@@ -2,7 +2,7 @@ import { defineCharacter } from '../../src'
 
 export default defineCharacter({
   name: '제나',
-  points: {
+  images: {
     normal: {
       src: 'girl_normal',
       width: 350,

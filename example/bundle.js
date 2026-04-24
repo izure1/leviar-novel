@@ -5,14 +5,6 @@
     return config;
   }
 
-  // src/define/defineExploreScene.ts
-  function defineExploreScene(config, options) {
-    return {
-      kind: "explore",
-      options
-    };
-  }
-
   // src/define/defineCmd.ts
   function resolveVal(val, vars) {
     if (typeof val === "function") return val(vars);
@@ -14249,8 +14241,8 @@ ${addLineNumbers(fragment)}`);
     const charDefs = ctx.renderer.config.characters;
     const def = charDefs[name];
     if (!def) return;
-    const resolvedKey = imageKey ?? Object.keys(def.points)[0];
-    const imageDef = def.points[resolvedKey];
+    const resolvedKey = imageKey ?? Object.keys(def.images)[0];
+    const imageDef = def.images[resolvedKey];
     if (!imageDef) return;
     const states = getCharStates(ctx);
     const objs = getCharObjects(ctx);
@@ -15383,7 +15375,7 @@ ${addLineNumbers(fragment)}`);
   // example/characters/arisiero.ts
   var arisiero_default = defineCharacter({
     name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
-    points: {
+    images: {
       normal: {
         src: "girl_normal",
         width: 350,
@@ -15406,7 +15398,7 @@ ${addLineNumbers(fragment)}`);
   // example/characters/zena.ts
   var zena_default = defineCharacter({
     name: "\uC81C\uB098",
-    points: {
+    images: {
       normal: {
         src: "girl_normal",
         width: 350,
@@ -15445,13 +15437,13 @@ ${addLineNumbers(fragment)}`);
       "test-cmd": testCmd
     },
     scenes: [
-      "scene-intro",
-      "scene-a",
-      "scene-condition",
-      "scene-effects",
-      "explore-map",
       "scene-zena",
-      "scene-zena-game"
+      "scene-zena-game",
+      "scene-zena-food",
+      "scene-zena-stream",
+      "scene-zena-outside",
+      "scene-zena-bug",
+      "scene-zena-ending"
     ],
     points: ["face", "chest"],
     characters: {
@@ -15501,416 +15493,6 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
-  // example/scenes/scene-intro.ts
-  var scene_intro_default = defineScene({
-    config: novel_config_default,
-    initial: commonInitial
-  }, [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-library", duration: 0 },
-    { type: "mood", mood: "day", intensity: 0.3, duration: 0 },
-    { type: "effect", action: "add", effect: "dust", src: "dust", rate: 15, skip: true },
-    { type: "screen-fade", dir: "in", preset: "black", duration: 3e3 },
-    { type: "test-cmd", message: "Custom command works!" },
-    {
-      type: "dialogue",
-      text: [
-        "\uC624\uB798\uB41C \uC885\uC774 \uB0C4\uC0C8\uB294 \uC5B8\uC81C\uB098 \uB9C8\uC74C\uC744 \uCC28\uBD84\uD558\uAC8C \uB9CC\uB4E0\uB2E4.",
-        "\uB0A1\uC740 \uAC00\uC8FD \uD45C\uC9C0\uAC00 \uD48D\uAE30\uB294 \uCFF0\uCFF0\uD55C \uD5A5\uAE30, \uADF8\uB9AC\uACE0 \uC815\uC801.",
-        "\uD559\uAD50 \uB3C4\uC11C\uAD00\uC758 \uAC00\uC7A5 \uAE4A\uC219\uD55C \uACF3\uC740 \uB098\uC758 \uC720\uC77C\uD55C \uC548\uC2DD\uCC98\uC600\uB2E4.",
-        "\uC0AC\uB78C\uB4E4\uC758 \uBC1C\uAE38\uC774 \uB2FF\uC9C0 \uC54A\uB294 \uC11C\uAC00 \uAD6C\uC11D\uC5D0\uB294 \uC2DC\uAC04\uC774 \uB290\uB9AC\uAC8C \uD750\uB978\uB2E4.",
-        "\uB098\uB294 \uC2B5\uAD00\uCC98\uB7FC \uC190\uAC00\uB77D\uC744 \uCC45\uB4F1 \uC704\uC5D0 \uC62C\uB9AC\uACE0 \uCC9C\uCC9C\uD788 \uD6D1\uC5B4 \uB0B4\uB824\uAC14\uB2E4.",
-        "\uAC70\uCE60\uAC70\uCE60\uD55C \uC9C8\uAC10\uC774 \uC190\uB05D\uBC14\uB2E5\uC744 \uD0C0\uACE0 \uC804\uD574\uC838 \uC628\uB2E4.",
-        "\uC624\uB298\uB530\uB77C \uD587\uC0B4\uC774 \uC720\uB09C\uD788\uB3C4 \uAE4A\uC219\uC774 \uC11C\uAC00 \uC0AC\uC774\uB85C \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5C8\uB2E4.",
-        "\uACF5\uC911\uC5D0 \uB5A0\uB2E4\uB2C8\uB294 \uBA3C\uC9C0 \uC785\uC790\uB4E4\uC774 \uBE5B\uC744 \uBC1B\uC544 \uBCF4\uC11D\uCC98\uB7FC \uBC18\uC9DD\uC600\uB2E4.",
-        "\uB098\uB294 \uADF8 \uC870\uC6A9\uD55C \uCDA4\uC0AC\uC704\uB97C \uBA4D\uD558\uB2C8 \uBC14\uB77C\uBCF4\uC558\uB2E4.",
-        "\uC544\uBB34\uB3C4 \uC5C6\uB294 \uB3C4\uC11C\uAD00. \uC624\uC9C1 \uB098\uB9CC\uC774 \uC774 \uC138\uACC4\uC758 \uC720\uC77C\uD55C \uAD00\uCC30\uC790\uC600\uB2E4.",
-        "\uD558\uC9C0\uB9CC... \uADF8 \uC0DD\uAC01\uC740 \uACE7 \uAE68\uC9C0\uACE0 \uB9D0\uC558\uB2E4."
-      ]
-    },
-    // ─── 2. 예기치 못한 조우 ───
-    { type: "camera-pan", position: "1/10", duration: 2500 },
-    { type: "dialogue", text: "\uC11C\uAC00 \uB108\uBA38, \uCC3D\uAC00 \uC790\uB9AC\uC5D0 \uB204\uAD70\uAC00 \uC549\uC544 \uC788\uC5C8\uB2E4." },
-    { type: "character", action: "show", name: "arisiero", position: "right", image: "normal", duration: 1500, focus: "face", skip: true },
-    {
-      type: "dialogue",
-      text: [
-        "\uD558\uC580 \uC154\uCE20 \uC704\uB85C \uC3DF\uC544\uC9C0\uB294 \uB178\uB780 \uD587\uC0B4.",
-        "\uADF8\uB140\uB294 \uB9C8\uCE58 \uADF8\uB9BC \uC18D\uC5D0\uC11C \uB9C9 \uAC78\uC5B4 \uB098\uC628 \uAC83\uB9CC \uAC19\uC740 \uBE44\uD604\uC2E4\uC801\uC778 \uBD84\uC704\uAE30\uB97C \uD48D\uACBC\uB2E4."
-      ]
-    },
-    { type: "camera-zoom", preset: "close-up", duration: 1200 },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uAC00 \uB4E4\uACE0 \uC788\uB294 \uCC45\uC758 \uC81C\uBAA9\uC744 \uD655\uC778\uD558\uB824 \uB208\uC744 \uAC00\uB298\uAC8C \uB5B4\uB2E4.",
-        "\uADF8\uAC83\uC740 \uB0B4\uAC00 \uC9C0\uB09C\uC8FC\uBD80\uD130 \uCC3E\uACE0 \uC788\uC5C8\uB358 \uC808\uD310\uB41C \uC18C\uC124\uC774\uC5C8\uB2E4."
-      ]
-    },
-    { type: "camera-zoom", preset: "reset", duration: 1e3 },
-    { type: "dialogue", speaker: "arisiero", text: "......" },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uB294 \uCC45\uC7A5\uC5D0 \uC2DC\uC120\uC744 \uACE0\uC815\uD55C \uCC44 \uBBF8\uB3D9\uB3C4 \uD558\uC9C0 \uC54A\uC558\uB2E4.",
-        "\uD398\uC774\uC9C0\uB97C \uB118\uAE30\uB294 \uC18C\uB9AC\uB9CC\uC774 \uC544\uC8FC \uAC00\uB054 \uC815\uC801\uC744 \uAE7C\uB2E4.",
-        "\uB098\uB294 \uC228\uC744 \uC8FD\uC774\uACE0 \uADF8\uB140\uC758 \uC606\uBAA8\uC2B5\uC744 \uAD00\uCC30\uD588\uB2E4.",
-        "\uC18D\uB208\uC379\uC774 \uD587\uBE5B\uC5D0 \uBC18\uC0AC\uB418\uC5B4 \uAC00\uB290\uB2E4\uB780 \uADF8\uB9BC\uC790\uB97C \uB9CC\uB4E4\uACE0 \uC788\uC5C8\uB2E4.",
-        "\uBB34\uC5B8\uAC00 \uB9D0\uC744 \uAC78\uC5B4\uC57C \uD560\uAE4C? \uC544\uB2C8\uBA74 \uC870\uC6A9\uD788 \uC790\uB9AC\uB97C \uBE44\uCF1C\uC918\uC57C \uD560\uAE4C?",
-        "\uAC08\uB4F1\uD558\uB294 \uC0AC\uC774, \uADF8\uB140\uC758 \uC190\uAC00\uB77D\uC774 \uBA48\uCDC4\uB2E4."
-      ]
-    },
-    { type: "dialogue", speaker: "arisiero", text: "\uC0AC\uB791\uC740 \uB9D0\uC774\uC57C, \uACB0\uAD6D \uC0C1\uC2E4\uC744 \uACAC\uB514\uAE30 \uC704\uD55C \uC5F0\uC2B5\uC77C\uC9C0\uB3C4 \uBAB0\uB77C." },
-    { type: "camera-effect", preset: "shake", duration: 400, skip: true },
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uD63C\uC7A3\uB9D0\uCC98\uB7FC \uC911\uC5BC\uAC70\uB838\uB2E4. \uB0AE\uC740 \uBAA9\uC18C\uB9AC\uAC00 \uACF5\uAE30\uB97C \uC9C4\uB3D9\uC2DC\uCF30\uB2E4.\n\uB098\uB294 \uB098\uB3C4 \uBAA8\uB974\uAC8C \uD5C9 \uD558\uACE0 \uC228\uC744 \uB4E4\uC774\uCF30\uB2E4." },
-    { type: "character", action: "show", name: "arisiero", image: "smile", duration: 800 },
-    {
-      type: "dialogue",
-      speaker: "arisiero",
-      text: [
-        "\uC544... \uBCF4\uACE0 \uACC4\uC168\uB098\uC694?",
-        "\uC778\uAE30\uCC99\uC774 \uB290\uAEF4\uC84C\uB294\uB370, \uC5ED\uC2DC \uB204\uAD70\uAC00 \uC788\uC5C8\uAD70\uC694."
-      ]
-    },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uAC00 \uACE0\uAC1C\uB97C \uB3CC\uB824 \uB098\uB97C \uC815\uBA74\uC73C\uB85C \uBC14\uB77C\uBCF4\uC558\uB2E4.",
-        "\uB208\uC774 \uB9C8\uC8FC\uCE5C \uC21C\uAC04, \uC2EC\uC7A5 \uBC15\uB3D9\uC774 \uD3C9\uC18C\uBCF4\uB2E4 \uB450 \uBC30\uB294 \uBE68\uB77C\uC9C4 \uAC83 \uAC19\uC558\uB2E4."
-      ]
-    },
-    // ─── 3. 긴 철학적 대화 ───
-    { type: "dialogue", speaker: "arisiero", text: "\uC774 \uCC45, \uB2F9\uC2E0\uB3C4 \uCC3E\uACE0 \uC788\uC5C8\uC8E0?" },
-    { type: "dialogue", text: "\uB098\uB294 \uB2F9\uD669\uD558\uBA70 \uACE0\uAC1C\uB97C \uB044\uB355\uC600\uB2E4. \uC5B4\uB5BB\uAC8C \uC54C\uC558\uB290\uB0D0\uACE0 \uBB3C\uC5C8\uB2E4." },
-    {
-      type: "dialogue",
-      speaker: "arisiero",
-      text: [
-        "\uB208\uBE5B\uC744 \uBCF4\uBA74 \uC54C \uC218 \uC788\uC5B4\uC694. \uAC08\uAD6C\uD558\uB294 \uBB34\uC5B8\uAC00\uAC00 \uB2F4\uAE34 \uB208\uBE5B.",
-        "\uC804 \uC774 \uCC45\uC744 \uBC8C\uC368 \uC138 \uBC88\uC9F8 \uC77D\uACE0 \uC788\uC5B4\uC694.",
-        "\uC77D\uC744 \uB54C\uB9C8\uB2E4 \uC0C8\uB85C\uC6B4 \uC758\uBBF8\uAC00 \uBC1C\uACAC\uB418\uAC70\uB4E0\uC694."
-      ]
-    },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uB294 \uCC45\uC7A5\uC744 \uB36E\uACE0 \uB098\uC5D0\uAC8C \uC758\uC790 \uD558\uB098\uB97C \uAC00\uB9AC\uCF30\uB2E4.",
-        "\uB098\uB294 \uC774\uB04C\uB9AC\uB4EF \uADF8\uB140\uC758 \uB9DE\uC740\uD3B8 \uC790\uB9AC\uC5D0 \uC549\uC558\uB2E4."
-      ]
-    },
-    { type: "dialogue", speaker: "arisiero", text: "\uB2F9\uC2E0\uC740 \uC774 \uC18C\uC124\uC758 \uACB0\uB9D0\uC774 \uD574\uD53C\uC5D4\uB529\uC774\uB77C\uACE0 \uC0DD\uAC01\uD558\uB098\uC694?" },
-    { type: "dialogue", text: "\uB098\uB294 \uC7A0\uC2DC \uACE0\uBBFC\uD588\uB2E4. \uC8FC\uC778\uACF5\uC774 \uC8FD\uC5C8\uC73C\uB2C8 \uC0C8\uB4DC\uC5D4\uB529\uC774 \uC544\uB2C8\uB0D0\uACE0 \uB300\uB2F5\uD588\uB2E4." },
-    {
-      type: "dialogue",
-      speaker: "arisiero",
-      text: [
-        "\uAE00\uC384\uC694... \uC804 \uB2E4\uB974\uAC8C \uC0DD\uAC01\uD574\uC694.",
-        "\uC8FD\uC74C\uC740 \uACB0\uB9D0\uC774 \uC544\uB2C8\uB77C, \uC644\uC131\uC77C \uC218\uB3C4 \uC788\uC796\uC544\uC694.",
-        "\uC790\uC2E0\uC758 \uC0AC\uB791\uC744 \uC601\uC6D0\uD788 \uBCC0\uD558\uC9C0 \uC54A\uB294 \uAC83\uC73C\uB85C \uB0A8\uAE30\uAE30 \uC704\uD55C \uC120\uD0DD."
-      ]
-    },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uC758 \uB17C\uB9AC\uB294 \uB3C5\uD2B9\uD558\uBA74\uC11C\uB3C4 \uC124\uB4DD\uB825\uC774 \uC788\uC5C8\uB2E4.",
-        "\uC6B0\uB9AC\uB294 \uADF8\uB807\uAC8C \uD55C\uCC38 \uB3D9\uC548 \uC0DD\uACFC \uC0AC, \uADF8\uB9AC\uACE0 \uAE30\uC5B5\uC5D0 \uB300\uD574 \uC774\uC57C\uAE30\uD588\uB2E4.",
-        "\uB3C4\uC11C\uAD00 \uCC3D\uBC16\uC73C\uB85C \uAD6C\uB984\uC774 \uD758\uB7EC\uAC00\uACE0, \uD587\uC0B4\uC758 \uAC01\uB3C4\uAC00 \uC870\uAE08\uC529 \uBCC0\uD574\uAC14\uB2E4.",
-        "\uCC98\uC74C \uBCF4\uB294 \uC0AC\uB78C\uACFC \uC774\uB807\uAC8C \uAE4A\uC740 \uB300\uD654\uB97C \uB098\uB20C \uC218 \uC788\uB2E4\uB294 \uC0AC\uC2E4\uC774 \uB180\uB77C\uC6E0\uB2E4.",
-        "\uB9C8\uCE58 \uC544\uC8FC \uC624\uB798\uC804\uBD80\uD130 \uC54C\uACE0 \uC9C0\uB0C8\uB358 \uC0AC\uC774\uCC98\uB7FC \uD3B8\uC548\uD588\uB2E4."
-      ]
-    },
-    { type: "dialogue", speaker: "arisiero", text: "\uC774\uB984\uC774 \uBB50\uC608\uC694?" },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uAC00 \uAC11\uC791\uC2A4\uB7FD\uAC8C \uBB3C\uC5C8\uB2E4.",
-        "\uB098\uB294 \uC774\uB984\uC744 \uB9D0\uD574\uC92C\uB2E4. \uADF8\uB7EC\uC790 \uADF8\uB140\uAC00 \uC785\uC220\uC744 \uB2EC\uC2F9\uC774\uBA70 \uB0B4 \uC774\uB984\uC744 \uB098\uC9C1\uC774 \uC74A\uC870\uB838\uB2E4."
-      ]
-    },
-    { type: "dialogue", speaker: "arisiero", text: "\uC88B\uC740 \uC774\uB984\uC774\uB124\uC694. \uB530\uB73B\uD55C \uBE5B\uC774 \uB290\uAEF4\uC9C0\uB294 \uC774\uB984\uC774\uC5D0\uC694." },
-    { type: "dialogue", text: "\uC5BC\uAD74\uC774 \uD654\uB048\uAC70\uB838\uB2E4. \uCC3D\uD53C\uD574\uC11C \uACE0\uAC1C\uB97C \uC219\uC600\uB2E4." },
-    // ─── 4. 노을의 시간 ───
-    { type: "control", action: "disable", duration: 5e3, skip: true },
-    { type: "mood", action: "add", mood: "sunset", intensity: 0.85, duration: 5e3, skip: true },
-    { type: "mood", action: "add", mood: "ambient", duration: 3e3, skip: true },
-    { type: "effect", action: "add", effect: "sakura", src: "sakura", rate: 15, skip: true },
-    {
-      type: "dialogue",
-      text: [
-        "\uC5B4\uB290\uB367 \uB3C4\uC11C\uAD00 \uB0B4\uBD80\uB294 \uC9C4\uD55C \uC624\uB80C\uC9C0\uBE5B\uC73C\uB85C \uBB3C\uB4E4\uC5C8\uB2E4.",
-        "\uCC3D\uBC16\uC5D0\uC11C \uB0A0\uB824 \uB4E4\uC5B4\uC628 \uBC9A\uAF43 \uC78E\uB4E4\uC774 \uBC14\uB2E5\uC5D0 \uD769\uBFCC\uB824\uC84C\uB2E4.",
-        "\uADF8\uB140\uC758 \uBA38\uB9AC\uCE74\uB77D \uC704\uC5D0\uB3C4 \uC791\uC740 \uAF43\uC78E \uD558\uB098\uAC00 \uB0B4\uB824\uC549\uC558\uB2E4."
-      ]
-    },
-    { type: "camera-zoom", preset: "close-up", duration: 1500 },
-    {
-      type: "dialogue",
-      speaker: "arisiero",
-      text: [
-        "\uC544\uB984\uB2F5\uB124\uC694... \uC774 \uC21C\uAC04.",
-        "\uAC00\uB054\uC740 \uC2DC\uAC04\uC774 \uC774\uB300\uB85C \uBA48\uCDB0\uBC84\uB838\uC73C\uBA74 \uC88B\uACA0\uB2E4\uACE0 \uC0DD\uAC01\uD574\uC694.",
-        "\uB0B4\uC77C\uC774 \uC624\uBA74 \uC624\uB298\uC758 \uC6B0\uB9AC\uB294 \uB2E4\uC2DC\uB294 \uC874\uC7AC\uD558\uC9C0 \uC54A\uAC8C \uB420 \uD14C\uB2C8\uAE4C."
-      ]
-    },
-    { type: "camera-zoom", preset: "reset", duration: 1500 },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uC758 \uB9D0\uC5D0\uB294 \uAE4A\uC740 \uC0C1\uC2E4\uAC10\uC774 \uC11C\uB824 \uC788\uC5C8\uB2E4.",
-        "\uB098\uB294 \uADF8\uB140\uC758 \uC190\uC744 \uC7A1\uACE0 \uC2F6\uB2E4\uB294 \uCDA9\uB3D9\uC744 \uB290\uAF08\uB2E4.",
-        "\uD558\uC9C0\uB9CC \uB0B4 \uC190\uC740 \uCC45\uC0C1 \uBC11\uC5D0\uC11C \uAC00\uB298\uAC8C \uB5A8\uB9AC\uACE0 \uC788\uC744 \uBFD0\uC774\uC5C8\uB2E4.",
-        "\uC801\uB9C9 \uC18D\uC5D0\uC11C \uC6B0\uB9AC\uB294 \uD55C\uB3D9\uC548 \uB178\uC744\uB9CC\uC744 \uBC14\uB77C\uBCF4\uC558\uB2E4."
-      ]
-    },
-    { type: "dialogue", speaker: "arisiero", text: "\uC774\uC81C \uC804 \uAC00\uBD10\uC57C \uD574\uC694. \uD1B5\uAE08 \uC2DC\uAC04\uC774 \uC788\uAC70\uB4E0\uC694." },
-    { type: "character", action: "show", name: "arisiero", image: "normal", duration: 1e3 },
-    {
-      type: "dialogue",
-      speaker: "arisiero",
-      text: [
-        "\uC774 \uCC45, \uC81C\uAC00 \uBE4C\uB9B0 \uAC70\uC9C0\uB9CC... \uC624\uB298\uB9CC \uB2F9\uC2E0\uC5D0\uAC8C \uBE4C\uB824\uB4DC\uB9B4\uAC8C\uC694.",
-        "\uB2E4 \uC77D\uACE0 \uB098\uBA74, \uADF8\uB54C \uB2E4\uC2DC \uC774\uC57C\uAE30\uD574\uC694."
-      ]
-    },
-    { type: "dialogue", text: "\uADF8\uB140\uAC00 \uAC00\uBC29\uC744 \uCC59\uACA8 \uC790\uB9AC\uC5D0\uC11C \uC77C\uC5B4\uB0AC\uB2E4." },
-    // ─── 5. 작별과 여운 ───
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uAC00 \uC11C\uAC00 \uC0AC\uC774\uB85C \uCC9C\uCC9C\uD788 \uBA40\uC5B4\uC838 \uAC14\uB2E4.",
-        "\uBA40\uC5B4\uC9C0\uB294 \uBC1C\uC18C\uB9AC\uAC00 \uC2EC\uC7A5 \uC18C\uB9AC\uC640 \uACB9\uCCD0 \uB4E4\uB838\uB2E4.",
-        "\uB098\uB294 \uADF8 \uC790\uB9AC\uC5D0 \uBABB \uBC15\uD78C \uB4EF \uC11C\uC11C \uADF8\uB140\uC758 \uB4B7\uBAA8\uC2B5\uC744 \uBCF4\uC558\uB2E4.",
-        "\uC774\uB300\uB85C \uBCF4\uB0B4\uBA74 \uB2E4\uC2DC\uB294 \uBABB \uB9CC\uB0A0\uC9C0\uB3C4 \uBAA8\uB978\uB2E4.",
-        "\uAC00\uC2B4\uC18D\uC5D0\uC11C \uBB34\uC5B8\uAC00 \uB728\uAC70\uC6B4 \uAC83\uC774 \uC6B8\uCEE5 \uCE58\uBC00\uC5B4 \uC62C\uB790\uB2E4."
-      ]
-    },
-    { type: "camera-effect", preset: "shake", duration: 600 },
-    {
-      type: "dialogue",
-      text: [
-        "\uB098\uB294 \uADF8\uB140\uB97C \uBD80\uB974\uAE30 \uC704\uD574 \uC785\uC744 \uC5F4\uC5C8\uB2E4.",
-        "\uB3C4\uC11C\uAD00\uC758 \uACF5\uAE30\uAC00 \uAE34\uC7A5\uAC10\uC73C\uB85C \uD33D\uD33D\uD558\uAC8C \uB2F9\uACA8\uC84C\uB2E4.",
-        "\uC5B4\uB5A4 \uB9D0\uC744 \uD574\uC57C \uADF8\uB140\uB97C \uBA48\uCD9C \uC218 \uC788\uC744\uAE4C?"
-      ]
-    },
-    {
-      type: "choice",
-      choices: [
-        { text: "\uAE09\uD788 \uADF8\uB140\uB97C \uBD88\uB7EC \uC138\uC6B4\uB2E4", next: "scene-a", var: { likeability: 60 } },
-        { text: "\uB0B4\uC77C\uB3C4 \uC774\uACF3\uC5D0 \uC624\uB0D0\uACE0 \uBB3B\uB294\uB2E4", next: "scene-a", var: { likeability: 40 } },
-        { text: "\uC5F0\uB77D\uCC98\uB97C \uC815\uC911\uD788 \uBB3C\uC5B4\uBCF8\uB2E4", next: "scene-a", var: { likeability: 30 } },
-        { text: "\uC544\uBB34 \uB9D0\uB3C4 \uD558\uC9C0 \uBABB\uD55C \uCC44 \uBC30\uC6C5\uD55C\uB2E4", next: "scene-a", var: { likeability: 0 } }
-      ]
-    },
-    // ─── 6. 그 후의 이야기 (만약 배웅했을 경우의 감성 묘사) ───
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uC758 \uBAA8\uC2B5\uC774 \uC644\uC804\uD788 \uC0AC\uB77C\uC9C4 \uD6C4\uC5D0\uB3C4, \uB3C4\uC11C\uAD00\uC5D0\uB294 \uADF8\uB140\uC758 \uD5A5\uAE30\uAC00 \uB0A8\uC544 \uC788\uC5C8\uB2E4.",
-        "\uC190\uB54C \uBB3B\uC740 \uCC45\uB9CC\uC774 \uB0B4 \uC55E\uC5D0 \uB369\uADF8\uB7EC\uB2C8 \uB193\uC5EC \uC788\uC5C8\uB2E4.",
-        "\uB098\uB294 \uB5A8\uB9AC\uB294 \uC190\uC73C\uB85C \uCC45\uC7A5\uC744 \uB118\uACBC\uB2E4.",
-        "\uCCAB \uD398\uC774\uC9C0\uC5D0\uB294 \uADF8\uB140\uAC00 \uC801\uC5B4\uB193\uC740 \uB4EF\uD55C \uC791\uC740 \uBA54\uBAA8\uAC00 \uC788\uC5C8\uB2E4.",
-        '"\uAE30\uB2E4\uB9BC\uC740 \uD76C\uB9DD\uC758 \uB2E4\uB978 \uC774\uB984\uC785\uB2C8\uB2E4."',
-        "\uBA54\uBAA8\uB97C \uC77D\uB294 \uC21C\uAC04, \uAC00\uC2B4 \uD55C\uAD6C\uC11D\uC774 \uD658\uD574\uC9C0\uB294 \uAE30\uBD84\uC774 \uB4E4\uC5C8\uB2E4.",
-        "\uB0B4\uC77C\uB3C4, \uADF8\uB2E4\uC74C \uB0A0\uB3C4. \uB098\uB294 \uC774\uACF3\uC5D0 \uC624\uAC8C \uB420 \uAC83\uC774\uB2E4.",
-        "\uADF8\uB140\uB97C \uB2E4\uC2DC \uB9CC\uB098\uAE30 \uC704\uD574.",
-        "\uB098\uC758 \uC9C4\uC2EC\uC774 \uADF8\uB140\uC5D0\uAC8C \uB2FF\uC744 \uC218 \uC788\uAE30\uB97C \uBC14\uB77C\uBA70.",
-        "\uC870\uC6A9\uD55C \uB3C4\uC11C\uAD00\uC5D0 \uBC24\uC774 \uCC3E\uC544\uC624\uACE0 \uC788\uC5C8\uB2E4."
-      ]
-    },
-    { type: "mood", mood: "night", intensity: 0.9, duration: 4e3 },
-    { type: "effect", action: "remove", effect: "sakura", duration: 2e3 },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
-    { type: "dialogue", text: "\uCCAB \uBC88\uC9F8 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
-  ]);
-
-  // example/scenes/scene-a.ts
-  var scene_a_default = defineScene({ config: novel_config_default, initial: commonInitial }, [
-    // ── 배경 전환 + 벚꽃 효과
-    { type: "background", name: "bg-library", duration: 800, skip: true },
-    { type: "mood", mood: "day", intensity: 0.5, duration: 800, skip: true },
-    // ── 타이틀 오버레이
-    { type: "overlay", action: "add", text: "\u2014 \uB3C4\uC11C\uAD00 \u2014", preset: "title" },
-    { type: "overlay", action: "remove", preset: "title", duration: 800, skip: true },
-    { type: "effect", action: "add", effect: "sakura", src: "sakura", rate: 6, skip: true },
-    // ── 대사
-    { type: "dialogue", speaker: "arisiero", text: "\uBC9A\uAF43 \uC78E\uC0AC\uADC0\uAC00 \uB3C4\uC11C\uAD00 \uC548\uAE4C\uC9C0 \uB4E4\uC5B4\uC654\uB124\uC694!" },
-    { type: "dialogue", text: "\uADF8\uB140\uB294 \uCC3D\uAC00\uB85C \uAC78\uC5B4\uAC14\uB2E4." },
-    { type: "character-focus", name: "arisiero", point: "face" },
-    // ── 캐릭터 표정 변경 + 클로즈업
-    { type: "character", action: "show", name: "arisiero", image: "smile" },
-    { type: "character-focus", name: "arisiero", point: "face", zoom: "close-up", duration: 800, skip: true },
-    { type: "dialogue", speaker: "arisiero", text: "(\uD074\uB85C\uC988\uC5C5 \uC0C1\uD0DC \u2014 character-focus \uD14C\uC2A4\uD2B8)" },
-    // ── 하이라이트 (컷인)
-    { type: "character-highlight", name: "arisiero", action: "on", skip: true },
-    { type: "dialogue", speaker: "arisiero", text: "(\uD558\uC774\uB77C\uC774\uD2B8 \uCEF7\uC778 \u2014 character-highlight \uD14C\uC2A4\uD2B8)" },
-    { type: "character-highlight", name: "arisiero", action: "off" },
-    // ── 카메라 + 이펙트 리셋
-    { type: "character", name: "arisiero", action: "show", position: "center", skip: true },
-    { type: "camera-zoom", preset: "reset", duration: 600, skip: true },
-    { type: "camera-pan", position: "center", duration: 600, skip: true },
-    { type: "effect", action: "remove", effect: "sakura", duration: 800 },
-    // ── 다음 씬 선택
-    { type: "dialogue", text: "\uB2E4\uC74C \uD14C\uC2A4\uD2B8\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4." },
-    {
-      type: "choice",
-      choices: [
-        { text: "\uC870\uAC74 \uBD84\uAE30 \uD14C\uC2A4\uD2B8 \u2192", next: "scene-condition" },
-        { text: "\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \u2192", next: "scene-effects" }
-      ]
-    }
-  ]);
-
-  // example/scenes/scene-condition.ts
-  var scene_condition_default = defineScene({ config: novel_config_default, initial: commonInitial, variables: { _tries: 0 } }, [
-    // ── 나레이션
-    { type: "dialogue", text: `[\uC870\uAC74 \uBD84\uAE30 \uD14C\uC2A4\uD2B8]` },
-    { type: "dialogue", text: `\uD604\uC7AC \uD638\uAC10\uB3C4\uC640 \uB9CC\uB0A8 \uC5EC\uBD80\uB85C \uBD84\uAE30\uD569\uB2C8\uB2E4.` },
-    // ── label: cond-check
-    { type: "label", name: "cond-check" },
-    // ── 복합 조건: likeability >= 10
-    {
-      type: "condition",
-      if: ({ likeability }) => likeability >= 10,
-      goto: "branch-good",
-      else: "branch-bad"
-    },
-    // ── 나쁜 분기
-    { type: "label", name: "branch-bad" },
-    { type: "dialogue", speaker: "arisiero", text: "...\uC65C \uC774\uB7F0 \uB300\uC6B0\uB97C \uBC1B\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694." },
-    { type: "dialogue", text: '(\uD638\uAC10\uB3C4\uB97C 20\uC73C\uB85C \uAC15\uC81C \uC124\uC815\uD569\uB2C8\uB2E4. \uD604\uC7AC: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "\uCC38" : "\uAC70\uC9D3" }})' },
-    { type: "var", name: "likeability", value: 20 },
-    { type: "var", name: "_tries", value: 1 },
-    // 강제 수정 후 재확인
-    { type: "condition", if: ({ _tries }) => _tries >= 1, goto: "cond-check" },
-    // ── 좋은 분기
-    { type: "label", name: "branch-good" },
-    // ── [Resolvable 검증] name, image 함수형 prop (vars 자동 추론)
-    {
-      type: "character",
-      action: "show",
-      name: ({ likeability }) => likeability >= 10 ? "arisiero" : "arisiero",
-      image: ({ likeability }) => likeability >= 20 ? "smile" : "normal"
-    },
-    { type: "dialogue", speaker: "arisiero", text: '\uC640, \uD638\uAC10\uB3C4\uAC00 \uB192\uB124\uC694! \uAC10\uC0AC\uD574\uC694! (\uD604\uC7AC: {{ likeability }} {{ _tries }} {{ likeability >= 10 ? "\uCC38" : "\uAC70\uC9D3" }})' },
-    // ── [Resolvable 검증] text에 함수 반환값 + {{ }} 템플릿 중첩
-    { type: "dialogue", text: ({ likeability }) => `[\uD568\uC218\uD615 text] \uD604\uC7AC \uD638\uAC10\uB3C4: {{ ${likeability} }}, \uC870\uAC74: ${likeability >= 10 ? "\uD1B5\uACFC" : "\uC2E4\uD328"}` },
-    // ── [Resolvable 검증] choices 배열 원소 내부 text도 함수형
-    {
-      type: "choice",
-      choices: [
-        { text: ({ likeability }) => `\uD638\uAC10\uB3C4(${likeability})\uB85C \uACC4\uC18D`, next: "scene-effects" },
-        { text: "\uC2DC\uC791\uC73C\uB85C", next: "scene-intro" }
-      ]
-    },
-    // ── 실제 이 분기 이후는 choice에서 넘어가므로 아래는 도달 안 함
-    // ── or 조건 테스트
-    { type: "dialogue", text: "[or \uC870\uAC74 \uD14C\uC2A4\uD2B8] likeability >= 50 or endingReached" },
-    {
-      type: "condition",
-      if: ({ likeability, endingReached }) => likeability >= 50 || endingReached,
-      goto: "skip-normal"
-    },
-    { type: "dialogue", speaker: "arisiero", text: "(\uC870\uAC74\uC774 \uAC70\uC9D3 \u2014 50 \uBBF8\uB9CC\uC774\uACE0 \uC5D4\uB529 \uBBF8\uB2E4\uBABB\uD568)" },
-    { type: "label", name: "skip-normal" },
-    // ── 지역변수 최종 표시
-    { type: "dialogue", text: `[\uC9C0\uC5ED\uBCC0\uC218] _tries = \uC7AC\uC2DC\uB3C4 \uD69F\uC218. \uC804\uC5ED\uBCC0\uC218 likeability = \uD604\uC7AC \uD638\uAC10\uB3C4.` },
-    { type: "dialogue", text: "\uC52C \uC774\uB3D9 \uD6C4 _tries\uB294 \uCD08\uAE30\uD654\uB418\uC9C0\uB9CC likeability\uB294 \uC720\uC9C0\uB429\uB2C8\uB2E4." },
-    {
-      type: "choice",
-      choices: [
-        { text: "\uCE74\uBA54\uB77C \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \u2192", next: "scene-effects" },
-        { text: "\uCC98\uC74C\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30", next: "scene-intro" }
-      ]
-    }
-  ]);
-
-  // example/scenes/scene-effects.ts
-  var scene_effects_default = defineScene({ config: novel_config_default, initial: commonInitial }, [
-    // ── 공원으로 배경 전환
-    { type: "background", name: "bg-park", duration: 1e3, skip: true },
-    { type: "effect", action: "add", effect: "rain", src: "rain", rate: 500, skip: true },
-    { type: "mood", mood: "night", intensity: 0.7, duration: 1e3, skip: true },
-    { type: "dialogue", text: "[\uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8] \uACF5\uC6D0\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4." },
-    // ── 배열 텍스트 테스트 (Syntax Sugar)
-    {
-      type: "dialogue",
-      text: [
-        "\uBC30\uC5F4 \uD14D\uC2A4\uD2B8 \uD14C\uC2A4\uD2B8\uC785\uB2C8\uB2E4.",
-        "\uC5EC\uB7EC \uAC1C\uC758 \uB300\uC0AC\uB97C \uC791\uC131\uD560 \uB54C,",
-        "\uC774\uCC98\uB7FC \uBC30\uC5F4\uB85C \uBB36\uC5B4 \uC791\uC131\uD558\uBA74",
-        "\uAC01\uAC01 \uAC1C\uBCC4\uC801\uC778 \uB300\uC0AC\uB85C \uCC98\uB9AC\uB429\uB2C8\uB2E4."
-      ]
-    },
-    // ── 비 이펙트 + night 무드 + 플리커
-    { type: "mood", action: "add", mood: "night", intensity: 0.7, duration: 1200, skip: true },
-    { type: "mood", action: "add", mood: "cold", flicker: "flicker", skip: true },
-    { type: "dialogue", text: "rain \uC774\uD399\uD2B8 + cold \uC870\uBA85 + night \uBB34\uB4DC." },
-    // ── 카메라 흔들림
-    { type: "camera-effect", preset: "shake", duration: 500, repeat: 100 },
-    { type: "dialogue", text: "camera-effect: shake." },
-    // ── 카메라 줌
-    { type: "camera-zoom", preset: "close-up", duration: 600 },
-    { type: "dialogue", text: "camera-zoom: close-up." },
-    { type: "camera-zoom", preset: "reset", duration: 600 },
-    // ── 스크린 플래시
-    { type: "screen-flash", preset: "white" },
-    { type: "dialogue", text: "screen-flash: white." },
-    // ── 이펙트/조명 제거 + day 복원
-    { type: "effect", action: "remove", effect: "rain", duration: 600, skip: true },
-    { type: "mood", action: "remove", mood: "cold", duration: 600, skip: true },
-    { type: "mood", action: "add", mood: "day", intensity: 0.5, duration: 1e3, skip: true },
-    { type: "dialogue", text: "\uC774\uD399\uD2B8 \uC81C\uAC70, day \uBB34\uB4DC \uBCF5\uC6D0." },
-    // ── 와이프 전환
-    { type: "screen-wipe", dir: "out", preset: "left", duration: 800 },
-    { type: "screen-wipe", dir: "in", preset: "right", duration: 800 },
-    { type: "dialogue", text: "screen-wipe: left-out \u2192 right-in." },
-    // ── 페이드 전환
-    { type: "screen-fade", dir: "out", preset: "dream", duration: 800 },
-    { type: "screen-fade", dir: "in", preset: "dream", duration: 800 },
-    { type: "dialogue", text: "screen-fade: dream \uD504\uB9AC\uC14B." },
-    // ── 카메라 패닝
-    { type: "camera-pan", position: "right", duration: 800 },
-    { type: "dialogue", text: "camera-pan: right." },
-    { type: "camera-pan", position: "center", duration: 800 },
-    // ── fog 이펙트
-    { type: "effect", action: "add", effect: "fog", src: "fog", rate: 20 },
-    { type: "dialogue", text: "fog \uC774\uD399\uD2B8 \uCD94\uAC00." },
-    { type: "effect", action: "remove", effect: "fog", duration: 800 },
-    // ── 완료
-    { type: "dialogue", text: "\uBAA8\uB4E0 \uD654\uBA74 \uD6A8\uACFC \uD14C\uC2A4\uD2B8 \uC644\uB8CC!" },
-    {
-      type: "choice",
-      choices: [
-        { text: "\uD0D0\uC0C9 \uC52C (ExploreScene) \u2192", next: "explore-map" },
-        { text: "\uCC98\uC74C\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30", next: "scene-intro" }
-      ]
-    }
-  ]);
-
-  // example/scenes/explore-map.ts
-  var explore_map_default = defineExploreScene(novel_config_default, {
-    background: "bg-park",
-    objects: [
-      {
-        name: "door-to-intro",
-        position: { x: 180, y: 300 },
-        src: "obj-door",
-        next: "scene-intro",
-        width: 90,
-        height: 160
-      },
-      {
-        name: "window-to-effects",
-        position: { x: 520, y: 280 },
-        src: "obj-window",
-        next: "scene-effects",
-        width: 110,
-        height: 130
-      }
-    ]
-  });
-
   // example/scenes/scene-zena.ts
   var scene_zena_default = defineScene({
     config: novel_config_default,
@@ -15943,8 +15525,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "zena",
       text: [
-        '\uB2D8, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uC784"\uC774\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC74C?',
-        "\uC65C \uD558\uD544 \uB0B4 \uC55E\uC5D0\uC11C \uADF8\uB807\uAC8C \uD574\uB9D1\uAC8C \uCEE4\uD53C\uB97C \uB9C8\uC2DC\uB294 \uAC70\uC784? \uC790\uBE44 \uC810."
+        '\uB108, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?',
+        "\uC65C \uD558\uD544 \uB0B4 \uC55E\uC5D0\uC11C \uADF8\uB807\uAC8C \uD574\uB9D1\uAC8C \uCEE4\uD53C\uB97C \uB9C8\uC2DC\uB294 \uAC70\uC57C? \uC790\uBE44 \uC880 \uBCA0\uD480\uC5B4\uC918."
       ]
     },
     {
@@ -15961,15 +15543,15 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "zena",
       text: [
-        "\uC77C? \uD558, \uBE44\uC988\uB2C8\uC2A4 \uD1A0\uD06C \uAE08\uC9C0\uC784. \uC9C0\uAE08 \uB0B4 \uB450\uB1CC\uB294 404 Error \uC0C1\uD0DC\uB77C\uACE0\uC694.",
-        "\uADF8\uB0E5... \uC138\uC0C1\uC758 \uBAA8\uB4E0 \uCF54\uB4DC\uB97C \uC0AD\uC81C\uD558\uACE0 \uD3C9\uD654\uB85C\uC6B4 \uC790\uC5F0\uC778\uC73C\uB85C \uC0B4\uACE0 \uC2F6\uC744 \uBFD0\uC784."
+        "\uC77C? \uD558, \uBE44\uC988\uB2C8\uC2A4 \uD1A0\uD06C \uAE08\uC9C0\uC57C. \uC9C0\uAE08 \uB0B4 \uB450\uB1CC\uB294 404 Error \uC0C1\uD0DC\uB77C\uACE0.",
+        "\uADF8\uB0E5... \uC138\uC0C1\uC758 \uBAA8\uB4E0 \uCF54\uB4DC\uB97C \uC0AD\uC81C\uD558\uACE0 \uD3C9\uD654\uB85C\uC6B4 \uC790\uC5F0\uC778\uC73C\uB85C \uC0B4\uACE0 \uC2F6\uC744 \uBFD0\uC774\uC57C."
       ]
     },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 500 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uADFC\uB370 \uB2D8 \uCEE4\uD53C \uB9DB\uC788\uC5B4 \uBCF4\uC784. \uD55C \uC785\uB9CC? \uC544, \uB18D\uB2F4\uC784. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD558\uC148."
+      text: "\uADFC\uB370 \uB108 \uCEE4\uD53C \uB9DB\uC788\uC5B4 \uBCF4\uC778\uB2E4. \uD55C \uC785\uB9CC? \uC544, \uB18D\uB2F4\uC774\uC57C. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD574."
     },
     { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 버그 질문 ───
@@ -15979,14 +15561,14 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "zena",
       text: [
-        "\uBC84\uADF8?! \uB2D8, \uC9C0\uAE08 \uAE08\uAE30\uC5B4 \uC37C\uC74C. \uB0B4 \uC778\uC0DD \uC790\uCCB4\uAC00 \uAC70\uB300\uD55C \uBC84\uADF8\uC778\uB370 \uBB34\uC2A8 \uC18C\uB9B4 \uD558\uB294 \uAC70\uC784?",
-        "\uC138\uBBF8\uCF5C\uB860 \uD558\uB098 \uB54C\uBB38\uC5D0 \uB0B4 \uC8FC\uB9D0\uC774 \uD1B5\uC9F8\uB85C \uB0A0\uC544\uAC14\uB2E4\uACE0! \uC774\uAC74 \uC778\uAD8C \uCE68\uD574\uC784!"
+        "\uBC84\uADF8?! \uB108, \uC9C0\uAE08 \uAE08\uAE30\uC5B4 \uC37C\uC5B4. \uB0B4 \uC778\uC0DD \uC790\uCCB4\uAC00 \uAC70\uB300\uD55C \uBC84\uADF8\uC778\uB370 \uBB34\uC2A8 \uC18C\uB9B4 \uD558\uB294 \uAC70\uC57C?",
+        "\uC138\uBBF8\uCF5C\uB860 \uD558\uB098 \uB54C\uBB38\uC5D0 \uB0B4 \uC8FC\uB9D0\uC774 \uD1B5\uC9F8\uB85C \uB0A0\uC544\uAC14\uB2E4\uACE0! \uC774\uAC74 \uC778\uAD8C \uCE68\uD574\uC57C!"
       ]
     },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "...\uADFC\uB370 \uB2D8 \uAC1C\uBC1C\uC790\uC784? \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uD6C8\uC218 \uB450\uB294 \uD558\uCCAD \uC5C5\uC790\uC784? \uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
+      text: "...\uADFC\uB370 \uB108 \uAC1C\uBC1C\uC790\uC57C? \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uD6C8\uC218 \uB450\uB294 \uD558\uCCAD \uC5C5\uC790\uC57C? \uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
     },
     { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 도망 ───
@@ -15995,8 +15577,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "zena",
       text: [
-        "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC10? \uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uBE61\uCCD0 \uC788\uC73C\uB77C\uACE0?",
-        "\uB2D8, \uC549\uC73C\uC148. \uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC784. \uB3C4\uB9DD \uBABB \uAC10."
+        "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC00? \uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uD654\uB098 \uC788\uC73C\uB77C\uACE0?",
+        "\uB108, \uC549\uC544. \uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC57C. \uB3C4\uB9DD \uBABB \uAC00."
       ]
     },
     { type: "condition", if: () => true, goto: "common-end" },
@@ -16008,7 +15590,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: [
         "\uD558... \uBAA8\uB974\uACA0\uB2E4. \uAC13\uC0DD\uC740 \uB0B4\uC77C\uBD80\uD130 \uC0B4\uC9C0 \uBB50.",
-        "\uB2D8, \uB098\uB791 \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798\uC694? \uC694\uC998 \uC720\uD589\uD558\uB294 \uADF8 \uBC84\uADF8 \uAC9C."
+        "\uB108, \uB098\uB791 \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798? \uC694\uC998 \uC720\uD589\uD558\uB294 \uADF8 \uBC84\uADF8 \uAC9C."
       ]
     },
     {
@@ -16027,12 +15609,12 @@ ${addLineNumbers(fragment)}`);
       _zenaRage: 0
     },
     initial: commonInitial,
-    next: "scene-intro"
+    next: "scene-zena-food"
   }, [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-library", duration: 0 },
-    { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
-    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
+    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "mood", mood: "night", intensity: 0.7, duration: 0, skip: true },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3, skip: true },
     {
       type: "dialogue",
       text: [
@@ -16067,7 +15649,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC624, \uB2D8 \uAF64 \uBC30\uC6B0\uC2E0 \uBD84\uC774\uB124. \uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC74C."
+      text: "\uC624, \uB108 \uAF64 \uBC30\uC6B4 \uC0AC\uB78C\uC774\uB124. \uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
     },
     { type: "var", name: "likeability", value: 10 },
     { type: "condition", if: () => true, goto: "play-game" },
@@ -16080,7 +15662,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: [
         "\uB9DD\uAC9C\uC774\uB77C\uB2C8! \uC774\uAC74 \uC5B8\uB354\uB3C5\uC758 \uBC18\uB780\uC774\uC790 \uD3EC\uC2A4\uD2B8\uBAA8\uB354\uB2C8\uC998 \uC608\uC220\uC774\uB77C\uACE0!",
-        "\uD558... \uB2D8\uC740 \uC544\uC9C1 \uC774 \uC138\uACC4\uB97C \uC774\uD574\uD560 \uC900\uBE44\uAC00 \uC548 \uB41C \uAC70\uC784."
+        "\uD558... \uB108\uB294 \uC544\uC9C1 \uC774 \uC138\uACC4\uB97C \uC774\uD574\uD560 \uC900\uBE44\uAC00 \uC548 \uB41C \uAC70\uC57C."
       ]
     },
     { type: "condition", if: () => true, goto: "play-game" },
@@ -16090,9 +15672,9 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC790, \uD328\uB4DC \uC7A1\uC73C\uC148. \uBCF4\uC2A4\uC804\uC784."
+      text: "\uC790, \uD328\uB4DC \uC7A1\uC544. \uBCF4\uC2A4\uC804\uC774\uC57C."
     },
-    { type: "screen-flash", preset: "red", repeat: 5 },
+    { type: "screen-flash", preset: "red", skip: true },
     { type: "camera-effect", preset: "shake", duration: 800 },
     {
       type: "dialogue",
@@ -16110,6 +15692,451 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
     { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uAE30\uBB18\uD55C \uAC8C\uC784 \uB370\uC774\uD2B8\uAC00 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
+  ]);
+
+  // example/scenes/scene-zena-food.ts
+  var scene_zena_food_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial,
+    next: "scene-zena-stream"
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
+    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "mood", mood: "night", intensity: 0.7, duration: 0, skip: true },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD558... \uAC8C\uC784 \uC5B5\uAE4C \uB2F9\uD574\uC11C \uBA58\uD0C8 \uD130\uC9C0\uB2C8\uAE4C \uBC30\uACE0\uD30C\uC84C\uB2E4. \uC778\uAC04\uC758 3\uB300 \uC695\uAD6C\uB294 \uCF54\uB529, \uC218\uBA74, \uC57C\uC2DD \uC544\uB2C8\uC57C?"
+    },
+    {
+      type: "dialogue",
+      text: '"\uC2DD\uC695\uC774 \uC544\uB2C8\uB77C \uC57C\uC2DD\uC774\uB77C\uACE0?"'
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uB2F9\uC5F0\uD558\uC9C0. \uD604\uB300\uC778\uC5D0\uAC8C \uC57C\uC2DD\uC740 \uC911\uAEBE\uB9C8\uC758 \uC6D0\uCC9C\uC774\uC57C.",
+        "\uC911\uC694\uD55C \uAC74 \uAEBE\uC774\uC9C0 \uC54A\uB294 \uB9C8\uB77C\uB9DB."
+      ]
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uB294 \uC2A4\uB9C8\uD2B8\uD3F0\uC744 \uAEBC\uB0B4 \uBC30\uB2EC \uC571\uC744 \uBBF8\uCE5C \uB4EF\uC774 \uC2A4\uD06C\uB864\uD558\uAE30 \uC2DC\uC791\uD588\uB2E4."
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: '"\uBB34\uB09C\uD558\uAC8C \uCE58\uD0A8 \uC5B4\uB54C?"', goto: "chicken" },
+        { text: '"\uC544\uAE4C \uB9E4\uC6B4 \uAC70 \uBA39\uACE0 \uC2F6\uB2E4\uBA70. \uC5FD\uAE30 \uB5A1\uBCF6\uC774?"', goto: "spicy" }
+      ]
+    },
+    // ─── 치킨 ───
+    { type: "label", name: "chicken" },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uCE58\uD0A8? \uB108 T\uC57C?",
+        "\uACF5\uAC10 \uB2A5\uB825 \uC8FD\uC5C8\uB124. \uC694\uC998 \uB300\uC138\uB294 \uB9C8\uB77C\uB85C\uC81C\uD06C\uB9BC\uCE58\uC988\uCC1C\uB2ED\uC774\uC796\uC544."
+      ]
+    },
+    { type: "dialogue", text: '"\uB9C8\uB77C\uC5D0 \uB85C\uC81C\uC5D0 \uD06C\uB9BC\uCE58\uC988...? \uC704\uC7A5 \uD14C\uB7EC \uC544\uB0D0?"' },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD14C\uB7EC\uBC29\uC9C0\uBC95\uC740 \uD1B5\uACFC\uB410\uC9C0\uB9CC, \uCC1C\uB2ED\uBC29\uC9C0\uBC95\uC740 \uC544\uC9C1\uC774\uAC70\uB4E0, \uB0B4\uAC00."
+    },
+    { type: "dialogue", text: "\uD560 \uB9D0\uC744 \uC783\uC5C8\uB2E4." },
+    { type: "condition", if: () => true, goto: "order" },
+    // ─── 매운거 ───
+    { type: "label", name: "spicy" },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC624, \uAE30\uC5B5\uB825 \uC88B\uC740\uB370? \uB300\uD654\uAC00 \uB41C\uB2E4 \uB300\uD654\uAC00.",
+        "\uADFC\uB370 \uB9E4\uC6B4 \uAC70 \uBA39\uC73C\uBA74 \uB0B4 \uC704\uC7A5 \uC11C\uBC84\uAC00 \uD130\uC9C8\uC9C0\uB3C4 \uBAB0\uB77C."
+      ]
+    },
+    { type: "dialogue", text: '"\uADF8\uB807\uB2E4\uBA74?"' },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADF8\uB7EC\uB2C8\uAE4C \uB9C8\uB77C\uB85C\uC81C\uD06C\uB9BC\uCE58\uC988\uCC1C\uB2ED\uC73C\uB85C \uAC04\uB2E4."
+    },
+    { type: "dialogue", text: "\uAE30\uC801\uC758 \uB17C\uB9AC\uB2E4." },
+    { type: "condition", if: () => true, goto: "order" },
+    // ─── 공통 주문 ───
+    { type: "label", name: "order" },
+    {
+      type: "dialogue",
+      text: "\uACB0\uAD6D \uAE30\uC2B9\uC804 \uCC1C\uB2ED, \uC644\uBCBD\uD55C \uB2F5\uC815\uB108\uC600\uB2E4. \uC81C\uB098\uB294 \uC775\uC219\uD55C \uC190\uB180\uB9BC\uC73C\uB85C \uACB0\uC81C\uB97C \uB9C8\uCCE4\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBC30\uB2EC 60\uBD84 \uAC78\uB9B0\uB300."
+    },
+    { type: "camera-effect", preset: "shake", duration: 300 },
+    { type: "dialogue", text: '"\uC7A0\uAE50, \uBC29\uAE08 \uB0B4 \uD578\uB4DC\uD3F0\uC5D0\uC11C \uACB0\uC81C \uC54C\uB9BC\uC774 \uC6B8\uB9B0 \uAC83 \uAC19\uC740\uB370?"' },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC5B4, \uC74C\uC2DD \uC62C \uB54C\uAE4C\uC9C0 \uC2DC\uAC04 \uB0A8\uC558\uB124! \uC720\uD29C\uBE0C \uC20F\uD3FC\uC73C\uB85C \uB3C4\uD30C\uBBFC \uC880 \uCC44\uC6CC\uC57C\uC9C0~"
+    },
+    { type: "dialogue", text: "\uC81C\uB098\uB294 \uB0B4 \uB9D0\uC744 \uAE54\uB054\uD558\uAC8C \uC539\uACE0\uB294 \uD654\uBA74 \uC18D\uC73C\uB85C \uBE60\uC838\uB4E4\uC5C8\uB2E4." },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
+  ]);
+
+  // example/scenes/scene-zena-stream.ts
+  var scene_zena_stream_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial,
+    next: "scene-zena-outside"
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
+    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "mood", mood: "night", intensity: 0.7, duration: 0, skip: true },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    {
+      type: "dialogue",
+      text: "\uBC30\uB2EC \uC74C\uC2DD\uC744 \uAE30\uB2E4\uB9AC\uBA70 \uC720\uD29C\uBE0C\uB97C \uBCF4\uB358 \uC81C\uB098\uAC00 \uAC11\uC790\uAE30 \uB9C8\uC774\uD06C \uC120\uC744 \uAC74\uB4DC\uB838\uB2E4."
+    },
+    { type: "camera-effect", preset: "shake", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC557, \uC7A0\uAE50!",
+        "\uC774\uAC70 \uBC29\uC1A1 \uCF1C\uC9C4 \uAC70 \uC544\uB2C8\uC57C?!"
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "...\uC5B4? \uCF1C\uC84C\uB124.",
+        "\uD558\uC774\uB8FD~ \uD2B8\uC218\uB4E4!",
+        "\uBC29\uC1A1 \uC548 \uCF20\uB2E4\uACE0 \uD574\uB193\uACE0 \uC2E4\uC218\uB85C \uCF1C\uBC84\uB838\uB2E4!"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "1\uCD08 \uB9CC\uC5D0 \uD150\uC158\uC774 180\uB3C4 \uBC14\uB00C\uC5C8\uB2E4.",
+        "\uC778\uD130\uB137 \uBC29\uC1A1\uC778\uC758 \uC9C1\uC5C5\uBCD1\uC778\uAC00."
+      ]
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: "\uCE74\uBA54\uB77C \uBC16\uC5D0\uC11C \uC870\uC6A9\uD788 \uC190\uC744 \uD754\uB4E4\uC5B4\uC900\uB2E4", goto: "wave" },
+        { text: '"\uC57C, \uB0B4 \uCC1C\uB2ED\uC740 \uC5B8\uC81C \uC640?" \uB77C\uACE0 \uC18C\uB9AC\uCE5C\uB2E4', goto: "troll" }
+      ]
+    },
+    { type: "label", name: "wave" },
+    {
+      type: "dialogue",
+      text: [
+        "\uB098\uB294 \uCE74\uBA54\uB77C \uC0AC\uAC01\uC9C0\uB300\uC5D0\uC11C \uC7A5\uB09C\uC2A4\uB7FD\uAC8C \uC190\uC744 \uD754\uB4E4\uC5C8\uB2E4.",
+        "\uD654\uBA74 \uAD6C\uC11D\uC5D0 \uB0B4 \uC190\uAC00\uB77D\uC774 1\uCD08\uCBE4 \uC7A1\uD614\uB2E4."
+      ]
+    },
+    { type: "camera-effect", preset: "shake", duration: 300 },
+    {
+      type: "dialogue",
+      text: [
+        "\uC21C\uAC04, \uBBF8\uCE5C \uB4EF\uC774 \uC62C\uB77C\uAC00\uB358 \uCC44\uD305\uCC3D\uC774 \uC77C\uC21C\uAC04 \uC5BC\uC5B4\uBD99\uB354\uB2C8 \uB9E4\uC11C\uC6B4 \uC18D\uB3C4\uB85C \uB3C4\uBC30\uB418\uAE30 \uC2DC\uC791\uD588\uB2E4.",
+        "\uCC44\uD305\uCC3D: [ ??? ] [ \uBC29\uAE08 \uB0A8\uC790 \uC190 \uC544\uB2D8? ] [ \uC720\uB2C8\uCF58 \uBFD4 \uB2E4 \uBD80\uB7EC\uC9C0\uB294 \uC18C\uB9AC \uB4E4\uB9AC\uB124 ] [ \uD654\uBA74 \uAE4C\uB9E4\uC9C4\uB2E4 \u3137\u3137\u3137 ]"
+      ]
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "(\uC18C\uACE4\uC18C\uACE4) \uBBF8\uCCE4\uC5B4?! \uC190 \uCE58\uC6CC!",
+        "\uB098 \uC721\uC218 \uC6B0\uB824\uC11C \uBA39\uACE0\uC0AC\uB294 \uC2EC\uD574 \uBC29\uC1A1\uC774\uB780 \uB9D0\uC774\uC57C!"
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC544, \uC5EC\uB7EC\uBD84! \uBC29\uAE08 \uADF8\uAC70 \uC81C \uC190\uC774\uC5D0\uC694!",
+        "\uC81C\uAC00 \uBF08\uB300 \uAD75\uC740 \uAC70 \uC544\uC2DC\uC796\uC544\uC694? \uD558\uD558\uD558!"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uC5B4\uC124\uD508 \uD574\uBA85\uC774 \uD654\uB97C \uBD88\uB800\uB2E4. \uCC44\uD305\uCC3D\uC740 \uBFD4\uC774 \uBD80\uB7EC\uC9C4 \uC720\uB2C8\uCF58 \uB300\uC2E0 \uB2E4\uB978 \uBD80\uB958\uC758 \uC2DC\uCCAD\uC790\uB4E4\uB85C \uD3ED\uC8FC\uD558\uAE30 \uC2DC\uC791\uD588\uB2E4.",
+        "\uCC44\uD305\uCC3D: [ \uC6B0\uC6B1... ] [ \uD615 \uBB50\uD574 ] [ \uCEA0 \uB044\uACE0 \uB4C0\uB77C\uD55C \uD558\uB294 \uC774\uC720\uAC00 \uC788\uC5C8\uB124 ] [ \uC5ED\uACB9\uB2E4 \uC9C4\uC9DC \u314B\u314B\u314B\u314B ] [ \uAD70\uD544 \uC5EC\uACE0\uC0DD \uCEE8\uC149\uC784? ]"
+      ]
+    },
+    { type: "camera-effect", preset: "shake", duration: 500 },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC544\uB2C8\uC57C! \uD615 \uC544\uB2C8\uB77C\uACE0!",
+        "\uBBFC\uBC29\uC704 \uC548 \uB05D\uB0AC\uB0D0\uB2C8 \uC120 \uB118\uB124 \uC9C4\uC9DC!",
+        "\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uC5EC\uCEA0 \uC778\uC0DD \uB05D\uB0AC\uC796\uC544!"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uC774\uC131\uC744 \uC783\uC740 \uC81C\uB098\uAC00 \uB0B4 \uBA71\uC0B4\uC744 \uC7A1\uACE0 \uD754\uB4DC\uB294 \uC7A5\uBA74\uAE4C\uC9C0...",
+        "\uCE74\uBA54\uB77C\uC5D0 \uACE0\uC2A4\uB780\uD788 \uC1A1\uCD9C\uB418\uC5C8\uB2E4."
+      ]
+    },
+    {
+      type: "dialogue",
+      text: "\uCC44\uD305\uCC3D: [ \u314B\u314B\u314B\u314B \uBB3C\uB9AC\uC5D4\uC9C4 \uAC1C\uCA50\uB2E4 ] [ \uBA71\uC0B4\uC7A1\uC774 \uD569\uBC29 \uD3FC \uBBF8\uCCE4\uB2E4 ] [ \uB3C4\uD30C\uBBFC \uD130\uC9C0\uB124 ]"
+    },
+    { type: "condition", if: () => true, goto: "stream-end" },
+    { type: "label", name: "troll" },
+    { type: "camera-effect", preset: "shake", duration: 300 },
+    {
+      type: "dialogue",
+      text: [
+        "\uB0B4\uAC00 \uB4A4\uC5D0\uC11C \uCA4C\uB801\uCA4C\uB801\uD558\uAC8C \uC678\uCE58\uC790,",
+        "\uCC44\uD305\uCC3D\uC774 \uC21C\uC2DD\uAC04\uC5D0 \uBD88\uD0C0\uC624\uB974\uAE30 \uC2DC\uC791\uD588\uB2E4.",
+        "\uCC44\uD305\uCC3D: [ \u314B\u314B\u314B\u314B \uB0A8\uC790 \uBAA9\uC18C\uB9AC \uBB50\uB0D0 ] [ \uB3D9\uAC70\uB0A8 \uCC1C\uB2ED\uC740 \uC911\uB300\uC0AC\uD56D\uC774\uC9C0 ] [ \uBFD4 \uB2E4 \uAC08\uB824\uC11C \uAC00\uB8E8 \uB428 ] [ \uCC44\uD305\uCC3D \uAE4C\uB9E4\uC9C0\uB294 \uAC70 \uBCF4\uC18C ]"
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC545! \uC57C! \uB108 \uC9C0\uAE08 \uBB50 \uD558\uB294 \uAC70\uC57C?!"
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "...\uC544, \uC5EC\uB7EC\uBD84. \uBC29\uAE08 \uADF8\uAC74 \uC81C GPT\uC785\uB2C8\uB2E4.",
+        "\uBC30\uB2EC \uC54C\uB9BC \uAE30\uB2A5\uC774 \uC880 \uB9AC\uC5BC\uD558\uC8E0? \uB540\uB540..."
+      ]
+    },
+    { type: "condition", if: () => true, goto: "stream-end" },
+    { type: "label", name: "stream-end" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC624\uB298 \uBC29\uC1A1\uC740 3\uBD84 \uB9CC\uC5D0 \uBC29\uC885\uD558\uACA0\uC2B5\uB2C8\uB2E4! \u3143\u3143!"
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      text: [
+        "\uBC29\uC1A1 \uC885\uB8CC \uBC84\uD2BC\uC744 \uB204\uB974\uC790\uB9C8\uC790 \uC81C\uB098\uB294...",
+        "\uB2E4\uC2DC \uC8FD\uC740 \uB208\uC73C\uB85C \uB3CC\uC544\uC654\uB2E4."
+      ]
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
+  ]);
+
+  // example/scenes/scene-zena-outside.ts
+  var scene_zena_outside_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial,
+    next: "scene-zena-bug"
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
+    { type: "background", name: "bg-park", duration: 0, skip: true },
+    { type: "mood", mood: "day", intensity: 0.5, duration: 0, skip: true },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    {
+      type: "dialogue",
+      text: "\uB2E4\uC74C \uB0A0 \uC544\uCE68. \uB098\uB294 \uC81C\uB098\uB97C \uAC15\uC81C\uB85C \uACF5\uC6D0\uC5D0 \uB04C\uACE0 \uB098\uC654\uB2E4."
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC545! \uB208\uBD80\uC154! \uD587\uBE5B \uC5D0\uC784\uD575 \uCF30\uB0D0! \uC774\uAC70 \uBE14\uB8E8\uB77C\uC774\uD2B8 \uD544\uD130 \uC548 \uB3FC?!"
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."', goto: "sun" },
+        { text: '"\uC57C\uC678 \uBC29\uC1A1 \uCF58\uD150\uCE20\uB77C\uACE0 \uC0DD\uAC01\uD574."', goto: "content" }
+      ]
+    },
+    { type: "label", name: "sun" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBC40\uD30C\uC774\uC5B4\uBA74 \uB108\uBD80\uD130 \uBB3C\uC5C8\uC5B4. \uD53C\uB3C4 \uB9DB\uC5C6\uAC8C \uC0DD\uACBC\uC9C0\uB9CC."
+    },
+    { type: "condition", if: () => true, goto: "walk" },
+    { type: "label", name: "content" },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC624? \uCF58\uD150\uCE20? \uB108 \uC81C\uBC95 \uB9E4\uB2C8\uC800 \uB9C8\uC778\uB4DC\uAC00 \uC7A5\uCC29\uB410\uB124. \uAC00\uC0B0\uC810 +1\uC810."
+    },
+    { type: "condition", if: () => true, goto: "walk" },
+    { type: "label", name: "walk" },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uD22C\uB35C\uAC70\uB9AC\uBA74\uC11C\uB3C4 \uB098\uB97C \uB530\uB77C \uCC9C\uCC9C\uD788 \uACF5\uC6D0\uC744 \uAC78\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBB50... \uB098\uC058\uC9C4 \uC54A\uB124. \uADF8\uB798\uD53D \uB80C\uB354\uB9C1\uB3C4 \uC798 \uB410\uACE0. \uD480 \uD14D\uC2A4\uCC98\uB3C4 \uB098\uB984 \uACE0\uD574\uC0C1\uB3C4\uACE0."
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
+  ]);
+
+  // example/scenes/scene-zena-bug.ts
+  var scene_zena_bug_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial,
+    next: "scene-zena-ending"
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
+    { type: "background", name: "bg-park", duration: 0, skip: true },
+    { type: "mood", mood: "day", intensity: 0.5, duration: 0, skip: true },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
+    {
+      type: "dialogue",
+      text: "\uACF5\uC6D0\uC744 \uAC77\uB358 \uC911, \uAC11\uC790\uAE30 \uC81C\uB098\uAC00 \uBC1C\uAC78\uC74C\uC744 \uBA48\uCD94\uACE0 \uAD73\uC5B4\uBC84\uB838\uB2E4."
+    },
+    { type: "camera-effect", preset: "shake", duration: 500 },
+    { type: "character", action: "show", name: "zena", image: "normal", focus: "face", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD5C9... \uC800, \uC800\uAE30... \uBC84\uADF8... \uB9AC\uC5BC \uC6D4\uB4DC \uBC84\uADF8 \uB5B4\uC5B4...!"
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uC758 \uC2DC\uC120 \uB05D\uC5D0\uB294 \uD07C\uC9C0\uB9C9\uD55C \uB9E4\uBBF8 \uD55C \uB9C8\uB9AC\uAC00 \uBCA4\uCE58 \uC704\uC5D0 \uC549\uC544 \uC788\uC5C8\uB2E4."
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: "\uB9E4\uBBF8\uB97C \uB9E8\uC190\uC73C\uB85C \uC7A1\uC544\uC11C \uCE58\uC6CC\uC900\uB2E4", goto: "hero" },
+        { text: "\uAC19\uC774 \uBE44\uBA85\uC744 \uC9C0\uB974\uBA70 \uB3C4\uB9DD\uAC04\uB2E4", goto: "run" }
+      ]
+    },
+    { type: "label", name: "hero" },
+    {
+      type: "dialogue",
+      text: "\uB0B4\uAC00 \uD0DC\uC5F0\uD558\uAC8C \uB9E4\uBBF8\uB97C \uC7A1\uC544 \uC232\uC73C\uB85C \uB0A0\uB824\uBCF4\uB0B4\uC790, \uC81C\uB098\uAC00 \uC874\uACBD\uC2A4\uB7EC\uC6B4 \uB208\uBE5B\uC73C\uB85C \uB098\uB97C \uBCF4\uC558\uB2E4."
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBBF8\uCE5C \uD53C\uC9C0\uCEEC... \uB108 \uBC29\uAE08 \uB514\uBC84\uAE45 \uC18D\uB3C4 \uAC1C\uCA54\uC5C8\uC5B4. \uC778\uC815."
+    },
+    { type: "condition", if: () => true, goto: "calm" },
+    { type: "label", name: "run" },
+    { type: "camera-effect", preset: "shake", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC73C\uC544\uC544\uC545! \uC11C\uBC84 \uD130\uC9C4\uB2E4! \uB3C4\uB9DD\uAC00!!!"
+    },
+    {
+      type: "dialogue",
+      text: "\uC6B0\uB9AC\uB294 \uACF5\uC6D0 \uBC18 \uBC14\uD034\uB97C \uC804\uB825 \uC9C8\uC8FC\uD55C \uD6C4\uC5D0\uC57C \uACA8\uC6B0 \uBA48\uCDB0 \uC130\uB2E4."
+    },
+    { type: "condition", if: () => true, goto: "calm" },
+    { type: "label", name: "calm" },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD558\uC544... \uD558\uC544... \uC5ED\uC2DC \uD604\uC2E4 \uC138\uACC4\uB294 \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC57C. \uBE68\uB9AC \uC544\uC9C0\uD2B8\uB85C \uBCF5\uADC0\uD558\uC790."
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
+  ]);
+
+  // example/scenes/scene-zena-ending.ts
+  var scene_zena_ending_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial,
+    // 씬 5개 종료 후 처음으로 롤백
+    next: "scene-zena"
+  }, [
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
+    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "mood", mood: "sunset", intensity: 0.8, duration: 0, skip: true },
+    { type: "screen-fade", dir: "in", preset: "black", duration: 2e3 },
+    {
+      type: "dialogue",
+      text: "\uC5B4\uB290\uC0C8 \uD574\uAC00 \uC9C0\uACE0, \uCC3D\uBC16\uC73C\uB85C \uBD89\uC740 \uB178\uC744\uC774 \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5C8\uB2E4."
+    },
+    { type: "character", action: "show", name: "zena", image: "smile", position: "center", duration: 1e3 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uC624\uB298 \uD018\uC2A4\uD2B8(\uC678\uCD9C) \uAC19\uC774 \uB6F0\uC5B4\uC918\uC11C \uACE0\uB9C8\uC6CC.",
+        "\uC0AC\uC2E4 \uB098 \uD63C\uC790\uC11C\uB294 \uB098\uAC08 \uC5C4\uB450\uB3C4 \uBABB \uB0C8\uAC70\uB4E0."
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "...\uADFC\uB370 \uC880 \uC624\uAE00\uAC70\uB9AC\uB124. \uC544\uAE4C \uD55C \uB9D0\uC740 \uB864\uBC31\uD560\uAC8C. \uBABB \uB4E4\uC740 \uAC78\uB85C \uD574\uC918."
+    },
+    {
+      type: "choice",
+      choices: [
+        { text: '"\uC774\uBBF8 \uC138\uC774\uBE0C\uD588\uC5B4."', goto: "saved" },
+        { text: '"\uADF8\uB798, \uB098\uB3C4 \uD53C\uACE4\uD558\uB2E4."', goto: "tired" }
+      ]
+    },
+    { type: "label", name: "saved" },
+    { type: "camera-effect", preset: "shake", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544, \uB370\uC774\uD130 \uAC15\uC81C \uC0AD\uC81C\uD560 \uAC70\uC57C! \uB0B4 \uD751\uC5ED\uC0AC \uD3F4\uB354\uC5D0 \uC811\uADFC\uD558\uC9C0 \uB9C8!"
+    },
+    { type: "condition", if: () => true, goto: "epilogue" },
+    { type: "label", name: "tired" },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADF8\uCE58? \uB0B4\uC77C\uC740 \uAC01\uC790 \uC9D1\uC5D0\uC11C \uB514\uC2A4\uCF54\uB4DC\uB098 \uCF1C\uC790. \uADF8\uAC8C \uC6B0\uB9AC\uB2E4\uC6B4 \uAC70\uC9C0."
+    },
+    { type: "condition", if: () => true, goto: "epilogue" },
+    { type: "label", name: "epilogue" },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 800 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544\uBB34\uD2BC... \uC218\uACE0\uD588\uC5B4. \uD30C\uD2F0\uC6D0."
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uB294 \uC791\uAC8C \uC6C3\uC73C\uBA70 \uB2E4\uC2DC \uD5E4\uB4DC\uC14B\uC744 \uC37C\uB2E4. \uD3C9\uBC94\uD558\uC9C0\uB9CC, \uBC84\uADF8 \uD22C\uC131\uC774\uC778 \uC77C\uC0C1\uC774 \uB2E4\uC2DC \uC2DC\uC791\uB418\uACE0 \uC788\uC5C8\uB2E4."
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 3e3 },
+    { type: "dialogue", text: "\uC81C\uB098 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uBAA8\uB450 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4." }
   ]);
 
   // example/main.ts
@@ -16148,13 +16175,13 @@ ${addLineNumbers(fragment)}`);
       height: 600,
       depth: 500,
       scenes: {
-        "scene-intro": scene_intro_default,
-        "scene-a": scene_a_default,
-        "scene-condition": scene_condition_default,
-        "scene-effects": scene_effects_default,
-        "explore-map": explore_map_default,
         "scene-zena": scene_zena_default,
-        "scene-zena-game": scene_zena_game_default
+        "scene-zena-game": scene_zena_game_default,
+        "scene-zena-food": scene_zena_food_default,
+        "scene-zena-stream": scene_zena_stream_default,
+        "scene-zena-outside": scene_zena_outside_default,
+        "scene-zena-bug": scene_zena_bug_default,
+        "scene-zena-ending": scene_zena_ending_default
       }
     });
     await novel.load();

@@ -50,7 +50,7 @@ export interface CharDef {
   /** 캐릭터의 표시용 이름 (대사창 등에 사용) */
   name?: string
   /** 캐릭터의 각 표정/상태별 이미지 정의 */
-  points: Record<string, CharImageDef>
+  images: Record<string, CharImageDef>
 }
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
@@ -62,7 +62,7 @@ export type CharDefs = Record<string, CharDef>
 export type CharDefsWithPoints<TPoints extends readonly string[]> = {
   [CharKey: string]: {
     name?: string
-    points: {
+    images: {
       [ImageKey: string]: {
         src?: string
         width?: number
@@ -179,19 +179,19 @@ export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
  * ```
  */
 export interface NovelConfig<
-  TVars        extends Record<string, any>,
-  TScenes      extends readonly string[],
-  TCharacters  extends CharDefs,
+  TVars extends Record<string, any>,
+  TScenes extends readonly string[],
+  TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
-  TAssets      extends Record<string, string> = Record<string, string>,
-  TCmds        extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>,
-  TUi          extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>,
-  TPoints      extends readonly string[] = readonly string[],
+  TAssets extends Record<string, string> = Record<string, string>,
+  TCmds extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>,
+  TUi extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>,
+  TPoints extends readonly string[] = readonly string[],
 > {
   /** 게임의 전역 변수 초기값 목록입니다. */
-  vars:        TVars
+  vars: TVars
   /** 게임에 포함된 모든 씬(Scene) 이름 목록입니다. */
-  scenes:      TScenes
+  scenes: TScenes
   /**
    * 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록입니다.
    * 여기에 선언된 키만 `characters`의 각 이미지 `points`에 정의할 수 있습니다.
@@ -201,31 +201,31 @@ export interface NovelConfig<
    * points: ['face', 'chest', 'hand'] as const
    * ```
    */
-  points?:     TPoints
+  points?: TPoints
   /** 게임에 등장하는 모든 캐릭터의 정의 목록입니다. */
-  characters:  TCharacters
+  characters: TCharacters
   /** 게임에 사용되는 모든 배경 이미지 정의 목록입니다. */
   backgrounds: TBackgrounds
   /** 
    * 이펙트(비, 눈 등)의 상세 물리/시각적 설정 목록입니다. 
    * 미지정 시 렌더러(Renderer)의 기본값이 사용됩니다.
    */
-  effects?:    Partial<Record<EffectType, EffectDef>>
+  effects?: Partial<Record<EffectType, EffectDef>>
   /** 
    * 에셋의 키와 경로 매핑 목록입니다. 
    * 엔진 초기화 시점에 이 경로를 바탕으로 에셋을 자동 로드합니다.
    */
-  assets?:     TAssets
+  assets?: TAssets
   /** 
    * 스크립트 실행 중 에셋이나 명령어가 누락되었을 때 적용할 기본값(폴백) 규칙 목록입니다. 
    * 배열의 첫 번째부터 순차적으로 매칭되어 적용됩니다.
    */
-  fallback?:   FallbackRuleOf<TCmds>[]
+  fallback?: FallbackRuleOf<TCmds>[]
   /**
    * 커스텀 명령어 핸들러 목록입니다.
    * 씬에서 지정한 `type`과 매칭되어 실행됩니다.
    */
-  cmds?:       TCmds
+  cmds?: TCmds
   /**
    * UI 핸들러 목록입니다. key가 UIRegistry 등록 키가 됩니다.
    * `defineScene`의 `initial`에서 키/값 타입 추론에 사용됩니다.
@@ -238,7 +238,7 @@ export interface NovelConfig<
    * }
    * ```
    */
-  ui?:         TUi
+  ui?: TUi
 }
 
 export type { FallbackRule, FallbackRuleOf } from './dialogue'
@@ -259,12 +259,12 @@ export type { FallbackRule, FallbackRuleOf } from './dialogue'
  */
 export interface NovelOption {
   /** 렌더링에 사용할 대상 캔버스(Canvas) HTML 엘리먼트입니다. */
-  canvas:  HTMLCanvasElement
+  canvas: HTMLCanvasElement
   /** 
    * 씬의 논리적 렌더링 너비(px 단위)입니다. 
    * 미지정 시 캔버스의 실제 크기(canvas.width)를 사용합니다.
    */
-  width?:  number
+  width?: number
   /** 
    * 씬의 논리적 렌더링 높이(px 단위)입니다. 
    * 미지정 시 캔버스의 실제 크기(canvas.height)를 사용합니다.
@@ -274,7 +274,7 @@ export interface NovelOption {
    * 씬의 Z-depth 최댓값(px 단위)입니다. 
    * 카메라와 오브젝트 간의 원근감 거리를 결정하며, 기본값은 500입니다.
    */
-  depth?:  number
+  depth?: number
 }
 
 // =============================================================
@@ -292,8 +292,8 @@ export interface NovelOption {
  */
 export type CharacterKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
-    ? keyof TChars & string
-    : string
+  ? keyof TChars & string
+  : string
 
 /**
  * `NovelConfig`에서 특정 캐릭터의 이미지 키(`points`의 key) 유니온을 추출합니다.
@@ -305,10 +305,10 @@ export type CharacterKeysOf<TConfig> =
  */
 export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
-    ? TCharKey extends keyof TChars
-      ? keyof TChars[TCharKey]['points'] & string
-      : string
-    : string
+  ? TCharKey extends keyof TChars
+  ? keyof TChars[TCharKey]['images'] & string
+  : string
+  : string
 
 /**
  * `NovelConfig`에서 에셋 키(`assets`의 key) 유니온을 추출합니다.
@@ -320,8 +320,8 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
  */
 export type AssetKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any, any>
-    ? keyof TAssets & string
-    : string
+  ? keyof TAssets & string
+  : string
 
 /**
  * `NovelConfig`에서 배경 키(`backgrounds`의 key) 유니온을 추출합니다.
@@ -333,8 +333,8 @@ export type AssetKeysOf<TConfig> =
  */
 export type BackgroundKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any, any>
-    ? keyof TBgs & string
-    : string
+  ? keyof TBgs & string
+  : string
 
 /**
  * `NovelConfig`에서 씬 이름(`scenes`의 원소) 유니온을 추출합니다.
@@ -346,8 +346,8 @@ export type BackgroundKeysOf<TConfig> =
  */
 export type SceneNamesOf<TConfig> =
   TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any, any>
-    ? TScenes[number]
-    : string
+  ? TScenes[number]
+  : string
 
 /**
  * `NovelConfig`에서 전역 변수 타입(`vars`)을 추출합니다.
@@ -359,8 +359,8 @@ export type SceneNamesOf<TConfig> =
  */
 export type VarsOf<TConfig> =
   TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any, any>
-    ? TVars
-    : Record<string, any>
+  ? TVars
+  : Record<string, any>
 
 /**
  * `NovelConfig`에서 포인트 키(`points`의 원소) 유니온을 추출합니다.
@@ -372,8 +372,8 @@ export type VarsOf<TConfig> =
  */
 export type PointsOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, any, any, infer TPoints>
-    ? TPoints[number]
-    : string
+  ? TPoints[number]
+  : string
 
 /**
  * `NovelConfig`에서 커스텀 커맨드 핸들러 맵(`cmds`)을 추출합니다.
@@ -386,8 +386,8 @@ export type PointsOf<TConfig> =
  */
 export type CmdsOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, infer TCmds, any, any>
-    ? TCmds
-    : Record<never, never>
+  ? TCmds
+  : Record<never, never>
 
 /**
  * `NovelConfig`에서 UI 핸들러 키(`ui`의 key) 유니온을 추출합니다.
@@ -399,5 +399,5 @@ export type CmdsOf<TConfig> =
  */
 export type UiKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, any, infer TUi, any>
-    ? keyof TUi & string
-    : string
+  ? keyof TUi & string
+  : string

@@ -38,8 +38,8 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'zena',
     text: [
-      '님, 혹시 제 얼굴에 "나 오늘 갓생 살 거임"이라고 쓰여있음?',
-      '왜 하필 내 앞에서 그렇게 해맑게 커피를 마시는 거임? 자비 점.'
+      '너, 혹시 제 얼굴에 "나 오늘 갓생 살 거다"라고 쓰여있어?',
+      '왜 하필 내 앞에서 그렇게 해맑게 커피를 마시는 거야? 자비 좀 베풀어줘.'
     ]
   },
 
@@ -58,15 +58,15 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'zena',
     text: [
-      '일? 하, 비즈니스 토크 금지임. 지금 내 두뇌는 404 Error 상태라고요.',
-      '그냥... 세상의 모든 코드를 삭제하고 평화로운 자연인으로 살고 싶을 뿐임.'
+      '일? 하, 비즈니스 토크 금지야. 지금 내 두뇌는 404 Error 상태라고.',
+      '그냥... 세상의 모든 코드를 삭제하고 평화로운 자연인으로 살고 싶을 뿐이야.'
     ]
   },
   { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 500 },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '근데 님 커피 맛있어 보임. 한 입만? 아, 농담임. 밴(Ban) 당하기 싫으면 조심하셈.'
+    text: '근데 너 커피 맛있어 보인다. 한 입만? 아, 농담이야. 밴(Ban) 당하기 싫으면 조심해.'
   },
   { type: 'condition', if: () => true, goto: 'common-end' },
 
@@ -77,14 +77,14 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'zena',
     text: [
-      '버그?! 님, 지금 금기어 썼음. 내 인생 자체가 거대한 버그인데 무슨 소릴 하는 거임?',
-      '세미콜론 하나 때문에 내 주말이 통째로 날아갔다고! 이건 인권 침해임!'
+      '버그?! 너, 지금 금기어 썼어. 내 인생 자체가 거대한 버그인데 무슨 소릴 하는 거야?',
+      '세미콜론 하나 때문에 내 주말이 통째로 날아갔다고! 이건 인권 침해야!'
     ]
   },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '...근데 님 개발자임? 아니면 그냥 훈수 두는 하청 업자임? 말투가 딱 트위치 채팅창인데.'
+    text: '...근데 너 개발자야? 아니면 그냥 훈수 두는 하청 업자야? 말투가 딱 트위치 채팅창인데.'
   },
   { type: 'condition', if: () => true, goto: 'common-end' },
 
@@ -94,8 +94,8 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'zena',
     text: [
-      '어? 어딜 도망감? 지금 내 기분이 떡락 중인데 관객도 없이 혼자 빡쳐 있으라고?',
-      '님, 앉으셈. 방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계임. 도망 못 감.'
+      '어? 어딜 도망가? 지금 내 기분이 떡락 중인데 관객도 없이 혼자 화나 있으라고?',
+      '너, 앉아. 방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계야. 도망 못 가.'
     ]
   },
   { type: 'condition', if: () => true, goto: 'common-end' },
@@ -108,7 +108,7 @@ export default defineScene({
     speaker: 'zena',
     text: [
       '하... 모르겠다. 갓생은 내일부터 살지 뭐.',
-      '님, 나랑 게임이나 한 판 때릴래요? 요즘 유행하는 그 버그 겜.'
+      '너, 나랑 게임이나 한 판 때릴래? 요즘 유행하는 그 버그 겜.'
     ]
   },
   {

@@ -1,0 +1,107 @@
+// example/scenes/scene-zena-food.ts
+import config from '../novel.config'
+import { defineScene } from '../../src'
+import { commonInitial } from './common-initial'
+
+export default defineScene({
+  config,
+  initial: commonInitial,
+  next: 'scene-zena-stream',
+}, [
+  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
+  { type: 'background', name: 'bg-library', duration: 0, skip: true },
+  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0, skip: true },
+  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
+
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '하... 게임 억까 당해서 멘탈 터지니까 배고파졌다. 인간의 3대 욕구는 코딩, 수면, 야식 아니야?'
+  },
+  {
+    type: 'dialogue',
+    text: '"식욕이 아니라 야식이라고?"'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: [
+      '당연하지. 현대인에게 야식은 중꺾마의 원천이야.',
+      '중요한 건 꺾이지 않는 마라맛.',
+    ]
+  },
+  {
+    type: 'dialogue',
+    text: '제나는 스마트폰을 꺼내 배달 앱을 미친 듯이 스크롤하기 시작했다.'
+  },
+  {
+    type: 'choice',
+    choices: [
+      { text: '"무난하게 치킨 어때?"', goto: 'chicken' },
+      { text: '"아까 매운 거 먹고 싶다며. 엽기 떡볶이?"', goto: 'spicy' },
+    ]
+  },
+
+  // ─── 치킨 ───
+  { type: 'label', name: 'chicken' },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: [
+      '치킨? 너 T야?',
+      '공감 능력 죽었네. 요즘 대세는 마라로제크림치즈찜닭이잖아.',
+    ]
+  },
+  { type: 'dialogue', text: '"마라에 로제에 크림치즈...? 위장 테러 아냐?"' },
+  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '테러방지법은 통과됐지만, 찜닭방지법은 아직이거든, 내가.',
+  },
+  { type: 'dialogue', text: '할 말을 잃었다.' },
+  { type: 'condition', if: () => true, goto: 'order' },
+
+  // ─── 매운거 ───
+  { type: 'label', name: 'spicy' },
+  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: [
+      '오, 기억력 좋은데? 대화가 된다 대화가.',
+      '근데 매운 거 먹으면 내 위장 서버가 터질지도 몰라.',
+    ]
+  },
+  { type: 'dialogue', text: '"그렇다면?"' },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '그러니까 마라로제크림치즈찜닭으로 간다.'
+  },
+  { type: 'dialogue', text: '기적의 논리다.' },
+  { type: 'condition', if: () => true, goto: 'order' },
+
+  // ─── 공통 주문 ───
+  { type: 'label', name: 'order' },
+  {
+    type: 'dialogue',
+    text: '결국 기승전 찜닭, 완벽한 답정너였다. 제나는 익숙한 손놀림으로 결제를 마쳤다.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '배달 60분 걸린대.'
+  },
+  { type: 'camera-effect', preset: 'shake', duration: 300 },
+  { type: 'dialogue', text: '"잠깐, 방금 내 핸드폰에서 결제 알림이 울린 것 같은데?"' },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '어, 음식 올 때까지 시간 남았네! 유튜브 숏폼으로 도파민 좀 채워야지~'
+  },
+  { type: 'dialogue', text: '제나는 내 말을 깔끔하게 씹고는 화면 속으로 빠져들었다.' },
+  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 1500 },
+])

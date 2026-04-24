@@ -9,7 +9,7 @@ import type { CharDef } from '../types/config'
  * // example/characters/my-character.ts
  * export const myCharacter = defineCharacter({
  *   name: 'my-character',
- *   points: {
+ *   images: {
  *     normal: {
  *       src: 'my-character-normal',
  *       width: 350,

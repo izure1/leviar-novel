@@ -10,12 +10,12 @@ export default defineScene({
     _zenaRage: 0,
   },
   initial: commonInitial,
-  next: 'scene-intro',
+  next: 'scene-zena-food',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
-  { type: 'background', name: 'bg-library', duration: 0 },
-  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
-  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
+  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
+  { type: 'background', name: 'bg-library', duration: 0, skip: true },
+  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0, skip: true },
+  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000, skip: true },
 
   {
     type: 'dialogue',
@@ -54,7 +54,7 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '오, 님 꽤 배우신 분이네. 개발자의 의도를 완벽히 파악했음.'
+    text: '오, 너 꽤 배운 사람이네. 개발자의 의도를 완벽히 파악했어.'
   },
   { type: 'var', name: 'likeability', value: 10 },
   { type: 'condition', if: () => true, goto: 'play-game' },
@@ -68,7 +68,7 @@ export default defineScene({
     speaker: 'zena',
     text: [
       '망겜이라니! 이건 언더독의 반란이자 포스트모더니즘 예술이라고!',
-      '하... 님은 아직 이 세계를 이해할 준비가 안 된 거임.'
+      '하... 너는 아직 이 세계를 이해할 준비가 안 된 거야.'
     ]
   },
   { type: 'condition', if: () => true, goto: 'play-game' },
@@ -79,10 +79,10 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '자, 패드 잡으셈. 보스전임.'
+    text: '자, 패드 잡아. 보스전이야.'
   },
 
-  { type: 'screen-flash', preset: 'red', repeat: 5 },
+  { type: 'screen-flash', preset: 'red', skip: true },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
   {
     type: 'dialogue',

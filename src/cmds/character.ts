@@ -9,7 +9,7 @@ export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center'
 
 /** image의 모든 key를 추출 (Name 기반) */
 type _ImageKeysOf<TCharacters extends CharDefs, Name extends keyof TCharacters & string> =
-  keyof TCharacters[Name]['points'] & string
+  keyof TCharacters[Name]['images'] & string
 
 /** 
  * 캐릭터를 등장 또는 이동시키거나 퇴장시킨다 
@@ -114,8 +114,8 @@ export function showCharacter(ctx: SceneContext, name: string, position?: Charac
   const def = charDefs[name]
   if (!def) return
 
-  const resolvedKey = imageKey ?? Object.keys(def.points)[0]
-  const imageDef = def.points[resolvedKey]
+  const resolvedKey = imageKey ?? Object.keys(def.images)[0]
+  const imageDef = def.images[resolvedKey]
   if (!imageDef) return
 
   const states = getCharStates(ctx)
