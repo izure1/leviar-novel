@@ -1,4 +1,4 @@
-import type { CharDefs, BgDefs, NovelConfig, FallbackRule, EffectDef } from '../types/config'
+import type { CharDefs, BgDefs, NovelConfig, FallbackRuleOf, EffectDef } from '../types/config'
 import type { NovelModule } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
 import dialogueModule from '../modules/dialogue'
@@ -86,7 +86,7 @@ export function defineNovelConfig<
     backgrounds: TBackgrounds
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets
-    fallback?: FallbackRule[]
+    fallback?: FallbackRuleOf<any>[]
     modules?: TModules
   }
 ): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, BuiltinModules & TModules> {

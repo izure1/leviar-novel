@@ -3,8 +3,7 @@
 // =============================================================
 
 import type { World, Style, Attribute } from 'leviar'
-import type { FallbackRule, FallbackRuleOf, EffectType } from './dialogue'
-import type { SceneContext, CommandResult } from '../core/SceneContext'
+import type { FallbackRuleOf, EffectType } from './dialogue'
 import type { NovelModule } from '../define/defineCmdUI'
 
 /** 
@@ -55,8 +54,6 @@ export interface CharDef {
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
 
-
-
 /** 
  * 단일 배경 이미지 정의 
  * 
@@ -82,8 +79,6 @@ export interface BgDef {
 }
 /** 배경 목록 정의: bgKey → BgDef 매핑 */
 export type BgDefs = Record<string, BgDef>
-
-
 
 /** 
  * 특수 효과(날씨, 파티클 등)의 상세 속성 정의입니다. 미지정 속성은 Renderer 내부 폴백 값을 따릅니다. 
@@ -139,15 +134,6 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
 }
 
 /** 
- * 명령어의 실행 로직을 정의하는 핸들러 함수입니다.
- * @deprecated NovelModule을 사용하세요. define()으로 생성된 모듈의 defineCommand 참조.
- */
-export type CustomCmdHandler<TParams = any, TVars = any, TLocalVars = any> = (
-  params: TParams,
-  context: SceneContext<TVars, TLocalVars>
-) => CommandResult
-
-/** 
  * Novel 시스템의 최상위 설정 객체 타입입니다.
  * 게임 내 모든 변수, 씬, 캐릭터, 배경, 효과, 모듈 및 폴백 규칙을 정의합니다.
  * 
@@ -193,7 +179,7 @@ export interface NovelConfig<
    * 스크립트 실행 중 에셋이나 명령어가 누락되었을 때 적용할 기본값(폴백) 규칙 목록입니다. 
    * 배열의 첫 번째부터 순차적으로 매칭되어 적용됩니다.
    */
-  fallback?: FallbackRule[]
+  fallback?: FallbackRuleOf<any>[]
   /**
    * Novel 모듈 목록입니다. key가 커맨드 타입(`type`)과 UIRegistry 등록 키가 됩니다.
    * `define()`으로 생성된 모듈을 등록하세요.
@@ -210,7 +196,7 @@ export interface NovelConfig<
   modules?: TModules
 }
 
-export type { FallbackRule, FallbackRuleOf } from './dialogue'
+export type { FallbackRuleOf } from './dialogue'
 export type { NovelModule, NovelModuleMeta } from '../define/defineCmdUI'
 
 
@@ -277,8 +263,8 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
   ? TCharKey extends keyof TChars
   ? TChars[TCharKey] extends { images: infer TImgs }
-    ? keyof TImgs & string
-    : string
+  ? keyof TImgs & string
+  : string
   : string
   : string
 
@@ -346,12 +332,12 @@ export type VarsOf<TConfig> =
 export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
   ? TName extends keyof TChars
-    ? TChars[TName] extends { images: infer TImgs }
-      ? TImgs[keyof TImgs] extends { points?: infer P }
-        ? keyof P & string
-        : string
-      : string
-    : string
+  ? TChars[TName] extends { images: infer TImgs }
+  ? TImgs[keyof TImgs] extends { points?: infer P }
+  ? keyof P & string
+  : string
+  : string
+  : string
   : string
 
 /**
@@ -379,8 +365,3 @@ export type ModuleKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, infer TMods>
   ? keyof TMods & string
   : string
-
-/** @deprecated CmdsOf → ModulesOf 로 대체 */
-export type CmdsOf<TConfig> = ModulesOf<TConfig>
-/** @deprecated UiKeysOf → ModuleKeysOf 로 대체 */
-export type UiKeysOf<TConfig> = ModuleKeysOf<TConfig>

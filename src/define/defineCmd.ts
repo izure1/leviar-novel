@@ -3,7 +3,7 @@
 // =============================================================
 
 import type { SceneContext, CommandResult } from '../core/SceneContext'
-import type { CustomCmdHandler } from '../types/config'
+
 
 // ─── Resolvable 유틸리티 타입 ────────────────────────────────
 
@@ -135,7 +135,7 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  */
 export function defineCmd<TCmd>(
   handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult
-): CustomCmdHandler<Omit<TCmd, 'type'>, any, any> {
+): (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult {
   return (rawParams, ctx) => {
     const resolved = resolveParams(rawParams, ctx)
     return handler(resolved as Omit<TCmd, 'type'>, ctx)

@@ -2,8 +2,9 @@
 // dialogue.ts — 모든 DialogueEntry 유니온 타입 정의
 // =============================================================
 
-import type { CharDefs, BgDefs, CustomCmdHandler, CmdsOf, VarsOf, SceneNamesOf } from './config'
+import type { ModulesOf, VarsOf } from './config'
 import type { ResolvableProps } from '../define/defineCmd'
+import type { NovelModule } from '../define/defineCmdUI'
 
 // 프리셋 타입들 import (필요시 export)
 export type { MoodType, FlickerPreset } from '../modules/mood'
@@ -39,11 +40,11 @@ export type {
 }
 
 export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
-  [K in keyof CmdsOf<TConfig> & string]:
-    CmdsOf<TConfig>[K] extends CustomCmdHandler<infer TParams, any, any>
-      ? { type: K } & ResolvableProps<TParams, TVars, TLocalVars>
-      : never
-}[keyof CmdsOf<TConfig> & string]
+  [K in keyof ModulesOf<TConfig> & string]:
+  ModulesOf<TConfig>[K] extends NovelModule<infer TSchema>
+  ? { type: K } & ResolvableProps<TSchema, TVars, TLocalVars>
+  : never
+}[keyof ModulesOf<TConfig> & string]
 
 /**
  * T를 ResolvableProps로 감싼 뒤 type 키를 붙이는 헬퍼.
@@ -88,18 +89,15 @@ export type DialogueStep<TConfig, TLocalVars = Record<never, never>> =
 
 // ─── Fallback 룰 ─────────────────────────────────────────────
 
-/** TCmds를 인식하는 제네릭 FallbackRule. custom cmd 타입도 추론됩니다. */
+/** 모듈 스키마를 기반으로 폴백 규칙의 타입을 추론하는 제네릭입니다. */
 export type FallbackRuleOf<
-  TCmds extends Record<string, CustomCmdHandler<any, any, any>> = Record<never, never>
+  TModules extends Record<string, NovelModule<any>> = Record<never, never>
 > = _DialogueEntryUnion<
-    { cmds?: TCmds },
-    any,
-    any
-  > extends infer E
+  { modules?: TModules },
+  any,
+  any
+> extends infer E
   ? E extends { type: infer Type }
   ? { type: Type } & Partial<Omit<E, 'type' | 'skip'>> & { defaults?: Partial<Omit<E, 'skip'>> }
   : never
   : never
-
-/** @deprecated FallbackRuleOf<TCmds>를 사용하세요. custom cmd 타입이 추론되지 않습니다. */
-export type FallbackRule = FallbackRuleOf<Record<never, never>>

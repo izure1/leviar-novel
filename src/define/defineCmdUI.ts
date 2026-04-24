@@ -68,10 +68,6 @@ export type NovelModule<TSchema extends Record<string, any> = any> =
 
 // ─── 하위 호환 타입 alias ─────────────────────────────────────
 
-/** @deprecated UIHandler → NovelModule로 대체됨 */
-export type UIHandler<TSchema extends Record<string, any> = any> = NovelModule<TSchema>
-/** @deprecated UIHandlerMeta → NovelModuleMeta로 대체됨 */
-export type UIHandlerMeta<TSchema extends Record<string, any> = any> = NovelModuleMeta<TSchema>
 
 // ─── define() 팩토리 ─────────────────────────────────────────
 

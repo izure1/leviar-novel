@@ -4,7 +4,7 @@
 
 import type { SceneContext } from '../core/SceneContext'
 import type { UIRuntimeEntry } from '../core/UIRegistry'
-import type { CustomCmdHandler } from '../types/config'
+import type { CommandResult } from '../core/SceneContext'
 
 /**
  * defineUI가 반환하는 핸들러에 부착되는 메타데이터.
@@ -18,10 +18,10 @@ export interface UIHandlerMeta {
 }
 
 /**
- * defineUI가 반환하는 핸들러 타입 (CustomCmdHandler + 메타 부착)
+ * defineUI가 반환하는 핸들러 타입
  */
 export type UIHandler<TStyle> =
-  CustomCmdHandler<Partial<TStyle>> & UIHandlerMeta
+  ((params: Partial<TStyle>, ctx: SceneContext) => CommandResult) & UIHandlerMeta
 
 /**
  * UI 셋업 커맨드 핸들러를 정의합니다.
@@ -57,7 +57,7 @@ export function defineUI<TStyle>(
   name: string,
   builder: (style: Partial<TStyle>, ctx: SceneContext) => UIRuntimeEntry
 ): UIHandler<TStyle> {
-  const handler: CustomCmdHandler<Partial<TStyle>> = (rawStyle, ctx) => {
+  const handler: (rawStyle: Partial<TStyle>, ctx: SceneContext) => CommandResult = (rawStyle, ctx) => {
     // 1. 스타일을 CmdState에 저장 (세이브/로드용)
     ctx.cmdState.set(`setup-${name}`, rawStyle as Record<string, any>)
 

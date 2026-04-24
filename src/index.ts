@@ -12,7 +12,6 @@ export type {
   BgDefs,
   NovelConfig,
   NovelOption,
-  FallbackRule,
   FallbackRuleOf,
   // config 유틸리티 타입
   CharacterKeysOf,
@@ -25,8 +24,6 @@ export type {
   // modules 유틸리티 타입
   ModulesOf,
   ModuleKeysOf,
-  /** @deprecated CmdsOf → ModulesOf 사용 */
-  CmdsOf,
 } from './types/config'
 
 export type {
@@ -79,8 +76,6 @@ export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
 export { define } from './define/defineCmdUI'
 export type { NovelModule, NovelModuleMeta } from './define/defineCmdUI'
-/** @deprecated UIHandler → NovelModule 사용 */
-export type { UIHandler, UIHandlerMeta } from './define/defineCmdUI'
 
 // ─── UI 시스템 ───────────────────────────────────────────────
 export type { UIRuntimeEntry } from './core/UIRegistry'
