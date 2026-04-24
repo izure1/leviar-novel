@@ -112,6 +112,11 @@
     return { defineCmd: defineCmd4, defineUI: defineUI4 };
   }
 
+  // src/define/defineCharacter.ts
+  function defineCharacter(def) {
+    return def;
+  }
+
   // src/define/defineScene.ts
   function defineInitial(config, initial) {
     return initial;
@@ -14381,6 +14386,7 @@ ${addLineNumbers(fragment)}`);
         transform: { position: { x: 0, y: 0, z: 10 } }
       });
       ctx.renderer.world.camera?.addChild(rect);
+      ctx.renderer.track(rect);
       ctx.renderer.state.set("_transitionObj", rect);
     } else {
       rect.style.color = color;
@@ -14400,14 +14406,24 @@ ${addLineNumbers(fragment)}`);
     rect.style.opacity = startOpacity;
     ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, duration, cfg.easing);
   }
-  function screenFlash(ctx, preset = "inherit") {
+  function screenFlash(ctx, preset = "inherit", duration, repeat = 1) {
     const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastFlashPreset") ?? "white" : preset;
     ctx.renderer.state.set("_lastFlashPreset", resolvedPreset);
     const cfg = FLASH_PRESETS[resolvedPreset];
     if (!cfg) return;
     const rect = getTransitionRect(ctx, cfg.color);
-    rect.style.opacity = 1;
-    ctx.renderer.animate(rect, { style: { opacity: 0 } }, cfg.duration, "easeOut");
+    const flashDuration = duration ?? cfg.duration;
+    let count = 0;
+    const doFlash = () => {
+      if (repeat >= 0 && count >= repeat) return;
+      count++;
+      rect.style.opacity = 1;
+      const anim = ctx.renderer.animate(rect, { style: { opacity: 0 } }, flashDuration, "easeOut");
+      if (anim) {
+        anim.on("end", doFlash);
+      }
+    };
+    doFlash();
   }
   function screenWipe(ctx, dir, preset = "inherit", duration = 800) {
     const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastWipePreset") ?? "left" : preset;
@@ -14437,7 +14453,7 @@ ${addLineNumbers(fragment)}`);
     return false;
   });
   var screenFlashHandler = defineCmd((cmd, ctx) => {
-    screenFlash(ctx, cmd.preset ?? "inherit");
+    screenFlash(ctx, cmd.preset ?? "inherit", cmd.duration, cmd.repeat ?? 1);
     return false;
   });
   var screenWipeHandler = defineCmd((cmd, ctx) => {
@@ -15336,6 +15352,52 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
+  // example/characters/arisiero.ts
+  var arisiero_default = defineCharacter({
+    name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
+    points: {
+      normal: {
+        src: "girl_normal",
+        width: 350,
+        points: {
+          face: { x: 0.5, y: 0.18 },
+          chest: { x: 0.5, y: 0.45 }
+        }
+      },
+      smile: {
+        src: "girl_smile",
+        width: 350,
+        points: {
+          face: { x: 0.5, y: 0.18 },
+          chest: { x: 0.5, y: 0.45 }
+        }
+      }
+    }
+  });
+
+  // example/characters/zena.ts
+  var zena_default = defineCharacter({
+    name: "\uC81C\uB098",
+    points: {
+      normal: {
+        src: "girl_normal",
+        width: 350,
+        points: {
+          face: { x: 0.5, y: 0.18 },
+          chest: { x: 0.5, y: 0.45 }
+        }
+      },
+      smile: {
+        src: "girl_smile",
+        width: 350,
+        points: {
+          face: { x: 0.5, y: 0.18 },
+          chest: { x: 0.5, y: 0.45 }
+        }
+      }
+    }
+  });
+
   // example/novel.config.ts
   var testCmd = defineCmd((cmd, ctx) => {
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
@@ -15365,48 +15427,8 @@ ${addLineNumbers(fragment)}`);
     ],
     points: ["face", "chest"],
     characters: {
-      "arisiero": {
-        name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
-        points: {
-          normal: {
-            src: "girl_normal",
-            width: 350,
-            points: {
-              face: { x: 0.5, y: 0.18 },
-              chest: { x: 0.5, y: 0.45 }
-            }
-          },
-          smile: {
-            src: "girl_smile",
-            width: 350,
-            points: {
-              face: { x: 0.5, y: 0.18 },
-              chest: { x: 0.5, y: 0.45 }
-            }
-          }
-        }
-      },
-      "zena": {
-        name: "\uC81C\uB098",
-        points: {
-          normal: {
-            src: "girl_normal",
-            width: 350,
-            points: {
-              face: { x: 0.5, y: 0.18 },
-              chest: { x: 0.5, y: 0.45 }
-            }
-          },
-          smile: {
-            src: "girl_smile",
-            width: 350,
-            points: {
-              face: { x: 0.5, y: 0.18 },
-              chest: { x: 0.5, y: 0.45 }
-            }
-          }
-        }
-      }
+      "arisiero": arisiero_default,
+      "zena": zena_default
     },
     backgrounds: {
       "bg-floor": { src: "bg_floor", parallax: true },
@@ -15979,7 +16001,7 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-intro"
   }, [
-    // { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
@@ -16042,7 +16064,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC790, \uD328\uB4DC \uC7A1\uC73C\uC148. \uBCF4\uC2A4\uC804\uC784."
     },
-    { type: "screen-flash", preset: "red" },
+    { type: "screen-flash", preset: "red", repeat: 5 },
     { type: "camera-effect", preset: "shake", duration: 800 },
     {
       type: "dialogue",

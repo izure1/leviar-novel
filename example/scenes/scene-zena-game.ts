@@ -12,7 +12,7 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-intro',
 }, [
-  // { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
+  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
@@ -82,7 +82,7 @@ export default defineScene({
     text: '자, 패드 잡으셈. 보스전임.'
   },
 
-  { type: 'screen-flash', preset: 'red' },
+  { type: 'screen-flash', preset: 'red', repeat: 5 },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
   {
     type: 'dialogue',

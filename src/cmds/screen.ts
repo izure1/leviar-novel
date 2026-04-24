@@ -21,6 +21,10 @@ export interface ScreenFadeCmd {
 export interface ScreenFlashCmd {
   /** 플래시 효과에 사용될 색상 프리셋입니다. */
   preset?: FlashPreset
+  /** 애니메이션 지속 시간(ms 단위)입니다. (기본값: 프리셋 설정값) */
+  duration?: number
+  /** 반복 횟수입니다. 음수일 경우 무한 반복합니다. (기본값: 1) */
+  repeat?: number
 }
 
 /** 화면을 와이프 전환한다 */
@@ -67,6 +71,7 @@ function getTransitionRect(ctx: SceneContext, color: string): Rectangle<Record<s
       transform: { position: { x: 0, y: 0, z: 10 } },
     })
     ctx.renderer.world.camera?.addChild(rect)
+    ctx.renderer.track(rect)
     ctx.renderer.state.set('_transitionObj', rect)
   } else {
     rect.style.color = color
@@ -90,15 +95,27 @@ function screenFade(ctx: SceneContext, dir: 'in' | 'out', preset: FadeColorPrese
   ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, duration, cfg.easing)
 }
 
-function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit') {
+function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit', duration?: number, repeat: number = 1) {
   const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastFlashPreset') ?? 'white' : preset
   ctx.renderer.state.set('_lastFlashPreset', resolvedPreset)
   const cfg = FLASH_PRESETS[resolvedPreset as Exclude<FlashPreset, 'inherit'>]
   if (!cfg) return
 
   const rect = getTransitionRect(ctx, cfg.color)
-  rect.style.opacity = 1
-  ctx.renderer.animate(rect, { style: { opacity: 0 } }, cfg.duration, 'easeOut')
+  const flashDuration = duration ?? cfg.duration
+  
+  let count = 0
+  const doFlash = () => {
+    if (repeat >= 0 && count >= repeat) return
+    count++
+    rect.style.opacity = 1
+    const anim = ctx.renderer.animate(rect, { style: { opacity: 0 } }, flashDuration, 'easeOut')
+    if (anim) {
+      anim.on('end', doFlash)
+    }
+  }
+  
+  doFlash()
 }
 
 function screenWipe(ctx: SceneContext, dir: 'in' | 'out', preset: WipePreset = 'inherit', duration: number = 800) {
@@ -137,7 +154,7 @@ export const screenFadeHandler = defineCmd<ScreenFadeCmd>((cmd, ctx) => {
 })
 
 export const screenFlashHandler = defineCmd<ScreenFlashCmd>((cmd, ctx) => {
-  screenFlash(ctx, cmd.preset ?? 'inherit')
+  screenFlash(ctx, cmd.preset ?? 'inherit', cmd.duration, cmd.repeat ?? 1)
   return false
 })
 
