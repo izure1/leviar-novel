@@ -271,7 +271,7 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
   // 단일 문자열이든 배열이든 통일하여 처리
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
-  let index = 0
+  let index = ctx.scene.getTextSubIndex()
 
   return () => {
     const ui = ctx.ui.get('dialogue') as any
@@ -296,6 +296,7 @@ export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
     data.lines = [...lines]
 
     ctx.cmdState.set('dialogue', { ...data })
+    ctx.scene.setTextSubIndex(index)
     index++
 
     return false

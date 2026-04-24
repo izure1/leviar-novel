@@ -13366,7 +13366,7 @@ ${addLineNumbers(fragment)}`);
   var dialogueHandler = defineCmd2((cmd, ctx, data) => {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
-    let index = 0;
+    let index = ctx.scene.getTextSubIndex();
     return () => {
       const ui = ctx.ui.get("dialogue");
       if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
@@ -13381,6 +13381,7 @@ ${addLineNumbers(fragment)}`);
       data.subIndex = index;
       data.lines = [...lines];
       ctx.cmdState.set("dialogue", { ...data });
+      ctx.scene.setTextSubIndex(index);
       index++;
       return false;
     };
@@ -14599,6 +14600,9 @@ ${addLineNumbers(fragment)}`);
         },
         scene: {
           getTextSubIndex: () => this.textSubIndex,
+          setTextSubIndex: (idx) => {
+            this.textSubIndex = idx;
+          },
           interpolateText: (text) => this._interpolateText(text),
           jumpToLabel: (label) => this._jumpToLabel(label),
           hasLabel: (label) => this.labelIndex.has(label),
@@ -14782,6 +14786,9 @@ ${addLineNumbers(fragment)}`);
         },
         scene: {
           getTextSubIndex: () => this.textSubIndex,
+          setTextSubIndex: (idx) => {
+            this.textSubIndex = idx;
+          },
           interpolateText: (text) => this._interpolateText(text),
           jumpToLabel: (label) => this._jumpToLabel(label),
           hasLabel: (label) => this.labelIndex.has(label),
@@ -14886,13 +14893,33 @@ ${addLineNumbers(fragment)}`);
       const step = steps[this.cursor];
       if (!step) return;
       const cmd = step;
-      if (cmd.type === "dialogue") {
+      const result = this._executeCmd(cmd);
+      if (typeof result === "function") {
+        this._tickFn = result;
+        const firstResult = result();
+        if (firstResult === "handled") {
+          this._tickFn = null;
+          this.callbacks.syncUIState();
+        } else if (firstResult === true) {
+          this._tickFn = null;
+          this.cursor++;
+          this.textSubIndex = 0;
+          this._executeNext();
+        } else {
+          this._waitingInput = true;
+          this.callbacks.syncUIState();
+        }
+      } else if (result === "handled") {
         this._waitingInput = true;
-      } else if (cmd.type === "choice") {
-        this._waitingInput = true;
+        this.callbacks.syncUIState();
       } else {
         if (!cmd.skip) {
           this._waitingInput = true;
+          this.callbacks.syncUIState();
+        } else {
+          this.cursor++;
+          this.textSubIndex = 0;
+          this._executeNext();
         }
       }
     }
@@ -15339,6 +15366,7 @@ ${addLineNumbers(fragment)}`);
         },
         scene: {
           getTextSubIndex: () => 0,
+          setTextSubIndex: noop,
           interpolateText: (t) => t,
           jumpToLabel: noop,
           hasLabel: () => false,

@@ -16,6 +16,8 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
   scene: {
     /** 텍스트 배열 사용 시 현재 출력 중인 텍스트의 내부 인덱스 반환 */
     getTextSubIndex: () => number
+    /** 현재 텍스트 서브 인덱스를 설정합니다 */
+    setTextSubIndex: (idx: number) => void
     /** 텍스트 내의 `{{변수}}` 템플릿 문법을 실제 변수 값으로 치환하여 반환하는 헬퍼 함수 */
     interpolateText: (text: string) => string
     /** 지정된 라벨(label) 위치로 실행 커서 점프 */

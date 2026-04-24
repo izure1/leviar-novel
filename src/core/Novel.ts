@@ -510,6 +510,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       },
       scene: {
         getTextSubIndex: () => 0,
+        setTextSubIndex: noop as any,
         interpolateText: (t: string) => t,
         jumpToLabel: noop as any,
         hasLabel: () => false,

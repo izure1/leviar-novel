@@ -196,6 +196,7 @@ export class DialogueScene {
       },
       scene: {
         getTextSubIndex: () => this.textSubIndex,
+        setTextSubIndex: (idx: number) => { this.textSubIndex = idx },
         interpolateText: (text: string) => this._interpolateText(text),
         jumpToLabel: (label: string) => this._jumpToLabel(label),
         hasLabel: (label: string) => this.labelIndex.has(label),
@@ -408,6 +409,7 @@ export class DialogueScene {
       },
       scene: {
         getTextSubIndex: () => this.textSubIndex,
+        setTextSubIndex: (idx: number) => { this.textSubIndex = idx },
         interpolateText: (text: string) => this._interpolateText(text),
         jumpToLabel: (label: string) => this._jumpToLabel(label),
         hasLabel: (label: string) => this.labelIndex.has(label),
@@ -522,15 +524,37 @@ export class DialogueScene {
     if (!step) return
 
     const cmd = step as DialogueEntry<any, any, any>
-    if (cmd.type === 'dialogue') {
-      // cmdState에 저장된 데이터로 dialogueUI가 복원 처리 (rebuildUI 단계에서 이미 렌더됨)
+    
+    // 재표시 시 커맨드를 다시 실행하여 상태(예: choice 버튼 렌더링, dialogue TickFn 복구 등)를 복원합니다.
+    const result = this._executeCmd(cmd)
+    
+    if (typeof result === 'function') {
+      this._tickFn = result
+      // TickFn 복원 시 1회 실행하여 내부 상태(인덱스 등)를 동기화하고 대기 상태로 만듭니다.
+      const firstResult = result()
+      if (firstResult === 'handled') {
+        this._tickFn = null
+        this.callbacks.syncUIState()
+      } else if (firstResult === true) {
+        this._tickFn = null
+        this.cursor++
+        this.textSubIndex = 0
+        this._executeNext()
+      } else {
+        this._waitingInput = true
+        this.callbacks.syncUIState()
+      }
+    } else if (result === 'handled') {
       this._waitingInput = true
-    } else if (cmd.type === 'choice') {
-      // choice도 동일 — rebuildUI에서 복원
-      this._waitingInput = true
+      this.callbacks.syncUIState()
     } else {
       if (!cmd.skip) {
         this._waitingInput = true
+        this.callbacks.syncUIState()
+      } else {
+        this.cursor++
+        this.textSubIndex = 0
+        this._executeNext()
       }
     }
   }
