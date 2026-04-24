@@ -8,16 +8,23 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-stream',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
   { type: 'background', name: 'bg-library', duration: 0, skip: true },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0, skip: true },
-  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '하... 게임 억까 당해서 멘탈 터지니까 배고파졌다. 인간의 3대 욕구는 코딩, 수면, 야식 아니야?'
+    text: '하... 게임 억까 당해서 멘탈 터지니까 배고파졌다.'
+  },
+  {
+    type: 'dialogue',
+    text: '그녀가 배를 부여잡으며 깊은 한숨을 쉬었다.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '인간의 3대 욕구는 코딩, 수면, 야식 아니야?'
   },
   {
     type: 'dialogue',
@@ -25,11 +32,17 @@ export default defineScene({
   },
   {
     type: 'dialogue',
+    text: '어이없어서 태클을 걸었지만, 그녀는 아랑곳하지 않았다.'
+  },
+  {
+    type: 'dialogue',
     speaker: 'zena',
-    text: [
-      '당연하지. 현대인에게 야식은 중꺾마의 원천이야.',
-      '중요한 건 꺾이지 않는 마라맛.',
-    ]
+    text: '당연하지. 현대인에게 야식은 중꺾마의 원천이야.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '중요한 건 꺾이지 않는 마라맛.'
   },
   {
     type: 'dialogue',
@@ -50,9 +63,14 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'zena',
     text: [
-      '치킨? 너 T야?',
-      '공감 능력 죽었네. 요즘 대세는 마라로제크림치즈찜닭이잖아.',
+      '치킨?',
+      '너 T야? 공감 능력 죽었네.',
+      '요즘 대세는 마라로제크림치즈찜닭이잖아.'
     ]
+  },
+  {
+    type: 'dialogue',
+    text: '그게 무슨 끔찍한 혼종인가.'
   },
   { type: 'dialogue', text: '"마라에 로제에 크림치즈...? 위장 테러 아냐?"' },
   { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
@@ -70,16 +88,26 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: [
-      '오, 기억력 좋은데? 대화가 된다 대화가.',
-      '근데 매운 거 먹으면 내 위장 서버가 터질지도 몰라.',
-    ]
+    text: '오, 기억력 좋은데? 대화가 된다 대화가.'
+  },
+  {
+    type: 'dialogue',
+    text: '제나가 만족스러운 미소를 지었다.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '근데 매운 거 먹으면 내 위장이 위험해질 수도...'
   },
   { type: 'dialogue', text: '"그렇다면?"' },
   {
     type: 'dialogue',
     speaker: 'zena',
     text: '그러니까 마라로제크림치즈찜닭으로 간다.'
+  },
+  {
+    type: 'dialogue',
+    text: '대체 어디서부터 태클을 걸어야 할지 모르겠다.'
   },
   { type: 'dialogue', text: '기적의 논리다.' },
   { type: 'condition', if: () => true, goto: 'order' },
@@ -88,7 +116,11 @@ export default defineScene({
   { type: 'label', name: 'order' },
   {
     type: 'dialogue',
-    text: '결국 기승전 찜닭, 완벽한 답정너였다. 제나는 익숙한 손놀림으로 결제를 마쳤다.'
+    text: '결국 기승전 찜닭, 완벽한 답정너였다.'
+  },
+  {
+    type: 'dialogue',
+    text: '제나는 익숙한 손놀림으로 결제를 마쳤다.'
   },
   {
     type: 'dialogue',
@@ -96,12 +128,25 @@ export default defineScene({
     text: '배달 60분 걸린대.'
   },
   { type: 'camera-effect', preset: 'shake', duration: 300 },
-  { type: 'dialogue', text: '"잠깐, 방금 내 핸드폰에서 결제 알림이 울린 것 같은데?"' },
+  { type: 'dialogue', text: '"잠깐, 방금 내 핸드폰에서 카드 결제 알림이 울린 것 같은데?"' },
+  {
+    type: 'dialogue',
+    text: '등골이 쎄하게 식었다.'
+  },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '어, 음식 올 때까지 시간 남았네! 유튜브 숏폼으로 도파민 좀 채워야지~'
+    text: '어, 음식 올 때까지 시간 남았네!'
   },
-  { type: 'dialogue', text: '제나는 내 말을 깔끔하게 씹고는 화면 속으로 빠져들었다.' },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '유튜브 숏폼으로 도파민 좀 채워야지~'
+  },
+  { type: 'dialogue', text: '제나는 내 말을 깔끔하게 씹어버렸다.' },
+  {
+    type: 'dialogue',
+    text: '그리고는 곧바로 화면 속 숏폼 영상으로 빨려 들어갔다.'
+  },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 1500 },
 ])

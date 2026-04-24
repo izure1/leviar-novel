@@ -2,7 +2,7 @@
 import { defineNovelConfig, defineCmd } from '../src'
 import { dialogueUISetup } from '../src/cmds/dialogue'
 import { choiceUISetup } from '../src/cmds/choice'
-import arisiero from './characters/arisiero'
+import chat from './characters/chat'
 import zena from './characters/zena'
 
 const testCmd = defineCmd<{ message: string }>((cmd, ctx) => {
@@ -32,9 +32,8 @@ export default defineNovelConfig({
     'scene-zena-bug',
     'scene-zena-ending',
   ] as const,
-  points: ['face', 'chest'],
   characters: {
-    'arisiero': arisiero,
+    'chat': chat,
     'zena': zena,
   },
   backgrounds: {

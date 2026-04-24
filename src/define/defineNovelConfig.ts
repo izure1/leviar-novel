@@ -1,4 +1,4 @@
-import type { CharDefs, CharDefsWithPoints, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
+import type { CharDefs, BgDefs, NovelConfig, FallbackRuleOf, EffectDef, CustomCmdHandler } from '../types/config'
 import type { UIHandler } from '../define/defineCmdUI'
 import type { EffectType } from '../types/dialogue'
 
@@ -11,7 +11,6 @@ import type { EffectType } from '../types/dialogue'
  * export default defineNovelConfig({
  *   vars: { likeability: 0, metCharacterA: false },
  *   scenes: ['scene-a', 'scene-b'],
- *   points: ['face', 'chest'],
  *   characters: { ... },
  *   backgrounds: { ... },
  *   ui: {
@@ -27,7 +26,6 @@ import type { EffectType } from '../types/dialogue'
 export function defineNovelConfig<
   TVars extends Record<string, any>,
   const TScenes extends readonly string[],
-  const TPoints extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string>,
@@ -37,9 +35,7 @@ export function defineNovelConfig<
   config: {
     vars: TVars
     scenes: TScenes
-    /** 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록 */
-    points: TPoints
-    characters: TCharacters & CharDefsWithPoints<TPoints>
+    characters: TCharacters
     backgrounds: TBackgrounds
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets
@@ -47,6 +43,6 @@ export function defineNovelConfig<
     cmds?: TCmds
     ui?: TUi
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TUi, TPoints> {
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TCmds, TUi> {
   return config as any
 }

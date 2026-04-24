@@ -14311,8 +14311,8 @@ ${addLineNumbers(fragment)}`);
     const charDefs = ctx.renderer.config.characters;
     const def = charDefs[name];
     if (!def) return;
-    const activeImgKey = target._currentImageKey ?? Object.keys(def.points)[0];
-    const imageDef = def.points[activeImgKey];
+    const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0];
+    const imageDef = def.images[activeImgKey];
     const fp = focusType && imageDef?.points ? imageDef.points[focusType] : { x: 0.5, y: 0.5 };
     const targetX = target.transform?.position?.x ?? 0;
     const charW = target.style?.width ?? 500;
@@ -15372,27 +15372,10 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
-  // example/characters/arisiero.ts
-  var arisiero_default = defineCharacter({
-    name: "\uC544\uB9AC\uC2DC\uC5D0\uB85C",
-    images: {
-      normal: {
-        src: "girl_normal",
-        width: 350,
-        points: {
-          face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 }
-        }
-      },
-      smile: {
-        src: "girl_smile",
-        width: 350,
-        points: {
-          face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 }
-        }
-      }
-    }
+  // example/characters/chat.ts
+  var chat_default = defineCharacter({
+    name: "\uCC44\uD305\uCC3D",
+    images: {}
   });
 
   // example/characters/zena.ts
@@ -15404,7 +15387,8 @@ ${addLineNumbers(fragment)}`);
         width: 350,
         points: {
           face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 }
+          chest: { x: 0.5, y: 0.45 },
+          legs: { x: 0.5, y: 0.55 }
         }
       },
       smile: {
@@ -15445,9 +15429,8 @@ ${addLineNumbers(fragment)}`);
       "scene-zena-bug",
       "scene-zena-ending"
     ],
-    points: ["face", "chest"],
     characters: {
-      "arisiero": arisiero_default,
+      "chat": chat_default,
       "zena": zena_default
     },
     backgrounds: {
@@ -15479,9 +15462,30 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default, {
     "dialogue": {
-      bg: { color: "#00000000", gradientType: "linear", gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%", height: 168 },
-      speaker: { fontSize: 27, fontWeight: "bold", color: "#ffd966", borderWidth: 2, borderColor: "rgb(255,255,255)" },
-      text: { fontSize: 18, color: "#f0f0f0", lineHeight: 1.65 }
+      bg: {
+        color: "#00000000",
+        gradientType: "linear",
+        gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%",
+        height: 168
+      },
+      speaker: {
+        fontSize: 27,
+        fontWeight: "bold",
+        fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+        color: "#daacffff",
+        // borderWidth: 2,
+        // borderColor: 'rgb(255,255,255)',
+        textShadowOffsetX: 2,
+        textShadowOffsetY: 2,
+        textShadowBlur: 0,
+        textShadowColor: "rgb(0,0,0)"
+      },
+      text: {
+        fontSize: 18,
+        fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+        color: "#f0f0f0",
+        lineHeight: 1.65
+      }
     },
     "choices": {
       background: "rgba(20,20,50,0.90)",
@@ -15508,11 +15512,19 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
       type: "dialogue",
-      text: [
-        "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4.",
-        "\uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C, \uAD6C\uC11D \uC790\uB9AC\uC5D0\uC11C \uBB18\uD55C \uC0B4\uAE30\uAC00 \uB290\uAEF4\uC84C\uB2E4.",
-        "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
-      ]
+      text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uD5A5\uAE0B\uD55C \uCEE4\uD53C \uD5A5\uACFC \uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C..."
+    },
+    {
+      type: "dialogue",
+      text: "\uAD6C\uC11D \uC790\uB9AC\uC5D0\uC11C \uC720\uB3C5 \uC774\uC9C8\uC801\uC778 \uC0B4\uAE30\uAC00 \uB290\uAEF4\uC84C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
     {
@@ -15520,14 +15532,36 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC544... \uC778\uC0DD \uC9C4\uC9DC \uB85C\uADF8\uC544\uC6C3\uD558\uACE0 \uC2F6\uB2E4."
     },
-    { type: "dialogue", text: "\uADF8\uB140\uB294 \uC55E\uC5D0 \uB193\uC778 \uB178\uD2B8\uBD81\uC744 \uC8FD\uC77C \uB4EF\uC774 \uB178\uB824\uBCF4\uACE0 \uC788\uC5C8\uB2E4." },
+    {
+      type: "dialogue",
+      text: "\uC18C\uB140\uB294 \uAE08\uBC29\uC774\uB77C\uB3C4 \uBAA8\uB2C8\uD130\uB97C \uBD80\uC220 \uB4EF\uD55C \uAE30\uC138\uC600\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uC55E\uC5D0 \uB193\uC778 \uB178\uD2B8\uBD81\uC744 \uC8FD\uC77C \uB4EF\uC774 \uB178\uB824\uBCF4\uACE0 \uC788\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uB0B4\uAC00 \uD790\uB054 \uCCD0\uB2E4\uBCF4\uC790, \uC0B4\uBC8C\uD55C \uB208\uBE5B\uACFC \uB531 \uB9C8\uC8FC\uCCE4\uB2E4."
+    },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        '\uB108, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?',
-        "\uC65C \uD558\uD544 \uB0B4 \uC55E\uC5D0\uC11C \uADF8\uB807\uAC8C \uD574\uB9D1\uAC8C \uCEE4\uD53C\uB97C \uB9C8\uC2DC\uB294 \uAC70\uC57C? \uC790\uBE44 \uC880 \uBCA0\uD480\uC5B4\uC918."
-      ]
+      text: '\uB108, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?'
+    },
+    {
+      type: "dialogue",
+      text: "\uCD08\uBA74\uC5D0 \uB2E4\uC9DC\uACE0\uC9DC \uC2DC\uBE44\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC65C \uD558\uD544 \uB0B4 \uC55E\uC5D0\uC11C \uADF8\uB807\uAC8C \uD574\uB9D1\uAC8C \uCEE4\uD53C\uB97C \uB9C8\uC2DC\uB294 \uAC70\uC57C?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC790\uBE44 \uC880 \uBCA0\uD480\uC5B4\uC918."
     },
     {
       type: "choice",
@@ -15542,16 +15576,35 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC77C? \uD558, \uBE44\uC988\uB2C8\uC2A4 \uD1A0\uD06C \uAE08\uC9C0\uC57C. \uC9C0\uAE08 \uB0B4 \uB450\uB1CC\uB294 404 Error \uC0C1\uD0DC\uB77C\uACE0.",
-        "\uADF8\uB0E5... \uC138\uC0C1\uC758 \uBAA8\uB4E0 \uCF54\uB4DC\uB97C \uC0AD\uC81C\uD558\uACE0 \uD3C9\uD654\uB85C\uC6B4 \uC790\uC5F0\uC778\uC73C\uB85C \uC0B4\uACE0 \uC2F6\uC744 \uBFD0\uC774\uC57C."
-      ]
+      text: "\uC77C? \uD558, \uBE44\uC988\uB2C8\uC2A4 \uD1A0\uD06C \uAE08\uC9C0\uC57C. \uC9C0\uAE08 \uB0B4 \uB450\uB1CC\uB294 404 Error \uC0C1\uD0DC\uB77C\uACE0."
+    },
+    {
+      type: "dialogue",
+      text: "\uB300\uCCB4 \uBB34\uC2A8 \uC77C\uC744 \uD558\uAE38\uB798 \uC0C1\uD0DC \uCF54\uB4DC\uB97C \uC785\uC5D0 \uB2EC\uACE0 \uC0AC\uB294 \uAC78\uAE4C."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADF8\uB0E5... \uC138\uC0C1\uC758 \uBAA8\uB4E0 \uCF54\uB4DC\uB97C \uC0AD\uC81C\uD558\uACE0 \uD3C9\uD654\uB85C\uC6B4 \uC790\uC5F0\uC778\uC73C\uB85C \uC0B4\uACE0 \uC2F6\uC744 \uBFD0\uC774\uC57C."
+    },
+    {
+      type: "dialogue",
+      text: "\uD655\uC2E4\uD788 \uC81C\uC815\uC2E0\uC740 \uC544\uB2CC \uAC83 \uAC19\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 500 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uADFC\uB370 \uB108 \uCEE4\uD53C \uB9DB\uC788\uC5B4 \uBCF4\uC778\uB2E4. \uD55C \uC785\uB9CC? \uC544, \uB18D\uB2F4\uC774\uC57C. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD574."
+      text: "\uADFC\uB370 \uB108 \uCEE4\uD53C \uB9DB\uC788\uC5B4 \uBCF4\uC778\uB2E4. \uD55C \uC785\uB9CC?"
+    },
+    {
+      type: "dialogue",
+      text: "\uB0B4 \uCEE4\uD53C\uC794\uC744 \uD5A5\uD574 \uC190\uC744 \uBED7\uB294 \uD3FC\uC774 \uC2EC\uC0C1\uCE58 \uC54A\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544, \uB18D\uB2F4\uC774\uC57C. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD574."
     },
     { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 버그 질문 ───
@@ -15560,26 +15613,74 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uBC84\uADF8?! \uB108, \uC9C0\uAE08 \uAE08\uAE30\uC5B4 \uC37C\uC5B4. \uB0B4 \uC778\uC0DD \uC790\uCCB4\uAC00 \uAC70\uB300\uD55C \uBC84\uADF8\uC778\uB370 \uBB34\uC2A8 \uC18C\uB9B4 \uD558\uB294 \uAC70\uC57C?",
-        "\uC138\uBBF8\uCF5C\uB860 \uD558\uB098 \uB54C\uBB38\uC5D0 \uB0B4 \uC8FC\uB9D0\uC774 \uD1B5\uC9F8\uB85C \uB0A0\uC544\uAC14\uB2E4\uACE0! \uC774\uAC74 \uC778\uAD8C \uCE68\uD574\uC57C!"
-      ]
+      text: "\uBC84\uADF8?! \uB108, \uC9C0\uAE08 \uAE08\uAE30\uC5B4 \uC37C\uC5B4."
+    },
+    {
+      type: "dialogue",
+      text: "\uBC1C\uC791 \uC2A4\uC704\uCE58\uB97C \uB204\uB978 \uBAA8\uC591\uC774\uB2E4."
     },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "...\uADFC\uB370 \uB108 \uAC1C\uBC1C\uC790\uC57C? \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uD6C8\uC218 \uB450\uB294 \uD558\uCCAD \uC5C5\uC790\uC57C? \uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
+      text: "\uB0B4 \uC778\uC0DD \uC790\uCCB4\uAC00 \uAC70\uB300\uD55C \uBC84\uADF8\uC778\uB370 \uBB34\uC2A8 \uC18C\uB9B4 \uD558\uB294 \uAC70\uC57C?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC138\uBBF8\uCF5C\uB860 \uD558\uB098 \uB54C\uBB38\uC5D0 \uB0B4 \uC8FC\uB9D0\uC774 \uD1B5\uC9F8\uB85C \uB0A0\uC544\uAC14\uB2E4\uACE0! \uC774\uAC74 \uC778\uAD8C \uCE68\uD574\uC57C!"
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uD5C8\uACF5\uC5D0 \uB300\uACE0 \uC8FC\uBA39\uC9C8\uC744 \uD574\uB314\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "...\uADFC\uB370 \uB108 \uAC1C\uBC1C\uC790\uC57C? \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uD6C8\uC218 \uB450\uB294 \uD558\uCCAD \uC5C5\uC790\uC57C?"
+    },
+    {
+      type: "dialogue",
+      text: "\uC758\uC2EC\uC2A4\uB7EC\uC6B4 \uB208\uCD08\uB9AC\uB85C \uC704\uC544\uB798\uB97C \uD6D1\uC5B4\uBCF8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
     },
     { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 도망 ───
     { type: "label", name: "escape" },
     {
       type: "dialogue",
+      text: "\uB625\uC774 \uBB34\uC11C\uC6CC\uC11C \uD53C\uD558\uB098. \uB098\uB294 \uC2AC\uADF8\uBA38\uB2C8 \uC790\uB9AC\uC5D0\uC11C \uC77C\uC5B4\uB0AC\uB2E4."
+    },
+    {
+      type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC00? \uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uD654\uB098 \uC788\uC73C\uB77C\uACE0?",
-        "\uB108, \uC549\uC544. \uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC57C. \uB3C4\uB9DD \uBABB \uAC00."
-      ]
+      text: "\uC5B4? \uC5B4\uB51C \uB3C4\uB9DD\uAC00?"
+    },
+    {
+      type: "dialogue",
+      text: "\uBC88\uAC1C\uAC19\uC774 \uC190\uBAA9\uC744 \uBD99\uC7A1\uD614\uB2E4. \uC545\uB825\uC774 \uC7A5\uB09C\uC774 \uC544\uB2C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC9C0\uAE08 \uB0B4 \uAE30\uBD84\uC774 \uB5A1\uB77D \uC911\uC778\uB370 \uAD00\uAC1D\uB3C4 \uC5C6\uC774 \uD63C\uC790 \uD654\uB098 \uC788\uC73C\uB77C\uACE0?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB108, \uC549\uC544."
+    },
+    {
+      type: "dialogue",
+      text: "\uB098\uB294 \uC58C\uC804\uD788 \uB2E4\uC2DC \uC790\uB9AC\uC5D0 \uC549\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC57C. \uB3C4\uB9DD \uBABB \uAC00."
     },
     { type: "condition", if: () => true, goto: "common-end" },
     // ─── 공통 엔딩 ───
@@ -15588,17 +15689,39 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uD558... \uBAA8\uB974\uACA0\uB2E4. \uAC13\uC0DD\uC740 \uB0B4\uC77C\uBD80\uD130 \uC0B4\uC9C0 \uBB50.",
-        "\uB108, \uB098\uB791 \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798? \uC694\uC998 \uC720\uD589\uD558\uB294 \uADF8 \uBC84\uADF8 \uAC9C."
-      ]
+      text: "\uD558... \uBAA8\uB974\uACA0\uB2E4. \uAC13\uC0DD\uC740 \uB0B4\uC77C\uBD80\uD130 \uC0B4\uC9C0 \uBB50."
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uB178\uD2B8\uBD81\uC744 \uCF85 \uB2EB\uACE0\uB294, \uAC00\uBC29\uC5D0\uC11C \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uD588\uB2E4."
+      text: "\uADF8\uB140\uB294 \uBBF8\uB828 \uC5C6\uC774 \uB178\uD2B8\uBD81 \uD654\uBA74\uC744 \uC808\uC804 \uBAA8\uB4DC\uB85C \uB3CC\uB838\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB108, \uB098\uB791 \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC694\uC998 \uC720\uD589\uD558\uB294 \uADF8 \uB625\uAC9C \uC788\uC5B4. \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC778 \uAC70."
+    },
+    {
+      type: "dialogue",
+      text: "\uC544\uB2C8, \uBC29\uAE08 \uC804\uAE4C\uC9C0 \uBC84\uADF8 \uB54C\uBB38\uC5D0 \uD654\uB0B4\uC9C0 \uC54A\uC558\uB098?"
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uB300\uB2F5\uB3C4 \uB4E3\uC9C0 \uC54A\uACE0 \uB178\uD2B8\uBD81\uC744 \uCF85 \uB2EB\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB9AC\uACE0 \uAC00\uBC29\uC5D0\uC11C \uBAAC\uC2A4\uD130 \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uC744 \uB54C\uB838\uB2E4."
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
-    { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uCCAB \uB9CC\uB0A8\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
+    {
+      type: "dialogue",
+      text: "\uC774\uAC83\uC774 \uB098\uC640 \uC81C\uB098\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
+    }
   ]);
 
   // example/scenes/scene-zena-game.ts
@@ -15617,25 +15740,47 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3, skip: true },
     {
       type: "dialogue",
-      text: [
-        "\uC81C\uB098\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4.",
-        "\uD654\uBA74 \uC18D\uC5D0\uC11C\uB294 \uC815\uCCB4\uBD88\uBA85\uC758 \uBAAC\uC2A4\uD130\uAC00 \uAE30\uAD34\uD55C \uD3F4\uB9AC\uACE4\uC744 \uD769\uBFCC\uB9AC\uBA70 \uCDA4\uC744 \uCD94\uACE0 \uC788\uB2E4."
-      ]
+      text: "\uC81C\uB098\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uBC29 \uC548\uC740 \uBA39\uB2E4 \uB0A8\uC740 \uCEF5\uB77C\uBA74 \uC6A9\uAE30\uC640 \uC815\uCCB4\uBD88\uBA85\uC758 \uC804\uC120\uB4E4\uB85C \uC5B4\uC9C0\uB7FD\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uD654\uBA74 \uC18D\uC5D0\uC11C\uB294 \uC815\uCCB4\uBD88\uBA85\uC758 \uBAAC\uC2A4\uD130\uAC00 \uAE30\uAD34\uD55C \uD3F4\uB9AC\uACE4\uC744 \uD769\uBFCC\uB9AC\uBA70 \uCDA4\uC744 \uCD94\uACE0 \uC788\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC790, \uBD10\uBD10. \uC774 \uAC8C\uC784\uC774 \uC5BC\uB9C8\uB098 \uAC13\uAC9C\uC774\uB0D0\uBA74...",
-        "\uC5EC\uAE30\uC11C \uC810\uD504\uD0A4\uB97C \uC138 \uBC88 \uC5F0\uD0C0\uD558\uACE0 \uC549\uAE30\uB97C \uB204\uB974\uBA74 \uD558\uB298\uC744 \uB0A0 \uC218 \uC788\uC74C."
-      ]
+      text: "\uC790, \uBD10\uBD10. \uC774 \uAC8C\uC784\uC774 \uC5BC\uB9C8\uB098 \uAC13\uAC9C\uC774\uB0D0\uBA74..."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uBC18\uC9DD\uC774\uB294 \uB208\uBE5B\uC73C\uB85C \uBAA8\uB2C8\uD130\uB97C \uAC00\uB9AC\uCF30\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC5EC\uAE30\uC11C \uC810\uD504\uD0A4\uB97C \uC138 \uBC88 \uC5F0\uD0C0\uD558\uACE0 \uC549\uAE30\uB97C \uB204\uB974\uBA74 \uD558\uB298\uC744 \uB0A0 \uC218 \uC788\uC74C."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uAC8C \uBB34\uC2A8 \uBBF8\uCE5C \uC870\uC791\uBC95\uC778\uAC00 \uC2F6\uC9C0\uB9CC, \uD654\uBA74 \uC18D \uCE90\uB9AD\uD130\uB294 \uC815\uB9D0\uB85C \uACF5\uC911\uBD80\uC591\uC744 \uC2DC\uC791\uD588\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uBB3C\uB860 \uCC29\uC9C0\uD560 \uB550 \uB9F5\uC744 \uB6AB\uACE0 \uC9C0\uD558\uC2E4\uB85C \uB5A8\uC5B4\uC9C0\uC9C0\uB9CC. \uC644\uC804 \uC544\uD2B8 \uC544\uB2D8?"
+      text: [
+        "\uBB3C\uB860 \uCC29\uC9C0\uD560 \uB550 \uB9F5\uC744 \uB6AB\uACE0 \uC9C0\uD558\uC2E4\uB85C \uB5A8\uC5B4\uC9C0\uC9C0\uB9CC.",
+        "\uC644\uC804 \uC544\uD2B8 \uC544\uB2D8?"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: "\uC544\uB2C8, \uADF8\uAC74 \uADF8\uB0E5 \uCE58\uBA85\uC801\uC778 \uBC84\uADF8\uC796\uC544."
     },
     {
       type: "choice",
@@ -15648,22 +15793,53 @@ ${addLineNumbers(fragment)}`);
     { type: "label", name: "agree" },
     {
       type: "dialogue",
+      text: '"\uBC84\uADF8\uAC00 \uC544\uB2C8\uB77C \uAE30\uB2A5\uC774\uB124\uC694."'
+    },
+    {
+      type: "dialogue",
+      text: "\uB0B4 \uC601\uD63C \uC5C6\uB294 \uB9AC\uC561\uC158\uC5D0\uB3C4 \uADF8\uB140\uB294 \uD06C\uAC8C \uAC10\uB3D9\uD55C \uB4EF\uD588\uB2E4."
+    },
+    {
+      type: "dialogue",
       speaker: "zena",
-      text: "\uC624, \uB108 \uAF64 \uBC30\uC6B4 \uC0AC\uB78C\uC774\uB124. \uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
+      text: "\uB108 \uAF64 \uBC30\uC6B4 \uC0AC\uB78C\uC774\uB124."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
     },
     { type: "var", name: "likeability", value: 10 },
     { type: "condition", if: () => true, goto: "play-game" },
     // ─── 분기: 반대 ───
     { type: "label", name: "disagree" },
+    {
+      type: "dialogue",
+      text: '"\uADF8\uB0E5 \uB9DD\uAC9C \uC544\uB2C8\uC57C?"'
+    },
+    {
+      type: "dialogue",
+      text: "\uD329\uD2B8\uB97C \uAF42\uC544\uB123\uC790, \uC81C\uB098\uC758 \uD45C\uC815\uC774 \uC2E4\uC2DC\uAC04\uC73C\uB85C \uC369\uC5B4 \uB4E4\uC5B4\uAC14\uB2E4."
+    },
     { type: "camera-effect", preset: "shake", duration: 300 },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uB9DD\uAC9C\uC774\uB77C\uB2C8! \uC774\uAC74 \uC5B8\uB354\uB3C5\uC758 \uBC18\uB780\uC774\uC790 \uD3EC\uC2A4\uD2B8\uBAA8\uB354\uB2C8\uC998 \uC608\uC220\uC774\uB77C\uACE0!",
-        "\uD558... \uB108\uB294 \uC544\uC9C1 \uC774 \uC138\uACC4\uB97C \uC774\uD574\uD560 \uC900\uBE44\uAC00 \uC548 \uB41C \uAC70\uC57C."
-      ]
+      text: "\uB9DD\uAC9C\uC774\uB77C\uB2C8! \uC774\uAC74 \uC5B8\uB354\uB3C5\uC758 \uBC18\uB780\uC774\uC790 \uD3EC\uC2A4\uD2B8\uBAA8\uB354\uB2C8\uC998 \uC608\uC220\uC774\uB77C\uACE0!"
+    },
+    {
+      type: "dialogue",
+      text: "\uB418\uB3C4 \uC54A\uB294 \uAC1C\uB625\uCCA0\uD559\uC744 \uB4E4\uBA39\uC774\uBA70 \uB098\uB97C \uB9E4\uB3C4\uD55C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD558... \uB108\uB294 \uC544\uC9C1 \uC774 \uC138\uACC4\uB97C \uC774\uD574\uD560 \uC900\uBE44\uAC00 \uC548 \uB41C \uAC70\uC57C."
+    },
+    {
+      type: "dialogue",
+      text: "\uC624\uD788\uB824 \uD3C9\uC0DD \uC774\uD574\uD558\uACE0 \uC2F6\uC9C0 \uC54A\uB2E4."
     },
     { type: "condition", if: () => true, goto: "play-game" },
     // ─── 게임 플레이 ───
@@ -15674,11 +15850,23 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC790, \uD328\uB4DC \uC7A1\uC544. \uBCF4\uC2A4\uC804\uC774\uC57C."
     },
+    {
+      type: "dialogue",
+      text: "\uC5B4\uCA4C\uB2E4 \uBCF4\uB2C8 \uB098\uAE4C\uC9C0 \uB0A1\uC740 \uC5D1\uBC15 \uD328\uB4DC\uB97C \uAC74\uB124\uBC1B\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uAE30\uB984\uB54C\uAC00 \uBB3B\uC5B4\uC788\uB294 \uD328\uB4DC\uC5D0\uC11C\uB294 \uBBF8\uC138\uD558\uAC8C \uC591\uD30C\uB9C1 \uB0C4\uC0C8\uAC00 \uB0AC\uB2E4."
+    },
     { type: "screen-flash", preset: "red", skip: true },
     { type: "camera-effect", preset: "shake", duration: 800 },
     {
       type: "dialogue",
-      text: "\uD654\uBA74\uC774 \uAE30\uAD34\uD558\uAC8C \uC77C\uADF8\uB7EC\uC9C0\uB354\uB2C8, \uAC8C\uC784 \uCE90\uB9AD\uD130\uAC00 T\uD3EC\uC988\uB97C \uCDE8\uD558\uBA70 \uD558\uB298\uB85C \uC19F\uAD6C\uCCE4\uB2E4."
+      text: "\uC804\uD22C\uAC00 \uC2DC\uC791\uB418\uC790\uB9C8\uC790 \uD654\uBA74\uC774 \uAE30\uAD34\uD558\uAC8C \uC77C\uADF8\uB7EC\uC84C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uB0B4 \uCE90\uB9AD\uD130\uAC00 \uAC11\uC790\uAE30 T\uD3EC\uC988\uB97C \uCDE8\uD558\uB354\uB2C8 \uD558\uB298\uB85C \uC19F\uAD6C\uCE58\uAE30 \uC2DC\uC791\uD588\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
@@ -15688,10 +15876,16 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uD5C8\uD0C8\uD558\uAC8C \uD328\uB4DC\uB97C \uB0B4\uB824\uB193\uC558\uB2E4."
+      text: "\uADF8\uB140\uB294 \uC544\uBB34\uB807\uC9C0\uB3C4 \uC54A\uB2E4\uB294 \uB4EF \uD5C8\uD0C8\uD558\uAC8C \uD328\uB4DC\uB97C \uB0B4\uB824\uB193\uC558\uB2E4."
     },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 2e3 },
-    { type: "dialogue", text: "\uC81C\uB098\uC640\uC758 \uAE30\uBB18\uD55C \uAC8C\uC784 \uB370\uC774\uD2B8\uAC00 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4." }
+    {
+      type: "dialogue",
+      text: "\uC774\uB534 \uAC78 \uAC13\uAC9C\uC774\uB77C\uACE0 \uBD80\uB974\uB2E4\uB2C8, \uC138\uC0C1\uC774 \uC5B4\uB5BB\uAC8C \uB418\uBA39\uC740 \uAC78\uAE4C."
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uC640\uC758 \uAE30\uBB18\uD55C \uB625\uAC9C \uB370\uC774\uD2B8\uAC00 \uD5C8\uBB34\uD558\uAC8C \uB05D\uB0AC\uB2E4."
+    }
   ]);
 
   // example/scenes/scene-zena-food.ts
@@ -15700,15 +15894,22 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-zena-stream"
   }, [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
     { type: "background", name: "bg-library", duration: 0, skip: true },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0, skip: true },
-    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uD558... \uAC8C\uC784 \uC5B5\uAE4C \uB2F9\uD574\uC11C \uBA58\uD0C8 \uD130\uC9C0\uB2C8\uAE4C \uBC30\uACE0\uD30C\uC84C\uB2E4. \uC778\uAC04\uC758 3\uB300 \uC695\uAD6C\uB294 \uCF54\uB529, \uC218\uBA74, \uC57C\uC2DD \uC544\uB2C8\uC57C?"
+      text: "\uD558... \uAC8C\uC784 \uC5B5\uAE4C \uB2F9\uD574\uC11C \uBA58\uD0C8 \uD130\uC9C0\uB2C8\uAE4C \uBC30\uACE0\uD30C\uC84C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uAC00 \uBC30\uB97C \uBD80\uC5EC\uC7A1\uC73C\uBA70 \uAE4A\uC740 \uD55C\uC228\uC744 \uC26C\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC778\uAC04\uC758 3\uB300 \uC695\uAD6C\uB294 \uCF54\uB529, \uC218\uBA74, \uC57C\uC2DD \uC544\uB2C8\uC57C?"
     },
     {
       type: "dialogue",
@@ -15716,11 +15917,17 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "dialogue",
+      text: "\uC5B4\uC774\uC5C6\uC5B4\uC11C \uD0DC\uD074\uC744 \uAC78\uC5C8\uC9C0\uB9CC, \uADF8\uB140\uB294 \uC544\uB791\uACF3\uD558\uC9C0 \uC54A\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uB2F9\uC5F0\uD558\uC9C0. \uD604\uB300\uC778\uC5D0\uAC8C \uC57C\uC2DD\uC740 \uC911\uAEBE\uB9C8\uC758 \uC6D0\uCC9C\uC774\uC57C.",
-        "\uC911\uC694\uD55C \uAC74 \uAEBE\uC774\uC9C0 \uC54A\uB294 \uB9C8\uB77C\uB9DB."
-      ]
+      text: "\uB2F9\uC5F0\uD558\uC9C0. \uD604\uB300\uC778\uC5D0\uAC8C \uC57C\uC2DD\uC740 \uC911\uAEBE\uB9C8\uC758 \uC6D0\uCC9C\uC774\uC57C."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC911\uC694\uD55C \uAC74 \uAEBE\uC774\uC9C0 \uC54A\uB294 \uB9C8\uB77C\uB9DB."
     },
     {
       type: "dialogue",
@@ -15740,9 +15947,14 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "zena",
       text: [
-        "\uCE58\uD0A8? \uB108 T\uC57C?",
-        "\uACF5\uAC10 \uB2A5\uB825 \uC8FD\uC5C8\uB124. \uC694\uC998 \uB300\uC138\uB294 \uB9C8\uB77C\uB85C\uC81C\uD06C\uB9BC\uCE58\uC988\uCC1C\uB2ED\uC774\uC796\uC544."
+        "\uCE58\uD0A8?",
+        "\uB108 T\uC57C? \uACF5\uAC10 \uB2A5\uB825 \uC8FD\uC5C8\uB124.",
+        "\uC694\uC998 \uB300\uC138\uB294 \uB9C8\uB77C\uB85C\uC81C\uD06C\uB9BC\uCE58\uC988\uCC1C\uB2ED\uC774\uC796\uC544."
       ]
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uAC8C \uBB34\uC2A8 \uB054\uCC0D\uD55C \uD63C\uC885\uC778\uAC00."
     },
     { type: "dialogue", text: '"\uB9C8\uB77C\uC5D0 \uB85C\uC81C\uC5D0 \uD06C\uB9BC\uCE58\uC988...? \uC704\uC7A5 \uD14C\uB7EC \uC544\uB0D0?"' },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
@@ -15759,10 +15971,16 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC624, \uAE30\uC5B5\uB825 \uC88B\uC740\uB370? \uB300\uD654\uAC00 \uB41C\uB2E4 \uB300\uD654\uAC00.",
-        "\uADFC\uB370 \uB9E4\uC6B4 \uAC70 \uBA39\uC73C\uBA74 \uB0B4 \uC704\uC7A5 \uC11C\uBC84\uAC00 \uD130\uC9C8\uC9C0\uB3C4 \uBAB0\uB77C."
-      ]
+      text: "\uC624, \uAE30\uC5B5\uB825 \uC88B\uC740\uB370? \uB300\uD654\uAC00 \uB41C\uB2E4 \uB300\uD654\uAC00."
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uAC00 \uB9CC\uC871\uC2A4\uB7EC\uC6B4 \uBBF8\uC18C\uB97C \uC9C0\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADFC\uB370 \uB9E4\uC6B4 \uAC70 \uBA39\uC73C\uBA74 \uB0B4 \uC704\uC7A5\uC774 \uC704\uD5D8\uD574\uC9C8 \uC218\uB3C4..."
     },
     { type: "dialogue", text: '"\uADF8\uB807\uB2E4\uBA74?"' },
     {
@@ -15770,13 +15988,21 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uADF8\uB7EC\uB2C8\uAE4C \uB9C8\uB77C\uB85C\uC81C\uD06C\uB9BC\uCE58\uC988\uCC1C\uB2ED\uC73C\uB85C \uAC04\uB2E4."
     },
+    {
+      type: "dialogue",
+      text: "\uB300\uCCB4 \uC5B4\uB514\uC11C\uBD80\uD130 \uD0DC\uD074\uC744 \uAC78\uC5B4\uC57C \uD560\uC9C0 \uBAA8\uB974\uACA0\uB2E4."
+    },
     { type: "dialogue", text: "\uAE30\uC801\uC758 \uB17C\uB9AC\uB2E4." },
     { type: "condition", if: () => true, goto: "order" },
     // ─── 공통 주문 ───
     { type: "label", name: "order" },
     {
       type: "dialogue",
-      text: "\uACB0\uAD6D \uAE30\uC2B9\uC804 \uCC1C\uB2ED, \uC644\uBCBD\uD55C \uB2F5\uC815\uB108\uC600\uB2E4. \uC81C\uB098\uB294 \uC775\uC219\uD55C \uC190\uB180\uB9BC\uC73C\uB85C \uACB0\uC81C\uB97C \uB9C8\uCCE4\uB2E4."
+      text: "\uACB0\uAD6D \uAE30\uC2B9\uC804 \uCC1C\uB2ED, \uC644\uBCBD\uD55C \uB2F5\uC815\uB108\uC600\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uB294 \uC775\uC219\uD55C \uC190\uB180\uB9BC\uC73C\uB85C \uACB0\uC81C\uB97C \uB9C8\uCCE4\uB2E4."
     },
     {
       type: "dialogue",
@@ -15784,13 +16010,26 @@ ${addLineNumbers(fragment)}`);
       text: "\uBC30\uB2EC 60\uBD84 \uAC78\uB9B0\uB300."
     },
     { type: "camera-effect", preset: "shake", duration: 300 },
-    { type: "dialogue", text: '"\uC7A0\uAE50, \uBC29\uAE08 \uB0B4 \uD578\uB4DC\uD3F0\uC5D0\uC11C \uACB0\uC81C \uC54C\uB9BC\uC774 \uC6B8\uB9B0 \uAC83 \uAC19\uC740\uB370?"' },
+    { type: "dialogue", text: '"\uC7A0\uAE50, \uBC29\uAE08 \uB0B4 \uD578\uB4DC\uD3F0\uC5D0\uC11C \uCE74\uB4DC \uACB0\uC81C \uC54C\uB9BC\uC774 \uC6B8\uB9B0 \uAC83 \uAC19\uC740\uB370?"' },
+    {
+      type: "dialogue",
+      text: "\uB4F1\uACE8\uC774 \uC384\uD558\uAC8C \uC2DD\uC5C8\uB2E4."
+    },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC5B4, \uC74C\uC2DD \uC62C \uB54C\uAE4C\uC9C0 \uC2DC\uAC04 \uB0A8\uC558\uB124! \uC720\uD29C\uBE0C \uC20F\uD3FC\uC73C\uB85C \uB3C4\uD30C\uBBFC \uC880 \uCC44\uC6CC\uC57C\uC9C0~"
+      text: "\uC5B4, \uC74C\uC2DD \uC62C \uB54C\uAE4C\uC9C0 \uC2DC\uAC04 \uB0A8\uC558\uB124!"
     },
-    { type: "dialogue", text: "\uC81C\uB098\uB294 \uB0B4 \uB9D0\uC744 \uAE54\uB054\uD558\uAC8C \uC539\uACE0\uB294 \uD654\uBA74 \uC18D\uC73C\uB85C \uBE60\uC838\uB4E4\uC5C8\uB2E4." },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC720\uD29C\uBE0C \uC20F\uD3FC\uC73C\uB85C \uB3C4\uD30C\uBBFC \uC880 \uCC44\uC6CC\uC57C\uC9C0~"
+    },
+    { type: "dialogue", text: "\uC81C\uB098\uB294 \uB0B4 \uB9D0\uC744 \uAE54\uB054\uD558\uAC8C \uC539\uC5B4\uBC84\uB838\uB2E4." },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB9AC\uACE0\uB294 \uACE7\uBC14\uB85C \uD654\uBA74 \uC18D \uC20F\uD3FC \uC601\uC0C1\uC73C\uB85C \uBE68\uB824 \uB4E4\uC5B4\uAC14\uB2E4."
+    },
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
 
@@ -15813,27 +16052,90 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC557, \uC7A0\uAE50!",
-        "\uC774\uAC70 \uBC29\uC1A1 \uCF1C\uC9C4 \uAC70 \uC544\uB2C8\uC57C?!"
-      ]
+      text: "\uC557, \uC7A0\uAE50!"
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uC758 \uC190\uB180\uB9BC\uC774 \uB2E4\uAE09\uD574\uC84C\uB2E4. \uB9C8\uC6B0\uC2A4\uB97C \uB9C8\uAD6C \uD074\uB9AD\uD558\uB294 \uC18C\uB9AC\uAC00 \uBC29 \uC548\uC744 \uCC44\uC6B4\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC774\uAC70 \uBC29\uC1A1 \uCF1C\uC9C4 \uAC70 \uC544\uB2C8\uC57C?!"
+    },
+    {
+      type: "dialogue",
+      text: "\uBC29\uC1A1 \uD504\uB85C\uADF8\uB7A8 \uD654\uBA74\uC5D0 \uBE68\uAC04 \uBD88\uC774 \uB4E4\uC5B4\uC628 \uAC83\uC744 \uD655\uC778\uD558\uC790, \uADF8\uB140\uC758 \uB3D9\uACF5\uC774 \uC9C0\uC9C4\uC744 \uC77C\uC73C\uCF30\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "...\uC5B4? \uCF1C\uC84C\uB124.",
-        "\uD558\uC774\uB8FD~ \uD2B8\uC218\uB4E4!",
-        "\uBC29\uC1A1 \uC548 \uCF20\uB2E4\uACE0 \uD574\uB193\uACE0 \uC2E4\uC218\uB85C \uCF1C\uBC84\uB838\uB2E4!"
-      ]
+      text: "...\uC5B4? \uCF1C\uC84C\uB124."
     },
     {
       type: "dialogue",
+      text: "\uB180\uB78D\uAC8C\uB3C4, \uADF8 \uB2F9\uD669\uD568\uC740 \uB2E8 1\uCD08 \uB9CC\uC5D0 \uD754\uC801\uB3C4 \uC5C6\uC774 \uC0AC\uB77C\uC84C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD558\uC774\uB8FD~ \uD2B8\uC218\uB4E4!"
+    },
+    {
+      type: "dialogue",
+      text: "\uBAA9\uC18C\uB9AC \uD1A4\uC774 \uB450 \uC625\uD0C0\uBE0C\uB294 \uC871\uD788 \uC62C\uB77C\uAC14\uB2E4. \uD3C9\uC18C\uC758 \uAC78\uAC78\uD55C \uBAA9\uC18C\uB9AC\uB294 \uC628\uB370\uAC04\uB370\uC5C6\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBC29\uC1A1 \uC548 \uCF20\uB2E4\uACE0 \uD574\uB193\uACE0 \uC2E4\uC218\uB85C \uCF1C\uBC84\uB838\uB2E4!"
+    },
+    {
+      type: "dialogue",
+      text: "1\uCD08 \uB9CC\uC5D0 \uD150\uC158\uC774 180\uB3C4 \uBC14\uB00C\uC5C8\uB2E4. \uC778\uD130\uB137 \uBC29\uC1A1\uC778\uC758 \uC9C1\uC5C5\uBCD1\uC778\uAC00."
+    },
+    {
+      type: "dialogue",
+      speaker: "chat",
       text: [
-        "1\uCD08 \uB9CC\uC5D0 \uD150\uC158\uC774 180\uB3C4 \uBC14\uB00C\uC5C8\uB2E4.",
-        "\uC778\uD130\uB137 \uBC29\uC1A1\uC778\uC758 \uC9C1\uC5C5\uBCD1\uC778\uAC00."
-      ]
+        '<style color="rgb(150,150,150)">[ \uC557 \uAE30\uC2B5 \uBC45\uC628 \u3137\u3137 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC624\uB298 \uD734\uBC29\uC774\uB77C\uBA70! \uD734\uBC29\uC774\uB77C\uBA70! ]</style>',
+        '<style color="rgb(150,150,150)">[ \uD5D0\uB808\uBC8C\uB5A1 \uB4E4\uC5B4\uC654\uC2B5\uB2C8\uB2E4 \uC81C\uB098\uB2D8 ]</style>'
+      ],
+      speed: 10
+    },
+    {
+      type: "dialogue",
+      text: "\uD654\uBA74 \uC606\uC5D0 \uB744\uC6CC\uC9C4 \uCC44\uD305\uCC3D\uC774 \uC21C\uC2DD\uAC04\uC5D0 \uC2DC\uCCAD\uC790\uB4E4\uC758 \uBC18\uC751\uC73C\uB85C \uAC00\uB4DD \uCC3C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "chat",
+      text: '<style color="rgb(150,150,150)">[ \uC329\uC5BC \uBC29\uC1A1\uC778\uAC00\uC694? ]</style>',
+      speed: 10
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544\uB2C8\uC57C~ \uBC29\uAE08 \uC138\uC218\uD558\uACE0 \uC640\uC11C \uC644\uC804 \uC329\uC5BC\uC774\uAE34 \uD55C\uB370,"
+    },
+    {
+      type: "dialogue",
+      text: "\uBC29\uAE08 \uC804\uAE4C\uC9C0 \uAC8C\uC784\uC5D0\uC11C \uC5B5\uAE4C\uB2F9\uD588\uB2E4\uBA70 \uC0F7\uAC74\uC744 \uCE58\uB358 \uADF8 \uC778\uAC04\uC774 \uB9DE\uB098?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC6B0\uB9AC \uD2B8\uC218\uB4E4 \uBCF4\uACE0 \uC2F6\uC5B4\uC11C \uC7A0\uAE50 \uCF30\uC9C0~"
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uCE74\uBA54\uB77C\uB97C \uD5A5\uD574 \uB2A5\uC219\uD558\uAC8C \uC190\uD558\uD2B8\uB97C \uB0A0\uB838\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uC790\uC5F0\uC2A4\uB7FD\uAC8C \uB0B4 \uC874\uC7AC\uB294 \uC644\uBCBD\uD558\uAC8C \uD22C\uBA85\uC778\uAC04 \uCDE8\uAE09\uC744 \uB2F9\uD558\uACE0 \uC788\uC5C8\uB2E4."
     },
     {
       type: "choice",
@@ -15845,90 +16147,229 @@ ${addLineNumbers(fragment)}`);
     { type: "label", name: "wave" },
     {
       type: "dialogue",
-      text: [
-        "\uB098\uB294 \uCE74\uBA54\uB77C \uC0AC\uAC01\uC9C0\uB300\uC5D0\uC11C \uC7A5\uB09C\uC2A4\uB7FD\uAC8C \uC190\uC744 \uD754\uB4E4\uC5C8\uB2E4.",
-        "\uD654\uBA74 \uAD6C\uC11D\uC5D0 \uB0B4 \uC190\uAC00\uB77D\uC774 1\uCD08\uCBE4 \uC7A1\uD614\uB2E4."
-      ]
+      speaker: "zena",
+      text: "\uC624\uB298 \uC57C\uC2DD\uC740 \uCC1C\uB2ED \uC2DC\uCF30\uC5B4\uC6A9~"
     },
-    { type: "camera-effect", preset: "shake", duration: 300 },
     {
       type: "dialogue",
-      text: [
-        "\uC21C\uAC04, \uBBF8\uCE5C \uB4EF\uC774 \uC62C\uB77C\uAC00\uB358 \uCC44\uD305\uCC3D\uC774 \uC77C\uC21C\uAC04 \uC5BC\uC5B4\uBD99\uB354\uB2C8 \uB9E4\uC11C\uC6B4 \uC18D\uB3C4\uB85C \uB3C4\uBC30\uB418\uAE30 \uC2DC\uC791\uD588\uB2E4.",
-        "\uCC44\uD305\uCC3D: [ ??? ] [ \uBC29\uAE08 \uB0A8\uC790 \uC190 \uC544\uB2D8? ] [ \uC720\uB2C8\uCF58 \uBFD4 \uB2E4 \uBD80\uB7EC\uC9C0\uB294 \uC18C\uB9AC \uB4E4\uB9AC\uB124 ] [ \uD654\uBA74 \uAE4C\uB9E4\uC9C4\uB2E4 \u3137\u3137\u3137 ]"
-      ]
+      text: "\uB0B4 \uB3C8\uC73C\uB85C \uC2DC\uCF1C\uB193\uACE0 \uBCF8\uC778 \uC57C\uC2DD\uC778 \uAC83\uCC98\uB7FC \uC790\uC5F0\uC2A4\uB7FD\uAC8C \uD3EC\uC7A5\uD55C\uB2E4."
     },
     {
       type: "dialogue",
       speaker: "zena",
+      text: "\uD63C\uC790 \uBA39\uAE30\uC5D4 \uC880 \uB9CE\uC9C0\uB9CC \uB0A8\uC73C\uBA74 \uB0BC \uBA39\uC5B4\uC57C\uC9C0!"
+    },
+    {
+      type: "dialogue",
+      text: "\uAC70\uC9D3\uB9D0\uC774 \uC220\uC220 \uB098\uC624\uB294 \uAF34\uC744 \uBCF4\uB2C8 \uAC00\uB9CC\uD788 \uC788\uC744 \uC218\uAC00 \uC5C6\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uB098\uB294 \uCE74\uBA54\uB77C \uC0AC\uAC01\uC9C0\uB300\uC5D0\uC11C \uC7A5\uB09C\uC2A4\uB7FD\uAC8C \uD314\uC744 \uBED7\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uD654\uBA74 \uAD6C\uC11D\uC5D0 \uB0B4 \uC190\uAC00\uB77D\uC774 1\uCD08\uCBE4 \uC7A1\uD614\uB2E4."
+    },
+    { type: "camera-effect", preset: "shake", duration: 300 },
+    {
+      type: "dialogue",
+      text: "\uC21C\uAC04, \uBBF8\uCE5C \uB4EF\uC774 \uC62C\uB77C\uAC00\uB358 \uCC44\uD305\uCC3D\uC774 \uC77C\uC21C\uAC04 \uC5BC\uC5B4\uBD99\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB9AC\uACE0 \uB9E4\uC11C\uC6B4 \uC18D\uB3C4\uB85C \uB2E4\uC2DC \uB3C4\uBC30\uB418\uAE30 \uC2DC\uC791\uD588\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "chat",
       text: [
-        "(\uC18C\uACE4\uC18C\uACE4) \uBBF8\uCCE4\uC5B4?! \uC190 \uCE58\uC6CC!",
-        "\uB098 \uC721\uC218 \uC6B0\uB824\uC11C \uBA39\uACE0\uC0AC\uB294 \uC2EC\uD574 \uBC29\uC1A1\uC774\uB780 \uB9D0\uC774\uC57C!"
-      ]
+        '<style color="rgb(150,150,150)">[ ??? ]</style>',
+        '<style color="rgb(150,150,150)">[ \uBC29\uAE08 \uB0A8\uC790 \uC190 \uC544\uB2D8? ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC720\uB2C8\uCF58 \uBFD4 \uB2E4 \uBD80\uB7EC\uC9C0\uB294 \uC18C\uB9AC \uB4E4\uB9AC\uB124 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uB098 \uAE4C\uB9E4\uC838,,, ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 ]</style>'
+      ],
+      speed: 10
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uC758 \uC5BC\uAD74\uC774 \uC0AC\uC0C9\uC774 \uB418\uC5C8\uB2E4. \uADF8\uB140\uB294 \uB9C8\uC774\uD06C\uB97C \uD669\uAE09\uD788 \uAC00\uB838\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: '<style fontSize="14">\uBBF8\uCCE4\uC5B4?! \uC190 \uCE58\uC6CC!</style>'
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB098 \uC721\uC218 \uC6B0\uB824\uC11C \uBA39\uACE0\uC0AC\uB294 \uC2EC\uD574 \uBC29\uC1A1\uC774\uB780 \uB9D0\uC774\uC57C!"
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uB294 \uB2E4\uC2DC \uB9C8\uC774\uD06C\uC5D0\uC11C \uC190\uC744 \uB5BC\uACE0 \uC5B5\uC9C0\uC6C3\uC74C\uC744 \uC9C0\uC5C8\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC544, \uC5EC\uB7EC\uBD84! \uBC29\uAE08 \uADF8\uAC70 \uC81C \uC190\uC774\uC5D0\uC694!",
-        "\uC81C\uAC00 \uBF08\uB300 \uAD75\uC740 \uAC70 \uC544\uC2DC\uC796\uC544\uC694? \uD558\uD558\uD558!"
-      ]
+      text: "\uC544, \uC5EC\uB7EC\uBD84! \uBC29\uAE08 \uADF8\uAC70 \uC81C \uC190\uC774\uC5D0\uC694!"
     },
     {
       type: "dialogue",
-      text: [
-        "\uC5B4\uC124\uD508 \uD574\uBA85\uC774 \uD654\uB97C \uBD88\uB800\uB2E4. \uCC44\uD305\uCC3D\uC740 \uBFD4\uC774 \uBD80\uB7EC\uC9C4 \uC720\uB2C8\uCF58 \uB300\uC2E0 \uB2E4\uB978 \uBD80\uB958\uC758 \uC2DC\uCCAD\uC790\uB4E4\uB85C \uD3ED\uC8FC\uD558\uAE30 \uC2DC\uC791\uD588\uB2E4.",
-        "\uCC44\uD305\uCC3D: [ \uC6B0\uC6B1... ] [ \uD615 \uBB50\uD574 ] [ \uCEA0 \uB044\uACE0 \uB4C0\uB77C\uD55C \uD558\uB294 \uC774\uC720\uAC00 \uC788\uC5C8\uB124 ] [ \uC5ED\uACB9\uB2E4 \uC9C4\uC9DC \u314B\u314B\u314B\u314B ] [ \uAD70\uD544 \uC5EC\uACE0\uC0DD \uCEE8\uC149\uC784? ]"
-      ]
+      text: "\uB9D0\uB3C4 \uC548 \uB418\uB294 \uBCC0\uBA85\uC774\uB2E4. \uB204\uAC00 \uBD10\uB3C4 \uB450\uD23C\uD55C \uB0A8\uC790 \uC190\uC774\uC5C8\uB294\uB370."
     },
-    { type: "camera-effect", preset: "shake", duration: 500 },
-    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC544\uB2C8\uC57C! \uD615 \uC544\uB2C8\uB77C\uACE0!",
-        "\uBBFC\uBC29\uC704 \uC548 \uB05D\uB0AC\uB0D0\uB2C8 \uC120 \uB118\uB124 \uC9C4\uC9DC!",
-        "\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uC5EC\uCEA0 \uC778\uC0DD \uB05D\uB0AC\uC796\uC544!"
-      ]
+      text: "\uC81C\uAC00 \uBF08\uB300 \uAD75\uC740 \uAC70 \uC544\uC2DC\uC796\uC544\uC694? \uD558\uD558\uD558!"
     },
     {
       type: "dialogue",
-      text: [
-        "\uC774\uC131\uC744 \uC783\uC740 \uC81C\uB098\uAC00 \uB0B4 \uBA71\uC0B4\uC744 \uC7A1\uACE0 \uD754\uB4DC\uB294 \uC7A5\uBA74\uAE4C\uC9C0...",
-        "\uCE74\uBA54\uB77C\uC5D0 \uACE0\uC2A4\uB780\uD788 \uC1A1\uCD9C\uB418\uC5C8\uB2E4."
-      ]
+      text: "\uC5B4\uC124\uD508 \uD574\uBA85\uC774 \uD654\uB97C \uBD88\uB800\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uCC44\uD305\uCC3D: [ \u314B\u314B\u314B\u314B \uBB3C\uB9AC\uC5D4\uC9C4 \uAC1C\uCA50\uB2E4 ] [ \uBA71\uC0B4\uC7A1\uC774 \uD569\uBC29 \uD3FC \uBBF8\uCCE4\uB2E4 ] [ \uB3C4\uD30C\uBBFC \uD130\uC9C0\uB124 ]"
+      text: "\uCC44\uD305\uCC3D\uC740 \uBFD4\uC774 \uBD80\uB7EC\uC9C4 \uC720\uB2C8\uCF58 \uB300\uC2E0 \uB2E4\uB978 \uBD80\uB958\uC758 \uC2DC\uCCAD\uC790\uB4E4\uB85C \uD3ED\uC8FC\uD558\uAE30 \uC2DC\uC791\uD588\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "chat",
+      text: [
+        '<style color="rgb(150,150,150)">[ \uD615\uB2D8 \uC870\uC9C1\uC73C\uB85C \uB3CC\uC544\uC624\uC2ED\uC1FC ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC5EC\uAE30 \uB0A8\uCEA0\uBC29 \uB9DE\uC2B5\uB2C8\uB2E4 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uB098 \uC6D0 \uCC38 \u314B\u314B \uC81C \uBF08\uB300\uAC00 \uB2E8\uB2E8\uD574\uC84C\uC2B5\uB2C8\uB2E4 \uC774\uAC70\u314B\u314B\u314B ]</style>'
+      ],
+      speed: 10
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544\uB2C8\uC57C! \uD615 \uC544\uB2C8\uB77C\uACE0!"
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uAC00 \uD544\uC0AC\uC801\uC73C\uB85C \uD56D\uBCC0\uD588\uC9C0\uB9CC, \uCC44\uD305\uCC3D\uC758 \uD750\uB984\uC740 \uB9C9\uC744 \uC218 \uC5C6\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBBFC\uBC29\uC704 \uC548 \uB05D\uB0AC\uB0D0\uB2C8 \uC120 \uB118\uB124 \uC9C4\uC9DC!"
+    },
+    {
+      type: "dialogue",
+      text: "\uD654\uAC00 \uBA38\uB9AC\uB05D\uAE4C\uC9C0 \uB09C \uC81C\uB098\uAC00 \uB9C8\uCE68\uB0B4 \uC774\uC131\uC744 \uB193\uC544\uBC84\uB838\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uCC44\uD305\uCC3D \uCC3D\uB0AC\uC796\uC544!"
+    },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uAC00 \uB0B4 \uBA71\uC0B4\uC744 \uC7A1\uACE0 \uD754\uB4DC\uB294 \uC7A5\uBA74\uAE4C\uC9C0..."
+    },
+    {
+      type: "dialogue",
+      text: "\uCEA0 \uD654\uBA74\uC744 \uD1B5\uD574 \uACE0\uC2A4\uB780\uD788 \uC1A1\uCD9C\uB418\uACE0 \uB9D0\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "chat",
+      text: [
+        '<style color="rgb(150,150,150)">[ \u314B\u314B\u314B\u314B \uD53C\uC9C0\uCEEC ]</style>',
+        '<style color="rgb(150,150,150)">[ \uBA71\uC0B4\uC7A1\uC774 \uD569\uBC29 \uD3FC \uBBF8\uCCE4\uB2E4 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uB3C4\uD30C\uBBFC \uD130\uC9C0\uB124 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC7AC\uBBF8\uB5D8 \uC7AC\uBBF8\uB5D8 \uC7AC\uBBF8\uB5D8 \uC7AC\uBBF8\uB5D8 \uC7AC\uBBF8\uB5D8 \uC7AC\uBBF8\uB5D8 ]</style>'
+      ],
+      speed: 10
     },
     { type: "condition", if: () => true, goto: "stream-end" },
     { type: "label", name: "troll" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC624\uB298 \uC57C\uC2DD\uC740 \uCC1C\uB2ED \uC2DC\uCF30\uC5B4\uC6A9~"
+    },
+    {
+      type: "dialogue",
+      text: "\uBC29\uAE08 \uC804\uAE4C\uC9C0 \uBD84\uB178\uC870\uC808\uC7A5\uC560\uB97C \uBCF4\uC774\uB358 \uC0AC\uB78C\uC774 \uB9DE\uB098 \uC2F6\uC744 \uC815\uB3C4\uB85C \uC559\uC99D\uB9DE\uC740 \uBAA9\uC18C\uB9AC\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC678\uB86D\uAC8C \uD63C\uC790 \uBA39\uBC29 \uD560 \uC608\uC815\uC774\uB2C8\uAE4C \uB2E4\uB4E4 \uB05D\uAE4C\uC9C0 \uBD10\uC918\uC57C \uD574?"
+    },
     { type: "camera-effect", preset: "shake", duration: 300 },
     {
       type: "dialogue",
+      text: "\uBED4\uBED4\uD55C \uBA58\uD2B8\uB97C \uB4E3\uC790\uB9C8\uC790 \uB098\uB3C4 \uBAA8\uB974\uAC8C \uC785\uC774 \uBA3C\uC800 \uC6C0\uC9C1\uC600\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: '"\uC57C, \uB0B4 \uCC1C\uB2ED\uC740 \uC5B8\uC81C \uC640?"'
+    },
+    {
+      type: "dialogue",
+      text: "\uB0B4\uAC00 \uB4A4\uC5D0\uC11C \uCA4C\uB801\uCA4C\uB801\uD558\uAC8C \uC678\uCE58\uC790, \uBC29 \uC548\uC758 \uACF5\uAE30\uAC00 \uC2F8\uB298\uD558\uAC8C \uC2DD\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB9AC\uACE0 1\uCD08\uC758 \uC815\uC801 \uD6C4, \uCC44\uD305\uCC3D\uC774 \uC21C\uC2DD\uAC04\uC5D0 \uBD88\uD0C0\uC624\uB974\uAE30 \uC2DC\uC791\uD588\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "chat",
       text: [
-        "\uB0B4\uAC00 \uB4A4\uC5D0\uC11C \uCA4C\uB801\uCA4C\uB801\uD558\uAC8C \uC678\uCE58\uC790,",
-        "\uCC44\uD305\uCC3D\uC774 \uC21C\uC2DD\uAC04\uC5D0 \uBD88\uD0C0\uC624\uB974\uAE30 \uC2DC\uC791\uD588\uB2E4.",
-        "\uCC44\uD305\uCC3D: [ \u314B\u314B\u314B\u314B \uB0A8\uC790 \uBAA9\uC18C\uB9AC \uBB50\uB0D0 ] [ \uB3D9\uAC70\uB0A8 \uCC1C\uB2ED\uC740 \uC911\uB300\uC0AC\uD56D\uC774\uC9C0 ] [ \uBFD4 \uB2E4 \uAC08\uB824\uC11C \uAC00\uB8E8 \uB428 ] [ \uCC44\uD305\uCC3D \uAE4C\uB9E4\uC9C0\uB294 \uAC70 \uBCF4\uC18C ]"
-      ]
+        '<style color="rgb(150,150,150)">[ \u314B\u314B\u314B\u314B \uB0A8\uC790 \uBAA9\uC18C\uB9AC \uBB50\uB0D0 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uB3D9\uAC70\uB0A8 \uCC1C\uB2ED\uC740 \uC911\uB300\uC0AC\uD56D\uC774\uC9C0 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uBFD4 \uB2E4 \uAC08\uB824\uC11C \uAC00\uB8E8 \uB428 ]</style>',
+        '<style color="rgb(150,150,150)">[ \uCC44\uD305\uCC3D \uAE4C\uB9E4\uC9C0\uB294 \uAC70 \uBCF4\uC18C ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 ]</style>'
+      ],
+      speed: 10
     },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      text: "\uC81C\uB098\uC758 \uC5BC\uAD74\uC5D0\uC11C \uC601\uC5C5\uC6A9 \uBBF8\uC18C\uAC00 \uC644\uC804\uD788 \uC99D\uBC1C\uD588\uB2E4."
+    },
     {
       type: "dialogue",
       speaker: "zena",
       text: "\uC545! \uC57C! \uB108 \uC9C0\uAE08 \uBB50 \uD558\uB294 \uAC70\uC57C?!"
     },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uAC00 \uB0B4 \uCABD\uC744 \uD671 \uB178\uB824\uBCF4\uBA70 \uC0AC\uC790\uD6C4\uB97C \uB0B4\uC9C8\uB800\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uD558\uC9C0\uB9CC \uC774\uBBF8 \uC5CE\uC9C8\uB7EC\uC9C4 \uBB3C\uC774\uB2E4. \uCC44\uD305\uCC3D\uC758 \uD3ED\uC8FC\uB294 \uBA48\uCD9C \uAE30\uBBF8\uAC00 \uBCF4\uC774\uC9C0 \uC54A\uC558\uB2E4."
+    },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
+      text: "\uC81C\uB098\uB294 \uD669\uAE09\uD788 \uB2E4\uC2DC \uC5B5\uC9C0 \uBBF8\uC18C\uB97C \uC7A5\uCC29\uD588\uB2E4."
+    },
+    {
+      type: "dialogue",
       speaker: "zena",
-      text: [
-        "...\uC544, \uC5EC\uB7EC\uBD84. \uBC29\uAE08 \uADF8\uAC74 \uC81C GPT\uC785\uB2C8\uB2E4.",
-        "\uBC30\uB2EC \uC54C\uB9BC \uAE30\uB2A5\uC774 \uC880 \uB9AC\uC5BC\uD558\uC8E0? \uB540\uB540..."
-      ]
+      text: "...\uC544, \uC5EC\uB7EC\uBD84. \uBC29\uAE08 \uADF8\uAC74 \uC81C GPT\uC785\uB2C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "GPT\uAC00 \uCC1C\uB2ED\uC744 \uCC3E\uB0D0."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBC30\uB2EC \uC54C\uB9BC \uAE30\uB2A5\uC774 \uC880 \uB9AC\uC5BC\uD558\uC8E0? \uB540\uB540..."
+    },
+    {
+      type: "dialogue",
+      text: "\uC544\uBB34\uB3C4 \uBBFF\uC9C0 \uC54A\uC744 \uBCC0\uBA85\uC744 \uB358\uC9C0\uACE0\uB294, \uADF8\uB140\uAC00 \uB2E4\uAE09\uD558\uAC8C \uB9C8\uC6B0\uC2A4\uB97C \uC950\uC5C8\uB2E4."
     },
     { type: "condition", if: () => true, goto: "stream-end" },
     { type: "label", name: "stream-end" },
@@ -15937,13 +16378,18 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC624\uB298 \uBC29\uC1A1\uC740 3\uBD84 \uB9CC\uC5D0 \uBC29\uC885\uD558\uACA0\uC2B5\uB2C8\uB2E4! \u3143\u3143!"
     },
+    {
+      type: "dialogue",
+      text: "\uB2E4\uAE09\uD55C \uC778\uC0AC\uC640 \uD568\uAED8 \uD654\uBA74\uC774 \uAEBC\uC84C\uB2E4."
+    },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
       type: "dialogue",
-      text: [
-        "\uBC29\uC1A1 \uC885\uB8CC \uBC84\uD2BC\uC744 \uB204\uB974\uC790\uB9C8\uC790 \uC81C\uB098\uB294...",
-        "\uB2E4\uC2DC \uC8FD\uC740 \uB208\uC73C\uB85C \uB3CC\uC544\uC654\uB2E4."
-      ]
+      text: "\uBC29\uC1A1 \uC885\uB8CC \uBC84\uD2BC\uC744 \uB204\uB974\uC790\uB9C8\uC790 \uC81C\uB098\uB294..."
+    },
+    {
+      type: "dialogue",
+      text: "\uB2E4\uC2DC \uC601\uD63C \uC5C6\uB294, \uD145 \uBE48 \uB208\uB3D9\uC790\uB85C \uB3CC\uC544\uC654\uB2E4."
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
@@ -15956,17 +16402,41 @@ ${addLineNumbers(fragment)}`);
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
     { type: "background", name: "bg-park", duration: 0, skip: true },
-    { type: "mood", mood: "day", intensity: 0.5, duration: 0, skip: true },
+    { type: "mood", mood: "day", intensity: 1, duration: 0, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
       type: "dialogue",
-      text: "\uB2E4\uC74C \uB0A0 \uC544\uCE68. \uB098\uB294 \uC81C\uB098\uB97C \uAC15\uC81C\uB85C \uACF5\uC6D0\uC5D0 \uB04C\uACE0 \uB098\uC654\uB2E4."
+      text: "\uB2E4\uC74C \uB0A0 \uC544\uCE68."
+    },
+    {
+      type: "dialogue",
+      text: "\uB098\uB294 \uC5B4\uC82F\uBC24 \uBC29\uC1A1 \uC0AC\uACE0\uC758 \uCDA9\uACA9\uC5D0\uC11C \uD5E4\uC5B4\uB098\uC624\uC9C0 \uBABB\uD558\uB294 \uC81C\uB098\uB97C \uAC15\uC81C\uB85C \uB04C\uACE0 \uB098\uC654\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uBC29\uAD6C\uC11D\uC5D0\uB9CC \uBC15\uD600\uC788\uB2E4\uAC00\uB294 \uC815\uB9D0\uB85C \uACF0\uD321\uC774\uAC00 \uD53C\uC5B4\uC624\uB97C \uAC83 \uAC19\uC558\uAE30 \uB54C\uBB38\uC774\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC545! \uB208\uBD80\uC154! \uD587\uBE5B \uC5D0\uC784\uD575 \uCF30\uB0D0! \uC774\uAC70 \uBE14\uB8E8\uB77C\uC774\uD2B8 \uD544\uD130 \uC548 \uB3FC?!"
+      text: "\uC545!"
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uD587\uBE5B\uC744 \uCB10\uC790\uB9C8\uC790 \uC81C\uB098\uAC00 \uB208\uC744 \uAC10\uC2F8 \uC950\uBA70 \uBE44\uBA85\uC744 \uC9C8\uB800\uB2E4.",
+        "\uAF2D \uD1F4\uB9C8\uB2F9\uD558\uB294 \uAC70 \uAC19\uB2E4."
+      ]
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uD587\uBE5B \uC5D0\uC784\uD575 \uCF30\uB0D0! \uC774\uAC70 \uBE14\uB8E8\uB77C\uC774\uD2B8 \uD544\uD130 \uC548 \uB3FC?!"
+    },
+    {
+      type: "dialogue",
+      text: "\uC138\uC0C1\uC5D0 \uC5B4\uB5A4 \uD0DC\uC591\uC774 \uBE14\uB8E8\uB77C\uC774\uD2B8 \uD544\uD130\uB97C \uC9C0\uC6D0\uD55C\uB2E4\uB294 \uB9D0\uC778\uAC00."
     },
     {
       type: "choice",
@@ -15978,28 +16448,84 @@ ${addLineNumbers(fragment)}`);
     { type: "label", name: "sun" },
     {
       type: "dialogue",
-      speaker: "zena",
-      text: "\uBC40\uD30C\uC774\uC5B4\uBA74 \uB108\uBD80\uD130 \uBB3C\uC5C8\uC5B4. \uD53C\uB3C4 \uB9DB\uC5C6\uAC8C \uC0DD\uACBC\uC9C0\uB9CC."
+      text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."'
     },
-    { type: "condition", if: () => true, goto: "walk" },
-    { type: "label", name: "content" },
-    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
+    {
+      type: "dialogue",
+      text: "\uB0B4 \uC9C0\uC801\uC5D0 \uC81C\uB098\uAC00 \uB367\uB2C8\uB97C \uB4DC\uB7EC\uB0B4\uBA70 \uC73C\uB974\uB801\uAC70\uB838\uB2E4."
+    },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC624? \uCF58\uD150\uCE20? \uB108 \uC81C\uBC95 \uB9E4\uB2C8\uC800 \uB9C8\uC778\uB4DC\uAC00 \uC7A5\uCC29\uB410\uB124. \uAC00\uC0B0\uC810 +1\uC810."
+      text: "\uBC40\uD30C\uC774\uC5B4\uBA74 \uB108\uBD80\uD130 \uBB3C\uC5C8\uC5B4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADFC\uB370 \uB10C \uD53C\uB3C4 \uB9DB\uC5C6\uAC8C \uC0DD\uACA8\uC11C \uBB3C\uAE30\uB3C4 \uC2EB\uC5B4."
+    },
+    {
+      type: "dialogue",
+      text: "\uC544\uCE68\uBD80\uD130 \uC2DC\uBE44 \uAC70\uB294 \uC19C\uC528\uAC00 \uBCF4\uD1B5\uC774 \uC544\uB2C8\uB2E4."
+    },
+    { type: "condition", if: () => true, goto: "walk" },
+    { type: "label", name: "content" },
+    { type: "character", action: "show", name: "zena", image: "normal", focus: "", duration: 300 },
+    {
+      type: "dialogue",
+      text: '"\uC57C\uC678 \uBC29\uC1A1 \uCF58\uD150\uCE20\uB77C\uACE0 \uC0DD\uAC01\uD574."'
+    },
+    {
+      type: "dialogue",
+      text: "\uB0B4\uAC00 \uC5B4\uB974\uACE0 \uB2EC\uB798\uC790, \uC81C\uB098\uC758 \uADC0\uAC00 \uCAD1\uAE0B\uAC70\uB838\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC624? \uCF58\uD150\uCE20?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB108 \uC81C\uBC95 \uB9E4\uB2C8\uC800 \uB9C8\uC778\uB4DC\uAC00 \uC7A5\uCC29\uB410\uB124."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uAC00\uC0B0\uC810 +1\uC810 \uC8FC\uACA0\uC5B4."
+    },
+    {
+      type: "dialogue",
+      text: "\uB300\uCCB4 \uADF8 \uC810\uC218\uB294 \uC5B4\uB514\uB2E4 \uC4F0\uB294 \uAC74\uC9C0 \uBB3B\uACE0 \uC2F6\uC5C8\uC9C0\uB9CC \uAFB9 \uCC38\uC558\uB2E4."
     },
     { type: "condition", if: () => true, goto: "walk" },
     { type: "label", name: "walk" },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uD22C\uB35C\uAC70\uB9AC\uBA74\uC11C\uB3C4 \uB098\uB97C \uB530\uB77C \uCC9C\uCC9C\uD788 \uACF5\uC6D0\uC744 \uAC78\uC5C8\uB2E4."
+      text: "\uACB0\uAD6D \uADF8\uB140\uB294 \uC785\uC220\uC744 \uC090\uC8FD\uAC70\uB9AC\uBA74\uC11C\uB3C4 \uB098\uB97C \uB530\uB77C\uB098\uC130\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uC2AC\uB9AC\uD37C\uB97C \uC9C8\uC9C8 \uB04C\uBA70 \uCC9C\uCC9C\uD788 \uACF5\uC6D0 \uC0B0\uCC45\uB85C\uB97C \uAC77\uAE30 \uC2DC\uC791\uD588\uB2E4."
     },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uBB50... \uB098\uC058\uC9C4 \uC54A\uB124. \uADF8\uB798\uD53D \uB80C\uB354\uB9C1\uB3C4 \uC798 \uB410\uACE0. \uD480 \uD14D\uC2A4\uCC98\uB3C4 \uB098\uB984 \uACE0\uD574\uC0C1\uB3C4\uACE0."
+      text: "\uBB50... \uB098\uC058\uC9C4 \uC54A\uB124."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uC8FC\uBCC0\uC758 \uB098\uBB34\uC640 \uD480\uAF43\uB4E4\uC744 \uC720\uC2EC\uD788 \uAD00\uCC30\uD588\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADF8\uB798\uD53D \uB80C\uB354\uB9C1\uB3C4 \uC798 \uB410\uACE0. \uD480 \uD14D\uC2A4\uCC98\uB3C4 \uB098\uB984 \uACE0\uD574\uC0C1\uB3C4\uACE0."
+    },
+    {
+      type: "dialogue",
+      text: "\uC790\uC5F0\uC744 \uBCF4\uACE0 \uB80C\uB354\uB9C1\uC744 \uC6B4\uC6B4\uD558\uB2E4\uB2C8, \uC774 \uB140\uC11D\uC758 \uB1CC \uAD6C\uC870\uB294 \uC815\uB9D0 \uC54C \uC218\uAC00 \uC5C6\uB2E4."
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
@@ -16017,36 +16543,52 @@ ${addLineNumbers(fragment)}`);
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
       type: "dialogue",
-      text: "\uACF5\uC6D0\uC744 \uAC77\uB358 \uC911, \uAC11\uC790\uAE30 \uC81C\uB098\uAC00 \uBC1C\uAC78\uC74C\uC744 \uBA48\uCD94\uACE0 \uAD73\uC5B4\uBC84\uB838\uB2E4."
+      text: [
+        "\uACF5\uC6D0\uC744 \uAC77\uB358 \uC911,",
+        "\uAC11\uC790\uAE30 \uC81C\uB098\uAC00 \uBC1C\uAC78\uC74C\uC744 \uBA48\uCD94\uACE0 \uAD73\uC5B4\uBC84\uB838\uB2E4."
+      ]
     },
     { type: "camera-effect", preset: "shake", duration: 500 },
     { type: "character", action: "show", name: "zena", image: "normal", focus: "face", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uD5C9... \uC800, \uC800\uAE30... \uBC84\uADF8... \uB9AC\uC5BC \uC6D4\uB4DC \uBC84\uADF8 \uB5B4\uC5B4...!"
+      text: [
+        "\uD5C9... \uC800, \uC800\uAE30...",
+        "\uBC84\uADF8... \uB9AC\uC5BC \uC6D4\uB4DC \uBC84\uADF8 \uB5B4\uC5B4...!"
+      ]
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uC758 \uC2DC\uC120 \uB05D\uC5D0\uB294 \uD07C\uC9C0\uB9C9\uD55C \uB9E4\uBBF8 \uD55C \uB9C8\uB9AC\uAC00 \uBCA4\uCE58 \uC704\uC5D0 \uC549\uC544 \uC788\uC5C8\uB2E4."
+      text: [
+        "\uADF8\uB140\uC758 \uC2DC\uC120 \uB05D\uC5D0\uB294",
+        "\uD07C\uC9C0\uB9C9\uD55C \uB9E4\uBBF8 \uD55C \uB9C8\uB9AC\uAC00 \uBCA4\uCE58 \uC704\uC5D0 \uC549\uC544 \uC788\uC5C8\uB2E4."
+      ]
     },
     {
       type: "choice",
       choices: [
         { text: "\uB9E4\uBBF8\uB97C \uB9E8\uC190\uC73C\uB85C \uC7A1\uC544\uC11C \uCE58\uC6CC\uC900\uB2E4", goto: "hero" },
-        { text: "\uAC19\uC774 \uBE44\uBA85\uC744 \uC9C0\uB974\uBA70 \uB3C4\uB9DD\uAC04\uB2E4", goto: "run" }
+        { text: "\uAC19\uC774 \uBE44\uBA85\uC744 \uC9C0\uB974\uBA70 \uB3C4\uB9DD\uAC04\uB2E4", goto: "run" },
+        { text: "\uB9E4\uBBF8\uB97C \uC7A1\uC544\uC11C \uB4F1\uC5D0 \uBD99\uC5EC\uC900\uB2E4", goto: "prank" }
       ]
     },
     { type: "label", name: "hero" },
     {
       type: "dialogue",
-      text: "\uB0B4\uAC00 \uD0DC\uC5F0\uD558\uAC8C \uB9E4\uBBF8\uB97C \uC7A1\uC544 \uC232\uC73C\uB85C \uB0A0\uB824\uBCF4\uB0B4\uC790, \uC81C\uB098\uAC00 \uC874\uACBD\uC2A4\uB7EC\uC6B4 \uB208\uBE5B\uC73C\uB85C \uB098\uB97C \uBCF4\uC558\uB2E4."
+      text: [
+        "\uB0B4\uAC00 \uD0DC\uC5F0\uD558\uAC8C \uB9E4\uBBF8\uB97C \uC7A1\uC544 \uC232\uC73C\uB85C \uB0A0\uB824\uBCF4\uB0B4\uC790,",
+        "\uC81C\uB098\uAC00 \uC874\uACBD\uC2A4\uB7EC\uC6B4 \uB208\uBE5B\uC73C\uB85C \uB098\uB97C \uBCF4\uC558\uB2E4."
+      ]
     },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uBBF8\uCE5C \uD53C\uC9C0\uCEEC... \uB108 \uBC29\uAE08 \uB514\uBC84\uAE45 \uC18D\uB3C4 \uAC1C\uCA54\uC5C8\uC5B4. \uC778\uC815."
+      text: [
+        "\uBBF8\uCE5C \uD53C\uC9C0\uCEEC...",
+        "\uB108 \uBC29\uAE08 \uB514\uBC84\uAE45 \uC18D\uB3C4 \uAC1C\uCA54\uC5C8\uC5B4. \uC778\uC815."
+      ]
     },
     { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "run" },
@@ -16054,11 +16596,17 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC73C\uC544\uC544\uC545! \uC11C\uBC84 \uD130\uC9C4\uB2E4! \uB3C4\uB9DD\uAC00!!!"
+      text: [
+        "\uC73C\uC544\uC544\uC545!",
+        "\uC11C\uBC84 \uD130\uC9C4\uB2E4! \uB3C4\uB9DD\uAC00!!!"
+      ]
     },
     {
       type: "dialogue",
-      text: "\uC6B0\uB9AC\uB294 \uACF5\uC6D0 \uBC18 \uBC14\uD034\uB97C \uC804\uB825 \uC9C8\uC8FC\uD55C \uD6C4\uC5D0\uC57C \uACA8\uC6B0 \uBA48\uCDB0 \uC130\uB2E4."
+      text: [
+        "\uC6B0\uB9AC\uB294 \uACF5\uC6D0 \uBC18 \uBC14\uD034\uB97C \uC804\uB825 \uC9C8\uC8FC\uD55C \uD6C4\uC5D0\uC57C",
+        "\uACA8\uC6B0 \uBA48\uCDB0 \uC130\uB2E4."
+      ]
     },
     { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "calm" },
@@ -16066,9 +16614,54 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uD558\uC544... \uD558\uC544... \uC5ED\uC2DC \uD604\uC2E4 \uC138\uACC4\uB294 \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC57C. \uBE68\uB9AC \uC544\uC9C0\uD2B8\uB85C \uBCF5\uADC0\uD558\uC790."
+      text: [
+        "\uD558\uC544... \uD558\uC544...",
+        "\uC5ED\uC2DC \uD604\uC2E4 \uC138\uACC4\uB294 \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC57C.",
+        "\uBE68\uB9AC \uC544\uC9C0\uD2B8\uB85C \uBCF5\uADC0\uD558\uC790."
+      ]
     },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
+    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 },
+    { type: "label", name: "prank" },
+    {
+      type: "dialogue",
+      text: [
+        "\uB098\uB294 \uC7AC\uBE68\uB9AC \uB9E4\uBBF8\uB97C \uB09A\uC544\uCC44\uC5B4 \uC81C\uB098\uC758 \uB4F1\uC5D0 \uC0B4\uD3EC\uC2DC \uBD99\uC600\uB2E4.",
+        "\uB9E4\uBBF8\uAC00 \uB9F4\uB9F4 \uC6B8\uAE30 \uC2DC\uC791\uD558\uC790 \uC81C\uB098\uC758 \uB208\uB3D9\uC790\uAC00 \uBBF8\uCE5C\uB4EF\uC774 \uD754\uB4E4\uB838\uB2E4."
+      ]
+    },
+    { type: "camera-effect", preset: "shake", intensity: 20, duration: 1e3 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uAE84\uC544\uC544\uC544\uC544\uC545!!! \uC57C \uC774 \uBBF8\uCE5C!!!",
+        "\uB4F1\uC5D0! \uB4F1\uC5D0 \uBB54\uAC00 \uC9C4\uB3D9\uC774 \uC6B8\uB9AC\uC796\uC544!! \uB5BC \uC918!!!"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        '"\uC77C\uB2E8 \uC815\uC0C1\uC801\uC73C\uB85C \uB9E4\uBBF8\uAC00 \uB4F1\uC5D0 \uC548\uCC29\uD574\uC11C \uB9F4\uB9F4 \uC18C\uB9AC\uB97C \uB0B4\uBA70 \uC791\uB3D9\uD558\uACE0 \uC788\uC73C\uB2C8,"',
+        '"\uD568\uBD80\uB85C \uAC74\uB4DC\uB9AC\uC9C0 \uC54A\uB294 \uAC8C \uAC1C\uBC1C\uC790\uC758 \uCCA0\uCE59\uC774\uB2E4. \uC123\uBD88\uB9AC \uB5BC\uB824\uB2E4 \uB2E4\uB978 \uB370\uB85C \uD280\uBA74 \uB354 \uD070 \uBC84\uADF8\uAC00 \uC0DD\uACA8."'
+      ]
+    },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uBBF8\uCE5C \uC18C\uB9AC \uD558\uC9C0 \uB9C8\uC544\uC544\uC544!!",
+        "\uC0B4\uB824\uC918\uC5B4\uC5B4!!!"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uC81C\uB098\uB294 \uACF5\uC6D0\uC744 \uBBF8\uCE5C \uB4EF\uC774 \uB6F0\uC5B4\uB2E4\uB2C8\uAE30 \uC2DC\uC791\uD588\uB2E4.",
+        "\uAC15\uC81C \uB2EC\uB9AC\uAE30 \uC6B4\uB3D9\uC73C\uB85C \uC624\uB298\uCE58 \uCE7C\uB85C\uB9AC \uC18C\uBAA8\uB294 \uC644\uBCBD\uD558\uB2E4."
+      ]
+    },
+    { type: "condition", if: () => true, goto: "calm" }
   ]);
 
   // example/scenes/scene-zena-ending.ts
@@ -16086,20 +16679,43 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC5B4\uB290\uC0C8 \uD574\uAC00 \uC9C0\uACE0, \uCC3D\uBC16\uC73C\uB85C \uBD89\uC740 \uB178\uC744\uC774 \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5C8\uB2E4."
     },
+    {
+      type: "dialogue",
+      text: "\uB2E4\uC0AC\uB2E4\uB09C\uD588\uB358 \uD558\uB8E8\uAC00 \uB05D\uC744 \uD5A5\uD574 \uAC00\uACE0 \uC788\uB2E4."
+    },
     { type: "character", action: "show", name: "zena", image: "smile", position: "center", duration: 1e3 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: [
-        "\uC624\uB298 \uD018\uC2A4\uD2B8(\uC678\uCD9C) \uAC19\uC774 \uB6F0\uC5B4\uC918\uC11C \uACE0\uB9C8\uC6CC.",
-        "\uC0AC\uC2E4 \uB098 \uD63C\uC790\uC11C\uB294 \uB098\uAC08 \uC5C4\uB450\uB3C4 \uBABB \uB0C8\uAC70\uB4E0."
-      ]
+      text: "\uC624\uB298 \uD018\uC2A4\uD2B8 \uAC19\uC774 \uB6F0\uC5B4\uC918\uC11C \uACE0\uB9C8\uC6CC."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uB2E8\uC21C\uD55C \uC678\uCD9C\uC870\uCC28 \uD018\uC2A4\uD2B8\uB77C\uACE0 \uBD80\uB978\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC0AC\uC2E4 \uB098 \uD63C\uC790\uC11C\uB294 \uB098\uAC08 \uC5C4\uB450\uB3C4 \uBABB \uB0C8\uAC70\uB4E0."
+    },
+    {
+      type: "dialogue",
+      text: "\uC0B4\uC9DD \uC465\uC2A4\uB7EC\uC6B4 \uB4EF, \uC81C\uB098\uAC00 \uC2DC\uC120\uC744 \uD68C\uD53C\uD558\uBA70 \uBEA8\uC744 \uAE01\uC801\uC600\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 500 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "...\uADFC\uB370 \uC880 \uC624\uAE00\uAC70\uB9AC\uB124. \uC544\uAE4C \uD55C \uB9D0\uC740 \uB864\uBC31\uD560\uAC8C. \uBABB \uB4E4\uC740 \uAC78\uB85C \uD574\uC918."
+      text: "...\uADFC\uB370 \uC880 \uC624\uAE00\uAC70\uB9AC\uB124."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544\uAE4C \uD55C \uB9D0\uC740 \uB864\uBC31\uD560\uAC8C. \uBABB \uB4E4\uC740 \uAC78\uB85C \uD574\uC918."
+    },
+    {
+      type: "dialogue",
+      text: "\uAE30\uAECF \uBD84\uC704\uAE30 \uC7A1\uC544\uB193\uACE0 1\uCD08 \uB9CC\uC5D0 \uCCA0\uD68C\uD55C\uB2E4."
     },
     {
       type: "choice",
@@ -16109,19 +16725,53 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "label", name: "saved" },
+    {
+      type: "dialogue",
+      text: '"\uC774\uBBF8 \uB0B4 \uB1CC\uC5D0 \uC138\uC774\uBE0C\uD588\uC5B4."'
+    },
+    {
+      type: "dialogue",
+      text: "\uC7A5\uB09C\uC2A4\uB7FD\uAC8C \uBC1B\uC544\uCE58\uC790, \uC81C\uB098\uC758 \uB208\uC774 \uCEE4\uC84C\uB2E4."
+    },
     { type: "camera-effect", preset: "shake", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC544, \uB370\uC774\uD130 \uAC15\uC81C \uC0AD\uC81C\uD560 \uAC70\uC57C! \uB0B4 \uD751\uC5ED\uC0AC \uD3F4\uB354\uC5D0 \uC811\uADFC\uD558\uC9C0 \uB9C8!"
+      text: "\uC544, \uB370\uC774\uD130 \uAC15\uC81C \uC0AD\uC81C\uD560 \uAC70\uC57C!"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uB0B4 \uD751\uC5ED\uC0AC \uD3F4\uB354\uC5D0 \uBD88\uBC95 \uC811\uADFC\uD558\uC9C0 \uB9C8!"
+    },
+    {
+      type: "dialogue",
+      text: "\uADC0\uB05D\uC774 \uC0C8\uBE68\uAC1C\uC9C4 \uC81C\uB098\uAC00 \uC560\uAFCE\uC740 \uD0A4\uBCF4\uB4DC \uC0F7\uAC74\uC744 \uCCE4\uB2E4."
     },
     { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "tired" },
+    {
+      type: "dialogue",
+      text: '"\uADF8\uB798, \uB098\uB3C4 \uD53C\uACE4\uD558\uB2E4. \uB2F9\uBD84\uAC04 \uC678\uCD9C\uC740 \uBB34\uB9AC\uC57C."'
+    },
+    {
+      type: "dialogue",
+      text: "\uACA9\uD558\uAC8C \uB3D9\uC758\uD574\uC8FC\uC790, \uADF8\uB140\uC758 \uC5BC\uAD74\uC5D0 \uC548\uB3C4\uAC10\uC774 \uBC88\uC84C\uB2E4."
+    },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uADF8\uCE58? \uB0B4\uC77C\uC740 \uAC01\uC790 \uC9D1\uC5D0\uC11C \uB514\uC2A4\uCF54\uB4DC\uB098 \uCF1C\uC790. \uADF8\uAC8C \uC6B0\uB9AC\uB2E4\uC6B4 \uAC70\uC9C0."
+      text: "\uADF8\uCE58? \uB0B4\uC77C\uC740 \uAC01\uC790 \uC9D1\uC5D0\uC11C \uB514\uC2A4\uCF54\uB4DC\uB098 \uCF1C\uC790."
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uADF8\uAC8C \uC6B0\uB9AC\uB2E4\uC6B4 \uAC70\uC9C0."
+    },
+    {
+      type: "dialogue",
+      text: "\uD788\uD0A4\uCF54\uBAA8\uB9AC \uB3D9\uB9F9\uC774 \uACB0\uC131\uB418\uB294 \uC21C\uAC04\uC774\uC5C8\uB2E4."
     },
     { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "epilogue" },
@@ -16133,7 +16783,15 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "dialogue",
-      text: "\uC81C\uB098\uB294 \uC791\uAC8C \uC6C3\uC73C\uBA70 \uB2E4\uC2DC \uD5E4\uB4DC\uC14B\uC744 \uC37C\uB2E4. \uD3C9\uBC94\uD558\uC9C0\uB9CC, \uBC84\uADF8 \uD22C\uC131\uC774\uC778 \uC77C\uC0C1\uC774 \uB2E4\uC2DC \uC2DC\uC791\uB418\uACE0 \uC788\uC5C8\uB2E4."
+      text: "\uC81C\uB098\uB294 \uC791\uAC8C \uC6C3\uC73C\uBA70 \uB2E4\uC2DC \uD5E4\uB4DC\uC14B\uC744 \uC37C\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uBAA8\uB2C8\uD130 \uBD88\uBE5B\uC774 \uADF8\uB140\uC758 \uBEA8\uC744 \uC740\uC740\uD558\uAC8C \uBE44\uCD94\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uD3C9\uBC94\uD558\uC9C0\uB9CC, \uBC84\uADF8 \uD22C\uC131\uC774\uC778 \uC77C\uC0C1\uC774 \uB2E4\uC2DC \uC2DC\uC791\uB418\uACE0 \uC788\uC5C8\uB2E4."
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 3e3 },
     { type: "dialogue", text: "\uC81C\uB098 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uBAA8\uB450 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4." }

@@ -9,6 +9,7 @@ export default defineCharacter({
       points: {
         face: { x: 0.5, y: 0.18 },
         chest: { x: 0.5, y: 0.45 },
+        legs: { x: 0.5, y: 0.55 },
       },
     },
     smile: {

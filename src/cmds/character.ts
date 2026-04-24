@@ -33,7 +33,7 @@ export type CharacterCmd<TConfig = any> = {
      * 등장과 동시에 카메라 포커스를 수행할지 여부입니다.
      * `true`일 경우 기본 포인트를 사용하며, 문자열 지정 시 config.points에 정의된 포인트 키를 입력합니다.
      */
-    focus?: boolean | PointsOf<TConfig> | (string & {})
+    focus?: boolean | PointsOf<TConfig, Name> | (string & {})
     /** 애니메이션 적용 시간(ms 단위)입니다. */
     duration?: number
   }
@@ -52,7 +52,7 @@ export type CharacterFocusCmd<TConfig = any> = {
     /** 포커스 할 캐릭터의 이름입니다. */
     name: Name
     /** 맞출 카메라 초점 포인트입니다. (config.points에 정의된 키로 자동완성됩니다) */
-    point?: PointsOf<TConfig> | 'inherit' | (string & {})
+    point?: PointsOf<TConfig, Name> | 'inherit' | (string & {})
     /** 포커스 시 적용될 화면 줌(Zoom) 수준입니다. */
     zoom?: ZoomPreset
     /** 카메라 이동에 걸리는 시간(ms 단위)입니다. (기본값: 800) */
@@ -200,8 +200,8 @@ function focusCharacter(ctx: SceneContext, name: string, focusType?: string, fit
   const def = charDefs[name]
   if (!def) return
 
-  const activeImgKey = target._currentImageKey ?? Object.keys(def.points)[0]
-  const imageDef = def.points[activeImgKey]
+  const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0]
+  const imageDef = def.images[activeImgKey]
   const fp = (focusType && imageDef?.points) ? imageDef.points[focusType] : { x: 0.5, y: 0.5 }
 
   const targetX = target.transform?.position?.x ?? 0

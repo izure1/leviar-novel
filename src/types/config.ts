@@ -55,22 +55,7 @@ export interface CharDef {
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
 
-/**
- * `config.points`에 선언된 포인트 키만 허용하는 CharDef 제약 타입.
- * characters 정의 시 각 이미지의 points에 `config.points`의 **모든 키**를 강제합니다.
- */
-export type CharDefsWithPoints<TPoints extends readonly string[]> = {
-  [CharKey: string]: {
-    name?: string
-    images: {
-      [ImageKey: string]: {
-        src?: string
-        width?: number
-        points: Record<TPoints[number], { x: number; y: number }>
-      }
-    }
-  }
-}
+
 
 /** 
  * 단일 배경 이미지 정의 
@@ -186,22 +171,11 @@ export interface NovelConfig<
   TAssets extends Record<string, string> = Record<string, string>,
   TCmds extends Record<string, CustomCmdHandler<any, TVars, any>> = Record<string, CustomCmdHandler<any, TVars, any>>,
   TUi extends Record<string, UIHandler<any>> = Record<string, UIHandler<any>>,
-  TPoints extends readonly string[] = readonly string[],
 > {
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars: TVars
   /** 게임에 포함된 모든 씬(Scene) 이름 목록입니다. */
   scenes: TScenes
-  /**
-   * 캐릭터 이미지에서 사용 가능한 포커스 포인트 이름 목록입니다.
-   * 여기에 선언된 키만 `characters`의 각 이미지 `points`에 정의할 수 있습니다.
-   *
-   * @example
-   * ```ts
-   * points: ['face', 'chest', 'hand'] as const
-   * ```
-   */
-  points?: TPoints
   /** 게임에 등장하는 모든 캐릭터의 정의 목록입니다. */
   characters: TCharacters
   /** 게임에 사용되는 모든 배경 이미지 정의 목록입니다. */
@@ -291,12 +265,12 @@ export interface NovelOption {
  * ```
  */
 export type CharacterKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? keyof TChars & string
   : string
 
 /**
- * `NovelConfig`에서 특정 캐릭터의 이미지 키(`points`의 key) 유니온을 추출합니다.
+ * `NovelConfig`에서 특정 캐릭터의 이미지 키 유니온을 추출합니다.
  *
  * @example
  * ```ts
@@ -304,7 +278,7 @@ export type CharacterKeysOf<TConfig> =
  * ```
  */
 export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? TCharKey extends keyof TChars
   ? keyof TChars[TCharKey]['images'] & string
   : string
@@ -319,7 +293,7 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
  * ```
  */
 export type AssetKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any, any>
+  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any>
   ? keyof TAssets & string
   : string
 
@@ -332,7 +306,7 @@ export type AssetKeysOf<TConfig> =
  * ```
  */
 export type BackgroundKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any, any>
+  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any>
   ? keyof TBgs & string
   : string
 
@@ -345,7 +319,7 @@ export type BackgroundKeysOf<TConfig> =
  * ```
  */
 export type SceneNamesOf<TConfig> =
-  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any, any>
+  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any>
   ? TScenes[number]
   : string
 
@@ -358,21 +332,28 @@ export type SceneNamesOf<TConfig> =
  * ```
  */
 export type VarsOf<TConfig> =
-  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any, any>
+  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any>
   ? TVars
   : Record<string, any>
 
 /**
- * `NovelConfig`에서 포인트 키(`points`의 원소) 유니온을 추출합니다.
+ * `NovelConfig`에서 특정 캐릭터(`TName`)의 모든 이미지에 정의된 `points` 키 유니온을 추출합니다.
+ * `character-focus`의 `point` 자동완성에 사용됩니다.
  *
  * @example
  * ```ts
- * type Point = PointsOf<typeof config>  // 'face' | 'chest'
+ * type AriPoints = PointsOf<typeof config, 'arisiero'>  // 'face' | 'chest'
  * ```
  */
-export type PointsOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, any, any, infer TPoints>
-  ? TPoints[number]
+export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  ? TName extends keyof TChars
+    ? TChars[TName] extends { images: infer TImgs }
+      ? TImgs[keyof TImgs] extends { points?: infer P }
+        ? keyof P & string
+        : string
+      : string
+    : string
   : string
 
 /**
@@ -385,7 +366,7 @@ export type PointsOf<TConfig> =
  * ```
  */
 export type CmdsOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, infer TCmds, any, any>
+  TConfig extends NovelConfig<any, any, any, any, any, infer TCmds, any>
   ? TCmds
   : Record<never, never>
 
@@ -398,6 +379,6 @@ export type CmdsOf<TConfig> =
  * ```
  */
 export type UiKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, any, infer TUi, any>
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TUi>
   ? keyof TUi & string
   : string
