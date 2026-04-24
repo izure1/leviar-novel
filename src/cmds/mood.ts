@@ -213,5 +213,5 @@ export const moodHandler = defineCmd<MoodCmd>((cmd, ctx) => {
       setFlicker(ctx, addCmd.mood, addCmd.flicker)
     }
   }
-  return false
+  return true
 })

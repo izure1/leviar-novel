@@ -111,5 +111,5 @@ export const backgroundHandler = defineCmd<BackgroundCmd<any>>((cmd, ctx) => {
     cmd.duration ?? 1000,
     cmd.isVideo ?? false,
   )
-  return false
+  return true
 })

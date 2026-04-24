@@ -85,6 +85,7 @@ function screenFade(ctx: SceneContext, dir: 'in' | 'out', preset: FadeColorPrese
   const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastFadePreset') ?? 'black' : preset
   ctx.renderer.state.set('_lastFadePreset', resolvedPreset)
   const cfg = FADE_PRESETS[resolvedPreset as Exclude<FadeColorPreset, 'inherit'>]
+
   if (!cfg) return
 
   const rect = getTransitionRect(ctx, cfg.color)
@@ -103,7 +104,7 @@ function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit', duratio
 
   const rect = getTransitionRect(ctx, cfg.color)
   const flashDuration = duration ?? cfg.duration
-  
+
   let count = 0
   const doFlash = () => {
     if (repeat >= 0 && count >= repeat) return
@@ -114,7 +115,7 @@ function screenFlash(ctx: SceneContext, preset: FlashPreset = 'inherit', duratio
       anim.on('end', doFlash)
     }
   }
-  
+
   doFlash()
 }
 
@@ -150,15 +151,15 @@ function screenWipe(ctx: SceneContext, dir: 'in' | 'out', preset: WipePreset = '
 
 export const screenFadeHandler = defineCmd<ScreenFadeCmd>((cmd, ctx) => {
   screenFade(ctx, cmd.dir, cmd.preset ?? 'inherit', cmd.duration ?? 600)
-  return false
+  return true
 })
 
 export const screenFlashHandler = defineCmd<ScreenFlashCmd>((cmd, ctx) => {
   screenFlash(ctx, cmd.preset ?? 'inherit', cmd.duration, cmd.repeat ?? 1)
-  return false
+  return true
 })
 
 export const screenWipeHandler = defineCmd<ScreenWipeCmd>((cmd, ctx) => {
   screenWipe(ctx, cmd.dir, cmd.preset ?? 'inherit', cmd.duration ?? 800)
-  return false
+  return true
 })

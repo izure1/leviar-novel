@@ -6,7 +6,7 @@ import type { Renderer, RendererState } from './Renderer'
 import type { SceneDefinition } from '../define/defineScene'
 import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
-import type { SceneContext, CommandResult, SimpleCommandResult } from './SceneContext'
+import type { SceneContext, CommandResult } from './SceneContext'
 import type { UIRuntimeEntry } from './UIRegistry'
 import { dialogueHandler } from '../cmds/dialogue'
 import { choiceHandler } from '../cmds/choice'
@@ -106,12 +106,6 @@ export class DialogueScene {
 
   /** 씬 종료 여부 */
   private _ended: boolean = false
-
-  /**
-   * TickFn 모드: defineCmd에서 함수를 반환했을 때 저장됩니다.
-   * 사용자 입력마다 이 함수가 재호출되고, true 반환 시 다음 스텝으로 진행됩니다.
-   */
-  private _tickFn: (() => SimpleCommandResult) | null = null
 
   constructor(
     renderer: Renderer,
@@ -247,41 +241,8 @@ export class DialogueScene {
   advance(): void {
     if (!this._waitingInput || this._ended) return
 
-    // ─ TickFn 모드: 사용자 입력 → tick 재호출
-    if (this._tickFn) {
-      const tickResult = this._tickFn()
-      if (tickResult === 'handled') {
-        this._tickFn = null
-        this._waitingInput = false
-        this.callbacks.syncUIState()
-        return
-      }
-      if (tickResult === true) {
-        // 루프 종료 → 다음 스텝으로
-        this._tickFn = null
-        this._waitingInput = false
-        this.cursor++
-        this.textSubIndex = 0
-        this._executeNext()
-      }
-      // false / void → 계속 대기
-      return
-    }
-
-    const steps = this.definition.dialogues as DialogueStep<any>[]
-    const step = steps[this.cursor] as any
-
-    if (step.type === 'dialogue' && Array.isArray(step.text)) {
-      if (this.textSubIndex < step.text.length - 1) {
-        this.textSubIndex++
-        // 다음 줄은 dialogueHandler의 TickFn이 처리하므로 여기서는 커서만 이동
-        return
-      }
-    }
-
+    // false / void 반환 cmd: cursor 유지 → _executeNext()가 동일 cmd 재실행
     this._waitingInput = false
-    this.cursor++
-    this.textSubIndex = 0
     this._executeNext()
   }
 
@@ -300,29 +261,6 @@ export class DialogueScene {
 
     const result = this._executeCmd(cmd)
 
-    // TickFn 반환: 즉시 1회 실행 후 결과에 따라 처리
-    if (typeof result === 'function') {
-      this._tickFn = result
-      const firstResult = result()
-      if (firstResult === 'handled') {
-        this._tickFn = null
-        this.callbacks.syncUIState()
-        return
-      }
-      if (firstResult === true) {
-        // 첫 tick에서 바로 완료
-        this._tickFn = null
-        this.cursor++
-        this.textSubIndex = 0
-        this._executeNext()
-      } else {
-        // false / void → 입력 대기
-        this._waitingInput = true
-        this.callbacks.syncUIState()
-      }
-      return
-    }
-
     if (result === 'handled') {
       this.callbacks.syncUIState()
       return
@@ -333,6 +271,7 @@ export class DialogueScene {
       this.textSubIndex = 0
       this._executeNext()
     } else {
+      // false / void: 입력 대기. advance() 시 cursor 유지 → _executeNext() 재호출 → cmd 재실행
       this._waitingInput = true
       this.callbacks.syncUIState()
     }
@@ -458,7 +397,9 @@ export class DialogueScene {
     const current = steps[this.cursor]
     if (current?.type === 'dialogue') {
       const cmd = current as any
-      const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text
+      // textSubIndex는 "다음에 출력할 줄" 인덱스이므로 현재 표시 중인 줄은 -1
+      const displayIndex = Math.max(0, this.textSubIndex - 1)
+      const txt = Array.isArray(cmd.text) ? cmd.text[displayIndex] : cmd.text
       const interpolated = this._interpolateText(txt)
       const speakerName = this._getSpeakerName(cmd.speaker as string | undefined)
       return { ...cmd, text: interpolated, speaker: speakerName } as any
@@ -526,38 +467,20 @@ export class DialogueScene {
     if (!step) return
 
     const cmd = step as DialogueEntry<any, any, any>
-    
-    // 재표시 시 커맨드를 다시 실행하여 상태(예: choice 버튼 렌더링, dialogue TickFn 복구 등)를 복원합니다.
+
+    // 재표시 시 커맨드를 다시 실행하여 상태(예: choice 버튼 렌더링 등)를 복원합니다.
     const result = this._executeCmd(cmd)
-    
-    if (typeof result === 'function') {
-      this._tickFn = result
-      // TickFn 복원 시 1회 실행하여 내부 상태(인덱스 등)를 동기화하고 대기 상태로 만듭니다.
-      const firstResult = result()
-      if (firstResult === 'handled') {
-        this._tickFn = null
-        this.callbacks.syncUIState()
-      } else if (firstResult === true) {
-        this._tickFn = null
-        this.cursor++
-        this.textSubIndex = 0
-        this._executeNext()
-      } else {
-        this._waitingInput = true
-        this.callbacks.syncUIState()
-      }
-    } else if (result === 'handled') {
+
+    if (result === 'handled') {
       this._waitingInput = true
       this.callbacks.syncUIState()
+    } else if (result === true || cmd.skip) {
+      this.cursor++
+      this.textSubIndex = 0
+      this._executeNext()
     } else {
-      if (!cmd.skip) {
-        this._waitingInput = true
-        this.callbacks.syncUIState()
-      } else {
-        this.cursor++
-        this.textSubIndex = 0
-        this._executeNext()
-      }
+      this._waitingInput = true
+      this.callbacks.syncUIState()
     }
   }
 

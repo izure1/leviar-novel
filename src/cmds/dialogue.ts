@@ -268,37 +268,31 @@ export interface DialogueCmd<TConfig = any> {
 }
 
 export const dialogueHandler = defineCmd<DialogueCmd<any>>((cmd, ctx, data) => {
-  // 단일 문자열이든 배열이든 통일하여 처리
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
-  let index = ctx.scene.getTextSubIndex()
+  const index = ctx.scene.getTextSubIndex()
 
-  return () => {
-    const ui = ctx.ui.get('dialogue') as any
+  const ui = ctx.ui.get('dialogue') as any
 
-    // 타이핑 중이면 즉시 완료 후 대기 유지
-    if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
-      ui.completeTyping()
-      return false
-    }
-
-    // 대사 출력이 끝났으면 다음 커맨드로 진행
-    if (index >= lines.length) {
-      return true
-    }
-
-    // Proxy 트랩 및 렌더링 갱신을 위해 속도, 화자를 먼저 설정
-    data.speed = cmd.speed
-    data.speakerKey = cmd.speaker as string | undefined
-    data.subIndex = index
-
-    // 배열 참조를 갱신하여 update 내부의 lines !== _prevLines 체크를 통과시킴
-    data.lines = [...lines]
-
-    ctx.cmdState.set('dialogue', { ...data })
-    ctx.scene.setTextSubIndex(index)
-    index++
-
+  // 타이핑 중 클릭: 즉시 완료 후 대기 (다음 클릭에서 다음 줄)
+  if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
+    ui.completeTyping()
     return false
   }
+
+  // 모든 줄 출력 완료 → 다음 커맨드로
+  if (index >= lines.length) {
+    return true
+  }
+
+  // 현재 줄 출력
+  data.speed = cmd.speed
+  data.speakerKey = cmd.speaker as string | undefined
+  data.subIndex = index
+  data.lines = [...lines]
+
+  ctx.cmdState.set('dialogue', { ...data })
+  ctx.scene.setTextSubIndex(index + 1)
+
+  return false
 })

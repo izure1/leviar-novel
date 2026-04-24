@@ -13358,25 +13358,22 @@ ${addLineNumbers(fragment)}`);
   var dialogueHandler = defineCmd2((cmd, ctx, data) => {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
-    let index = ctx.scene.getTextSubIndex();
-    return () => {
-      const ui = ctx.ui.get("dialogue");
-      if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
-        ui.completeTyping();
-        return false;
-      }
-      if (index >= lines.length) {
-        return true;
-      }
-      data.speed = cmd.speed;
-      data.speakerKey = cmd.speaker;
-      data.subIndex = index;
-      data.lines = [...lines];
-      ctx.cmdState.set("dialogue", { ...data });
-      ctx.scene.setTextSubIndex(index);
-      index++;
+    const index = ctx.scene.getTextSubIndex();
+    const ui = ctx.ui.get("dialogue");
+    if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
+      ui.completeTyping();
       return false;
-    };
+    }
+    if (index >= lines.length) {
+      return true;
+    }
+    data.speed = cmd.speed;
+    data.speakerKey = cmd.speaker;
+    data.subIndex = index;
+    data.lines = [...lines];
+    ctx.cmdState.set("dialogue", { ...data });
+    ctx.scene.setTextSubIndex(index + 1);
+    return false;
   });
 
   // src/cmds/choice.ts
@@ -13672,7 +13669,7 @@ ${addLineNumbers(fragment)}`);
       cmd.duration ?? 1e3,
       cmd.isVideo ?? false
     );
-    return false;
+    return true;
   });
 
   // src/cmds/mood.ts
@@ -13824,7 +13821,7 @@ ${addLineNumbers(fragment)}`);
         setFlicker(ctx, addCmd.mood, addCmd.flicker);
       }
     }
-    return false;
+    return true;
   });
 
   // src/cmds/effect.ts
@@ -13952,7 +13949,7 @@ ${addLineNumbers(fragment)}`);
       const rmCmd = cmd;
       removeEffect(ctx, rmCmd.effect, rmCmd.duration);
     }
-    return false;
+    return true;
   });
 
   // src/cmds/overlay.ts
@@ -14054,7 +14051,7 @@ ${addLineNumbers(fragment)}`);
     } else if (cmd.action === "clear") {
       clearOverlay(ctx, cmd.duration);
     }
-    return false;
+    return true;
   });
 
   // src/cmds/camera.ts
@@ -14192,15 +14189,15 @@ ${addLineNumbers(fragment)}`);
   }
   var cameraZoomHandler = defineCmd((cmd, ctx) => {
     zoomCamera(ctx, cmd.preset, cmd.duration);
-    return false;
+    return true;
   });
   var cameraPanHandler = defineCmd((cmd, ctx) => {
     panCamera(ctx, cmd.position, cmd.duration);
-    return false;
+    return true;
   });
   var cameraEffectHandler = defineCmd((cmd, ctx) => {
     cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
-    return false;
+    return true;
   });
 
   // src/cmds/character.ts
@@ -14333,14 +14330,14 @@ ${addLineNumbers(fragment)}`);
     } else {
       removeCharacter(ctx, cmd.name, cmd.duration);
     }
-    return false;
+    return true;
   });
   var characterFocusHandler = defineCmd((cmd, ctx) => {
     focusCharacter(ctx, cmd.name, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
-    return false;
+    return true;
   });
   var characterHighlightHandler = defineCmd((_cmd, _ctx) => {
-    return false;
+    return true;
   });
 
   // src/cmds/screen.ts
@@ -14443,15 +14440,15 @@ ${addLineNumbers(fragment)}`);
   }
   var screenFadeHandler = defineCmd((cmd, ctx) => {
     screenFade(ctx, cmd.dir, cmd.preset ?? "inherit", cmd.duration ?? 600);
-    return false;
+    return true;
   });
   var screenFlashHandler = defineCmd((cmd, ctx) => {
     screenFlash(ctx, cmd.preset ?? "inherit", cmd.duration, cmd.repeat ?? 1);
-    return false;
+    return true;
   });
   var screenWipeHandler = defineCmd((cmd, ctx) => {
     screenWipe(ctx, cmd.dir, cmd.preset ?? "inherit", cmd.duration ?? 800);
-    return false;
+    return true;
   });
 
   // src/cmds/ui.ts
@@ -14467,9 +14464,17 @@ ${addLineNumbers(fragment)}`);
   // src/cmds/control.ts
   var controlHandler = defineCmd((cmd, ctx) => {
     if (cmd.action === "disable" && typeof cmd.duration === "number") {
-      ctx.callbacks.disableInput(cmd.duration);
-      const expireAt = Date.now() + cmd.duration;
-      return () => Date.now() >= expireAt;
+      const saved = ctx.cmdState.get("control");
+      const expireAt = saved?.expireAt ?? Date.now() + cmd.duration;
+      if (!saved?.expireAt) {
+        ctx.cmdState.set("control", { expireAt });
+        ctx.callbacks.disableInput(cmd.duration);
+      }
+      if (Date.now() >= expireAt) {
+        ctx.cmdState.set("control", {});
+        return true;
+      }
+      return false;
     }
     return true;
   });
@@ -14513,11 +14518,6 @@ ${addLineNumbers(fragment)}`);
     _waitingInput = false;
     /** 씬 종료 여부 */
     _ended = false;
-    /**
-     * TickFn 모드: defineCmd에서 함수를 반환했을 때 저장됩니다.
-     * 사용자 입력마다 이 함수가 재호출되고, true 반환 시 다음 스텝으로 진행됩니다.
-     */
-    _tickFn = null;
     constructor(renderer, callbacks, definition) {
       this.renderer = renderer;
       this.callbacks = callbacks;
@@ -14639,34 +14639,7 @@ ${addLineNumbers(fragment)}`);
      */
     advance() {
       if (!this._waitingInput || this._ended) return;
-      if (this._tickFn) {
-        const tickResult = this._tickFn();
-        if (tickResult === "handled") {
-          this._tickFn = null;
-          this._waitingInput = false;
-          this.callbacks.syncUIState();
-          return;
-        }
-        if (tickResult === true) {
-          this._tickFn = null;
-          this._waitingInput = false;
-          this.cursor++;
-          this.textSubIndex = 0;
-          this._executeNext();
-        }
-        return;
-      }
-      const steps = this.definition.dialogues;
-      const step = steps[this.cursor];
-      if (step.type === "dialogue" && Array.isArray(step.text)) {
-        if (this.textSubIndex < step.text.length - 1) {
-          this.textSubIndex++;
-          return;
-        }
-      }
       this._waitingInput = false;
-      this.cursor++;
-      this.textSubIndex = 0;
       this._executeNext();
     }
     _executeNext() {
@@ -14680,25 +14653,6 @@ ${addLineNumbers(fragment)}`);
       const step = steps[this.cursor];
       const cmd = step;
       const result = this._executeCmd(cmd);
-      if (typeof result === "function") {
-        this._tickFn = result;
-        const firstResult = result();
-        if (firstResult === "handled") {
-          this._tickFn = null;
-          this.callbacks.syncUIState();
-          return;
-        }
-        if (firstResult === true) {
-          this._tickFn = null;
-          this.cursor++;
-          this.textSubIndex = 0;
-          this._executeNext();
-        } else {
-          this._waitingInput = true;
-          this.callbacks.syncUIState();
-        }
-        return;
-      }
       if (result === "handled") {
         this.callbacks.syncUIState();
         return;
@@ -14825,7 +14779,8 @@ ${addLineNumbers(fragment)}`);
       const current = steps[this.cursor];
       if (current?.type === "dialogue") {
         const cmd = current;
-        const txt = Array.isArray(cmd.text) ? cmd.text[this.textSubIndex] : cmd.text;
+        const displayIndex = Math.max(0, this.textSubIndex - 1);
+        const txt = Array.isArray(cmd.text) ? cmd.text[displayIndex] : cmd.text;
         const interpolated = this._interpolateText(txt);
         const speakerName = this._getSpeakerName(cmd.speaker);
         return { ...cmd, text: interpolated, speaker: speakerName };
@@ -14888,33 +14843,16 @@ ${addLineNumbers(fragment)}`);
       if (!step) return;
       const cmd = step;
       const result = this._executeCmd(cmd);
-      if (typeof result === "function") {
-        this._tickFn = result;
-        const firstResult = result();
-        if (firstResult === "handled") {
-          this._tickFn = null;
-          this.callbacks.syncUIState();
-        } else if (firstResult === true) {
-          this._tickFn = null;
-          this.cursor++;
-          this.textSubIndex = 0;
-          this._executeNext();
-        } else {
-          this._waitingInput = true;
-          this.callbacks.syncUIState();
-        }
-      } else if (result === "handled") {
+      if (result === "handled") {
         this._waitingInput = true;
         this.callbacks.syncUIState();
+      } else if (result === true || cmd.skip) {
+        this.cursor++;
+        this.textSubIndex = 0;
+        this._executeNext();
       } else {
-        if (!cmd.skip) {
-          this._waitingInput = true;
-          this.callbacks.syncUIState();
-        } else {
-          this.cursor++;
-          this.textSubIndex = 0;
-          this._executeNext();
-        }
+        this._waitingInput = true;
+        this.callbacks.syncUIState();
       }
     }
     get isEnded() {

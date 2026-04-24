@@ -226,15 +226,15 @@ export const characterHandler = defineCmd<CharacterCmd<any>>((cmd, ctx) => {
   } else {
     removeCharacter(ctx, cmd.name, cmd.duration)
   }
-  return false
+  return true
 })
 
 export const characterFocusHandler = defineCmd<CharacterFocusCmd<any>>((cmd, ctx) => {
   focusCharacter(ctx, cmd.name, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
-  return false
+  return true
 })
 
 export const characterHighlightHandler = defineCmd<CharacterHighlightCmd<any>>((_cmd, _ctx) => {
   // highlight 기능은 현재 구현 미완, skip 처리
-  return false
+  return true
 })

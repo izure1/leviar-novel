@@ -141,7 +141,7 @@ export const overlayHandler = defineCmd<OverlayCmd>((cmd, ctx) => {
   } else if (cmd.action === 'clear') {
     clearOverlay(ctx, cmd.duration)
   }
-  return false
+  return true
 })
 
 // ─── rebuildFromState 연동용 헬퍼 (Renderer에서 호출) ─────────

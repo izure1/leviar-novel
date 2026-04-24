@@ -311,7 +311,7 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       show: noop as any,
       hide: noop as any,
     },
-      scene: {
+    scene: {
       getTextSubIndex: () => 0,
       setTextSubIndex: noop as any,
       interpolateText: (t: string) => t,

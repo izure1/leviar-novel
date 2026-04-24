@@ -102,38 +102,33 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * 핸들러가 호출될 때 cmd의 모든 속성(함수 포함)이 자동으로 resolve됩니다.
  *
  * ## 반환값
- * - `true` / `false` / `void` / `'handled'`: 즉시 결과 결정
- * - `() => SimpleCommandResult` (**TickFn**): do-while 루프 방식
- *   - 반환 즉시 1회 실행됨
- *   - 이후 사용자 입력마다 재호출됨
- *   - `true` 반환 시 루프 종료 뒤 다음 스텝
+ * - `true`: 즉시 완료. 다음 스텝으로 자동 진행
+ * - `false` / `void`: 사용자 입력 대기. 입력 시 해당 커맨드가 **다시 실행**됨
+ * - `'handled'`: 씬 이동 등으로 인한 즉시 중단
  *
- * @example 이전 방식 (단순 결과)
+ * @example 단순 완료
  * ```ts
  * export const myHandler = defineCmd<{ message: string }>((cmd, ctx) => {
  *   ctx.callbacks.onDialogue(undefined, cmd.message)
- *   return false
+ *   return false // 입력 대기
  * })
  * ```
  *
- * @example TickFn 방식 (여러 줄 대사 클릭마다 다음줄)
+ * @example 여러 줄 대사 (재실행 방식)
  * ```ts
  * export const multiLineHandler = defineCmd<{ lines: string[] }>((cmd, ctx) => {
- *   let index = 0
- *   return () => {
- *     ctx.callbacks.onDialogue(undefined, cmd.lines[index])
- *     index++
- *     return index >= cmd.lines.length // 마지막 줄이면 true → 다음 스텝
- *   }
+ *   const index = ctx.scene.getTextSubIndex()
+ *   if (index >= cmd.lines.length) return true // 완료
+ *   showLine(cmd.lines[index])
+ *   ctx.scene.setTextSubIndex(index + 1)
+ *   return false // 다음 입력 시 재실행 → 다음 줄
  * })
  * ```
  *
  * @example ctx.execute로 다른 커맨드 실행
  * ```ts
  * export const showCharacterHandler = defineCmd<{ name: string }>((cmd, ctx) => {
- *   // builtin 'character' 커맨드를 내부에서 즉시 실행
  *   ctx.execute({ type: 'character', name: cmd.name, image: 'normal', position: 'center' })
- *   // 반환값을 그대로 전파할 수도 있음 (TickFn 포함)
  *   return ctx.execute({ type: 'dialogue', text: `${cmd.name} 등장!` })
  * })
  * ```

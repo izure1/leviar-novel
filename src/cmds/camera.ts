@@ -199,15 +199,15 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
 
 export const cameraZoomHandler = defineCmd<CameraZoomCmd>((cmd, ctx) => {
   zoomCamera(ctx, cmd.preset, cmd.duration)
-  return false
+  return true
 })
 
 export const cameraPanHandler = defineCmd<CameraPanCmd>((cmd, ctx) => {
   panCamera(ctx, cmd.position, cmd.duration)
-  return false
+  return true
 })
 
 export const cameraEffectHandler = defineCmd<CameraEffectCmd>((cmd, ctx) => {
   cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat)
-  return false
+  return true
 })

@@ -166,5 +166,5 @@ export const effectHandler = defineCmd<EffectCmd<any>>((cmd, ctx) => {
     const rmCmd = cmd as Extract<EffectCmd<any>, { action: 'remove' }>
     removeEffect(ctx, rmCmd.effect, rmCmd.duration)
   }
-  return false
+  return true
 })
