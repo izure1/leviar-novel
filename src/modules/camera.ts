@@ -103,7 +103,10 @@ export function panCamera(ctx: SceneContext, position: PanPreset, duration?: num
   }
 
   if (ctx.renderer.camBaseObj) {
-    ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { x: targetX, y: targetY } } }, finalDur, 'easeInOutQuad')
+    const dur = ctx.renderer.dur(finalDur)
+    ctx.renderer.animate(ctx.renderer.camBaseObj, {
+      transform: { position: { x: targetX, y: targetY } }
+    }, dur, 'easeInOutQuad')
   }
 }
 
@@ -197,7 +200,7 @@ export interface CameraZoomSchema { lastPreset: string }
 
 const cameraZoomModule = define<CameraZoomCmd, CameraZoomSchema>({ lastPreset: 'reset' })
 
-cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+cameraZoomModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 cameraZoomModule.defineCommand(function* (cmd, ctx, data) {
   const resolved = cmd.preset === 'inherit' ? data.lastPreset : cmd.preset
@@ -214,7 +217,7 @@ export interface CameraPanSchema { lastPreset: string }
 
 const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ lastPreset: 'center' })
 
-cameraPanModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+cameraPanModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 cameraPanModule.defineCommand(function* (cmd, ctx, data) {
   const resolved = cmd.position === 'inherit' ? data.lastPreset : cmd.position
@@ -231,7 +234,7 @@ export interface CameraEffectSchema { lastPreset: string }
 
 const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({ lastPreset: 'shake' })
 
-cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+cameraEffectModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 cameraEffectModule.defineCommand(function* (cmd, ctx, data) {
   data.lastPreset = cmd.preset

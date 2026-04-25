@@ -17,7 +17,12 @@ import type { SceneContext } from './SceneContext'
 function _extractPropKeys(props: any): string[] {
   const keys: string[] = []
   if (props.style) keys.push('style')
-  if (props.transform?.position) keys.push('transform.position')
+  if (props.transform?.position) {
+    if (props.transform.position.x !== undefined) keys.push('transform.position.x')
+    if (props.transform.position.y !== undefined) keys.push('transform.position.y')
+    if (props.transform.position.z !== undefined) keys.push('transform.position.z')
+    if (keys.length === (props.style ? 1 : 0)) keys.push('transform.position')
+  }
   if (props.transform?.scale) keys.push('transform.scale')
   if (props.transform?.rotation) keys.push('transform.rotation')
   if (keys.length === 0) keys.push('__default__')
@@ -208,11 +213,24 @@ export class Renderer {
    */
   captureState(): RendererState {
     const cam = this.world.camera
+
+    const getCamPos = (axis: 'x' | 'y' | 'z') => {
+      if (this.camBaseObj) {
+        const anims = (this.camBaseObj as any).__activeAnims as Map<string, any> | undefined
+        const entry = anims?.get(`transform.position.${axis}`) || anims?.get('transform.position')
+        if (entry?.target?.transform?.position?.[axis] !== undefined) {
+          return entry.target.transform.position[axis] as number
+        }
+        return this.camBaseObj.transform.position[axis]
+      }
+      return cam?.transform.position[axis] ?? 0
+    }
+
     return {
       cameraState: {
-        x: this.camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
-        y: this.camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
-        z: this.camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0,
+        x: getCamPos('x'),
+        y: getCamPos('y'),
+        z: getCamPos('z'),
       },
       pluginState: Object.fromEntries(
         Array.from(this.state.entries()).filter(([key, value]) => {

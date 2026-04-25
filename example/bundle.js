@@ -606,7 +606,10 @@
       targetY = 0;
     }
     if (ctx.renderer.camBaseObj) {
-      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { x: targetX, y: targetY } } }, finalDur, "easeInOutQuad");
+      const dur = ctx.renderer.dur(finalDur);
+      ctx.renderer.animate(ctx.renderer.camBaseObj, {
+        transform: { position: { x: targetX, y: targetY } }
+      }, dur, "easeInOutQuad");
     }
   }
   function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
@@ -14392,7 +14395,12 @@ ${addLineNumbers(fragment)}`);
   function _extractPropKeys(props) {
     const keys = [];
     if (props.style) keys.push("style");
-    if (props.transform?.position) keys.push("transform.position");
+    if (props.transform?.position) {
+      if (props.transform.position.x !== void 0) keys.push("transform.position.x");
+      if (props.transform.position.y !== void 0) keys.push("transform.position.y");
+      if (props.transform.position.z !== void 0) keys.push("transform.position.z");
+      if (keys.length === (props.style ? 1 : 0)) keys.push("transform.position");
+    }
     if (props.transform?.scale) keys.push("transform.scale");
     if (props.transform?.rotation) keys.push("transform.rotation");
     if (keys.length === 0) keys.push("__default__");
@@ -14532,11 +14540,22 @@ ${addLineNumbers(fragment)}`);
      */
     captureState() {
       const cam = this.world.camera;
+      const getCamPos = (axis) => {
+        if (this.camBaseObj) {
+          const anims = this.camBaseObj.__activeAnims;
+          const entry = anims?.get(`transform.position.${axis}`) || anims?.get("transform.position");
+          if (entry?.target?.transform?.position?.[axis] !== void 0) {
+            return entry.target.transform.position[axis];
+          }
+          return this.camBaseObj.transform.position[axis];
+        }
+        return cam?.transform.position[axis] ?? 0;
+      };
       return {
         cameraState: {
-          x: this.camBaseObj?.transform.position.x ?? cam?.transform.position.x ?? 0,
-          y: this.camBaseObj?.transform.position.y ?? cam?.transform.position.y ?? 0,
-          z: this.camBaseObj?.transform.position.z ?? cam?.transform.position.z ?? 0
+          x: getCamPos("x"),
+          y: getCamPos("y"),
+          z: getCamPos("z")
         },
         pluginState: Object.fromEntries(
           Array.from(this.state.entries()).filter(([key, value]) => {
@@ -15554,15 +15573,6 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
     },
-    { type: "for", start: 0, end: 10, acc: 1 },
-    // { type: 'label', name: 'loop' },
-    // { type: 'screen-flash', preset: 'red' },
-    // { type: 'var', name: '_test', value: ({ _test }) => _test + 1 },
-    // {
-    //   type: 'dialogue',
-    //   text: '{{ _test }}',
-    // },
-    // { type: 'condition', if: ({ _test }) => _test < 10, goto: 'loop' },
     {
       type: "dialogue",
       text: "\uD5A5\uAE0B\uD55C \uCEE4\uD53C \uD5A5\uACFC \uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C..."
