@@ -13,7 +13,7 @@ import type { DialogueStep } from '../types/dialogue'
  * key: `keyof TModules`, value: 해당 `NovelModule`의 스키마(`TSchema`)의 `Partial`
  */
 export type InitialOf<TModules> = {
-  [K in keyof TModules]?: TModules[K] extends NovelModule<infer TSchema> ? Partial<TSchema> : never
+  [K in keyof TModules]?: TModules[K] extends NovelModule<any, infer TSchema> ? Partial<TSchema> : never
 }
 
 /**

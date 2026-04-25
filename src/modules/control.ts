@@ -10,11 +10,11 @@ export interface ControlSchema {
   expireAt: number
 }
 
-const controlModule = define<ControlSchema>({ expireAt: 0 })
+const controlModule = define<ControlCmd, ControlSchema>({ expireAt: 0 })
 
 controlModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-controlModule.defineCommand<ControlCmd>((cmd, ctx, data) => {
+controlModule.defineCommand((cmd, ctx, data) => {
   if (cmd.action === 'disable' && typeof cmd.duration === 'number') {
     const expireAt = data.expireAt > Date.now() ? data.expireAt : Date.now() + cmd.duration
 

@@ -7,6 +7,7 @@ export default defineScene({
   config,
   variables: {
     _isAnnoyed: false,
+    _test: 0,
   },
   initial: commonInitial,
   next: 'scene-zena-game',
@@ -20,6 +21,15 @@ export default defineScene({
     type: 'dialogue',
     text: '주말 오후의 카페. 창밖으로 내리쬐는 햇살이 평화롭다.'
   },
+  { type: 'for', start: 0, end: 10, acc: 1 },
+  // { type: 'label', name: 'loop' },
+  // { type: 'screen-flash', preset: 'red' },
+  // { type: 'var', name: '_test', value: ({ _test }) => _test + 1 },
+  // {
+  //   type: 'dialogue',
+  //   text: '{{ _test }}',
+  // },
+  // { type: 'condition', if: ({ _test }) => _test < 10, goto: 'loop' },
   {
     type: 'dialogue',
     text: '향긋한 커피 향과 사람들의 웅성거림 사이로...'

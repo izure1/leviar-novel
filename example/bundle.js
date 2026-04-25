@@ -24,7 +24,7 @@
     let _onUpdate = null;
     let _version = 0;
     let _moduleKey = null;
-    const _raw = { ...schema };
+    const _raw = { ...schema ?? {} };
     const data = new Proxy(_raw, {
       set(target, key, value) {
         ;
@@ -42,7 +42,7 @@
     let _viewBuilderFn = null;
     const module = {
       __isModule: true,
-      __schemaDefault: schema,
+      __schemaDefault: schema ?? {},
       get __handler() {
         return _handlerFn;
       },
@@ -15406,12 +15406,23 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/novel.config.ts
-  var testModule = define2({ message: void 0 });
+  var testModule = define2();
   testModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
   testModule.defineCommand((cmd, ctx) => {
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
+    return true;
+  });
+  var forModule = define2({ start: 0, end: 0, acc: 1 });
+  forModule.defineView(() => ({ show: () => {
+  }, hide: () => {
+  } }));
+  forModule.defineCommand((cmd, ctx, data) => {
+    for (let i = cmd.start; i < cmd.end; i += cmd.acc ?? 1) {
+      ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
+      return false;
+    }
     return true;
   });
   var novel_config_default = defineNovelConfig({
@@ -15421,7 +15432,8 @@ ${addLineNumbers(fragment)}`);
       endingReached: false
     },
     modules: {
-      "test-cmd": testModule
+      "test-cmd": testModule,
+      "for": forModule
     },
     scenes: [
       "scene-zena",
@@ -15504,7 +15516,8 @@ ${addLineNumbers(fragment)}`);
   var scene_zena_default = defineScene({
     config: novel_config_default,
     variables: {
-      _isAnnoyed: false
+      _isAnnoyed: false,
+      _test: 0
     },
     initial: commonInitial,
     next: "scene-zena-game"
@@ -15517,6 +15530,15 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
     },
+    { type: "for", start: 0, end: 10, acc: 1 },
+    // { type: 'label', name: 'loop' },
+    // { type: 'screen-flash', preset: 'red' },
+    // { type: 'var', name: '_test', value: ({ _test }) => _test + 1 },
+    // {
+    //   type: 'dialogue',
+    //   text: '{{ _test }}',
+    // },
+    // { type: 'condition', if: ({ _test }) => _test < 10, goto: 'loop' },
     {
       type: "dialogue",
       text: "\uD5A5\uAE0B\uD55C \uCEE4\uD53C \uD5A5\uACFC \uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C..."
@@ -16663,8 +16685,7 @@ ${addLineNumbers(fragment)}`);
         "\uC81C\uB098\uB294 \uACF5\uC6D0\uC744 \uBBF8\uCE5C \uB4EF\uC774 \uB6F0\uC5B4\uB2E4\uB2C8\uAE30 \uC2DC\uC791\uD588\uB2E4.",
         "\uAC15\uC81C \uB2EC\uB9AC\uAE30 \uC6B4\uB3D9\uC73C\uB85C \uC624\uB298\uCE58 \uCE7C\uB85C\uB9AC \uC18C\uBAA8\uB294 \uC644\uBCBD\uD558\uB2E4."
       ]
-    },
-    { type: "condition", if: () => true, goto: "calm" }
+    }
   ]);
 
   // example/scenes/scene-zena-ending.ts
@@ -16833,7 +16854,7 @@ ${addLineNumbers(fragment)}`);
     const novel = new Novel(novel_config_default, {
       canvas,
       width: 800,
-      height: 600,
+      height: 450,
       depth: 500,
       scenes: {
         "scene-zena": scene_zena_default,

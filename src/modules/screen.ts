@@ -81,14 +81,14 @@ export interface ScreenFadeSchema {
   lastPreset: string
 }
 
-const screenFadeModule = define<ScreenFadeSchema>({ lastPreset: 'black' })
+const screenFadeModule = define<ScreenFadeCmd, ScreenFadeSchema>({ lastPreset: 'black' })
 
 screenFadeModule.defineView((_data, _ctx) => ({
   show: () => {},
   hide: () => {},
 }))
 
-screenFadeModule.defineCommand<ScreenFadeCmd>((cmd, ctx, data) => {
+screenFadeModule.defineCommand((cmd, ctx, data) => {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
     ? data.lastPreset
     : cmd.preset
@@ -113,14 +113,14 @@ export interface ScreenFlashSchema {
   lastPreset: string
 }
 
-const screenFlashModule = define<ScreenFlashSchema>({ lastPreset: 'white' })
+const screenFlashModule = define<ScreenFlashCmd, ScreenFlashSchema>({ lastPreset: 'white' })
 
 screenFlashModule.defineView((_data, _ctx) => ({
   show: () => {},
   hide: () => {},
 }))
 
-screenFlashModule.defineCommand<ScreenFlashCmd>((cmd, ctx, data) => {
+screenFlashModule.defineCommand((cmd, ctx, data) => {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
     ? data.lastPreset
     : cmd.preset
@@ -154,14 +154,14 @@ export interface ScreenWipeSchema {
   lastFadePreset: string
 }
 
-const screenWipeModule = define<ScreenWipeSchema>({ lastPreset: 'left', lastFadePreset: 'black' })
+const screenWipeModule = define<ScreenWipeCmd, ScreenWipeSchema>({ lastPreset: 'left', lastFadePreset: 'black' })
 
 screenWipeModule.defineView((_data, _ctx) => ({
   show: () => {},
   hide: () => {},
 }))
 
-screenWipeModule.defineCommand<ScreenWipeCmd>((cmd, ctx, data) => {
+screenWipeModule.defineCommand((cmd, ctx, data) => {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
     ? data.lastPreset
     : cmd.preset

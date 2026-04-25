@@ -90,7 +90,7 @@ export interface DialogueCmd<TConfig = any> {
  * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
  * ```
  */
-const dialogueModule = define<DialogueSchema>({
+const dialogueModule = define<DialogueCmd<any>, DialogueSchema>({
   bg: undefined,
   speaker: undefined,
   text: undefined,
@@ -264,7 +264,7 @@ dialogueModule.defineView((data, ctx) => {
   }
 })
 
-dialogueModule.defineCommand<DialogueCmd<any>>((cmd, ctx, data) => {
+dialogueModule.defineCommand((cmd, ctx, data) => {
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
   const index = ctx.scene.getTextSubIndex()

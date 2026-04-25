@@ -9,11 +9,11 @@ export interface UICmd<TConfig = any> {
   duration?: number
 }
 
-const uiModule = define<Record<never, never>>({})
+const uiModule = define<UICmd<any>>({})
 
 uiModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-uiModule.defineCommand<UICmd<any>>((cmd, ctx) => {
+uiModule.defineCommand((cmd, ctx) => {
   if (cmd.action === 'show') {
     ctx.ui.show(cmd.name, cmd.duration)
   } else {

@@ -29,7 +29,7 @@ export interface OverlaySchema {
 /**
  * 오버레이 모듈. `novel.config`의 `modules: { 'overlay': overlayModule }` 형태로 등록합니다.
  */
-const overlayModule = define<OverlaySchema>({
+const overlayModule = define<OverlayCmd, OverlaySchema>({
   overlays: {},
 })
 
@@ -113,7 +113,7 @@ overlayModule.defineView((data, ctx) => {
   }
 })
 
-overlayModule.defineCommand<OverlayCmd>((cmd, ctx, data) => {
+overlayModule.defineCommand((cmd, ctx, data) => {
   const newOverlays = { ...data.overlays }
 
   if (cmd.action === 'add') {

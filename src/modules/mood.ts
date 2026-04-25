@@ -56,7 +56,7 @@ export interface MoodSchema {
 /**
  * 무드 모듈. `novel.config`의 `modules: { 'mood': moodModule }` 형태로 등록합니다.
  */
-const moodModule = define<MoodSchema>({
+const moodModule = define<MoodCmd, MoodSchema>({
   activeMoods: {},
 })
 
@@ -160,7 +160,7 @@ moodModule.defineView((data, ctx) => {
   }
 })
 
-moodModule.defineCommand<MoodCmd>((cmd, ctx, data) => {
+moodModule.defineCommand((cmd, ctx, data) => {
   const newMoods = { ...data.activeMoods }
 
   if (cmd.action === 'remove') {

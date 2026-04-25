@@ -67,7 +67,7 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
 /**
  * 선택지 모듈. `novel.config`의 `modules: { 'choices': choiceModule }` 형태로 등록합니다.
  */
-const choiceModule = define<ChoiceSchema>({
+const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema>({
   fontSize: undefined,
   fontFamily: undefined,
   color: undefined,
@@ -190,7 +190,7 @@ choiceModule.defineView((data, ctx) => {
   }
 })
 
-choiceModule.defineCommand<ChoiceCmd<any, any>>((cmd, ctx) => {
+choiceModule.defineCommand((cmd, ctx) => {
   const entry = ctx.ui.get('choice')
 
   if (!entry) {

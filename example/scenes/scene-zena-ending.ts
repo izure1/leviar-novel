@@ -56,7 +56,7 @@ export default defineScene({
     type: 'dialogue',
     text: '기껏 분위기 잡아놓고 1초 만에 철회한다.'
   },
-  
+
   {
     type: 'choice',
     choices: [

@@ -20,11 +20,11 @@ export type VarCmd<TVars, TLocalVars> =
     value: TLocalVars[keyof TLocalVars]
   }
 
-const varModule = define<Record<never, never>>({})
+const varModule = define<VarCmd<any, any>>({})
 
 varModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-varModule.defineCommand<VarCmd<any, any>>((cmd, ctx) => {
+varModule.defineCommand((cmd, ctx) => {
   const nameStr = cmd.name as string
   const val = cmd.value
 

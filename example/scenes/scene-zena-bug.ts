@@ -140,5 +140,4 @@ export default defineScene({
       '강제 달리기 운동으로 오늘치 칼로리 소모는 완벽하다.'
     ]
   },
-  { type: 'condition', if: () => true, goto: 'calm' }
 ])

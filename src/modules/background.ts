@@ -43,7 +43,7 @@ export interface BackgroundSchema {
 /**
  * 배경 모듈. `novel.config`의 `modules: { 'background': backgroundModule }` 형태로 등록합니다.
  */
-const backgroundModule = define<BackgroundSchema>({
+const backgroundModule = define<BackgroundCmd<any>, BackgroundSchema>({
   key: undefined,
   fit: 'cover',
   duration: 1000,
@@ -141,7 +141,7 @@ backgroundModule.defineView((data, ctx) => {
   }
 })
 
-backgroundModule.defineCommand<BackgroundCmd<any>>((cmd, ctx, data) => {
+backgroundModule.defineCommand((cmd, ctx, data) => {
   const bgDefs = ctx.renderer.config.backgrounds as BgDefs
   const def = bgDefs[cmd.name as string]
   if (!def) return true

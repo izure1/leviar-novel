@@ -72,7 +72,7 @@ function resolvePositionX(position: string): number {
 /**
  * 캐릭터 모듈. `novel.config`의 `modules: { 'character': characterModule }` 형태로 등록합니다.
  */
-const characterModule = define<CharacterSchema>({
+const characterModule = define<CharacterCmd<any>, CharacterSchema>({
   characters: {},
 })
 
@@ -179,7 +179,7 @@ characterModule.defineView((data, ctx) => {
   }
 })
 
-characterModule.defineCommand<CharacterCmd<any>>((cmd, ctx, data) => {
+characterModule.defineCommand((cmd, ctx, data) => {
   const newChars = { ...data.characters }
 
   if (cmd.action === 'show') {
@@ -251,14 +251,14 @@ function _focusCharacter(
 
 export interface CharacterFocusSchema { _unused: undefined }
 
-const characterFocusModule = define<CharacterFocusSchema>({ _unused: undefined })
+const characterFocusModule = define<CharacterFocusCmd<any>, CharacterFocusSchema>({ _unused: undefined })
 
 characterFocusModule.defineView((_data, _ctx) => ({
   show: () => {},
   hide: () => {},
 }))
 
-characterFocusModule.defineCommand<CharacterFocusCmd<any>>((cmd, ctx) => {
+characterFocusModule.defineCommand((cmd, ctx) => {
   const entry = ctx.ui.get('character') as any
   const charObj = entry?.getObj?.(cmd.name)
   if (!charObj) return true
@@ -277,14 +277,14 @@ export { characterFocusModule }
 
 export interface CharacterHighlightSchema { _unused: undefined }
 
-const characterHighlightModule = define<CharacterHighlightSchema>({ _unused: undefined })
+const characterHighlightModule = define<CharacterHighlightCmd<any>, CharacterHighlightSchema>({ _unused: undefined })
 
 characterHighlightModule.defineView((_data, _ctx) => ({
   show: () => {},
   hide: () => {},
 }))
 
-characterHighlightModule.defineCommand<CharacterHighlightCmd<any>>((_cmd, _ctx) => {
+characterHighlightModule.defineCommand((_cmd, _ctx) => {
   // 구현 미완, skip
   return true
 })

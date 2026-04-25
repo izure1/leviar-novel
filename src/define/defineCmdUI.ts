@@ -56,14 +56,20 @@ export interface NovelModuleMeta<TSchema extends Record<string, any> = any> {
  * - `defineView`: View 빌더 등록 (View)
  * - schema: 공유 상태 (Model)
  */
-export type NovelModule<TSchema extends Record<string, any> = any> =
+export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
   NovelModuleMeta<TSchema> & {
-    defineCommand<TCmd>(
-      handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext, data: TSchema) => CommandResult
-    ): NovelModule<TSchema>
+    /**
+     * 커맨드 핸들러를 등록합니다.
+     * - `cmd`: `{ type: 'key', ...TCmd }` 에서 type을 제외한 커맨드 속성
+     * - `ctx`: SceneContext
+     * - `state`: define() schema 인수로부터 자동 추론된 공유 상태
+     */
+    defineCommand(
+      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => CommandResult
+    ): NovelModule<TCmd, TSchema>
     defineView(
       builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
-    ): NovelModule<TSchema>
+    ): NovelModule<TCmd, TSchema>
   }
 
 // ─── 하위 호환 타입 alias ─────────────────────────────────────
@@ -104,7 +110,7 @@ export type NovelModule<TSchema extends Record<string, any> = any> =
  * modules: { 'dialogue': dialogueModule }
  * ```
  */
-export function define<TSchema extends Record<string, any>>(schema: TSchema): NovelModule<TSchema> {
+export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>>(schema?: TSchema): NovelModule<TCmd, TSchema> {
   // ─── 반응형 구독자 ──────────────────────────────────────────
   let _onUpdate: ((data: TSchema) => void) | null = null
   /**
@@ -115,11 +121,11 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): No
   let _moduleKey: string | null = null
 
   // ─── 공유 data (Proxy로 래핑) ─────────────────────────────
-  const _raw: TSchema = { ...schema }
+  const _raw: TSchema = { ...(schema ?? {}) } as TSchema
 
   const data = new Proxy(_raw, {
     set(target, key, value) {
-      ;(target as any)[key] = value
+      ; (target as any)[key] = value
       const v = ++_version
       // 동일 틱의 여러 set을 microtask로 배치 처리
       Promise.resolve().then(() => {
@@ -136,9 +142,9 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): No
   let _viewBuilderFn: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null = null
 
   // ─── 모듈 객체 ───────────────────────────────────────────
-  const module: NovelModule<TSchema> = {
+  const module: NovelModule<TCmd, TSchema> = {
     __isModule: true as const,
-    __schemaDefault: schema,
+    __schemaDefault: (schema ?? {}) as TSchema,
 
     get __handler() { return _handlerFn },
     get __viewBuilder() { return _viewBuilderFn },
@@ -147,12 +153,12 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): No
       _moduleKey = key
     },
 
-    defineCommand<TCmd>(
-      handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext, data: TSchema) => CommandResult
-    ): NovelModule<TSchema> {
+    defineCommand(
+      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => CommandResult
+    ): NovelModule<TCmd, TSchema> {
       _handlerFn = (rawParams: any, ctx: SceneContext) => {
         const resolved = resolveParams(rawParams, ctx)
-        const result = handler(resolved as Omit<TCmd, 'type'>, ctx, data)
+        const result = handler(resolved as TCmd, ctx, data)
         // Auto-save: 핸들러 실행 후 _raw 스냅샷을 cmdState에 저장
         if (_moduleKey) {
           ctx.cmdState.set(_moduleKey, { ..._raw })
@@ -164,7 +170,7 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): No
 
     defineView(
       builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
-    ): NovelModule<TSchema> {
+    ): NovelModule<TCmd, TSchema> {
       /**
        * `__viewBuilder`: Novel 엔진이 씬 시작 / 세이브 로드 시 직접 호출.
        * 1) mergedData를 data proxy에 반영 (저장된 state 또는 initial 데이터)
@@ -176,7 +182,7 @@ export function define<TSchema extends Record<string, any>>(schema: TSchema): No
         // 저장된 state를 proxy data에 반영 (proxy set → microtask 예약됨)
         for (const key in mergedData) {
           if ((mergedData as any)[key] !== undefined) {
-            ;(data as any)[key] = (mergedData as any)[key]
+            ; (data as any)[key] = (mergedData as any)[key]
           }
         }
 

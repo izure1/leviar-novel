@@ -3,10 +3,28 @@ import { defineNovelConfig, define } from '../src'
 import chat from './characters/chat'
 import zena from './characters/zena'
 
-const testModule = define<{ message?: string }>({ message: undefined })
-testModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
-testModule.defineCommand<{ message: string }>((cmd, ctx) => {
+const testModule = define<{ message: string }>()
+testModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
+testModule.defineCommand((cmd, ctx) => {
   console.log('[test-cmd]', cmd.message, ctx.globalVars)
+  return true
+})
+
+const forModule = define<{
+  start: number
+  end: number
+  acc?: number
+}, {
+  start: number
+  end: number
+  acc: number
+}>({ start: 0, end: 0, acc: 1 })
+forModule.defineView(() => ({ show: () => { }, hide: () => { } }))
+forModule.defineCommand((cmd, ctx, data) => {
+  for (let i = data.start; i < cmd.end; i += (cmd.acc ?? 1)) {
+    ctx.execute({ type: 'dialogue', text: () => `dialog ${i}` })
+    return false
+  }
   return true
 })
 
@@ -18,6 +36,7 @@ export default defineNovelConfig({
   },
   modules: {
     'test-cmd': testModule,
+    'for': forModule,
   },
   scenes: [
     'scene-zena',
@@ -27,7 +46,7 @@ export default defineNovelConfig({
     'scene-zena-outside',
     'scene-zena-bug',
     'scene-zena-ending',
-  ] as const,
+  ],
   characters: {
     'chat': chat,
     'zena': zena,

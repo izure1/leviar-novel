@@ -12,11 +12,11 @@ export interface LabelCmd {
   name: string
 }
 
-const labelModule = define<Record<never, never>>({})
+const labelModule = define<LabelCmd>({})
 
 labelModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-labelModule.defineCommand<LabelCmd>((_cmd, _ctx) => {
+labelModule.defineCommand((_cmd, _ctx) => {
   return true
 })
 

@@ -57,7 +57,7 @@ export interface EffectSchema {
 /**
  * 이펙트 모듈. `novel.config`의 `modules: { 'effect': effectModule }` 형태로 등록합니다.
  */
-const effectModule = define<EffectSchema>({
+const effectModule = define<EffectCmd<any>, EffectSchema>({
   activeEffects: {},
 })
 
@@ -151,7 +151,7 @@ effectModule.defineView((data, ctx) => {
   }
 })
 
-effectModule.defineCommand<EffectCmd<any>>((rawCmd, ctx, data) => {
+effectModule.defineCommand((rawCmd, ctx, data) => {
   const cmd = rawCmd as any
   const newEffects = { ...data.activeEffects }
 

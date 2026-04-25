@@ -22,11 +22,11 @@ export interface ConditionCmd<TConfig = any, TLocalVars = any> {
   'else-next'?: SceneNamesOf<TConfig>
 }
 
-const conditionModule = define<Record<never, never>>({})
+const conditionModule = define<ConditionCmd<any, any>>({})
 
 conditionModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-conditionModule.defineCommand<ConditionCmd<any, any>>((cmd, ctx) => {
+conditionModule.defineCommand((cmd, ctx) => {
   const result = typeof cmd.if === 'function' ? cmd.if(ctx.scene.getVars()) : (cmd.if as unknown as boolean)
 
   if (result) {
