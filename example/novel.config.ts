@@ -30,7 +30,6 @@ forModule.defineCommand(function* (cmd, ctx, state) {
 export default defineNovelConfig({
   width: 800,
   height: 450,
-  depth: 500,
   vars: {
     likeability: 0,
     metHeroine: false,

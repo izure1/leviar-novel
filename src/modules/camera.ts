@@ -37,7 +37,7 @@ export interface CameraEffectCmd {
 const ZOOM_PRESETS: Record<Exclude<ZoomPreset, 'inherit'>, { scale: number; duration: number }> = {
   'close-up': { scale: 1.5, duration: 800 },
   'medium': { scale: 1.2, duration: 600 },
-  'wide': { scale: 0.8, duration: 800 },
+  'wide': { scale: 0.92, duration: 800 },
   'reset': { scale: 1.0, duration: 600 },
 }
 

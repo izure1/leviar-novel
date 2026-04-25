@@ -63,11 +63,11 @@ backgroundModule.defineView((data, ctx) => {
 
     const src = def.src ?? key
     const cam = ctx.renderer.world.camera as any
-    const zPos = ctx.renderer.depth
+    const zPos = 2000 // 기존 ctx.renderer.depth(500) * 4
     const baseW = ctx.renderer.width
     const baseH = ctx.renderer.height
-    const maxPanX = baseW * 0.4
-    const maxPanY = baseH * 0.5
+    const maxPanX = baseW * 0.08
+    const maxPanY = baseH * 0.08
     const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
     const exactW = baseW + maxPanX * 2
     const exactH = baseH + maxPanY * 2
@@ -86,6 +86,37 @@ backgroundModule.defineView((data, ctx) => {
       },
       transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } },
     })
+
+    if (fit === 'cover' || fit === 'contain') {
+      const checkFit = () => {
+        const rw = (obj as any).__renderedSize?.w
+        const rh = (obj as any).__renderedSize?.h
+        if (rw > 0 && rh > 0) {
+          const imgRatio = rw / rh
+          const targetRatio = exactW / exactH
+          if (fit === 'cover') {
+            if (imgRatio > targetRatio) {
+              obj.style.width = exactH * imgRatio
+              obj.style.height = exactH
+            } else {
+              obj.style.width = exactW
+              obj.style.height = exactW / imgRatio
+            }
+          } else if (fit === 'contain') {
+            if (imgRatio > targetRatio) {
+              obj.style.width = exactW
+              obj.style.height = exactW / imgRatio
+            } else {
+              obj.style.width = exactH * imgRatio
+              obj.style.height = exactH
+            }
+          }
+        } else {
+          requestAnimationFrame(checkFit)
+        }
+      }
+      checkFit()
+    }
 
     if (!parallax) {
       ctx.renderer.world.camera?.addChild(obj)

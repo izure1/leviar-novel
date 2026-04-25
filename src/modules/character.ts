@@ -207,7 +207,14 @@ characterModule.defineCommand(function* (cmd, ctx, data) {
         const entry = ctx.ui.get('character') as any
         const charObj = entry?.getObj?.(showCmd.name)
         if (charObj) {
-          _focusCharacter(ctx, showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
+          const check = () => {
+            if ((charObj as any).__renderedSize?.h > 0) {
+              _focusCharacter(ctx, showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
+            } else {
+              requestAnimationFrame(check)
+            }
+          }
+          check()
         }
       })
     }
@@ -240,7 +247,7 @@ function _focusCharacter(
   const targetX = target.transform?.position?.x ?? 0
   const charW = target.style?.width ?? 500
   const rendH = (target as any).__renderedSize?.h
-  const charH = (rendH && rendH > 0) ? rendH : charW * 2
+  const charH = imageDef?.height ?? ((rendH && rendH > 0) ? rendH : charW * 2)
 
   const panX = targetX + charW * (fp.x - 0.5)
   const panY = charH * (0.5 - fp.y)
@@ -267,7 +274,14 @@ characterFocusModule.defineCommand(function* (cmd, ctx) {
   const def = charDefs[cmd.name]
   if (!def) return true
 
-  _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
+  const check = () => {
+    if ((charObj as any).__renderedSize?.h > 0) {
+      _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
+    } else {
+      requestAnimationFrame(check)
+    }
+  }
+  check()
   return true
 })
 

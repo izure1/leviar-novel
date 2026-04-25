@@ -56,7 +56,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   readonly vars: TConfig['vars']
 
   private readonly _config:   TConfig
-  private readonly _option:   { canvas: HTMLCanvasElement; width: number; height: number; depth: number }
+  private readonly _option:   { canvas: HTMLCanvasElement; width: number; height: number }
   private readonly _world:    World
   private readonly _renderer: Renderer
   private readonly _scenes:   Map<string, AnySceneDef> = new Map()
@@ -91,14 +91,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       canvas,
       width:  config.width  ?? canvas.width,
       height: config.height ?? canvas.height,
-      depth:  config.depth  ?? 500,
     }
 
     this._world = new World({ canvas })
     this._renderer = new Renderer(this._world, config, {
       width:  this._option.width,
       height: this._option.height,
-      depth:  this._option.depth,
     })
 
     this.vars = { ...(config.vars as object) } as TConfig['vars']

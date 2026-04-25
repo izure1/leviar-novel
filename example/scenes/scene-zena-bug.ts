@@ -10,7 +10,7 @@ export default defineScene({
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
   { type: 'background', name: 'bg-park', duration: 0, skip: true },
-  { type: 'mood', mood: 'day', intensity: 0.5, duration: 0, skip: true },
+  { type: 'mood', mood: 'day', intensity: 1, duration: 0, skip: true },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
   { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
@@ -70,6 +70,7 @@ export default defineScene({
 
   { type: 'label', name: 'run' },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
+  { type: 'mood', mood: 'horror', action: 'add', flicker: 'strobe' },
   {
     type: 'dialogue',
     speaker: 'zena',

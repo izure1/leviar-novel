@@ -77,7 +77,7 @@ effectModule.defineView((data, ctx) => {
     }
     const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10
     const clipName = `${type}_rate_${finalRate}_${srcKey ?? 'default'}`
-    const particleZ = ctx.renderer.depth / 2
+    const particleZ = 250
 
     if (!ctx.renderer.world.particleManager.get(clipName)) {
       const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip }
@@ -131,7 +131,7 @@ effectModule.defineView((data, ctx) => {
   }
 
   return {
-    show: () => {},
+    show: () => { },
     hide: () => {
       for (const obj of Object.values(_effectObjs)) {
         obj?.fadeOut?.(300, 'easeIn')

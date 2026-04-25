@@ -27,6 +27,11 @@ export interface CharImageDef {
    * 캐릭터의 기본 렌더링 너비(px 단위)입니다. 
    */
   width?: number
+  /**
+   * 캐릭터의 기본 렌더링 높이(px 단위)입니다.
+   * 이미지가 로드되기 전에 character-focus 등에서 정확한 높이 계산을 위해 사용할 수 있습니다.
+   */
+  height?: number
   /** 
    * 캐릭터의 포커스 포인트 목록입니다. (0~1 사이 정규화된 값). 
    * x는 좌에서 우로, y는 위에서 아래로의 위치를 나타냅니다. 
@@ -167,11 +172,7 @@ export interface NovelConfig<
    * 미지정 시 캔버스의 실제 크기(canvas.height)를 사용합니다.
    */
   height?: number
-  /** 
-   * 씬의 Z-depth 최댓값(px 단위)입니다. 
-   * 카메라와 오브젝트 간의 원근감 거리를 결정하며, 기본값은 500입니다.
-   */
-  depth?: number
+
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars: TVars
   /** 게임에 포함된 모든 씬(Scene) 이름 목록입니다. */

@@ -497,11 +497,11 @@
       if (!def) return null;
       const src = def.src ?? key;
       const cam = ctx.renderer.world.camera;
-      const zPos = ctx.renderer.depth;
+      const zPos = 2e3;
       const baseW = ctx.renderer.width;
       const baseH = ctx.renderer.height;
-      const maxPanX = baseW * 0.4;
-      const maxPanY = baseH * 0.5;
+      const maxPanX = baseW * 0.08;
+      const maxPanY = baseH * 0.08;
       const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
       const exactW = baseW + maxPanX * 2;
       const exactH = baseH + maxPanY * 2;
@@ -517,6 +517,36 @@
         },
         transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } }
       });
+      if (fit === "cover" || fit === "contain") {
+        const checkFit = () => {
+          const rw = obj.__renderedSize?.w;
+          const rh = obj.__renderedSize?.h;
+          if (rw > 0 && rh > 0) {
+            const imgRatio = rw / rh;
+            const targetRatio = exactW / exactH;
+            if (fit === "cover") {
+              if (imgRatio > targetRatio) {
+                obj.style.width = exactH * imgRatio;
+                obj.style.height = exactH;
+              } else {
+                obj.style.width = exactW;
+                obj.style.height = exactW / imgRatio;
+              }
+            } else if (fit === "contain") {
+              if (imgRatio > targetRatio) {
+                obj.style.width = exactW;
+                obj.style.height = exactW / imgRatio;
+              } else {
+                obj.style.width = exactH * imgRatio;
+                obj.style.height = exactH;
+              }
+            }
+          } else {
+            requestAnimationFrame(checkFit);
+          }
+        };
+        checkFit();
+      }
       if (!parallax) {
         ctx.renderer.world.camera?.addChild(obj);
       }
@@ -587,7 +617,7 @@
   var ZOOM_PRESETS = {
     "close-up": { scale: 1.5, duration: 800 },
     "medium": { scale: 1.2, duration: 600 },
-    "wide": { scale: 0.8, duration: 800 },
+    "wide": { scale: 0.92, duration: 800 },
     "reset": { scale: 1, duration: 600 }
   };
   var PAN_PRESETS = {
@@ -873,7 +903,14 @@
           const entry = ctx.ui.get("character");
           const charObj = entry?.getObj?.(showCmd.name);
           if (charObj) {
-            _focusCharacter(ctx, showCmd.name, charObj, def, focusType, "inherit", focusDuration);
+            const check = () => {
+              if (charObj.__renderedSize?.h > 0) {
+                _focusCharacter(ctx, showCmd.name, charObj, def, focusType, "inherit", focusDuration);
+              } else {
+                requestAnimationFrame(check);
+              }
+            };
+            check();
           }
         });
       }
@@ -892,7 +929,7 @@
     const targetX = target.transform?.position?.x ?? 0;
     const charW = target.style?.width ?? 500;
     const rendH = target.__renderedSize?.h;
-    const charH = rendH && rendH > 0 ? rendH : charW * 2;
+    const charH = imageDef?.height ?? (rendH && rendH > 0 ? rendH : charW * 2);
     const panX = targetX + charW * (fp.x - 0.5);
     const panY = charH * (0.5 - fp.y);
     panCamera(ctx, "center", duration, panX, panY);
@@ -912,7 +949,14 @@
     const charDefs = ctx.renderer.config.characters;
     const def = charDefs[cmd.name];
     if (!def) return true;
-    _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
+    const check = () => {
+      if (charObj.__renderedSize?.h > 0) {
+        _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
+      } else {
+        requestAnimationFrame(check);
+      }
+    };
+    check();
     return true;
   });
   var characterHighlightModule = define2({ _unused: void 0 });
@@ -1126,7 +1170,7 @@
       };
       const finalRate = rate ?? DEFAULT_EFFECT_RATES[type] ?? 10;
       const clipName = `${type}_rate_${finalRate}_${srcKey ?? "default"}`;
-      const particleZ = ctx.renderer.depth / 2;
+      const particleZ = 250;
       if (!ctx.renderer.world.particleManager.get(clipName)) {
         const clipBase = { ...EFFECT_CLIP_PRESETS[type], ...configEffect?.clip };
         const cam = ctx.renderer.world.camera;
@@ -14452,7 +14496,6 @@ ${addLineNumbers(fragment)}`);
     config;
     width;
     height;
-    depth;
     _objects = /* @__PURE__ */ new Set();
     _isSkipping = false;
     // 커스텀 명령어들이 저장할 범용 상태 저장소
@@ -14466,7 +14509,6 @@ ${addLineNumbers(fragment)}`);
       this.config = config;
       this.width = option.width;
       this.height = option.height;
-      this.depth = option.depth;
       if (!this.world.camera) {
         this.world.camera = this.world.createCamera();
       }
@@ -15156,14 +15198,12 @@ ${addLineNumbers(fragment)}`);
       this._option = {
         canvas,
         width: config.width ?? canvas.width,
-        height: config.height ?? canvas.height,
-        depth: config.depth ?? 500
+        height: config.height ?? canvas.height
       };
       this._world = new World({ canvas });
       this._renderer = new Renderer3(this._world, config, {
         width: this._option.width,
-        height: this._option.height,
-        depth: this._option.depth
+        height: this._option.height
       });
       this.vars = { ...config.vars };
       this._collectModules(config.modules);
@@ -15524,7 +15564,6 @@ ${addLineNumbers(fragment)}`);
   var novel_config_default = defineNovelConfig({
     width: 800,
     height: 450,
-    depth: 500,
     vars: {
       likeability: 0,
       metHeroine: false,
@@ -15634,7 +15673,6 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
-    { type: "effect", action: "add", effect: "snow", src: "snow", rate: 50 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
       type: "dialogue",
@@ -15652,7 +15690,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
     },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "1/10", focus: "face", duration: 800 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -15690,10 +15728,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC790\uBE44 \uC880 \uBCA0\uD480\uC5B4\uC918."
     },
-    {
-      type: "camera-zoom",
-      preset: "reset"
-    },
+    { type: "character-focus", name: "zena", point: "face", zoom: "reset" },
     {
       type: "choice",
       choices: [
@@ -16669,7 +16704,7 @@ ${addLineNumbers(fragment)}`);
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
     { type: "background", name: "bg-park", duration: 0, skip: true },
-    { type: "mood", mood: "day", intensity: 0.5, duration: 0, skip: true },
+    { type: "mood", mood: "day", intensity: 1, duration: 0, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
@@ -16724,6 +16759,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "run" },
     { type: "camera-effect", preset: "shake", duration: 800 },
+    { type: "mood", mood: "horror", action: "add", flicker: "strobe" },
     {
       type: "dialogue",
       speaker: "zena",

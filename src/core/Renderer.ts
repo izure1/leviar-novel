@@ -60,7 +60,6 @@ export interface RendererState {
 export interface RendererOption {
   width: number
   height: number
-  depth: number
 }
 
 export class Renderer {
@@ -68,7 +67,6 @@ export class Renderer {
   public readonly config: NovelConfig<any, any, any, any>
   public readonly width: number
   public readonly height: number
-  public readonly depth: number
 
   private _objects: Set<LeviarObject> = new Set()
   private _isSkipping: boolean = false
@@ -86,7 +84,6 @@ export class Renderer {
     this.config = config
     this.width = option.width
     this.height = option.height
-    this.depth = option.depth
 
     if (!this.world.camera) {
       this.world.camera = (this.world as any).createCamera()

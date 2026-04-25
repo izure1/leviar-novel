@@ -15,7 +15,6 @@ export default defineScene({
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
-  { type: 'effect', action: 'add', effect: 'snow', src: 'snow', rate: 50 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
   {
@@ -34,7 +33,7 @@ export default defineScene({
     type: 'dialogue',
     text: '그곳에는 마치 세상 모든 짐을 짊어진 듯한 표정의 소녀가 있었다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: '1/10', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -72,9 +71,7 @@ export default defineScene({
     speaker: 'zena',
     text: '자비 좀 베풀어줘.'
   },
-  {
-    type: 'camera-zoom', preset: 'reset'
-  },
+  { type: 'character-focus', name: 'zena', point: 'face', zoom: 'reset' },
 
   {
     type: 'choice',
