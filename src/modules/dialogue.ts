@@ -6,6 +6,8 @@ import { define } from '../define/defineCmdUI'
 
 /** dialogueModule이 공유하는 데이터 스키마 */
 export interface DialogueSchema {
+  /** 대화창 전체 패널 스타일 (권장) */
+  style?: Partial<Style> & { height?: number }
   /** 대화창 배경 패널 스타일 */
   bg?: Partial<Style> & { height?: number }
   /** 화자(캐릭터 이름) 텍스트 스타일 */
@@ -91,6 +93,7 @@ export interface DialogueCmd<TConfig = any> {
  * ```
  */
 const dialogueModule = define<DialogueCmd<any>, DialogueSchema>({
+  style: undefined,
   bg: undefined,
   speaker: undefined,
   text: undefined,
@@ -111,7 +114,7 @@ dialogueModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   // 스타일 병합
-  const bgCfg = { ...DEFAULT_BG, ...(data.bg ?? {}) } as Style
+  const bgCfg = { ...DEFAULT_BG, ...(data.bg ?? {}), ...(data.style ?? {}) } as Style
   const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as Style
   const txtCfg = { ...DEFAULT_TEXT, ...(data.text ?? {}) } as Style
 
@@ -246,7 +249,7 @@ dialogueModule.defineView((data, ctx) => {
      */
     update: (d: DialogueSchema) => {
       // 스타일 갱신
-      const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}) } as Style
+      const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}), ...(d.style ?? {}) } as Style
       const newSpkCfg = { ...DEFAULT_SPEAKER, ...(d.speaker ?? {}) } as Style
       const newTxtCfg = { ...DEFAULT_TEXT, ...(d.text ?? {}) } as Style
       Object.assign(bgObj.style, newBgCfg)

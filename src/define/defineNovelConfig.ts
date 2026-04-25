@@ -23,26 +23,26 @@ import controlModule from '../modules/control'
  * `defineNovelConfig`의 `modules`에 명시하지 않아도 자동으로 등록됩니다.
  */
 export const BUILTIN_MODULES = {
-  'dialogue':            dialogueModule,
-  'choice':              choiceModule,
-  'background':          backgroundModule,
-  'character':           characterModule,
-  'character-focus':     characterFocusModule,
+  'dialogue': dialogueModule,
+  'choice': choiceModule,
+  'background': backgroundModule,
+  'character': characterModule,
+  'character-focus': characterFocusModule,
   'character-highlight': characterHighlightModule,
-  'mood':                moodModule,
-  'effect':              effectModule,
-  'overlay':             overlayModule,
-  'screen-fade':         screenFadeModule,
-  'screen-flash':        screenFlashModule,
-  'screen-wipe':         screenWipeModule,
-  'camera-zoom':         cameraZoomModule,
-  'camera-pan':          cameraPanModule,
-  'camera-effect':       cameraEffectModule,
-  'condition':           conditionModule,
-  'var':                 varModule,
-  'label':               labelModule,
-  'ui':                  uiModule,
-  'control':             controlModule,
+  'mood': moodModule,
+  'effect': effectModule,
+  'overlay': overlayModule,
+  'screen-fade': screenFadeModule,
+  'screen-flash': screenFlashModule,
+  'screen-wipe': screenWipeModule,
+  'camera-zoom': cameraZoomModule,
+  'camera-pan': cameraPanModule,
+  'camera-effect': cameraEffectModule,
+  'condition': conditionModule,
+  'var': varModule,
+  'label': labelModule,
+  'ui': uiModule,
+  'control': controlModule,
 } as const
 
 /** 내장 모듈 타입 */
@@ -60,8 +60,12 @@ export type BuiltinModules = typeof BUILTIN_MODULES
  * @example
  * ```ts
  * export default defineNovelConfig({
+ *   width: ..., // default: canvas width
+ *   height: ..., // default: canvas height
+ *   depth: ..., // default: 500
  *   vars: { likeability: 0, metCharacterA: false },
  *   scenes: ['scene-a', 'scene-b'],
+ *   assets: { ... },
  *   characters: { ... },
  *   backgrounds: { ... },
  *   // 커스텀 모듈만 추가

@@ -1,34 +1,49 @@
 import type { Resolvable } from '../define/defineCmd'
 import type { SceneNamesOf, VarsOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
+import type { Style } from 'leviar'
 
 // ─── 선택지 UI 스타일 + 런타임 상태 스키마 ────────────────────
 
 /** choiceModule이 공유하는 데이터 스키마 */
 export interface ChoiceSchema {
-  fontSize?: number
-  fontFamily?: string
-  color?: string
-  background?: string
-  borderColor?: string
-  hoverBackground?: string
-  hoverBorderColor?: string
-  borderRadius?: number
-  minWidth?: number
+  /** 선택지 전체 배경(컨테이너) 스타일 */
+  bg?: Partial<Style>
+  /** 선택지 버튼(배경) 스타일 */
+  button?: Partial<Style> & { minWidth?: number }
+  /** 선택지 버튼 호버 스타일 */
+  buttonHover?: Partial<Style>
+  /** 선택지 텍스트 스타일 */
+  text?: Partial<Style>
+  /** 선택지 텍스트 호버 스타일 */
+  textHover?: Partial<Style>
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_CHOICE: Required<ChoiceSchema> = {
-  fontSize: 18,
-  fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-  color: '#fff',
-  background: 'rgba(30,30,60,0.85)',
-  borderColor: 'rgba(255,255,255,0.3)',
-  hoverBackground: 'rgba(80,80,180,0.9)',
-  hoverBorderColor: 'rgba(255,255,255,0.7)',
-  borderRadius: 8,
-  minWidth: 260,
+const DEFAULT_CHOICE: ChoiceSchema = {
+  bg: {
+    color: 'rgba(0,0,0,0.6)',
+  },
+  button: {
+    color: 'rgba(30,30,60,0.85)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1.5,
+    borderRadius: 8,
+    minWidth: 260,
+  },
+  buttonHover: {
+    color: 'rgba(80,80,180,0.9)',
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  text: {
+    fontSize: 18,
+    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+    color: '#fff',
+  },
+  textHover: {
+    color: '#ffffaa', // 기본 호버 텍스트 색상 (약간 노란빛)
+  },
 }
 
 // ─── ChoiceCmd 타입 ──────────────────────────────────────────
@@ -68,19 +83,15 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
  * 선택지 모듈. `novel.config`의 `modules: { 'choices': choiceModule }` 형태로 등록합니다.
  */
 const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema>({
-  fontSize: undefined,
-  fontFamily: undefined,
-  color: undefined,
-  background: undefined,
-  borderColor: undefined,
-  hoverBackground: undefined,
-  hoverBorderColor: undefined,
-  borderRadius: undefined,
-  minWidth: undefined,
+  bg: undefined,
+  button: undefined,
+  buttonHover: undefined,
+  text: undefined,
+  textHover: undefined,
 })
 
 choiceModule.defineView((data, ctx) => {
-  const cfg = { ...DEFAULT_CHOICE, ...data } as Required<ChoiceSchema>
+  const cfg = { ...DEFAULT_CHOICE, ...data }
 
   const cam = ctx.world.camera
   const w = ctx.renderer.width
@@ -92,9 +103,11 @@ choiceModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   // 전체 화면을 덮는 반투명 배경 패널 (이벤트 차단 용도 겸용)
+  const defaultBgStyle = { ...DEFAULT_CHOICE.bg, ...cfg.bg } as Partial<Style>
+
   const bgObj = ctx.world.createRectangle({
     style: {
-      color: 'rgba(0,0,0,0.6)',
+      ...defaultBgStyle,
       width: w,
       height: h,
       zIndex: 500,
@@ -125,8 +138,13 @@ choiceModule.defineView((data, ctx) => {
       bgObj.fadeIn(200, 'easeOut')
       _clearButtons()
 
-      const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize
-      const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth
+      const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button } as Partial<Style> & { minWidth?: number }
+      const defaultHoverStyle = { ...DEFAULT_CHOICE.buttonHover, ...cfg.buttonHover } as Partial<Style>
+      const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text } as Partial<Style>
+      const defaultTextHoverStyle = { ...DEFAULT_CHOICE.textHover, ...cfg.textHover } as Partial<Style>
+
+      const fSize = defaultTextStyle.fontSize ?? 18
+      const mWidth = defaultBtnStyle.minWidth ?? 260
       const gap = 12
       const paddingY = 12
       const btnH = fSize * 1.5 + paddingY * 2
@@ -139,39 +157,64 @@ choiceModule.defineView((data, ctx) => {
         const estimatedTextW = textStr.length * fSize * 0.8
         const btnW = Math.max(mWidth, estimatedTextW + 64)
 
+        const btnStyle: Partial<Style> = {
+          ...defaultBtnStyle,
+          width: btnW,
+          height: btnH,
+          zIndex: defaultBtnStyle.zIndex ?? 501,
+          pointerEvents: true,
+          opacity: defaultBtnStyle.opacity ?? 1,
+        }
+
         const btnObj = ctx.world.createRectangle({
-          style: {
-            color: cfg.background ?? DEFAULT_CHOICE.background,
-            borderColor: cfg.borderColor ?? DEFAULT_CHOICE.borderColor,
-            borderWidth: 1.5,
-            borderRadius: cfg.borderRadius ?? DEFAULT_CHOICE.borderRadius,
-            width: btnW,
-            height: btnH,
-            zIndex: 501,
-            pointerEvents: true,
-            opacity: 1
-          },
+          style: btnStyle,
           transform: { position: toLocal(w / 2, cy) }
         })
 
+        const textStyle: Partial<Style> = {
+          ...defaultTextStyle,
+          textAlign: defaultTextStyle.textAlign ?? 'center',
+          zIndex: defaultTextStyle.zIndex ?? 502,
+          pointerEvents: false,
+        }
+
         const txtObj = ctx.world.createText({
           attribute: { text: textStr },
-          style: {
-            fontSize: fSize,
-            fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
-            color: cfg.color ?? DEFAULT_CHOICE.color,
-            textAlign: 'center',
-            zIndex: 502,
-            pointerEvents: false
-          },
+          style: textStyle,
           transform: { position: { x: 0, y: 0, z: 0 } }
         })
 
+        const normalStyleProps = {
+          color: btnStyle.color,
+          borderColor: btnStyle.borderColor,
+        }
+
+        const normalTextProps = {
+          color: textStyle.color,
+          textShadowBlur: textStyle.textShadowBlur,
+          textShadowColor: textStyle.textShadowColor,
+          textShadowOffsetX: textStyle.textShadowOffsetX,
+          textShadowOffsetY: textStyle.textShadowOffsetY,
+        }
+
+        const hoverBtnStyle = {
+          color: defaultHoverStyle.color,
+          borderColor: defaultHoverStyle.borderColor,
+          ...defaultHoverStyle
+        }
+
+        const hoverTxtStyle = {
+          color: defaultTextHoverStyle.color,
+          ...defaultTextHoverStyle
+        }
+
         btnObj.on('mouseover', () => {
-          btnObj.animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150)
+          btnObj.animate({ style: hoverBtnStyle as any }, 150)
+          txtObj.animate({ style: hoverTxtStyle as any }, 150)
         })
         btnObj.on('mouseout', () => {
-          btnObj.animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150)
+          btnObj.animate({ style: normalStyleProps as any }, 150)
+          txtObj.animate({ style: normalTextProps as any }, 150)
         })
         btnObj.on('click', () => {
           onSelect(i)

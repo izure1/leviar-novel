@@ -29,11 +29,20 @@ export const commonInitial = defineInitial(config, {
     },
   },
   'choice': {
-    background: 'rgba(20,20,50,0.90)',
-    borderColor: 'rgba(255,255,255,0.25)',
-    hoverBackground: 'rgba(80,60,180,0.92)',
-    hoverBorderColor: 'rgba(200,180,255,0.8)',
-    borderRadius: 10,
-    minWidth: 280,
+    button: {
+      color: 'rgba(20,20,50,0.90)',
+      borderColor: 'rgba(255,255,255,0.25)',
+      borderRadius: 10,
+      minWidth: 280,
+    },
+    buttonHover: {
+      color: 'rgba(80,60,180,0.92)',
+      borderColor: 'rgba(200,180,255,0.8)',
+    },
+    textHover: {
+      color: '#fff0b3', // 노란빛 호버 텍스트 예시
+      textShadowBlur: 4,
+      textShadowColor: 'rgba(255,255,255,0.8)',
+    }
   },
 })

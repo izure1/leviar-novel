@@ -117,6 +117,7 @@
     return charDefs?.[speakerKey]?.name ?? speakerKey;
   }
   var dialogueModule = define2({
+    style: void 0,
     bg: void 0,
     speaker: void 0,
     text: void 0,
@@ -130,7 +131,7 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {} };
+    const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {}, ...data.style ?? {} };
     const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
     const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
     const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
@@ -244,7 +245,7 @@
        * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */
       update: (d) => {
-        const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {} };
+        const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {}, ...d.style ?? {} };
         const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
         const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
         Object.assign(bgObj.style, newBgCfg);
@@ -281,26 +282,36 @@
 
   // src/modules/choice.ts
   var DEFAULT_CHOICE = {
-    fontSize: 18,
-    fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-    color: "#fff",
-    background: "rgba(30,30,60,0.85)",
-    borderColor: "rgba(255,255,255,0.3)",
-    hoverBackground: "rgba(80,80,180,0.9)",
-    hoverBorderColor: "rgba(255,255,255,0.7)",
-    borderRadius: 8,
-    minWidth: 260
+    bg: {
+      color: "rgba(0,0,0,0.6)"
+    },
+    button: {
+      color: "rgba(30,30,60,0.85)",
+      borderColor: "rgba(255,255,255,0.3)",
+      borderWidth: 1.5,
+      borderRadius: 8,
+      minWidth: 260
+    },
+    buttonHover: {
+      color: "rgba(80,80,180,0.9)",
+      borderColor: "rgba(255,255,255,0.7)"
+    },
+    text: {
+      fontSize: 18,
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      color: "#fff"
+    },
+    textHover: {
+      color: "#ffffaa"
+      // 기본 호버 텍스트 색상 (약간 노란빛)
+    }
   };
   var choiceModule = define2({
-    fontSize: void 0,
-    fontFamily: void 0,
-    color: void 0,
-    background: void 0,
-    borderColor: void 0,
-    hoverBackground: void 0,
-    hoverBorderColor: void 0,
-    borderRadius: void 0,
-    minWidth: void 0
+    bg: void 0,
+    button: void 0,
+    buttonHover: void 0,
+    text: void 0,
+    textHover: void 0
   });
   choiceModule.defineView((data, ctx) => {
     const cfg = { ...DEFAULT_CHOICE, ...data };
@@ -308,9 +319,10 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const defaultBgStyle = { ...DEFAULT_CHOICE.bg, ...cfg.bg };
     const bgObj = ctx.world.createRectangle({
       style: {
-        color: "rgba(0,0,0,0.6)",
+        ...defaultBgStyle,
         width: w,
         height: h,
         zIndex: 500,
@@ -339,8 +351,12 @@
       onChoices: (choices, onSelect) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
-        const fSize = cfg.fontSize ?? DEFAULT_CHOICE.fontSize;
-        const mWidth = cfg.minWidth ?? DEFAULT_CHOICE.minWidth;
+        const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button };
+        const defaultHoverStyle = { ...DEFAULT_CHOICE.buttonHover, ...cfg.buttonHover };
+        const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text };
+        const defaultTextHoverStyle = { ...DEFAULT_CHOICE.textHover, ...cfg.textHover };
+        const fSize = defaultTextStyle.fontSize ?? 18;
+        const mWidth = defaultBtnStyle.minWidth ?? 260;
         const gap = 12;
         const paddingY = 12;
         const btnH = fSize * 1.5 + paddingY * 2;
@@ -351,37 +367,56 @@
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
           const btnW = Math.max(mWidth, estimatedTextW + 64);
+          const btnStyle = {
+            ...defaultBtnStyle,
+            width: btnW,
+            height: btnH,
+            zIndex: defaultBtnStyle.zIndex ?? 501,
+            pointerEvents: true,
+            opacity: defaultBtnStyle.opacity ?? 1
+          };
           const btnObj = ctx.world.createRectangle({
-            style: {
-              color: cfg.background ?? DEFAULT_CHOICE.background,
-              borderColor: cfg.borderColor ?? DEFAULT_CHOICE.borderColor,
-              borderWidth: 1.5,
-              borderRadius: cfg.borderRadius ?? DEFAULT_CHOICE.borderRadius,
-              width: btnW,
-              height: btnH,
-              zIndex: 501,
-              pointerEvents: true,
-              opacity: 1
-            },
+            style: btnStyle,
             transform: { position: toLocal(w / 2, cy) }
           });
+          const textStyle = {
+            ...defaultTextStyle,
+            textAlign: defaultTextStyle.textAlign ?? "center",
+            zIndex: defaultTextStyle.zIndex ?? 502,
+            pointerEvents: false
+          };
           const txtObj = ctx.world.createText({
             attribute: { text: textStr },
-            style: {
-              fontSize: fSize,
-              fontFamily: cfg.fontFamily ?? DEFAULT_CHOICE.fontFamily,
-              color: cfg.color ?? DEFAULT_CHOICE.color,
-              textAlign: "center",
-              zIndex: 502,
-              pointerEvents: false
-            },
+            style: textStyle,
             transform: { position: { x: 0, y: 0, z: 0 } }
           });
+          const normalStyleProps = {
+            color: btnStyle.color,
+            borderColor: btnStyle.borderColor
+          };
+          const normalTextProps = {
+            color: textStyle.color,
+            textShadowBlur: textStyle.textShadowBlur,
+            textShadowColor: textStyle.textShadowColor,
+            textShadowOffsetX: textStyle.textShadowOffsetX,
+            textShadowOffsetY: textStyle.textShadowOffsetY
+          };
+          const hoverBtnStyle = {
+            color: defaultHoverStyle.color,
+            borderColor: defaultHoverStyle.borderColor,
+            ...defaultHoverStyle
+          };
+          const hoverTxtStyle = {
+            color: defaultTextHoverStyle.color,
+            ...defaultTextHoverStyle
+          };
           btnObj.on("mouseover", () => {
-            btnObj.animate({ style: { color: cfg.hoverBackground, borderColor: cfg.hoverBorderColor } }, 150);
+            btnObj.animate({ style: hoverBtnStyle }, 150);
+            txtObj.animate({ style: hoverTxtStyle }, 150);
           });
           btnObj.on("mouseout", () => {
-            btnObj.animate({ style: { color: cfg.background, borderColor: cfg.borderColor } }, 150);
+            btnObj.animate({ style: normalStyleProps }, 150);
+            txtObj.animate({ style: normalTextProps }, 150);
           });
           btnObj.on("click", () => {
             onSelect(i);
@@ -15567,12 +15602,22 @@ ${addLineNumbers(fragment)}`);
       }
     },
     "choice": {
-      background: "rgba(20,20,50,0.90)",
-      borderColor: "rgba(255,255,255,0.25)",
-      hoverBackground: "rgba(80,60,180,0.92)",
-      hoverBorderColor: "rgba(200,180,255,0.8)",
-      borderRadius: 10,
-      minWidth: 280
+      button: {
+        color: "rgba(20,20,50,0.90)",
+        borderColor: "rgba(255,255,255,0.25)",
+        borderRadius: 10,
+        minWidth: 280
+      },
+      buttonHover: {
+        color: "rgba(80,60,180,0.92)",
+        borderColor: "rgba(200,180,255,0.8)"
+      },
+      textHover: {
+        color: "#fff0b3",
+        // 노란빛 호버 텍스트 예시
+        textShadowBlur: 4,
+        textShadowColor: "rgba(255,255,255,0.8)"
+      }
     }
   });
 
