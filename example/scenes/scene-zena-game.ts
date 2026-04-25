@@ -12,10 +12,10 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-food',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
-  { type: 'background', name: 'bg-library', duration: 0, skip: true },
-  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0, skip: true },
-  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000, skip: true },
+  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 0 },
+  { type: 'background', name: 'bg-library', duration: 0 },
+  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
+  { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 1000 },
 
   {
     type: 'dialogue',

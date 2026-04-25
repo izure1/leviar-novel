@@ -8,9 +8,9 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-bug',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
-  { type: 'background', name: 'bg-park', duration: 0, skip: true },
-  { type: 'mood', mood: 'day', intensity: 1, duration: 0, skip: true },
+  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
+  { type: 'background', name: 'bg-park', duration: 0 },
+  { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
   {

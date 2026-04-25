@@ -15,6 +15,7 @@ export default defineScene({
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
+  { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 25 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
   {
@@ -33,7 +34,7 @@ export default defineScene({
     type: 'dialogue',
     text: '그곳에는 마치 세상 모든 짐을 짊어진 듯한 표정의 소녀가 있었다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: '1/10', focus: 'face', duration: 800 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -231,7 +232,7 @@ export default defineScene({
     type: 'dialogue',
     text: '그리고 가방에서 몬스터 에너지 드링크를 꺼내 원샷을 때렸다.'
   },
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 2000 },
+  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 5000 },
   {
     type: 'dialogue',
     text: '이것이 나와 제나의 끔찍한 첫 만남이었다.'
