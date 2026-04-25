@@ -264,33 +264,31 @@ dialogueModule.defineView((data, ctx) => {
   }
 })
 
-dialogueModule.defineCommand((cmd, ctx, data) => {
+dialogueModule.defineCommand(function* (cmd, ctx, data) {
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
-  const index = ctx.scene.getTextSubIndex()
 
   const ui = ctx.ui.get('dialogue') as any
 
-  // 타이핑 중 클릭: 즉시 완료 후 대기 (다음 클릭에서 다음 줄)
-  if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
-    ui.completeTyping()
-    return false
+  for (let index = 0; index < lines.length; index++) {
+    data.speed = cmd.speed
+    data.speakerKey = cmd.speaker as string | undefined
+    data.subIndex = index
+    data.lines = [...lines]
+
+    ctx.scene.setTextSubIndex(index + 1)
+
+    // 타이핑 완료 또는 사용자 입력 대기
+    yield false
+
+    // 타이핑 중 클릭 시 즉시 완료 후 다시 대기
+    if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
+      ui.completeTyping()
+      yield false
+    }
   }
 
-  // 모든 줄 출력 완료 → 다음 커맨드로
-  if (index >= lines.length) {
-    return true
-  }
-
-  // 현재 줄 출력
-  data.speed = cmd.speed
-  data.speakerKey = cmd.speaker as string | undefined
-  data.subIndex = index
-  data.lines = [...lines]
-
-  ctx.scene.setTextSubIndex(index + 1)
-
-  return false
+  return true
 })
 
 export default dialogueModule

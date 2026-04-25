@@ -53,13 +53,21 @@
         _moduleKey = key;
       },
       defineCommand(handler) {
-        _handlerFn = (rawParams, ctx) => {
+        _handlerFn = function* (rawParams, ctx) {
           const resolved = resolveParams(rawParams, ctx);
-          const result = handler(resolved, ctx, data);
+          const gen = handler(resolved, ctx, data);
+          let res = gen.next();
+          while (!res.done) {
+            if (_moduleKey) {
+              ctx.state.set(_moduleKey, { ..._raw });
+            }
+            yield res.value;
+            res = gen.next();
+          }
           if (_moduleKey) {
             ctx.state.set(_moduleKey, { ..._raw });
           }
-          return result;
+          return res.value;
         };
         return module;
       },
@@ -251,24 +259,23 @@
       }
     };
   });
-  dialogueModule.defineCommand((cmd, ctx, data) => {
+  dialogueModule.defineCommand(function* (cmd, ctx, data) {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
-    const index = ctx.scene.getTextSubIndex();
     const ui = ctx.ui.get("dialogue");
-    if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
-      ui.completeTyping();
-      return false;
+    for (let index = 0; index < lines.length; index++) {
+      data.speed = cmd.speed;
+      data.speakerKey = cmd.speaker;
+      data.subIndex = index;
+      data.lines = [...lines];
+      ctx.scene.setTextSubIndex(index + 1);
+      yield false;
+      if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
+        ui.completeTyping();
+        yield false;
+      }
     }
-    if (index >= lines.length) {
-      return true;
-    }
-    data.speed = cmd.speed;
-    data.speakerKey = cmd.speaker;
-    data.subIndex = index;
-    data.lines = [...lines];
-    ctx.scene.setTextSubIndex(index + 1);
-    return false;
+    return true;
   });
   var dialogue_default = dialogueModule;
 
@@ -391,7 +398,7 @@
       }
     };
   });
-  choiceModule.defineCommand((cmd, ctx) => {
+  choiceModule.defineCommand(function* (cmd, ctx) {
     const entry = ctx.ui.get("choice");
     if (!entry) {
       console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
@@ -524,7 +531,7 @@
       }
     };
   });
-  backgroundModule.defineCommand((cmd, ctx, data) => {
+  backgroundModule.defineCommand(function* (cmd, ctx, data) {
     const bgDefs = ctx.renderer.config.backgrounds;
     const def = bgDefs[cmd.name];
     if (!def) return true;
@@ -678,7 +685,7 @@
   cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  cameraZoomModule.defineCommand((cmd, ctx, data) => {
+  cameraZoomModule.defineCommand(function* (cmd, ctx, data) {
     const resolved = cmd.preset === "inherit" ? data.lastPreset : cmd.preset;
     data.lastPreset = resolved;
     zoomCamera(ctx, resolved, cmd.duration);
@@ -688,7 +695,7 @@
   cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  cameraPanModule.defineCommand((cmd, ctx, data) => {
+  cameraPanModule.defineCommand(function* (cmd, ctx, data) {
     const resolved = cmd.position === "inherit" ? data.lastPreset : cmd.position;
     data.lastPreset = resolved;
     panCamera(ctx, resolved, cmd.duration);
@@ -698,7 +705,7 @@
   cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  cameraEffectModule.defineCommand((cmd, ctx, data) => {
+  cameraEffectModule.defineCommand(function* (cmd, ctx, data) {
     data.lastPreset = cmd.preset;
     cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
     return true;
@@ -809,7 +816,7 @@
       }
     };
   });
-  characterModule.defineCommand((cmd, ctx, data) => {
+  characterModule.defineCommand(function* (cmd, ctx, data) {
     const newChars = { ...data.characters };
     if (cmd.action === "show") {
       const showCmd = cmd;
@@ -860,7 +867,7 @@
     hide: () => {
     }
   }));
-  characterFocusModule.defineCommand((cmd, ctx) => {
+  characterFocusModule.defineCommand(function* (cmd, ctx) {
     const entry = ctx.ui.get("character");
     const charObj = entry?.getObj?.(cmd.name);
     if (!charObj) return true;
@@ -877,7 +884,7 @@
     hide: () => {
     }
   }));
-  characterHighlightModule.defineCommand((_cmd, _ctx) => {
+  characterHighlightModule.defineCommand(function* (_cmd, _ctx) {
     return true;
   });
 
@@ -991,7 +998,7 @@
       }
     };
   });
-  moodModule.defineCommand((cmd, ctx, data) => {
+  moodModule.defineCommand(function* (cmd, ctx, data) {
     const newMoods = { ...data.activeMoods };
     if (cmd.action === "remove") {
       delete newMoods[cmd.mood];
@@ -1150,7 +1157,7 @@
       }
     };
   });
-  effectModule.defineCommand((rawCmd, ctx, data) => {
+  effectModule.defineCommand(function* (rawCmd, ctx, data) {
     const cmd = rawCmd;
     const newEffects = { ...data.activeEffects };
     if (cmd.action === "add") {
@@ -1242,7 +1249,7 @@
       }
     };
   });
-  overlayModule.defineCommand((cmd, ctx, data) => {
+  overlayModule.defineCommand(function* (cmd, ctx, data) {
     const newOverlays = { ...data.overlays };
     if (cmd.action === "add") {
       if (cmd.text) newOverlays[cmd.preset ?? "caption"] = cmd.text;
@@ -1308,7 +1315,7 @@
     hide: () => {
     }
   }));
-  screenFadeModule.defineCommand((cmd, ctx, data) => {
+  screenFadeModule.defineCommand(function* (cmd, ctx, data) {
     const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
     data.lastPreset = resolvedPreset;
     const cfg = FADE_PRESETS[resolvedPreset];
@@ -1327,7 +1334,7 @@
     hide: () => {
     }
   }));
-  screenFlashModule.defineCommand((cmd, ctx, data) => {
+  screenFlashModule.defineCommand(function* (cmd, ctx, data) {
     const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
     data.lastPreset = resolvedPreset;
     const cfg = FLASH_PRESETS[resolvedPreset];
@@ -1353,7 +1360,7 @@
     hide: () => {
     }
   }));
-  screenWipeModule.defineCommand((cmd, ctx, data) => {
+  screenWipeModule.defineCommand(function* (cmd, ctx, data) {
     const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
     data.lastPreset = resolvedPreset;
     const cfg = WIPE_PRESETS[resolvedPreset];
@@ -1384,7 +1391,7 @@
   conditionModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  conditionModule.defineCommand((cmd, ctx) => {
+  conditionModule.defineCommand(function* (cmd, ctx) {
     const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
     if (result) {
       if (cmd.goto) {
@@ -1422,7 +1429,7 @@
   varModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  varModule.defineCommand((cmd, ctx) => {
+  varModule.defineCommand(function* (cmd, ctx) {
     const nameStr = cmd.name;
     const val = cmd.value;
     if (nameStr.startsWith("_")) {
@@ -1439,7 +1446,7 @@
   labelModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  labelModule.defineCommand((_cmd, _ctx) => {
+  labelModule.defineCommand(function* (_cmd, _ctx) {
     return true;
   });
   var label_default = labelModule;
@@ -1449,7 +1456,7 @@
   uiModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  uiModule.defineCommand((cmd, ctx) => {
+  uiModule.defineCommand(function* (cmd, ctx) {
     if (cmd.action === "show") {
       ctx.ui.show(cmd.name, cmd.duration);
     } else {
@@ -1464,18 +1471,18 @@
   controlModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  controlModule.defineCommand((cmd, ctx, data) => {
+  controlModule.defineCommand(function* (cmd, ctx, data) {
     if (cmd.action === "disable" && typeof cmd.duration === "number") {
       const expireAt = data.expireAt > Date.now() ? data.expireAt : Date.now() + cmd.duration;
       if (data.expireAt <= Date.now()) {
         data.expireAt = expireAt;
         ctx.callbacks.disableInput(cmd.duration);
       }
-      if (Date.now() >= expireAt) {
-        data.expireAt = 0;
-        return true;
+      while (Date.now() < expireAt) {
+        yield false;
       }
-      return false;
+      data.expireAt = 0;
+      return true;
     }
     return true;
   });
@@ -14628,6 +14635,8 @@ ${addLineNumbers(fragment)}`);
     labelIndex = /* @__PURE__ */ new Map();
     /** 사용자 입력 대기 중 여부 */
     _waitingInput = false;
+    /** 현재 실행 중인 커맨드 제너레이터 */
+    _activeGenerator = null;
     /** 씬 종료 여부 */
     _ended = false;
     constructor(renderer, callbacks, definition) {
@@ -14757,12 +14766,18 @@ ${addLineNumbers(fragment)}`);
       }
       const step = steps[this.cursor];
       const cmd = step;
-      const result = this._executeCmd(cmd);
+      if (!this._activeGenerator) {
+        this._activeGenerator = this._executeCmd(cmd);
+      }
+      const nextVal = this._activeGenerator.next();
+      const result = nextVal.value;
       if (result === "handled") {
+        this._activeGenerator = null;
         this.callbacks.syncUIState();
         return;
       }
-      if (result === true || cmd.skip) {
+      if (result === true || nextVal.done || cmd.skip) {
+        this._activeGenerator = null;
         this.cursor++;
         this.textSubIndex = 0;
         this._executeNext();
@@ -14772,6 +14787,7 @@ ${addLineNumbers(fragment)}`);
       }
     }
     _jumpToLabel(label) {
+      this._activeGenerator = null;
       const idx = this.labelIndex.get(label);
       if (idx === void 0) {
         console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`);
@@ -14865,7 +14881,9 @@ ${addLineNumbers(fragment)}`);
         return BUILTIN_HANDLERS[type](params, ctx);
       }
       console.warn(`[leviar-novel] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
-      return false;
+      return (function* () {
+        return false;
+      })();
     }
     /** 현재 대기 중인 choice 커맨드를 반환 */
     getCurrentChoice() {
@@ -14936,6 +14954,7 @@ ${addLineNumbers(fragment)}`);
       this.textSubIndex = textSubIndex;
       this.localVars = { ...localVars };
       this._ended = false;
+      this._activeGenerator = null;
       this._redisplayCurrentStep();
     }
     /**
@@ -14947,11 +14966,15 @@ ${addLineNumbers(fragment)}`);
       const step = steps[this.cursor];
       if (!step) return;
       const cmd = step;
-      const result = this._executeCmd(cmd);
+      this._activeGenerator = this._executeCmd(cmd);
+      const nextVal = this._activeGenerator.next();
+      const result = nextVal.value;
       if (result === "handled") {
+        this._activeGenerator = null;
         this._waitingInput = true;
         this.callbacks.syncUIState();
-      } else if (result === true || cmd.skip) {
+      } else if (result === true || nextVal.done || cmd.skip) {
+        this._activeGenerator = null;
         this.cursor++;
         this.textSubIndex = 0;
         this._executeNext();
@@ -15370,7 +15393,9 @@ ${addLineNumbers(fragment)}`);
           loadScene: noop,
           end: noop
         },
-        execute: () => false
+        execute: function* () {
+          return false;
+        }
       };
     }
   };
@@ -15410,7 +15435,7 @@ ${addLineNumbers(fragment)}`);
   testModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  testModule.defineCommand((cmd, ctx) => {
+  testModule.defineCommand(function* (cmd, ctx) {
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
@@ -15418,10 +15443,9 @@ ${addLineNumbers(fragment)}`);
   forModule.defineView(() => ({ show: () => {
   }, hide: () => {
   } }));
-  forModule.defineCommand((cmd, ctx, data) => {
-    for (let i = data.start; i < cmd.end; i += cmd.acc ?? 1) {
-      ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
-      return false;
+  forModule.defineCommand(function* (cmd, ctx, state) {
+    for (let i = cmd.start; i < cmd.end; i += cmd.acc ?? 1) {
+      yield* ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
     }
     return true;
   });

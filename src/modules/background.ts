@@ -141,7 +141,7 @@ backgroundModule.defineView((data, ctx) => {
   }
 })
 
-backgroundModule.defineCommand((cmd, ctx, data) => {
+backgroundModule.defineCommand(function* (cmd, ctx, data) {
   const bgDefs = ctx.renderer.config.backgrounds as BgDefs
   const def = bgDefs[cmd.name as string]
   if (!def) return true

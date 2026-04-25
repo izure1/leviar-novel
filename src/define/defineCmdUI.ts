@@ -42,7 +42,7 @@ export interface NovelModuleMeta<TSchema extends Record<string, any> = any> {
   /** 스키마 기본값 (타입 추론 전용, 런타임 미사용) */
   readonly __schemaDefault: TSchema
   /** defineCommand로 등록된 커맨드 핸들러 (없으면 null) */
-  readonly __handler: ((params: any, ctx: SceneContext) => CommandResult) | null
+  readonly __handler: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null
   /** defineView로 등록된 View 빌더 (없으면 null) */
   readonly __viewBuilder: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null
   /** Novel 엔진이 등록 시 key를 주입합니다 */
@@ -65,7 +65,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
      * - `state`: define() schema 인수로부터 자동 추론된 공유 상태
      */
     defineCommand(
-      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => CommandResult
+      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => Generator<CommandResult, CommandResult, any>
     ): NovelModule<TCmd, TSchema>
     defineView(
       builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
@@ -138,7 +138,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
   })
 
   // ─── 내부 핸들러 참조 ─────────────────────────────────────
-  let _handlerFn: ((params: any, ctx: SceneContext) => CommandResult) | null = null
+  let _handlerFn: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null = null
   let _viewBuilderFn: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null = null
 
   // ─── 모듈 객체 ───────────────────────────────────────────
@@ -154,16 +154,23 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
     },
 
     defineCommand(
-      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => CommandResult
+      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => Generator<CommandResult, CommandResult, any>
     ): NovelModule<TCmd, TSchema> {
-      _handlerFn = (rawParams: any, ctx: SceneContext) => {
+      _handlerFn = function* (rawParams: any, ctx: SceneContext) {
         const resolved = resolveParams(rawParams, ctx)
-        const result = handler(resolved as TCmd, ctx, data)
-        // Auto-save: 핸들러 실행 후 _raw 스냅샷을 state에 저장
+        const gen = handler(resolved as TCmd, ctx, data)
+        let res = gen.next()
+        while (!res.done) {
+          if (_moduleKey) {
+            ctx.state.set(_moduleKey, { ..._raw })
+          }
+          yield res.value
+          res = gen.next()
+        }
         if (_moduleKey) {
           ctx.state.set(_moduleKey, { ..._raw })
         }
-        return result
+        return res.value
       }
       return module
     },

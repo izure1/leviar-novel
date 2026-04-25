@@ -97,14 +97,14 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    * })
    * ```
    */
-  execute: (cmd: DialogueEntry<any, any, any> | { type: string; [key: string]: any }) => CommandResult
+  execute: (cmd: DialogueEntry<any, any, any> | { type: string; [key: string]: any }) => Generator<CommandResult, CommandResult, any>
 }
 
 /**
- * 커맨드 핸들러의 실행 결과 반환값
+ * 커맨드 핸들러의 실행 결과 반환값 (제너레이터가 yield 또는 return 하는 값)
  * - `true`: 커맨드 즉시 완료, 대기 없이 다음 스텝 자동 진행
  * - `false` | `void`: 커맨드 실행 후 멈춤, 사용자 입력(클릭/엔터 등) 대기.
- *   입력 시 해당 커맨드가 다시 실행됩니다.
+ *   입력 시 제너레이터의 next()가 호출됩니다.
  * - `'handled'`: 씬 이동 등으로 인해 엔진의 기본 실행 루프 즉시 중단
  */
 export type CommandResult = boolean | 'handled' | void

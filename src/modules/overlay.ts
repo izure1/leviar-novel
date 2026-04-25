@@ -113,7 +113,7 @@ overlayModule.defineView((data, ctx) => {
   }
 })
 
-overlayModule.defineCommand((cmd, ctx, data) => {
+overlayModule.defineCommand(function* (cmd, ctx, data) {
   const newOverlays = { ...data.overlays }
 
   if (cmd.action === 'add') {

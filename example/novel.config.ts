@@ -5,7 +5,7 @@ import zena from './characters/zena'
 
 const testModule = define<{ message: string }>()
 testModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
-testModule.defineCommand((cmd, ctx) => {
+testModule.defineCommand(function* (cmd, ctx) {
   console.log('[test-cmd]', cmd.message, ctx.globalVars)
   return true
 })
@@ -20,10 +20,9 @@ const forModule = define<{
   acc: number
 }>({ start: 0, end: 0, acc: 1 })
 forModule.defineView(() => ({ show: () => { }, hide: () => { } }))
-forModule.defineCommand((cmd, ctx, data) => {
-  for (let i = data.start; i < cmd.end; i += (cmd.acc ?? 1)) {
-    ctx.execute({ type: 'dialogue', text: () => `dialog ${i}` })
-    return false
+forModule.defineCommand(function* (cmd, ctx, state) {
+  for (let i = cmd.start; i < cmd.end; i += (cmd.acc ?? 1)) {
+    yield* ctx.execute({ type: 'dialogue', text: () => `dialog ${i}` })
   }
   return true
 })

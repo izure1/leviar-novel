@@ -24,7 +24,7 @@ const varModule = define<VarCmd<any, any>>({})
 
 varModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-varModule.defineCommand((cmd, ctx) => {
+varModule.defineCommand(function* (cmd, ctx) {
   const nameStr = cmd.name as string
   const val = cmd.value
 

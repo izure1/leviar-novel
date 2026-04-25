@@ -199,7 +199,7 @@ const cameraZoomModule = define<CameraZoomCmd, CameraZoomSchema>({ lastPreset: '
 
 cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-cameraZoomModule.defineCommand((cmd, ctx, data) => {
+cameraZoomModule.defineCommand(function* (cmd, ctx, data) {
   const resolved = cmd.preset === 'inherit' ? data.lastPreset : cmd.preset
   data.lastPreset = resolved
   zoomCamera(ctx, resolved as ZoomPreset, cmd.duration)
@@ -216,7 +216,7 @@ const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ lastPreset: 'cen
 
 cameraPanModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-cameraPanModule.defineCommand((cmd, ctx, data) => {
+cameraPanModule.defineCommand(function* (cmd, ctx, data) {
   const resolved = cmd.position === 'inherit' ? data.lastPreset : cmd.position
   data.lastPreset = resolved
   panCamera(ctx, resolved as PanPreset, cmd.duration)
@@ -233,7 +233,7 @@ const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({ lastPre
 
 cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-cameraEffectModule.defineCommand((cmd, ctx, data) => {
+cameraEffectModule.defineCommand(function* (cmd, ctx, data) {
   data.lastPreset = cmd.preset
   cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat)
   return true

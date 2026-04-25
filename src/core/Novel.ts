@@ -457,7 +457,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         loadScene: noop as any,
         end: noop,
       },
-      execute: () => false,
+      execute: function* () { return false },
     }
   }
 }

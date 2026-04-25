@@ -88,7 +88,7 @@ screenFadeModule.defineView((_data, _ctx) => ({
   hide: () => {},
 }))
 
-screenFadeModule.defineCommand((cmd, ctx, data) => {
+screenFadeModule.defineCommand(function* (cmd, ctx, data) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
     ? data.lastPreset
     : cmd.preset
@@ -120,7 +120,7 @@ screenFlashModule.defineView((_data, _ctx) => ({
   hide: () => {},
 }))
 
-screenFlashModule.defineCommand((cmd, ctx, data) => {
+screenFlashModule.defineCommand(function* (cmd, ctx, data) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
     ? data.lastPreset
     : cmd.preset
@@ -161,7 +161,7 @@ screenWipeModule.defineView((_data, _ctx) => ({
   hide: () => {},
 }))
 
-screenWipeModule.defineCommand((cmd, ctx, data) => {
+screenWipeModule.defineCommand(function* (cmd, ctx, data) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
     ? data.lastPreset
     : cmd.preset

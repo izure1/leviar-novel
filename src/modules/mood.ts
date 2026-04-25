@@ -160,7 +160,7 @@ moodModule.defineView((data, ctx) => {
   }
 })
 
-moodModule.defineCommand((cmd, ctx, data) => {
+moodModule.defineCommand(function* (cmd, ctx, data) {
   const newMoods = { ...data.activeMoods }
 
   if (cmd.action === 'remove') {

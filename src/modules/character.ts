@@ -179,7 +179,7 @@ characterModule.defineView((data, ctx) => {
   }
 })
 
-characterModule.defineCommand((cmd, ctx, data) => {
+characterModule.defineCommand(function* (cmd, ctx, data) {
   const newChars = { ...data.characters }
 
   if (cmd.action === 'show') {
@@ -258,7 +258,7 @@ characterFocusModule.defineView((_data, _ctx) => ({
   hide: () => {},
 }))
 
-characterFocusModule.defineCommand((cmd, ctx) => {
+characterFocusModule.defineCommand(function* (cmd, ctx) {
   const entry = ctx.ui.get('character') as any
   const charObj = entry?.getObj?.(cmd.name)
   if (!charObj) return true
@@ -284,7 +284,7 @@ characterHighlightModule.defineView((_data, _ctx) => ({
   hide: () => {},
 }))
 
-characterHighlightModule.defineCommand((_cmd, _ctx) => {
+characterHighlightModule.defineCommand(function* (_cmd, _ctx) {
   // 구현 미완, skip
   return true
 })

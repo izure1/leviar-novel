@@ -22,7 +22,7 @@ import { setBackground } from '../modules/background'
 import type { NovelModule } from '../define/defineCmdUI'
 
 // 내장 모듈 핸들러 테이블
-const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => CommandResult> = {
+const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
   'dialogue':             (p, c) => dialogueModule.__handler!(p, c),
   'choice':               (p, c) => choiceModule.__handler!(p, c),
   'condition':            (p, c) => conditionModule.__handler!(p, c),
@@ -101,6 +101,9 @@ export class DialogueScene {
 
   /** 사용자 입력 대기 중 여부 */
   private _waitingInput: boolean = false
+
+  /** 현재 실행 중인 커맨드 제너레이터 */
+  private _activeGenerator: Generator<CommandResult, CommandResult, any> | null = null
 
   /** 씬 종료 여부 */
   private _ended: boolean = false
@@ -229,7 +232,7 @@ export class DialogueScene {
   advance(): void {
     if (!this._waitingInput || this._ended) return
 
-    // false / void 반환 cmd: cursor 유지 → _executeNext()가 동일 cmd 재실행
+    // false / void 반환 시 _waitingInput이 풀리며 동일 제너레이터의 next()를 호출
     this._waitingInput = false
     this._executeNext()
   }
@@ -247,19 +250,26 @@ export class DialogueScene {
     const step = steps[this.cursor]
     const cmd = step as DialogueEntry<any, any, any>
 
-    const result = this._executeCmd(cmd)
+    if (!this._activeGenerator) {
+      this._activeGenerator = this._executeCmd(cmd)
+    }
+
+    const nextVal = this._activeGenerator.next()
+    const result = nextVal.value
 
     if (result === 'handled') {
+      this._activeGenerator = null
       this.callbacks.syncUIState()
       return
     }
 
-    if (result === true || cmd.skip) {
+    if (result === true || nextVal.done || cmd.skip) {
+      this._activeGenerator = null
       this.cursor++
       this.textSubIndex = 0
       this._executeNext()
     } else {
-      // false / void: 입력 대기. advance() 시 cursor 유지 → _executeNext() 재호출 → cmd 재실행
+      // false / void: 입력 대기. advance() 시 _executeNext() 재호출 -> _activeGenerator.next() 진행
       this._waitingInput = true
       this.callbacks.syncUIState()
     }
@@ -267,6 +277,7 @@ export class DialogueScene {
 
 
   private _jumpToLabel(label: string): void {
+    this._activeGenerator = null
     const idx = this.labelIndex.get(label)
     if (idx === undefined) {
       console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`)
@@ -291,7 +302,7 @@ export class DialogueScene {
   }
 
   /** 단일 커맨드를 실행 */
-  private _executeCmd(originalCmd: DialogueEntry<any, any, any>): CommandResult {
+  private _executeCmd(originalCmd: DialogueEntry<any, any, any>): Generator<CommandResult, CommandResult, any> {
     const r = this.renderer
     let cmd = originalCmd
 
@@ -364,7 +375,7 @@ export class DialogueScene {
     }
 
     console.warn(`[leviar-novel] 알 수 없는 커맨드 타입:`, type)
-    return false
+    return (function* () { return false })()
   }
 
   /** 현재 대기 중인 choice 커맨드를 반환 */
@@ -441,6 +452,7 @@ export class DialogueScene {
     this.textSubIndex = textSubIndex
     this.localVars = { ...localVars }
     this._ended = false
+    this._activeGenerator = null
     // cursor 위치의 대화/선택지를 재표시
     this._redisplayCurrentStep()
   }
@@ -457,12 +469,16 @@ export class DialogueScene {
     const cmd = step as DialogueEntry<any, any, any>
 
     // 재표시 시 커맨드를 다시 실행하여 상태(예: choice 버튼 렌더링 등)를 복원합니다.
-    const result = this._executeCmd(cmd)
+    this._activeGenerator = this._executeCmd(cmd)
+    const nextVal = this._activeGenerator.next()
+    const result = nextVal.value
 
     if (result === 'handled') {
+      this._activeGenerator = null
       this._waitingInput = true
       this.callbacks.syncUIState()
-    } else if (result === true || cmd.skip) {
+    } else if (result === true || nextVal.done || cmd.skip) {
+      this._activeGenerator = null
       this.cursor++
       this.textSubIndex = 0
       this._executeNext()

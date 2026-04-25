@@ -190,7 +190,7 @@ choiceModule.defineView((data, ctx) => {
   }
 })
 
-choiceModule.defineCommand((cmd, ctx) => {
+choiceModule.defineCommand(function* (cmd, ctx) {
   const entry = ctx.ui.get('choice')
 
   if (!entry) {
