@@ -59,9 +59,6 @@ async function main() {
 
   const novel = new Novel(config, {
     canvas,
-    width: 800,
-    height: 450,
-    depth: 500,
     scenes: {
       'scene-zena': sceneZena,
       'scene-zena-game': sceneZenaGame,

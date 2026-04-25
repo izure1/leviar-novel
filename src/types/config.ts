@@ -157,6 +157,21 @@ export interface NovelConfig<
   TAssets extends Record<string, string> = Record<string, string>,
   TModules extends Record<string, NovelModule<any>> = Record<string, NovelModule<any>>,
 > {
+  /** 
+   * 씬의 논리적 렌더링 너비(px 단위)입니다. 
+   * 미지정 시 캔버스의 실제 크기(canvas.width)를 사용합니다.
+   */
+  width?: number
+  /** 
+   * 씬의 논리적 렌더링 높이(px 단위)입니다. 
+   * 미지정 시 캔버스의 실제 크기(canvas.height)를 사용합니다.
+   */
+  height?: number
+  /** 
+   * 씬의 Z-depth 최댓값(px 단위)입니다. 
+   * 카메라와 오브젝트 간의 원근감 거리를 결정하며, 기본값은 500입니다.
+   */
+  depth?: number
   /** 게임의 전역 변수 초기값 목록입니다. */
   vars: TVars
   /** 게임에 포함된 모든 씬(Scene) 이름 목록입니다. */
@@ -216,21 +231,6 @@ export type { NovelModule, NovelModuleMeta } from '../define/defineCmdUI'
 export interface NovelOption {
   /** 렌더링에 사용할 대상 캔버스(Canvas) HTML 엘리먼트입니다. */
   canvas: HTMLCanvasElement
-  /** 
-   * 씬의 논리적 렌더링 너비(px 단위)입니다. 
-   * 미지정 시 캔버스의 실제 크기(canvas.width)를 사용합니다.
-   */
-  width?: number
-  /** 
-   * 씬의 논리적 렌더링 높이(px 단위)입니다. 
-   * 미지정 시 캔버스의 실제 크기(canvas.height)를 사용합니다.
-   */
-  height?: number
-  /** 
-   * 씬의 Z-depth 최댓값(px 단위)입니다. 
-   * 카메라와 오브젝트 간의 원근감 거리를 결정하며, 기본값은 500입니다.
-   */
-  depth?: number
 }
 
 // =============================================================

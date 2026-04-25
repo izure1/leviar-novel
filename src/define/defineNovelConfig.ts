@@ -80,6 +80,9 @@ export function defineNovelConfig<
   TModules extends Record<string, NovelModule<any>> = Record<never, never>,
 >(
   config: {
+    width?: number
+    height?: number
+    depth?: number
     vars: TVars
     scenes: TScenes
     characters: TCharacters

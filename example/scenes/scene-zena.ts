@@ -15,6 +15,7 @@ export default defineScene({
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'bg-floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
+  { type: 'effect', action: 'add', effect: 'snow', src: 'snow', rate: 50 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
   {
@@ -51,6 +52,7 @@ export default defineScene({
     type: 'dialogue',
     text: '내가 힐끔 쳐다보자, 살벌한 눈빛과 딱 마주쳤다.'
   },
+  { type: 'camera-zoom', preset: 'close-up' },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -69,6 +71,9 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'zena',
     text: '자비 좀 베풀어줘.'
+  },
+  {
+    type: 'camera-zoom', preset: 'reset'
   },
 
   {

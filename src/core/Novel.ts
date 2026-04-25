@@ -89,9 +89,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const canvas = option.canvas
     this._option = {
       canvas,
-      width:  option.width  ?? canvas.width,
-      height: option.height ?? canvas.height,
-      depth:  option.depth  ?? 500,
+      width:  config.width  ?? canvas.width,
+      height: config.height ?? canvas.height,
+      depth:  config.depth  ?? 500,
     }
 
     this._world = new World({ canvas })

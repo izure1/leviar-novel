@@ -15120,9 +15120,9 @@ ${addLineNumbers(fragment)}`);
       const canvas = option.canvas;
       this._option = {
         canvas,
-        width: option.width ?? canvas.width,
-        height: option.height ?? canvas.height,
-        depth: option.depth ?? 500
+        width: config.width ?? canvas.width,
+        height: config.height ?? canvas.height,
+        depth: config.depth ?? 500
       };
       this._world = new World({ canvas });
       this._renderer = new Renderer3(this._world, config, {
@@ -15487,6 +15487,9 @@ ${addLineNumbers(fragment)}`);
     return true;
   });
   var novel_config_default = defineNovelConfig({
+    width: 800,
+    height: 450,
+    depth: 500,
     vars: {
       likeability: 0,
       metHeroine: false,
@@ -15586,6 +15589,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "bg-floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
+    { type: "effect", action: "add", effect: "snow", src: "snow", rate: 50 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
       type: "dialogue",
@@ -15621,6 +15625,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB0B4\uAC00 \uD790\uB054 \uCCD0\uB2E4\uBCF4\uC790, \uC0B4\uBC8C\uD55C \uB208\uBE5B\uACFC \uB531 \uB9C8\uC8FC\uCCE4\uB2E4."
     },
+    { type: "camera-zoom", preset: "close-up" },
     {
       type: "dialogue",
       speaker: "zena",
@@ -15639,6 +15644,10 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "zena",
       text: "\uC790\uBE44 \uC880 \uBCA0\uD480\uC5B4\uC918."
+    },
+    {
+      type: "camera-zoom",
+      preset: "reset"
     },
     {
       type: "choice",
@@ -16905,9 +16914,6 @@ ${addLineNumbers(fragment)}`);
     const canvas = document.getElementById("canvas");
     const novel = new Novel(novel_config_default, {
       canvas,
-      width: 800,
-      height: 450,
-      depth: 500,
       scenes: {
         "scene-zena": scene_zena_default,
         "scene-zena-game": scene_zena_game_default,
