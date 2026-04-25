@@ -49,6 +49,8 @@ const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMo
 export interface MoodSchema {
   /** mood → intensity 맵 */
   activeMoods: Record<string, number>
+  /** mood → flicker 맵 */
+  flickers: Record<string, FlickerPreset>
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -58,6 +60,7 @@ export interface MoodSchema {
  */
 const moodModule = define<MoodCmd, MoodSchema>({
   activeMoods: {},
+  flickers: {},
 })
 
 moodModule.defineView((data, ctx) => {
@@ -133,6 +136,9 @@ moodModule.defineView((data, ctx) => {
   // 복원: 저장된 무드들 즉시 렌더
   for (const [mood, intensity] of Object.entries(data.activeMoods)) {
     _addMoodObj(mood as MoodType, intensity, 800, true)
+    if (data.flickers?.[mood]) {
+      _setFlicker(ctx, _moodObjs[mood], mood, intensity, data.flickers[mood])
+    }
   }
 
   return {
@@ -155,6 +161,14 @@ moodModule.defineView((data, ctx) => {
       // 추가/변경된 무드
       for (const [mood, intensity] of Object.entries(d.activeMoods)) {
         _addMoodObj(mood as MoodType, intensity, 800)
+        const preset = d.flickers?.[mood]
+        const obj = _moodObjs[mood]
+        if (preset && obj) {
+          const currentState = ctx.renderer.state.get('_flickerState')
+          if (currentState?.mood !== mood || currentState?.preset !== preset) {
+            _setFlicker(ctx, obj, mood, intensity, preset)
+          }
+        }
       }
     },
   }
@@ -162,31 +176,30 @@ moodModule.defineView((data, ctx) => {
 
 moodModule.defineCommand(function* (cmd, ctx, data) {
   const newMoods = { ...data.activeMoods }
+  const newFlickers = { ...(data.flickers || {}) }
 
   if (cmd.action === 'remove') {
     delete newMoods[cmd.mood]
+    delete newFlickers[cmd.mood]
   } else {
     const addCmd = cmd as Extract<MoodCmd, { action?: 'add' }>
     if (addCmd.mood === 'none') {
       // 전체 제거
       for (const k of Object.keys(newMoods)) delete newMoods[k]
+      for (const k of Object.keys(newFlickers)) delete newFlickers[k]
     } else {
       const preset = MOOD_PRESETS[addCmd.mood]
       newMoods[addCmd.mood] = addCmd.intensity ?? preset?.defaultIntensity ?? 1
-    }
-
-    // flicker 처리
-    if (addCmd.flicker) {
-      // flicker는 view에 직접 접근
-      const entry = ctx.ui.get('mood') as any
-      const obj = entry?.getObj?.(addCmd.mood)
-      if (obj) {
-        _setFlicker(ctx, obj, addCmd.mood, data.activeMoods[addCmd.mood] ?? 1, addCmd.flicker)
+      if (addCmd.flicker) {
+        newFlickers[addCmd.mood] = addCmd.flicker
+      } else {
+        delete newFlickers[addCmd.mood]
       }
     }
   }
 
   data.activeMoods = newMoods
+  data.flickers = newFlickers
   return true
 })
 
@@ -198,12 +211,17 @@ function _setFlicker(ctx: any, target: any, mood: string, baseOpacity: number, f
     strobe: { interval: 60, range: [0.0, 1.0] },
   }
   const cfg = configs[flickerPreset]
+  const loopToken = {}
+  target._flickerToken = loopToken
+
   ctx.renderer.state.set('_flickerObj', target)
   ctx.renderer.state.set('_flickerState', { mood, preset: flickerPreset })
 
   const step = () => {
-    if (ctx.renderer.state.get('_flickerObj') !== target) {
-      ctx.renderer.animate(target, { style: { opacity: baseOpacity } }, 300, 'easeInOutQuad')
+    if (ctx.renderer.state.get('_flickerObj') !== target || target._flickerToken !== loopToken) {
+      if (ctx.renderer.state.get('_flickerObj') !== target) {
+        ctx.renderer.animate(target, { style: { opacity: target._flickerBaseOpacity } }, 300, 'easeInOutQuad')
+      }
       return
     }
     const [min, max] = cfg.range

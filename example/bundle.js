@@ -990,7 +990,8 @@
     warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
   };
   var moodModule = define2({
-    activeMoods: {}
+    activeMoods: {},
+    flickers: {}
   });
   moodModule.defineView((data, ctx) => {
     const _moodObjs = {};
@@ -1056,6 +1057,9 @@
     };
     for (const [mood, intensity] of Object.entries(data.activeMoods)) {
       _addMoodObj(mood, intensity, 800, true);
+      if (data.flickers?.[mood]) {
+        _setFlicker(ctx, _moodObjs[mood], mood, intensity, data.flickers[mood]);
+      }
     }
     return {
       show: () => {
@@ -1076,31 +1080,41 @@
         }
         for (const [mood, intensity] of Object.entries(d.activeMoods)) {
           _addMoodObj(mood, intensity, 800);
+          const preset = d.flickers?.[mood];
+          const obj = _moodObjs[mood];
+          if (preset && obj) {
+            const currentState = ctx.renderer.state.get("_flickerState");
+            if (currentState?.mood !== mood || currentState?.preset !== preset) {
+              _setFlicker(ctx, obj, mood, intensity, preset);
+            }
+          }
         }
       }
     };
   });
   moodModule.defineCommand(function* (cmd, ctx, data) {
     const newMoods = { ...data.activeMoods };
+    const newFlickers = { ...data.flickers || {} };
     if (cmd.action === "remove") {
       delete newMoods[cmd.mood];
+      delete newFlickers[cmd.mood];
     } else {
       const addCmd = cmd;
       if (addCmd.mood === "none") {
         for (const k of Object.keys(newMoods)) delete newMoods[k];
+        for (const k of Object.keys(newFlickers)) delete newFlickers[k];
       } else {
         const preset = MOOD_PRESETS[addCmd.mood];
         newMoods[addCmd.mood] = addCmd.intensity ?? preset?.defaultIntensity ?? 1;
-      }
-      if (addCmd.flicker) {
-        const entry = ctx.ui.get("mood");
-        const obj = entry?.getObj?.(addCmd.mood);
-        if (obj) {
-          _setFlicker(ctx, obj, addCmd.mood, data.activeMoods[addCmd.mood] ?? 1, addCmd.flicker);
+        if (addCmd.flicker) {
+          newFlickers[addCmd.mood] = addCmd.flicker;
+        } else {
+          delete newFlickers[addCmd.mood];
         }
       }
     }
     data.activeMoods = newMoods;
+    data.flickers = newFlickers;
     return true;
   });
   function _setFlicker(ctx, target, mood, baseOpacity, flickerPreset) {
@@ -1111,11 +1125,15 @@
       strobe: { interval: 60, range: [0, 1] }
     };
     const cfg = configs[flickerPreset];
+    const loopToken = {};
+    target._flickerToken = loopToken;
     ctx.renderer.state.set("_flickerObj", target);
     ctx.renderer.state.set("_flickerState", { mood, preset: flickerPreset });
     const step = () => {
-      if (ctx.renderer.state.get("_flickerObj") !== target) {
-        ctx.renderer.animate(target, { style: { opacity: baseOpacity } }, 300, "easeInOutQuad");
+      if (ctx.renderer.state.get("_flickerObj") !== target || target._flickerToken !== loopToken) {
+        if (ctx.renderer.state.get("_flickerObj") !== target) {
+          ctx.renderer.animate(target, { style: { opacity: target._flickerBaseOpacity } }, 300, "easeInOutQuad");
+        }
         return;
       }
       const [min, max] = cfg.range;
