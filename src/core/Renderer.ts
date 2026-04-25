@@ -42,6 +42,7 @@ export interface CameraState {
   x: number
   y: number
   z: number
+  rotationZ?: number
 }
 
 export interface RendererState {
@@ -98,7 +99,7 @@ export class Renderer {
   private _initCameraSync(): void {
     this.camBaseObj = this.world.createRectangle({
       style: { width: 1, height: 1, opacity: 0.01, pointerEvents: false } as any,
-      transform: { position: { x: 0, y: 0, z: 0 } }
+      transform: { position: { x: 0, y: 0, z: 0 }, rotation: { z: 0 } }
     })
     this.camOffsetObj = this.world.createRectangle({
       style: { width: 1, height: 1, opacity: 0.01, pointerEvents: false } as any,
@@ -112,8 +113,8 @@ export class Renderer {
         this.world.camera.transform.position.x = this.camBaseObj.transform.position.x + this.camOffsetObj.transform.position.x
         this.world.camera.transform.position.y = this.camBaseObj.transform.position.y + this.camOffsetObj.transform.position.y
         this.world.camera.transform.position.z = this.camBaseObj.transform.position.z + this.camOffsetObj.transform.position.z
-        if (this.world.camera.transform.rotation && this.camOffsetObj.transform.rotation) {
-          this.world.camera.transform.rotation.z = this.camOffsetObj.transform.rotation.z
+        if (this.world.camera.transform.rotation && this.camBaseObj.transform.rotation && this.camOffsetObj.transform.rotation) {
+          this.world.camera.transform.rotation.z = this.camBaseObj.transform.rotation.z + this.camOffsetObj.transform.rotation.z
         }
       }
       this._camSyncRafId = requestAnimationFrame(syncLoop)
@@ -226,11 +227,24 @@ export class Renderer {
       return cam?.transform.position[axis] ?? 0
     }
 
+    const getCamRot = () => {
+      if (this.camBaseObj) {
+        const anims = (this.camBaseObj as any).__activeAnims as Map<string, any> | undefined
+        const entry = anims?.get('transform.rotation.z') || anims?.get('transform.rotation')
+        if (entry?.target?.transform?.rotation?.z !== undefined) {
+          return entry.target.transform.rotation.z as number
+        }
+        return this.camBaseObj.transform.rotation?.z ?? 0
+      }
+      return cam?.transform.rotation?.z ?? 0
+    }
+
     return {
       cameraState: {
         x: getCamPos('x'),
         y: getCamPos('y'),
         z: getCamPos('z'),
+        rotationZ: getCamRot(),
       },
       pluginState: Object.fromEntries(
         Array.from(this.state.entries()).filter(([key, value]) => {
@@ -253,6 +267,9 @@ export class Renderer {
         this.camBaseObj.transform.position.x = state.cameraState.x
         this.camBaseObj.transform.position.y = state.cameraState.y
         this.camBaseObj.transform.position.z = state.cameraState.z
+        if (this.camBaseObj.transform.rotation) {
+          this.camBaseObj.transform.rotation.z = state.cameraState.rotationZ ?? 0
+        }
       }
       if (this.camOffsetObj) {
         this.camOffsetObj.transform.position.x = 0
@@ -263,6 +280,9 @@ export class Renderer {
       cam.transform.position.x = state.cameraState.x
       cam.transform.position.y = state.cameraState.y
       cam.transform.position.z = state.cameraState.z
+      if (cam.transform.rotation) {
+        cam.transform.rotation.z = state.cameraState.rotationZ ?? 0
+      }
     }
     this.state = new Map(Object.entries(state.pluginState || {}))
   }
