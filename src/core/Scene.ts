@@ -66,8 +66,8 @@ export interface SceneCallbacks {
   isSkipping(): boolean
   /** 지정된 시간(ms) 동안 사용자의 입력(클릭/엔터 등)을 무시하도록 처리합니다. */
   disableInput(duration: number): void
-  /** CmdState store 참조 (cmdState 네임스페이스용) */
-  getCmdStateStore(): Map<string, any>
+  /** State store 참조 (state 네임스페이스용) */
+  getStateStore(): Map<string, any>
   /** UIRegistry 참조 (ui 네임스페이스용) */
   getUIRegistry(): Map<string, UIRuntimeEntry>
   /** UI 상태 동기화 (입력 모드 갱신 등)를 엔진에 요청합니다. */
@@ -167,7 +167,7 @@ export class DialogueScene {
     const modules = (r.config as any).modules as Record<string, NovelModule<any>> | undefined
     if (!modules) return
 
-    const cmdStateStore = this.callbacks.getCmdStateStore()
+    const stateStore = this.callbacks.getStateStore()
     const uiRegistry = this.callbacks.getUIRegistry()
 
     const ctx: SceneContext = {
@@ -176,9 +176,9 @@ export class DialogueScene {
       localVars: this.localVars,
       renderer: r,
       callbacks: this.callbacks,
-      cmdState: {
-        set: (name, data) => { cmdStateStore.set(name, data) },
-        get: (name) => cmdStateStore.get(name),
+      state: {
+        set: (name, data) => { stateStore.set(name, data) },
+        get: (name) => stateStore.get(name),
       },
       ui: {
         register: (name, entry) => { uiRegistry.set(name, entry) },
@@ -316,7 +316,7 @@ export class DialogueScene {
 
     const { type, skip, ...params } = cmd as any
 
-    const cmdStateStore = this.callbacks.getCmdStateStore()
+    const stateStore = this.callbacks.getStateStore()
     const uiRegistry = this.callbacks.getUIRegistry()
 
     const ctx: SceneContext = {
@@ -325,9 +325,9 @@ export class DialogueScene {
       localVars: this.localVars,
       renderer: r,
       callbacks: this.callbacks,
-      cmdState: {
-        set: (name, data) => { cmdStateStore.set(name, data) },
-        get: (name) => cmdStateStore.get(name),
+      state: {
+        set: (name, data) => { stateStore.set(name, data) },
+        get: (name) => stateStore.get(name),
       },
       ui: {
         register: (name, entry) => { uiRegistry.set(name, entry) },

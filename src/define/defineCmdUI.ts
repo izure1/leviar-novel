@@ -81,7 +81,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
  * MVC 구조의 Novel 모듈을 정의하는 팩토리입니다.
  *
  * - `schema`: 공유 상태 초깃값 (Model)
- * - `.defineCommand(handler)`: 커맨드 핸들러 등록 (Controller). 핸들러 실행 후 자동으로 state를 `ctx.cmdState`에 저장합니다.
+ * - `.defineCommand(handler)`: 커맨드 핸들러 등록 (Controller). 핸들러 실행 후 자동으로 state를 `ctx.state`에 저장합니다.
  * - `.defineView(builder)`: View 빌더 등록. `data` 변경 시 `entry.update(data)`가 자동 호출됩니다 (반응형).
  *
  * 반환된 모듈 객체를 `novel.config`의 `modules`에 key-value로 등록하면
@@ -159,9 +159,9 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
       _handlerFn = (rawParams: any, ctx: SceneContext) => {
         const resolved = resolveParams(rawParams, ctx)
         const result = handler(resolved as TCmd, ctx, data)
-        // Auto-save: 핸들러 실행 후 _raw 스냅샷을 cmdState에 저장
+        // Auto-save: 핸들러 실행 후 _raw 스냅샷을 state에 저장
         if (_moduleKey) {
-          ctx.cmdState.set(_moduleKey, { ..._raw })
+          ctx.state.set(_moduleKey, { ..._raw })
         }
         return result
       }

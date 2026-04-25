@@ -292,11 +292,11 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       captureRenderer: () => renderer.captureState(),
       isSkipping: () => true,
       disableInput: noop as any,
-      getCmdStateStore: () => new Map(),
+      getStateStore: () => new Map(),
       getUIRegistry: () => new Map(),
       syncUIState: noop,
     },
-    cmdState: {
+    state: {
       set: noop as any,
       get: () => undefined,
     },

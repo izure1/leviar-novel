@@ -38,17 +38,17 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
   }
   /**
    * 씬 전환에도 유지되는 cmd 상태 저장소.
-   * 세이브/로드 시 SaveData.cmdStates에 자동 포함됩니다.
+   * 세이브/로드 시 SaveData.states에 자동 포함됩니다.
    *
    * @example
    * ```ts
    * // 저장
-   * ctx.cmdState.set('dialogue', { subIndex: 2, lines: [...] })
+   * ctx.state.set('dialogue', { subIndex: 2, lines: [...] })
    * // 읽기 (로드 후 복원 시에도 사용)
-   * const saved = ctx.cmdState.get('dialogue')
+   * const saved = ctx.state.get('dialogue')
    * ```
    */
-  cmdState: {
+  state: {
     /** 이름으로 직렬화 가능한 데이터를 저장합니다 */
     set(name: string, data: Record<string, any>): void
     /** 이름으로 저장된 데이터를 읽습니다 */

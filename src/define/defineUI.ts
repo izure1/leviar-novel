@@ -27,7 +27,7 @@ export type UIHandler<TStyle> =
  * UI 셋업 커맨드 핸들러를 정의합니다.
  *
  * `defineCmd`와 동일한 패턴으로 사용하되, 씬에서 실행 시 UI 오브젝트를 생성하고
- * UIRegistry에 등록합니다. 스타일 데이터는 CmdState에 저장되어 세이브/로드에
+ * UIRegistry에 등록합니다. 스타일 데이터는 State에 저장되어 세이브/로드에
  * 자동으로 포함됩니다.
  *
  * @param name   UIRegistry 등록 키 (예: 'dialogue', 'choices')
@@ -58,8 +58,8 @@ export function defineUI<TStyle>(
   builder: (style: Partial<TStyle>, ctx: SceneContext) => UIRuntimeEntry
 ): UIHandler<TStyle> {
   const handler: (rawStyle: Partial<TStyle>, ctx: SceneContext) => CommandResult = (rawStyle, ctx) => {
-    // 1. 스타일을 CmdState에 저장 (세이브/로드용)
-    ctx.cmdState.set(`setup-${name}`, rawStyle as Record<string, any>)
+    // 1. 스타일을 State에 저장 (세이브/로드용)
+    ctx.state.set(`setup-${name}`, rawStyle as Record<string, any>)
 
     // 2. 빌더로 UI 생성
     const entry = builder(rawStyle as Partial<TStyle>, ctx)

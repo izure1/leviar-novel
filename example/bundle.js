@@ -57,7 +57,7 @@
           const resolved = resolveParams(rawParams, ctx);
           const result = handler(resolved, ctx, data);
           if (_moduleKey) {
-            ctx.cmdState.set(_moduleKey, { ..._raw });
+            ctx.state.set(_moduleKey, { ..._raw });
           }
           return result;
         };
@@ -1362,7 +1362,7 @@
     const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
     const dx = cfg.x * w * 2;
     const dy = cfg.y * h * 2;
-    const fadeState = ctx.cmdState.get("screen-fade");
+    const fadeState = ctx.state.get("screen-fade");
     const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset;
     const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
     const rect = getTransitionRect(ctx, color);
@@ -14680,7 +14680,7 @@ ${addLineNumbers(fragment)}`);
       const r = this.renderer;
       const modules = r.config.modules;
       if (!modules) return;
-      const cmdStateStore = this.callbacks.getCmdStateStore();
+      const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
       const ctx = {
         world: r.world,
@@ -14688,11 +14688,11 @@ ${addLineNumbers(fragment)}`);
         localVars: this.localVars,
         renderer: r,
         callbacks: this.callbacks,
-        cmdState: {
+        state: {
           set: (name, data) => {
-            cmdStateStore.set(name, data);
+            stateStore.set(name, data);
           },
-          get: (name) => cmdStateStore.get(name)
+          get: (name) => stateStore.get(name)
         },
         ui: {
           register: (name, entry) => {
@@ -14814,7 +14814,7 @@ ${addLineNumbers(fragment)}`);
         }
       }
       const { type, skip, ...params } = cmd;
-      const cmdStateStore = this.callbacks.getCmdStateStore();
+      const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
       const ctx = {
         world: r.world,
@@ -14822,11 +14822,11 @@ ${addLineNumbers(fragment)}`);
         localVars: this.localVars,
         renderer: r,
         callbacks: this.callbacks,
-        cmdState: {
+        state: {
           set: (name, data) => {
-            cmdStateStore.set(name, data);
+            stateStore.set(name, data);
           },
-          get: (name) => cmdStateStore.get(name)
+          get: (name) => stateStore.get(name)
         },
         ui: {
           register: (name, entry) => {
@@ -15040,8 +15040,8 @@ ${addLineNumbers(fragment)}`);
     _world;
     _renderer;
     _scenes = /* @__PURE__ */ new Map();
-    /** CmdState — 씬 전환 후에도 유지, 세이브/로드 대상 */
-    _cmdStateStore = /* @__PURE__ */ new Map();
+    /** State — 씬 전환 후에도 유지, 세이브/로드 대상 */
+    _stateStore = /* @__PURE__ */ new Map();
     /**
      * 모듈 레지스트리 — Novel 생성 시 config.modules에서 자동 수집.
      * key: 모듈 이름, value: NovelModule 객체
@@ -15210,7 +15210,7 @@ ${addLineNumbers(fragment)}`);
         globalVars: { ...this.vars },
         localVars: this._currentScene.getLocalVars(),
         rendererState: this._renderer.captureState(),
-        cmdStates: Object.fromEntries(this._cmdStateStore)
+        states: Object.fromEntries(this._stateStore)
       };
     }
     /**
@@ -15228,9 +15228,9 @@ ${addLineNumbers(fragment)}`);
       this._cleanupChoiceUI();
       this.stopSkip();
       Object.assign(this.vars, data.globalVars);
-      this._cmdStateStore.clear();
-      for (const [k, v] of Object.entries(data.cmdStates ?? {})) {
-        this._cmdStateStore.set(k, v);
+      this._stateStore.clear();
+      for (const [k, v] of Object.entries(data.states ?? {})) {
+        this._stateStore.set(k, v);
       }
       this._uiRegistry.clear();
       this._renderer.clear();
@@ -15239,7 +15239,7 @@ ${addLineNumbers(fragment)}`);
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      const subIndex = data.cmdStates?.["dialogue"]?.subIndex ?? 0;
+      const subIndex = data.states?.["dialogue"]?.subIndex ?? 0;
       scene.restoreState(data.cursor, data.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
@@ -15249,13 +15249,13 @@ ${addLineNumbers(fragment)}`);
     /**
      * 모든 등록된 모듈의 View 빌더를 실행하여 UI를 재생성합니다.
      * loadSave() 호출 후 실행됩니다.
-     * 저장된 cmdState를 각 모듈의 View에 주입하여 상태를 복원합니다.
+     * 저장된 state를 각 모듈의 View에 주입하여 상태를 복원합니다.
      */
     _rebuildModuleViews() {
       const ctx = this._makeRebuildCtx();
       for (const [name, module] of this._modules) {
         if (!module.__viewBuilder) continue;
-        const savedState = this._cmdStateStore.get(name) ?? {};
+        const savedState = this._stateStore.get(name) ?? {};
         const entry = module.__viewBuilder(savedState, ctx);
         this._uiRegistry.set(name, entry);
       }
@@ -15275,7 +15275,7 @@ ${addLineNumbers(fragment)}`);
         disableInput: (duration) => {
           this._inputDisabledUntil = Date.now() + duration;
         },
-        getCmdStateStore: () => this._cmdStateStore,
+        getStateStore: () => this._stateStore,
         getUIRegistry: () => this._uiRegistry,
         syncUIState: () => {
           this._syncUIState();
@@ -15326,7 +15326,7 @@ ${addLineNumbers(fragment)}`);
     _makeRebuildCtx() {
       const noop = () => {
       };
-      const cmdStateStore = this._cmdStateStore;
+      const stateStore = this._stateStore;
       const uiRegistry = this._uiRegistry;
       return {
         world: this._world,
@@ -15340,15 +15340,15 @@ ${addLineNumbers(fragment)}`);
           captureRenderer: () => this._renderer.captureState(),
           isSkipping: () => true,
           disableInput: noop,
-          getCmdStateStore: () => cmdStateStore,
+          getStateStore: () => stateStore,
           getUIRegistry: () => uiRegistry,
           syncUIState: noop
         },
-        cmdState: {
+        state: {
           set: (name, data) => {
-            cmdStateStore.set(name, data);
+            stateStore.set(name, data);
           },
-          get: (name) => cmdStateStore.get(name)
+          get: (name) => stateStore.get(name)
         },
         ui: {
           register: (name, entry) => {
@@ -15419,7 +15419,7 @@ ${addLineNumbers(fragment)}`);
   }, hide: () => {
   } }));
   forModule.defineCommand((cmd, ctx, data) => {
-    for (let i = cmd.start; i < cmd.end; i += cmd.acc ?? 1) {
+    for (let i = data.start; i < cmd.end; i += cmd.acc ?? 1) {
       ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
       return false;
     }

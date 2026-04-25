@@ -44,7 +44,7 @@ export interface SaveData {
    * 'dialogue' → { subIndex, lines, speaker }
    * 'background' → { key, fit } 등
    */
-  cmdStates:     Record<string, any>
+  states:     Record<string, any>
 }
 
 // =============================================================
@@ -61,8 +61,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private readonly _renderer: Renderer
   private readonly _scenes:   Map<string, AnySceneDef> = new Map()
 
-  /** CmdState — 씬 전환 후에도 유지, 세이브/로드 대상 */
-  private readonly _cmdStateStore: Map<string, any> = new Map()
+  /** State — 씬 전환 후에도 유지, 세이브/로드 대상 */
+  private readonly _stateStore: Map<string, any> = new Map()
 
   /**
    * 모듈 레지스트리 — Novel 생성 시 config.modules에서 자동 수집.
@@ -283,7 +283,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       globalVars:    { ...this.vars as object },
       localVars:     this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
-      cmdStates:     Object.fromEntries(this._cmdStateStore),
+      states:     Object.fromEntries(this._stateStore),
     }
   }
 
@@ -306,10 +306,10 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     // 전역 변수 복원
     Object.assign(this.vars as object, data.globalVars)
 
-    // CmdState 복원
-    this._cmdStateStore.clear()
-    for (const [k, v] of Object.entries(data.cmdStates ?? {})) {
-      this._cmdStateStore.set(k, v)
+    // State 복원
+    this._stateStore.clear()
+    for (const [k, v] of Object.entries(data.states ?? {})) {
+      this._stateStore.set(k, v)
     }
 
     // 렌더러 초기화 + 상태 복원
@@ -318,7 +318,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._renderer.restoreState(data.rendererState)
     this._renderer.rebuildFromState()
 
-    // 모듈 View 재생성 (cmdState에서 스키마 읽어 빌더 실행)
+    // 모듈 View 재생성 (state에서 스키마 읽어 빌더 실행)
     this._rebuildModuleViews()
 
     // 새 씬 인스턴스 생성 (start() 호출 없이)
@@ -326,7 +326,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any,any,any,any,any>)
 
     // 지역 변수 + cursor 복원
-    const subIndex = (data.cmdStates?.['dialogue'] as any)?.subIndex ?? 0
+    const subIndex = (data.states?.['dialogue'] as any)?.subIndex ?? 0
     scene.restoreState(data.cursor, data.localVars, subIndex)
 
     this._currentScene    = scene
@@ -338,14 +338,14 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   /**
    * 모든 등록된 모듈의 View 빌더를 실행하여 UI를 재생성합니다.
    * loadSave() 호출 후 실행됩니다.
-   * 저장된 cmdState를 각 모듈의 View에 주입하여 상태를 복원합니다.
+   * 저장된 state를 각 모듈의 View에 주입하여 상태를 복원합니다.
    */
   private _rebuildModuleViews(): void {
     const ctx = this._makeRebuildCtx()
 
     for (const [name, module] of this._modules) {
       if (!module.__viewBuilder) continue
-      const savedState = this._cmdStateStore.get(name) ?? {}
+      const savedState = this._stateStore.get(name) ?? {}
       const entry = module.__viewBuilder(savedState, ctx)
       this._uiRegistry.set(name, entry)
     }
@@ -361,7 +361,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       captureRenderer: ()             => this._renderer.captureState(),
       isSkipping:      ()             => this._isSkipping,
       disableInput:    (duration)     => { this._inputDisabledUntil = Date.now() + duration },
-      getCmdStateStore: ()            => this._cmdStateStore,
+      getStateStore: ()            => this._stateStore,
       getUIRegistry:    ()            => this._uiRegistry,
       syncUIState:      ()            => { this._syncUIState() },
     }
@@ -417,7 +417,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   private _makeRebuildCtx(): SceneContext {
     const noop = () => { /* no-op */ }
-    const cmdStateStore = this._cmdStateStore
+    const stateStore = this._stateStore
     const uiRegistry    = this._uiRegistry
     return {
       world:      this._world,
@@ -431,13 +431,13 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         captureRenderer:  () => this._renderer.captureState(),
         isSkipping:       () => true,
         disableInput:     noop as any,
-        getCmdStateStore: () => cmdStateStore,
+        getStateStore: () => stateStore,
         getUIRegistry:    () => uiRegistry,
         syncUIState:      noop,
       },
-      cmdState: {
-        set: (name, data) => { cmdStateStore.set(name, data) },
-        get: (name)       => cmdStateStore.get(name),
+      state: {
+        set: (name, data) => { stateStore.set(name, data) },
+        get: (name)       => stateStore.get(name),
       },
       ui: {
         register: (name, entry) => { uiRegistry.set(name, entry) },

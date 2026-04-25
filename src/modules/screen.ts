@@ -176,7 +176,7 @@ screenWipeModule.defineCommand((cmd, ctx, data) => {
   const dy = cfg.y * h * 2
 
   // 페이드 색상은 screen-fade 모듈의 state에서 가져옴 (renderer.state 공유)
-  const fadeState = ctx.cmdState.get('screen-fade') as ScreenFadeSchema | undefined
+  const fadeState = ctx.state.get('screen-fade') as ScreenFadeSchema | undefined
   const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset
   const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.color ?? 'rgba(0,0,0,1)'
   const rect = getTransitionRect(ctx, color)
