@@ -15983,6 +15983,22 @@ ${addLineNumbers(fragment)}`);
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
         }
+      },
+      angry: {
+        src: "girl_angry",
+        width: 350,
+        points: {
+          face: { x: 0.5, y: 0.18 },
+          chest: { x: 0.5, y: 0.45 }
+        }
+      },
+      embarrassed: {
+        src: "girl_embarrassed",
+        width: 350,
+        points: {
+          face: { x: 0.5, y: 0.18 },
+          chest: { x: 0.5, y: 0.45 }
+        }
       }
     }
   });
@@ -16044,6 +16060,8 @@ ${addLineNumbers(fragment)}`);
       // 캐릭터
       girl_normal: "./assets/girl_normal.png",
       girl_smile: "./assets/girl_smile.png",
+      girl_embarrassed: "./assets/girl_embarrassed.png",
+      girl_angry: "./assets/girl_angry.png",
       // 파티클
       dust: "./assets/particle_dust.png",
       rain: "./assets/particle_rain.png",
@@ -16155,6 +16173,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uB0B4\uAC00 \uD790\uB054 \uCCD0\uB2E4\uBCF4\uC790, \uC0B4\uBC8C\uD55C \uB208\uBE5B\uACFC \uB531 \uB9C8\uC8FC\uCCE4\uB2E4."
     },
     { type: "camera-zoom", preset: "close-up" },
+    { type: "character", action: "show", name: "zena", image: "angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -16222,6 +16241,7 @@ ${addLineNumbers(fragment)}`);
     // ─── 분기: 버그 질문 ───
     { type: "label", name: "ask-bug" },
     { type: "camera-effect", preset: "shake", duration: 400 },
+    { type: "character", action: "show", name: "zena", image: "angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -16266,6 +16286,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB625\uC774 \uBB34\uC11C\uC6CC\uC11C \uD53C\uD558\uB098. \uB098\uB294 \uC2AC\uADF8\uBA38\uB2C8 \uC790\uB9AC\uC5D0\uC11C \uC77C\uC5B4\uB0AC\uB2E4."
     },
+    { type: "character", action: "show", name: "zena", image: "angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -16641,8 +16662,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       text: "\uADF8\uB9AC\uACE0\uB294 \uACE7\uBC14\uB85C \uD654\uBA74 \uC18D \uC20F\uD3FC \uC601\uC0C1\uC73C\uB85C \uBE68\uB824 \uB4E4\uC5B4\uAC14\uB2E4."
-    },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
+    }
   ]);
 
   // example/scenes/scene-zena-stream.ts
@@ -16675,6 +16695,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC774\uAC70 \uBC29\uC1A1 \uCF1C\uC9C4 \uAC70 \uC544\uB2C8\uC57C?!"
     },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
       text: "\uBC29\uC1A1 \uD504\uB85C\uADF8\uB7A8 \uD654\uBA74\uC5D0 \uBE68\uAC04 \uBD88\uC774 \uB4E4\uC5B4\uC628 \uAC83\uC744 \uD655\uC778\uD558\uC790, \uADF8\uB140\uC758 \uB3D9\uACF5\uC774 \uC9C0\uC9C4\uC744 \uC77C\uC73C\uCF30\uB2E4."
@@ -16798,12 +16819,13 @@ ${addLineNumbers(fragment)}`);
       text: [
         '<style color="rgb(150,150,150)">[ ??? ]</style>',
         '<style color="rgb(150,150,150)">[ \uBC29\uAE08 \uB0A8\uC790 \uC190 \uC544\uB2D8? ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 ]</style>',
         '<style color="rgb(150,150,150)">[ \uC720\uB2C8\uCF58 \uBFD4 \uB2E4 \uBD80\uB7EC\uC9C0\uB294 \uC18C\uB9AC \uB4E4\uB9AC\uB124 ]</style>',
-        '<style color="rgb(150,150,150)">[ \uB098 \uAE4C\uB9E4\uC838,,, ]</style>',
-        '<style color="rgb(150,150,150)">[ \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 ]</style>'
+        '<style color="rgb(150,150,150)">[ \uB098 \uAE4C\uB9E4\uC838,,, ]</style>'
       ],
       speed: 10
     },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
       text: "\uC81C\uB098\uC758 \uC5BC\uAD74\uC774 \uC0AC\uC0C9\uC774 \uB418\uC5C8\uB2E4. \uADF8\uB140\uB294 \uB9C8\uC774\uD06C\uB97C \uD669\uAE09\uD788 \uAC00\uB838\uB2E4."
@@ -16816,7 +16838,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uB098 \uC721\uC218 \uC6B0\uB824\uC11C \uBA39\uACE0\uC0AC\uB294 \uC2EC\uD574 \uBC29\uC1A1\uC774\uB780 \uB9D0\uC774\uC57C!"
+      text: '<style fontSize="14">\uB098 \uC721\uC218 \uC6B0\uB824\uC11C \uBA39\uACE0\uC0AC\uB294 \uC2EC\uD574 \uBC29\uC1A1\uC774\uB780 \uB9D0\uC774\uC57C!</style>'
     },
     {
       type: "dialogue",
@@ -16835,7 +16857,10 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC81C\uAC00 \uBF08\uB300 \uAD75\uC740 \uAC70 \uC544\uC2DC\uC796\uC544\uC694? \uD558\uD558\uD558!"
+      text: [
+        "\uB0A8\uC790 \uC190 \uAC19\uC8E0?",
+        "\uC81C\uAC00 \uBF08\uB300 \uAD75\uC740 \uAC70 \uC544\uC2DC\uC796\uC544\uC694? \uD558\uD558\uD558!"
+      ]
     },
     {
       type: "dialogue",
@@ -16850,8 +16875,8 @@ ${addLineNumbers(fragment)}`);
       speaker: "chat",
       text: [
         '<style color="rgb(150,150,150)">[ \uD615\uB2D8 \uC870\uC9C1\uC73C\uB85C \uB3CC\uC544\uC624\uC2ED\uC1FC ]</style>',
-        '<style color="rgb(150,150,150)">[ \uC5EC\uAE30 \uB0A8\uCEA0\uBC29 \uB9DE\uC2B5\uB2C8\uB2E4 ]</style>',
-        '<style color="rgb(150,150,150)">[ \uB098 \uC6D0 \uCC38 \u314B\u314B \uC81C \uBF08\uB300\uAC00 \uB2E8\uB2E8\uD574\uC84C\uC2B5\uB2C8\uB2E4 \uC774\uAC70\u314B\u314B\u314B ]</style>'
+        '<style color="rgb(150,150,150)">[ \uC804\uC644\uADFC \uC2DC\uBC1C \u314B\u314B\u314B ]</style>',
+        '<style color="rgb(150,150,150)">[ \uC624\uBE60 \uB098 \uC96C\uC9C0\uB410\uC5B4 ]</style>'
       ],
       speed: 10
     },
@@ -16867,7 +16892,11 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uBBFC\uBC29\uC704 \uC548 \uB05D\uB0AC\uB0D0\uB2C8 \uC120 \uB118\uB124 \uC9C4\uC9DC!"
+      text: [
+        "\uBBFC\uBC29\uC704 \uC548 \uB05D\uB0AC\uB0D0\uB2C8 \uC120 \uB118\uB124 \uC9C4\uC9DC!",
+        "\uAC70\uADFC...?",
+        "\uADF8\uAC74 \uB610 \uBB34\uC2A8 \uBBF8\uCE5C \uC18C\uB9AC\uC57C \uADF8\uB7F0 \uAC8C \uC65C \uC788\uC5B4!"
+      ]
     },
     {
       type: "dialogue",
@@ -16934,15 +16963,15 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       speaker: "chat",
       text: [
-        '<style color="rgb(150,150,150)">[ \u314B\u314B\u314B\u314B \uB0A8\uC790 \uBAA9\uC18C\uB9AC \uBB50\uB0D0 ]</style>',
-        '<style color="rgb(150,150,150)">[ \uB3D9\uAC70\uB0A8 \uCC1C\uB2ED\uC740 \uC911\uB300\uC0AC\uD56D\uC774\uC9C0 ]</style>',
-        '<style color="rgb(150,150,150)">[ \uBFD4 \uB2E4 \uAC08\uB824\uC11C \uAC00\uB8E8 \uB428 ]</style>',
+        '<style color="rgb(150,150,150)">[ ???????? ]</style>',
+        '<style color="rgb(150,150,150)">[ \uBC29\uAE08 \uB0A8\uC790 \uBAA9\uC18C\uB9AC \uBB50\uB0D0 ]</style>',
+        '<style color="rgb(150,150,150)">[ \u314B\u314B\u314B\u314B \uB3D9\uAC70\uB0A8 \uCC1C\uB2ED\uC740 \uC911\uB300\uC0AC\uD56D\uC774\uC9C0 ]</style>',
         '<style color="rgb(150,150,150)">[ \uCC44\uD305\uCC3D \uAE4C\uB9E4\uC9C0\uB294 \uAC70 \uBCF4\uC18C ]</style>',
-        '<style color="rgb(150,150,150)">[ \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 \uC7AC\uBBF8\uC5C5\uB5D8 ]</style>'
+        '<style color="rgb(150,150,150)">[ \uBFD4 \uB2E4 \uAC08\uB824\uC11C \uAC00\uB8E8 \uB418\uB294 \uC911 ]</style>'
       ],
       speed: 10
     },
-    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
       text: "\uC81C\uB098\uC758 \uC5BC\uAD74\uC5D0\uC11C \uC601\uC5C5\uC6A9 \uBBF8\uC18C\uAC00 \uC644\uC804\uD788 \uC99D\uBC1C\uD588\uB2E4."
@@ -17029,11 +17058,6 @@ ${addLineNumbers(fragment)}`);
       text: "\uBC29\uAD6C\uC11D\uC5D0\uB9CC \uBC15\uD600\uC788\uB2E4\uAC00\uB294 \uC815\uB9D0\uB85C \uACF0\uD321\uC774\uAC00 \uD53C\uC5B4\uC624\uB97C \uAC83 \uAC19\uC558\uAE30 \uB54C\uBB38\uC774\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: "\uC545!"
-    },
     {
       type: "dialogue",
       text: [
@@ -17161,7 +17185,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "camera-effect", preset: "shake", duration: 500 },
-    { type: "character", action: "show", name: "zena", image: "normal", focus: "face", duration: 300 },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", focus: "face", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -17205,6 +17229,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "run" },
     { type: "camera-effect", preset: "shake", duration: 800 },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     { type: "mood", mood: "horror", action: "add", flicker: "strobe" },
     {
       type: "dialogue",
@@ -17258,7 +17283,6 @@ ${addLineNumbers(fragment)}`);
         '"\uD568\uBD80\uB85C \uAC74\uB4DC\uB9AC\uC9C0 \uC54A\uB294 \uAC8C \uAC1C\uBC1C\uC790\uC758 \uCCA0\uCE59\uC774\uB2E4. \uC123\uBD88\uB9AC \uB5BC\uB824\uB2E4 \uB2E4\uB978 \uB370\uB85C \uD280\uBA74 \uB354 \uD070 \uBC84\uADF8\uAC00 \uC0DD\uACA8."'
       ]
     },
-    { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -17295,95 +17319,97 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB2E4\uC0AC\uB2E4\uB09C\uD588\uB358 \uD558\uB8E8\uAC00 \uB05D\uC744 \uD5A5\uD574 \uAC00\uACE0 \uC788\uB2E4."
     },
-    { type: "character", action: "show", name: "zena", image: "smile", position: "center", duration: 1e3 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 1e3 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC624\uB298 \uD018\uC2A4\uD2B8 \uAC19\uC774 \uB6F0\uC5B4\uC918\uC11C \uACE0\uB9C8\uC6CC."
+      text: "\uC57C, \uC624\uB298 \uC5B4\uADF8\uB85C \uD551\uD401 \uC880 \uCE58\uB354\uB77C."
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uB2E8\uC21C\uD55C \uC678\uCD9C\uC870\uCC28 \uD018\uC2A4\uD2B8\uB77C\uACE0 \uBD80\uB978\uB2E4."
-    },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: "\uC0AC\uC2E4 \uB098 \uD63C\uC790\uC11C\uB294 \uB098\uAC08 \uC5C4\uB450\uB3C4 \uBABB \uB0C8\uAC70\uB4E0."
-    },
-    {
-      type: "dialogue",
-      text: "\uC0B4\uC9DD \uC465\uC2A4\uB7EC\uC6B4 \uB4EF, \uC81C\uB098\uAC00 \uC2DC\uC120\uC744 \uD68C\uD53C\uD558\uBA70 \uBEA8\uC744 \uAE01\uC801\uC600\uB2E4."
-    },
-    { type: "character", action: "show", name: "zena", image: "normal", duration: 500 },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: "...\uADFC\uB370 \uC880 \uC624\uAE00\uAC70\uB9AC\uB124."
+      text: "\uC678\uCD9C\uC744 \uBB34\uC2A8 \uB808\uC774\uB4DC \uB6F4 \uAC83\uCC98\uB7FC \uB9D0\uD55C\uB2E4."
     },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC544\uAE4C \uD55C \uB9D0\uC740 \uB864\uBC31\uD560\uAC8C. \uBABB \uB4E4\uC740 \uAC78\uB85C \uD574\uC918."
+      text: "\uB108 \uC5C6\uC5C8\uC73C\uBA74 \uC911\uAC04\uC5D0 \uD604\uC2E4 \uB85C\uADF8\uC544\uC6C3 \uD560 \uBED4\uD588\uC5B4. \uACE0\uB9D9\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uAE30\uAECF \uBD84\uC704\uAE30 \uC7A1\uC544\uB193\uACE0 1\uCD08 \uB9CC\uC5D0 \uCCA0\uD68C\uD55C\uB2E4."
+      text: "\uC81C\uB098\uAC00 \uBAA8\uB2C8\uD130\uB85C \uC2DC\uC120\uC744 \uACE0\uC815\uD558\uBA70 \uBB34\uC2EC\uD558\uAC8C \uD22D \uB358\uC84C\uB2E4."
+    },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "...\uC544 \uC528, \uBC29\uAE08 \uB300\uC0AC \uC880 \uBBF8\uC5F0\uC2DC NPC \uAC19\uC9C0 \uC54A\uC558\uB0D0?"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uBC29\uAE08 \uAC74 \uCE90\uC2DC \uC0AD\uC81C\uD574. \uBA38\uB9BF\uC18D \uD734\uC9C0\uD1B5 \uBE44\uC6B0\uAE30 \uB204\uB974\uB77C\uACE0."
+    },
+    {
+      type: "dialogue",
+      text: "\uC465\uC2A4\uB7EC\uC6C0\uC744 \uD654\uB0B4\uB294 \uAC78\uB85C \uBB34\uB9C8\uD558\uB824\uB294 \uAC8C \uBED4\uD788 \uBCF4\uC778\uB2E4."
     },
     {
       type: "choice",
       choices: [
-        { text: '"\uC774\uBBF8 \uC138\uC774\uBE0C\uD588\uC5B4."', goto: "saved" },
-        { text: '"\uADF8\uB798, \uB098\uB3C4 \uD53C\uACE4\uD558\uB2E4."', goto: "tired" }
+        { text: '"\uD0F1\uCEE4 \uC218\uACE0\uBE44 \uB0B4\uB194."', goto: "pay" },
+        { text: '"\uB2E4\uC74C \uB808\uC774\uB4DC\uB294 \uB534 \uC0AC\uB78C \uAD6C\uD574\uB77C."', goto: "tired" }
       ]
     },
-    { type: "label", name: "saved" },
+    { type: "label", name: "pay" },
     {
       type: "dialogue",
-      text: '"\uC774\uBBF8 \uB0B4 \uB1CC\uC5D0 \uC138\uC774\uBE0C\uD588\uC5B4."'
+      text: '"\uC5B4\uADF8\uB85C \uB04C\uC5B4\uC92C\uC73C\uB2C8\uAE4C \uD0F1\uCEE4 \uC218\uACE0\uBE44 \uB0B4\uB194."'
     },
     {
       type: "dialogue",
-      text: "\uC7A5\uB09C\uC2A4\uB7FD\uAC8C \uBC1B\uC544\uCE58\uC790, \uC81C\uB098\uC758 \uB208\uC774 \uCEE4\uC84C\uB2E4."
+      text: "\uBED4\uBED4\uD558\uAC8C \uC190\uC744 \uB0B4\uBC00\uC790, \uC81C\uB098\uC758 \uD45C\uC815\uC774 \uAD6C\uACA8\uC84C\uB2E4."
     },
     { type: "camera-effect", preset: "shake", duration: 300 },
+    { type: "character", action: "show", name: "zena", image: "angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC544, \uB370\uC774\uD130 \uAC15\uC81C \uC0AD\uC81C\uD560 \uAC70\uC57C!"
+      text: "\uBB50?! \uB274\uBE44 \uCA54\uD574\uC900 \uAC83\uB3C4 \uC544\uB2CC\uB370 \uBB34\uC2A8 \uC218\uACE0\uBE44\uC57C! \uC591\uC2EC \uB514\uBC84\uAE45 \uC880 \uD574!"
     },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uB0B4 \uD751\uC5ED\uC0AC \uD3F4\uB354\uC5D0 \uBD88\uBC95 \uC811\uADFC\uD558\uC9C0 \uB9C8!"
+      text: "\uB3C8\uC740 \uC5C6\uACE0, \uB300\uC2E0 \uB0B4\uC77C \uB4C0\uC624 \uB3CC\uB9B4 \uB54C \uB0B4\uAC00 \uD2B9\uBCC4\uD788 \uD790\uB7EC \uD574\uC900\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uADC0\uB05D\uC774 \uC0C8\uBE68\uAC1C\uC9C4 \uC81C\uB098\uAC00 \uC560\uAFCE\uC740 \uD0A4\uBCF4\uB4DC \uC0F7\uAC74\uC744 \uCCE4\uB2E4."
+      text: "\uD56D\uC0C1 \uB51C\uB7EC\uB9CC \uACE0\uC9D1\uD558\uBA70 \uB3CC\uC9C4\uD558\uB2E4 \uC8FD\uB294 \uC81C\uB098\uC758 \uC131\uD5A5\uC744 \uC0DD\uAC01\uD558\uBA74 \uC5C4\uCCAD\uB09C \uD30C\uACA9 \uB300\uC6B0\uB2E4."
     },
     { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "tired" },
     {
       type: "dialogue",
-      text: '"\uADF8\uB798, \uB098\uB3C4 \uD53C\uACE4\uD558\uB2E4. \uB2F9\uBD84\uAC04 \uC678\uCD9C\uC740 \uBB34\uB9AC\uC57C."'
+      text: '"\uC624\uB298 \uD53C\uB85C\uB3C4 \uB2E4 \uC37C\uB2E4. \uB2E4\uC74C \uB808\uC774\uB4DC\uB294 \uB2E4\uB978 \uD30C\uD2F0\uC6D0 \uAD6C\uD574\uB77C."'
     },
     {
       type: "dialogue",
-      text: "\uACA9\uD558\uAC8C \uB3D9\uC758\uD574\uC8FC\uC790, \uADF8\uB140\uC758 \uC5BC\uAD74\uC5D0 \uC548\uB3C4\uAC10\uC774 \uBC88\uC84C\uB2E4."
+      text: "\uB2E8\uD638\uD558\uAC8C \uC120\uC744 \uAE0B\uC790, \uC81C\uB098\uAC00 \uB2F9\uD669\uD55C \uB4EF \uBAA8\uB2C8\uD130\uC5D0\uC11C \uB208\uC744 \uB5D0\uB2E4."
     },
-    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: "\uADF8\uCE58? \uB0B4\uC77C\uC740 \uAC01\uC790 \uC9D1\uC5D0\uC11C \uB514\uC2A4\uCF54\uB4DC\uB098 \uCF1C\uC790."
-    },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uADF8\uAC8C \uC6B0\uB9AC\uB2E4\uC6B4 \uAC70\uC9C0."
+      text: "\uC5B4? \uC544\uB2C8... \uB2E4\uC74C \uD018\uC2A4\uD2B8\uB3C4 \uD0F1\uCEE4 \uD544\uC218\uC778\uB370..."
+    },
+    { type: "character", action: "show", name: "zena", image: "angry", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "\uC544 \uBAB0\uB77C! \uB534 \uC0AC\uB78C \uC5C6\uC73C\uB2C8\uAE4C \uB0B4\uAC00 \uD30C\uD2F0 \uCD08\uB300 \uBCF4\uB0B4\uBA74 \uC870\uC6A9\uD788 \uC218\uB77D\uC774\uB098 \uB20C\uB7EC!"
     },
     {
       type: "dialogue",
-      text: "\uD788\uD0A4\uCF54\uBAA8\uB9AC \uB3D9\uB9F9\uC774 \uACB0\uC131\uB418\uB294 \uC21C\uAC04\uC774\uC5C8\uB2E4."
+      text: "\uACB0\uAD6D \uAC15\uC81C \uC9D5\uC6A9 \uC5D4\uB529\uC774\uB2E4."
     },
     { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "epilogue" },
@@ -17391,19 +17417,19 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC544\uBB34\uD2BC... \uC218\uACE0\uD588\uC5B4. \uD30C\uD2F0\uC6D0."
+      text: "\uC544\uBB34\uD2BC... \uC218\uACE0\uD588\uB2E4. \uACE0\uAE30\uBC29\uD328."
     },
     {
       type: "dialogue",
-      text: "\uC81C\uB098\uB294 \uC791\uAC8C \uC6C3\uC73C\uBA70 \uB2E4\uC2DC \uD5E4\uB4DC\uC14B\uC744 \uC37C\uB2E4."
+      text: "\uC81C\uB098\uB294 \uD53C\uC2DD \uC6C3\uC73C\uBA70 \uD5E4\uB4DC\uC14B\uC744 \uACE0\uCCD0 \uC37C\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uBAA8\uB2C8\uD130 \uBD88\uBE5B\uC774 \uADF8\uB140\uC758 \uBEA8\uC744 \uC740\uC740\uD558\uAC8C \uBE44\uCD94\uC5C8\uB2E4."
+      text: "\uADF8\uB9AC\uACE0 \uBB34\uC790\uBE44\uD558\uAC8C \uAC8C\uC784 \uB9E4\uCE6D \uC2DC\uC791 \uBC84\uD2BC\uC744 \uB20C\uB800\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uD3C9\uBC94\uD558\uC9C0\uB9CC, \uBC84\uADF8 \uD22C\uC131\uC774\uC778 \uC77C\uC0C1\uC774 \uB2E4\uC2DC \uC2DC\uC791\uB418\uACE0 \uC788\uC5C8\uB2E4."
+      text: "\uB098\uC758 \uD3C9\uD654\uB85C\uC6B4 \uC8FC\uB9D0\uC740 \uC774\uB807\uAC8C \uADF8\uB140\uC758 \uAC8C\uC784 \uC911\uB3C5\uACFC \uD568\uAED8 \uD130\uC838\uBC84\uB838\uB2E4."
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 3e3 },
     { type: "dialogue", text: "\uC81C\uB098 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uBAA8\uB450 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4." }

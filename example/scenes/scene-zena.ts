@@ -53,6 +53,7 @@ export default defineScene({
     text: '내가 힐끔 쳐다보자, 살벌한 눈빛과 딱 마주쳤다.'
   },
   { type: 'camera-zoom', preset: 'close-up' },
+  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -123,6 +124,7 @@ export default defineScene({
   // ─── 분기: 버그 질문 ───
   { type: 'label', name: 'ask-bug' },
   { type: 'camera-effect', preset: 'shake', duration: 400 },
+  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -168,6 +170,7 @@ export default defineScene({
     type: 'dialogue',
     text: '똥이 무서워서 피하나. 나는 슬그머니 자리에서 일어났다.'
   },
+  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',

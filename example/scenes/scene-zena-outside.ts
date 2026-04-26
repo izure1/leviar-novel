@@ -28,11 +28,6 @@ export default defineScene({
   { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
   {
     type: 'dialogue',
-    speaker: 'zena',
-    text: '악!'
-  },
-  {
-    type: 'dialogue',
     text: [
       '햇빛을 쬐자마자 제나가 눈을 감싸 쥐며 비명을 질렀다.',
       '꼭 퇴마당하는 거 같다.'

@@ -33,6 +33,7 @@ export default defineScene({
     speaker: 'zena',
     text: '이거 방송 켜진 거 아니야?!'
   },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
     text: '방송 프로그램 화면에 빨간 불이 들어온 것을 확인하자, 그녀의 동공이 지진을 일으켰다.'
@@ -157,12 +158,13 @@ export default defineScene({
     text: [
       '<style color="rgb(150,150,150)">[ ??? ]</style>',
       '<style color="rgb(150,150,150)">[ 방금 남자 손 아님? ]</style>',
+      '<style color="rgb(150,150,150)">[ 재미업뗘 재미업뗘 재미업뗘 재미업뗘 재미업뗘 재미업뗘 ]</style>',
       '<style color="rgb(150,150,150)">[ 유니콘 뿔 다 부러지는 소리 들리네 ]</style>',
       '<style color="rgb(150,150,150)">[ 나 까매져,,, ]</style>',
-      '<style color="rgb(150,150,150)">[ 재미업뗘 재미업뗘 재미업뗘 재미업뗘 재미업뗘 재미업뗘 ]</style>'
     ],
     speed: 10,
   },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
     text: '제나의 얼굴이 사색이 되었다. 그녀는 마이크를 황급히 가렸다.'
@@ -175,7 +177,7 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '나 육수 우려서 먹고사는 심해 방송이란 말이야!'
+    text: '<style fontSize="14">나 육수 우려서 먹고사는 심해 방송이란 말이야!</style>'
   },
   {
     type: 'dialogue',
@@ -194,7 +196,10 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '제가 뼈대 굵은 거 아시잖아요? 하하하!'
+    text: [
+      '남자 손 같죠?',
+      '제가 뼈대 굵은 거 아시잖아요? 하하하!'
+    ]
   },
   {
     type: 'dialogue',
@@ -209,8 +214,8 @@ export default defineScene({
     speaker: 'chat',
     text: [
       '<style color="rgb(150,150,150)">[ 형님 조직으로 돌아오십쇼 ]</style>',
-      '<style color="rgb(150,150,150)">[ 여기 남캠방 맞습니다 ]</style>',
-      '<style color="rgb(150,150,150)">[ 나 원 참 ㅋㅋ 제 뼈대가 단단해졌습니다 이거ㅋㅋㅋ ]</style>'
+      '<style color="rgb(150,150,150)">[ 전완근 시발 ㅋㅋㅋ ]</style>',
+      '<style color="rgb(150,150,150)">[ 오빠 나 쥬지됐어 ]</style>',
     ],
     speed: 10,
   },
@@ -226,7 +231,11 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '민방위 안 끝났냐니 선 넘네 진짜!'
+    text: [
+      '민방위 안 끝났냐니 선 넘네 진짜!',
+      '거근...?',
+      '그건 또 무슨 미친 소리야 그런 게 왜 있어!',
+    ]
   },
   {
     type: 'dialogue',
@@ -294,15 +303,15 @@ export default defineScene({
     type: 'dialogue',
     speaker: 'chat',
     text: [
-      '<style color="rgb(150,150,150)">[ ㅋㅋㅋㅋ 남자 목소리 뭐냐 ]</style>',
-      '<style color="rgb(150,150,150)">[ 동거남 찜닭은 중대사항이지 ]</style>',
-      '<style color="rgb(150,150,150)">[ 뿔 다 갈려서 가루 됨 ]</style>',
+      '<style color="rgb(150,150,150)">[ ???????? ]</style>',
+      '<style color="rgb(150,150,150)">[ 방금 남자 목소리 뭐냐 ]</style>',
+      '<style color="rgb(150,150,150)">[ ㅋㅋㅋㅋ 동거남 찜닭은 중대사항이지 ]</style>',
       '<style color="rgb(150,150,150)">[ 채팅창 까매지는 거 보소 ]</style>',
-      '<style color="rgb(150,150,150)">[ 재미업뗘 재미업뗘 재미업뗘 재미업뗘 재미업뗘 재미업뗘 ]</style>'
+      '<style color="rgb(150,150,150)">[ 뿔 다 갈려서 가루 되는 중 ]</style>',
     ],
     speed: 10,
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
     text: '제나의 얼굴에서 영업용 미소가 완전히 증발했다.'

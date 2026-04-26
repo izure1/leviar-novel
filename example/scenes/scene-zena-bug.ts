@@ -23,7 +23,7 @@ export default defineScene({
   },
 
   { type: 'camera-effect', preset: 'shake', duration: 500 },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', focus: 'face', duration: 300 },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', focus: 'face', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -70,6 +70,7 @@ export default defineScene({
 
   { type: 'label', name: 'run' },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   { type: 'mood', mood: 'horror', action: 'add', flicker: 'strobe' },
   {
     type: 'dialogue',
@@ -125,7 +126,6 @@ export default defineScene({
       '"함부로 건드리지 않는 게 개발자의 철칙이다. 섣불리 떼려다 다른 데로 튀면 더 큰 버그가 생겨."'
     ]
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',

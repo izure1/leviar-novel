@@ -148,5 +148,4 @@ export default defineScene({
     type: 'dialogue',
     text: '그리고는 곧바로 화면 속 숏폼 영상으로 빨려 들어갔다.'
   },
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 1500 },
 ])

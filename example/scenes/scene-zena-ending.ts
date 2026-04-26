@@ -22,98 +22,100 @@ export default defineScene({
     type: 'dialogue',
     text: '다사다난했던 하루가 끝을 향해 가고 있다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', position: 'center', duration: 1000 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 1000 },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '오늘 퀘스트 같이 뛰어줘서 고마워.'
+    text: '야, 오늘 어그로 핑퐁 좀 치더라.'
   },
   {
     type: 'dialogue',
-    text: '그녀는 단순한 외출조차 퀘스트라고 부른다.'
-  },
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: '사실 나 혼자서는 나갈 엄두도 못 냈거든.'
-  },
-  {
-    type: 'dialogue',
-    text: '살짝 쑥스러운 듯, 제나가 시선을 회피하며 뺨을 긁적였다.'
-  },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 500 },
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: '...근데 좀 오글거리네.'
+    text: '외출을 무슨 레이드 뛴 것처럼 말한다.'
   },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '아까 한 말은 롤백할게. 못 들은 걸로 해줘.'
+    text: '너 없었으면 중간에 현실 로그아웃 할 뻔했어. 고맙다.'
   },
   {
     type: 'dialogue',
-    text: '기껏 분위기 잡아놓고 1초 만에 철회한다.'
+    text: '제나가 모니터로 시선을 고정하며 무심하게 툭 던졌다.'
+  },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 500 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '...아 씨, 방금 대사 좀 미연시 NPC 같지 않았냐?'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '방금 건 캐시 삭제해. 머릿속 휴지통 비우기 누르라고.'
+  },
+  {
+    type: 'dialogue',
+    text: '쑥스러움을 화내는 걸로 무마하려는 게 뻔히 보인다.'
   },
 
   {
     type: 'choice',
     choices: [
-      { text: '"이미 세이브했어."', goto: 'saved' },
-      { text: '"그래, 나도 피곤하다."', goto: 'tired' },
+      { text: '"탱커 수고비 내놔."', goto: 'pay' },
+      { text: '"다음 레이드는 딴 사람 구해라."', goto: 'tired' },
     ]
   },
 
-  { type: 'label', name: 'saved' },
+  { type: 'label', name: 'pay' },
   {
     type: 'dialogue',
-    text: '"이미 내 뇌에 세이브했어."'
+    text: '"어그로 끌어줬으니까 탱커 수고비 내놔."'
   },
   {
     type: 'dialogue',
-    text: '장난스럽게 받아치자, 제나의 눈이 커졌다.'
+    text: '뻔뻔하게 손을 내밀자, 제나의 표정이 구겨졌다.'
   },
   { type: 'camera-effect', preset: 'shake', duration: 300 },
+  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '아, 데이터 강제 삭제할 거야!'
+    text: '뭐?! 뉴비 쩔해준 것도 아닌데 무슨 수고비야! 양심 디버깅 좀 해!'
   },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '내 흑역사 폴더에 불법 접근하지 마!'
+    text: '돈은 없고, 대신 내일 듀오 돌릴 때 내가 특별히 힐러 해준다.'
   },
   {
     type: 'dialogue',
-    text: '귀끝이 새빨개진 제나가 애꿎은 키보드 샷건을 쳤다.'
+    text: '항상 딜러만 고집하며 돌진하다 죽는 제나의 성향을 생각하면 엄청난 파격 대우다.'
   },
   { type: 'condition', if: () => true, goto: 'epilogue' },
 
   { type: 'label', name: 'tired' },
   {
     type: 'dialogue',
-    text: '"그래, 나도 피곤하다. 당분간 외출은 무리야."'
+    text: '"오늘 피로도 다 썼다. 다음 레이드는 다른 파티원 구해라."'
   },
   {
     type: 'dialogue',
-    text: '격하게 동의해주자, 그녀의 얼굴에 안도감이 번졌다.'
+    text: '단호하게 선을 긋자, 제나가 당황한 듯 모니터에서 눈을 뗐다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: '그치? 내일은 각자 집에서 디스코드나 켜자.'
-  },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '그게 우리다운 거지.'
+    text: '어? 아니... 다음 퀘스트도 탱커 필수인데...'
+  },
+  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '아 몰라! 딴 사람 없으니까 내가 파티 초대 보내면 조용히 수락이나 눌러!'
   },
   {
     type: 'dialogue',
-    text: '히키코모리 동맹이 결성되는 순간이었다.'
+    text: '결국 강제 징용 엔딩이다.'
   },
   { type: 'condition', if: () => true, goto: 'epilogue' },
 
@@ -122,19 +124,19 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '아무튼... 수고했어. 파티원.'
+    text: '아무튼... 수고했다. 고기방패.'
   },
   {
     type: 'dialogue',
-    text: '제나는 작게 웃으며 다시 헤드셋을 썼다.'
+    text: '제나는 피식 웃으며 헤드셋을 고쳐 썼다.'
   },
   {
     type: 'dialogue',
-    text: '모니터 불빛이 그녀의 뺨을 은은하게 비추었다.'
+    text: '그리고 무자비하게 게임 매칭 시작 버튼을 눌렀다.'
   },
   {
     type: 'dialogue',
-    text: '평범하지만, 버그 투성이인 일상이 다시 시작되고 있었다.'
+    text: '나의 평화로운 주말은 이렇게 그녀의 게임 중독과 함께 터져버렸다.'
   },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 3000 },
   { type: 'dialogue', text: '제나 에피소드가 모두 종료되었습니다.' },
