@@ -58,6 +58,8 @@ export type CharacterHighlightCmd<TConfig = any> = {
 export interface CharacterSchema {
   /** name → { position, imageKey } 맵 */
   characters: Record<string, { position: string; imageKey: string }>
+  /** 최근 전환 애니메이션 지속 시간 (ms) */
+  lastDuration?: number
 }
 
 // ─── 위치/포커스 헬퍼 ────────────────────────────────────────
@@ -190,16 +192,17 @@ characterModule.defineView((data, ctx) => {
     // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
     getObj: (name: string) => _charObjs[name],
     update: (d: CharacterSchema) => {
+      const dur = d.lastDuration
       const newNames = new Set(Object.keys(d.characters))
       // 제거된 캐릭터
       for (const name of Object.keys(_charObjs)) {
         if (!newNames.has(name)) {
-          _removeCharacter(name)
+          _removeCharacter(name, dur)
         }
       }
       // 추가/변경된 캐릭터
       for (const [name, info] of Object.entries(d.characters)) {
-        _showCharacter(name, info.position, info.imageKey)
+        _showCharacter(name, info.position, info.imageKey, dur)
       }
     },
   }
@@ -221,7 +224,7 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolvedKey = showCmd.image ?? Object.keys(def.images)[0]
 
     newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey as string }
-    setState({ characters: newChars })
+    setState({ characters: newChars, lastDuration: cmd.duration })
 
     // focus 처리 (view의 getObj 사용)
     // state.characters 변경 → proxy microtask로 update() 예약됨
@@ -255,7 +258,7 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
     }
   } else {
     delete newChars[cmd.name]
-    setState({ characters: newChars })
+    setState({ characters: newChars, lastDuration: cmd.duration })
   }
 
   return true

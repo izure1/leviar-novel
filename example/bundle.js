@@ -1010,14 +1010,15 @@
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
       update: (d) => {
+        const dur = d.lastDuration;
         const newNames = new Set(Object.keys(d.characters));
         for (const name of Object.keys(_charObjs)) {
           if (!newNames.has(name)) {
-            _removeCharacter(name);
+            _removeCharacter(name, dur);
           }
         }
         for (const [name, info] of Object.entries(d.characters)) {
-          _showCharacter(name, info.position, info.imageKey);
+          _showCharacter(name, info.position, info.imageKey, dur);
         }
       }
     };
@@ -1033,7 +1034,7 @@
       const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
       const resolvedKey = showCmd.image ?? Object.keys(def.images)[0];
       newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
-      setState({ characters: newChars });
+      setState({ characters: newChars, lastDuration: cmd.duration });
       if (showCmd.focus) {
         const focusType = typeof showCmd.focus === "string" ? showCmd.focus : void 0;
         const focusDuration = showCmd.duration ?? 800;
@@ -1062,7 +1063,7 @@
       }
     } else {
       delete newChars[cmd.name];
-      setState({ characters: newChars });
+      setState({ characters: newChars, lastDuration: cmd.duration });
     }
     return true;
   });
@@ -16699,11 +16700,9 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-zena-outside"
   }, [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
-    { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
     {
       type: "dialogue",
       text: "\uBC30\uB2EC \uC74C\uC2DD\uC744 \uAE30\uB2E4\uB9AC\uBA70 \uC720\uD29C\uBE0C\uB97C \uBCF4\uB358 \uC81C\uB098\uAC00 \uAC11\uC790\uAE30 \uB9C8\uC774\uD06C \uC120\uC744 \uAC74\uB4DC\uB838\uB2E4."
@@ -17086,6 +17085,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uBC29\uAD6C\uC11D\uC5D0\uB9CC \uBC15\uD600\uC788\uB2E4\uAC00\uB294 \uC815\uB9D0\uB85C \uACF0\uD321\uC774\uAC00 \uD53C\uC5B4\uC624\uB97C \uAC83 \uAC19\uC558\uAE30 \uB54C\uBB38\uC774\uB2E4."
     },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
+    { type: "mood", mood: "day", intensity: 1, duration: 800, flicker: "candle" },
     {
       type: "dialogue",
       text: [
@@ -17258,7 +17258,7 @@ ${addLineNumbers(fragment)}`);
     { type: "label", name: "run" },
     { type: "camera-effect", preset: "shake", duration: 800 },
     { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
-    { type: "mood", mood: "horror", action: "add", flicker: "strobe" },
+    { type: "mood", mood: "horror", action: "add", intensity: 0.3, flicker: "strobe" },
     {
       type: "dialogue",
       speaker: "zena",
@@ -17274,19 +17274,8 @@ ${addLineNumbers(fragment)}`);
         "\uACA8\uC6B0 \uBA48\uCDB0 \uC130\uB2E4."
       ]
     },
+    { type: "mood", mood: "horror", action: "remove", duration: 1e3 },
     { type: "condition", if: () => true, goto: "calm" },
-    { type: "label", name: "calm" },
-    { type: "character", action: "show", name: "zena", image: "normal", duration: 500 },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: [
-        "\uD558\uC544... \uD558\uC544...",
-        "\uC5ED\uC2DC \uD604\uC2E4 \uC138\uACC4\uB294 \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC57C.",
-        "\uBE68\uB9AC \uC544\uC9C0\uD2B8\uB85C \uBCF5\uADC0\uD558\uC790."
-      ]
-    },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 },
     { type: "label", name: "prank" },
     {
       type: "dialogue",
@@ -17325,7 +17314,19 @@ ${addLineNumbers(fragment)}`);
         "\uC81C\uB098\uB294 \uACF5\uC6D0\uC744 \uBBF8\uCE5C \uB4EF\uC774 \uB6F0\uC5B4\uB2E4\uB2C8\uAE30 \uC2DC\uC791\uD588\uB2E4.",
         "\uAC15\uC81C \uB2EC\uB9AC\uAE30 \uC6B4\uB3D9\uC73C\uB85C \uC624\uB298\uCE58 \uCE7C\uB85C\uB9AC \uC18C\uBAA8\uB294 \uC644\uBCBD\uD558\uB2E4."
       ]
-    }
+    },
+    { type: "label", name: "calm" },
+    { type: "character", action: "show", name: "zena", image: "normal", duration: 500 },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: [
+        "\uD558\uC544... \uD558\uC544...",
+        "\uC5ED\uC2DC \uD604\uC2E4 \uC138\uACC4\uB294 \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC57C.",
+        "\uBE68\uB9AC \uC544\uC9C0\uD2B8\uB85C \uBCF5\uADC0\uD558\uC790."
+      ]
+    },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
 
   // example/scenes/scene-zena-ending.ts
@@ -17335,9 +17336,9 @@ ${addLineNumbers(fragment)}`);
     // 씬 5개 종료 후 처음으로 롤백
     next: "scene-zena"
   }, [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
-    { type: "background", name: "room", duration: 0, skip: true },
-    { type: "mood", mood: "sunset", intensity: 0.8, duration: 0, skip: true },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
+    { type: "background", name: "room", duration: 0 },
+    { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 2e3 },
     {
       type: "dialogue",

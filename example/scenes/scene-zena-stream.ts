@@ -8,12 +8,10 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-outside',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
-  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
   {
     type: 'dialogue',
     text: '배달 음식을 기다리며 유튜브를 보던 제나가 갑자기 마이크 선을 건드렸다.'
