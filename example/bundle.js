@@ -2232,7 +2232,7 @@
           width: w * 2,
           height: h * 2,
           opacity: 0,
-          zIndex: Z_INDEX.TRANSITION,
+          zIndex: Z_INDEX.UI_BASE,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -2301,7 +2301,7 @@
           width: w * 2,
           height: h * 2,
           opacity: 0,
-          zIndex: Z_INDEX.TRANSITION + 1,
+          zIndex: Z_INDEX.UI_BASE + 1,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
