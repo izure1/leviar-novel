@@ -53,14 +53,14 @@ export default defineNovelConfig({
     'zena': zena,
   },
   backgrounds: {
-    'bg-floor': { src: 'bg_floor', parallax: true },
-    'bg-library': { src: 'bg_library', parallax: true },
-    'bg-park': { src: 'bg_park', parallax: true },
+    'floor': { src: 'bg_floor', parallax: true },
+    'room': { src: 'bg_room', parallax: true },
+    'park': { src: 'bg_park', parallax: true },
   },
   assets: {
     // 배경
     bg_floor: './assets/bg_floor.png',
-    bg_library: './assets/bg_library.png',
+    bg_room: './assets/bg_room.png',
     bg_park: './assets/bg_park.png',
     // 캐릭터
     girl_normal: './assets/girl_normal.png',

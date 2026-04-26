@@ -13,7 +13,7 @@ export default defineScene({
   next: 'scene-zena-game',
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
-  { type: 'background', name: 'bg-floor', duration: 0 },
+  { type: 'background', name: 'floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
   { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 25 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },

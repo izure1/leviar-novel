@@ -16048,14 +16048,14 @@ ${addLineNumbers(fragment)}`);
       "zena": zena_default
     },
     backgrounds: {
-      "bg-floor": { src: "bg_floor", parallax: true },
-      "bg-library": { src: "bg_library", parallax: true },
-      "bg-park": { src: "bg_park", parallax: true }
+      "floor": { src: "bg_floor", parallax: true },
+      "room": { src: "bg_room", parallax: true },
+      "park": { src: "bg_park", parallax: true }
     },
     assets: {
       // 배경
       bg_floor: "./assets/bg_floor.png",
-      bg_library: "./assets/bg_library.png",
+      bg_room: "./assets/bg_room.png",
       bg_park: "./assets/bg_park.png",
       // 캐릭터
       girl_normal: "./assets/girl_normal.png",
@@ -16134,7 +16134,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-game"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-floor", duration: 0 },
+    { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
     { type: "effect", action: "add", effect: "dust", src: "dust", rate: 25 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
@@ -16368,7 +16368,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-food"
   }, [
     { type: "screen-wipe", dir: "out", preset: "left", duration: 0 },
-    { type: "background", name: "bg-library", duration: 0 },
+    { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
     { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
     {
@@ -16527,7 +16527,7 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-zena-stream"
   }, [
-    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "background", name: "room", duration: 0, skip: true },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0, skip: true },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
@@ -16672,7 +16672,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-outside"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-library", duration: 0 },
+    { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
@@ -17042,7 +17042,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-bug"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-park", duration: 0 },
+    { type: "background", name: "park", duration: 0 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
@@ -17173,7 +17173,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-ending"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
-    { type: "background", name: "bg-park", duration: 0, skip: true },
+    { type: "background", name: "park", duration: 0, skip: true },
     { type: "mood", mood: "day", intensity: 1, duration: 0, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
@@ -17308,7 +17308,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
-    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "background", name: "room", duration: 0, skip: true },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 2e3 },
     {
