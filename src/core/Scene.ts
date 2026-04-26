@@ -259,17 +259,22 @@ export class DialogueScene {
       this._activeGenerator = this._executeCmd(cmd)
     }
 
-    const nextVal = this._activeGenerator.next()
+    const currentGen = this._activeGenerator
+    const nextVal = currentGen.next()
     const result = nextVal.value
 
     if (result === 'handled') {
-      this._activeGenerator = null
+      if (this._activeGenerator === currentGen) {
+        this._activeGenerator = null
+      }
       this.callbacks.syncUIState()
       return
     }
 
     if (result === true || nextVal.done || cmd.skip) {
-      this._activeGenerator = null
+      if (this._activeGenerator === currentGen) {
+        this._activeGenerator = null
+      }
       this.cursor++
       this.textSubIndex = 0
       this._executeNext()
