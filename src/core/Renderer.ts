@@ -315,11 +315,13 @@ export class Renderer {
 function _makeRestoreCtx(renderer: Renderer): SceneContext {
   const noop = () => { /* no-op */ }
   return {
+    novel: null as any,
     world: renderer.world,
     renderer,
     globalVars: {},
     localVars: {},
     callbacks: {
+      getNovel: () => null as any,
       getGlobalVars: () => ({}),
       setGlobalVar: noop as any,
       loadScene: noop as any,

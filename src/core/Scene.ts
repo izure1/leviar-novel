@@ -56,6 +56,8 @@ const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generato
  * 전역 변수 조작, 씬 전환, UI 업데이트 등을 엔진에 요청할 때 사용됩니다.
  */
 export interface SceneCallbacks {
+  /** Novel 인스턴스를 반환합니다. */
+  getNovel(): any
   /** 전역 변수 전체 객체를 반환합니다. */
   getGlobalVars(): Record<string, any>
   /** 특정 전역 변수의 값을 설정합니다. */
@@ -181,6 +183,7 @@ export class DialogueScene {
     const uiRegistry = this.callbacks.getUIRegistry()
 
     const ctx: SceneContext = {
+      novel: this.callbacks.getNovel(),
       world: r.world,
       globalVars: this.callbacks.getGlobalVars(),
       localVars: this.localVars,
@@ -343,6 +346,7 @@ export class DialogueScene {
     const uiRegistry = this.callbacks.getUIRegistry()
 
     const ctx: SceneContext = {
+      novel: this.callbacks.getNovel(),
       world: r.world,
       globalVars: this.callbacks.getGlobalVars(),
       localVars: this.localVars,

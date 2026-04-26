@@ -353,6 +353,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   private _buildCallbacks(): SceneCallbacks {
     return {
+      getNovel: () => this as any,
       getGlobalVars: () => ({ ...this.vars as object }),
       setGlobalVar: (name, value) => { (this.vars as any)[name] = value },
       loadScene: (name) => { this.loadScene(name) },
@@ -455,11 +456,13 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const stateStore = this._stateStore
     const uiRegistry = this._uiRegistry
     return {
+      novel: this as any,
       world: this._world,
       renderer: this._renderer,
       globalVars: {},
       localVars: {},
       callbacks: {
+        getNovel: () => this as any,
         getGlobalVars: () => ({}),
         setGlobalVar: noop as any,
         loadScene: noop as any,

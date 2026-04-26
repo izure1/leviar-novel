@@ -5,6 +5,7 @@
 import type { World, Style, Attribute } from 'leviar'
 import type { FallbackRuleOf, EffectType } from './dialogue'
 import type { NovelModule } from '../define/defineCmdUI'
+import type { Novel } from '../core/Novel'
 
 /** 
  * 단일 캐릭터 이미지 변형 정의 
@@ -132,6 +133,8 @@ export interface EffectDef {
 export interface CustomCmdContext<TVars = any, TLocalVars = any> {
   /** Leviar 엔진의 World 인스턴스 */
   world: World
+  /** Novel 인스턴스 */
+  novel: Novel<any>
   /** 게임의 전역 변수 목록 */
   globalVars: TVars
   /** 현재 진행 중인 씬의 지역 변수 목록 */

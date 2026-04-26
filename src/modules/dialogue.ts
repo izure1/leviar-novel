@@ -271,7 +271,7 @@ dialogueModule.defineView((data, ctx) => {
         _prevLines = d.lines
         const txt = d.lines[d.subIndex ?? 0] as string
         const spkName = resolveSpeaker(d.speakerKey, charDefs)
-        const hooker = useHookallSync<DialogueHook>(ctx.renderer)
+        const hooker = useHookallSync<DialogueHook>(ctx.novel)
         hooker.trigger('dialogue:text', { speaker: spkName, text: txt }, (state) => {
           _renderText(state.speaker, state.text, d.speed)
           return state
