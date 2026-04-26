@@ -8,14 +8,21 @@ export type EffectType = 'dust' | 'rain' | 'snow' | 'sakura' | 'sparkle' | 'fog'
  */
 export type EffectCmd<TConfig = any> =
   | {
+    /** 수행할 동작입니다. ('add': 효과 추가) */
     action: 'add'
+    /** 추가할 이펙트의 종류입니다. */
     effect: EffectType
+    /** 이펙트에 사용할 에셋(이미지 등)의 키입니다. */
     src: AssetKeysOf<TConfig>
+    /** 파티클 생성 속도(빈도)입니다. */
     rate?: number
   }
   | {
+    /** 수행할 동작입니다. ('remove': 효과 제거) */
     action: 'remove'
+    /** 제거할 이펙트의 종류입니다. */
     effect: EffectType
+    /** 사라지는 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
   }
 

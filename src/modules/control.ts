@@ -2,7 +2,9 @@ import { define } from '../define/defineCmdUI'
 
 /** 사용자의 입력을 제어한다 */
 export interface ControlCmd {
+  /** 제어할 액션의 종류입니다. (현재 'disable'만 지원) */
   action: 'disable'
+  /** 입력 제어를 유지할 시간(ms)입니다. */
   duration: number
 }
 

@@ -16323,7 +16323,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC774\uAC83\uC774 \uB098\uC640 \uC81C\uB098\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
     },
-    { type: "screen-wipe", dir: "out", preset: "left", duration: 5e3, disable: true }
+    { type: "screen-wipe", dir: "out", preset: "left", duration: 3e3, disable: true }
   ]);
 
   // example/scenes/scene-zena-game.ts
@@ -16339,7 +16339,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-wipe", dir: "out", preset: "left", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
-    { type: "screen-wipe", dir: "in", preset: "left", duration: 5e3 },
+    { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
     {
       type: "dialogue",
       text: "\uC81C\uB098\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."

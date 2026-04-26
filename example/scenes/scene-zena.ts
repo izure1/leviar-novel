@@ -236,5 +236,5 @@ export default defineScene({
     type: 'dialogue',
     text: '이것이 나와 제나의 끔찍한 첫 만남이었다.'
   },
-  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 5000, disable: true },
+  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 3000, disable: true },
 ])

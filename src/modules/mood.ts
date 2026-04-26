@@ -13,15 +13,23 @@ export type FlickerPreset = 'candle' | 'flicker' | 'strobe'
  */
 export type MoodCmd =
   | {
+    /** 수행할 동작입니다. ('add': 무드 추가) */
     action?: 'add'
+    /** 추가할 화면 무드의 종류입니다. */
     mood: MoodType
+    /** 무드 이펙트의 강도(투명도)입니다. */
     intensity?: number
+    /** 조명 깜빡임(플리커) 효과 프리셋입니다. */
     flicker?: FlickerPreset
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
   }
   | {
+    /** 수행할 동작입니다. ('remove': 무드 제거) */
     action: 'remove'
+    /** 제거할 화면 무드의 종류입니다. */
     mood: MoodType
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
   }
 

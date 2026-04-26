@@ -15,7 +15,7 @@ export default defineScene({
   { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 0 },
   { type: 'background', name: 'bg-library', duration: 0 },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
-  { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 5000 },
+  { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
 
   {
     type: 'dialogue',

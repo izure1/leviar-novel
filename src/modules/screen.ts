@@ -8,26 +8,35 @@ export type WipePreset = 'left' | 'right' | 'up' | 'down' | 'inherit'
 
 /** 화면을 페이드인/아웃한다 */
 export interface ScreenFadeCmd {
+  /** 페이드의 방향입니다. ('in': 화면이 나타남, 'out': 화면이 덮임) */
   dir: 'in' | 'out'
+  /** 페이드 색상 프리셋입니다. */
   preset?: FadeColorPreset
+  /** 전환 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
-  /** 애니메이션 진행 중 사용자 입력을 차단할지 여부 */
+  /** 애니메이션 진행 중 사용자 입력을 차단할지 여부입니다. */
   disable?: boolean
 }
 
 /** 화면을 순간 플래시한다 */
 export interface ScreenFlashCmd {
+  /** 플래시 색상 프리셋입니다. */
   preset?: FlashPreset
+  /** 한 번의 플래시 애니메이션 지속 시간(ms)입니다. */
   duration?: number
+  /** 플래시 효과를 반복할 횟수입니다. */
   repeat?: number
 }
 
 /** 화면을 와이프 전환한다 */
 export interface ScreenWipeCmd {
+  /** 와이프의 방향입니다. ('in': 화면이 나타남, 'out': 화면이 덮임) */
   dir: 'in' | 'out'
+  /** 와이프 애니메이션의 진행 방향 프리셋입니다. */
   preset?: WipePreset
+  /** 전환 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
-  /** 애니메이션 진행 중 사용자 입력을 차단할지 여부 */
+  /** 애니메이션 진행 중 사용자 입력을 차단할지 여부입니다. */
   disable?: boolean
 }
 

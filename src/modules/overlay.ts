@@ -5,9 +5,13 @@ export type OverlayPreset = 'caption' | 'title' | 'whisper'
 
 /** 텍스트 오버레이를 추가, 제거, 전체 제거한다 */
 export interface OverlayCmd {
+  /** 수행할 동작입니다. (추가, 제거, 모두 지우기) */
   action: 'add' | 'remove' | 'clear'
+  /** 화면에 표시할 텍스트입니다. */
   text?: string
+  /** 텍스트 오버레이의 스타일 프리셋입니다. */
   preset?: OverlayPreset
+  /** 전환 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
 }
 

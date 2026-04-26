@@ -5,7 +5,9 @@ import { define } from '../define/defineCmdUI'
 export interface UICmd<TConfig = any> {
   /** 조작할 모듈의 이름(modules의 key)입니다. */
   name: ModuleKeysOf<TConfig>
+  /** 수행할 동작(보이기/숨기기)입니다. */
   action: 'show' | 'hide'
+  /** 전환 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
 }
 

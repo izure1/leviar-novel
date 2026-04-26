@@ -7,13 +7,17 @@ export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x'
 
 /** 카메라를 줌한다 */
 export interface CameraZoomCmd {
+  /** 줌 배율 프리셋입니다. ('inherit'일 경우 이전 상태 유지) */
   preset: ZoomPreset
+  /** 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
 }
 
 /** 카메라를 패닝한다 */
 export interface CameraPanCmd {
+  /** 패닝 위치 프리셋입니다. ('inherit'일 경우 이전 상태 유지) */
   position: PanPreset
+  /** 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
 }
 
@@ -26,9 +30,13 @@ export interface CameraPanCmd {
  * ```
  */
 export interface CameraEffectCmd {
+  /** 연출 효과의 프리셋 이름입니다. */
   preset: CameraEffectPreset
+  /** 효과의 전체 지속 시간(ms)입니다. */
   duration?: number
+  /** 효과의 강도입니다. 프리셋의 기본값을 덮어씁니다. */
   intensity?: number
+  /** 효과를 반복할 횟수입니다. (기본값: 1) */
   repeat?: number
 }
 

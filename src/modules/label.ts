@@ -9,6 +9,7 @@ import { define } from '../define/defineCmdUI'
  * ```
  */
 export interface LabelCmd {
+  /** 식별 가능한 라벨의 이름입니다. */
   name: string
 }
 

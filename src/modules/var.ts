@@ -12,17 +12,21 @@ import { define } from '../define/defineCmdUI'
  */
 export type VarCmd<TVars, TLocalVars> =
   | {
+    /** 변경할 변수의 이름입니다. */
     name: keyof TVars & string
+    /** 설정할 값입니다. */
     value: TVars[keyof TVars]
   }
   | {
+    /** 변경할 변수의 이름입니다. */
     name: keyof TLocalVars & string
+    /** 설정할 값입니다. */
     value: TLocalVars[keyof TLocalVars]
   }
 
 const varModule = define<VarCmd<any, any>>({})
 
-varModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
+varModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 varModule.defineCommand(function* (cmd, ctx) {
   const nameStr = cmd.name as string

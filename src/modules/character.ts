@@ -11,11 +11,17 @@ export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center'
  */
 export type CharacterCmd<TConfig = any> = {
   [Name in CharacterKeysOf<TConfig>]: {
+    /** 캐릭터에 수행할 동작(보이기/숨기기)입니다. */
     action: 'show' | 'remove'
+    /** 조작할 캐릭터의 이름(키)입니다. */
     name: Name
+    /** 캐릭터의 위치 프리셋입니다. */
     position?: CharacterPositionPreset
+    /** 표시할 캐릭터 이미지의 키입니다. */
     image?: ImageKeysOf<TConfig, Name> | (string & {})
+    /** 캐릭터 등장 시 카메라를 해당 캐릭터에 포커스할지 여부입니다. */
     focus?: boolean | PointsOf<TConfig, Name> | (string & {})
+    /** 등장/퇴장 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
   }
 }[CharacterKeysOf<TConfig>]
@@ -23,9 +29,13 @@ export type CharacterCmd<TConfig = any> = {
 /** 카메라를 캐릭터에 포커스한다 */
 export type CharacterFocusCmd<TConfig = any> = {
   [Name in CharacterKeysOf<TConfig>]: {
+    /** 포커스할 캐릭터의 이름입니다. */
     name: Name
+    /** 포커스할 포인트(부위)의 키 또는 'inherit'입니다. */
     point?: PointsOf<TConfig, Name> | 'inherit' | (string & {})
+    /** 줌 배율 프리셋입니다. */
     zoom?: ZoomPreset
+    /** 포커스 이동 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
   }
 }[CharacterKeysOf<TConfig>]
@@ -33,8 +43,11 @@ export type CharacterFocusCmd<TConfig = any> = {
 /** 캐릭터를 컷인(전면) 레이어로 올리거나 복원한다 */
 export type CharacterHighlightCmd<TConfig = any> = {
   [Name in CharacterKeysOf<TConfig>]: {
+    /** 하이라이트할 캐릭터의 이름입니다. */
     name: Name
+    /** 하이라이트 효과를 켜거나 끕니다. */
     action: 'on' | 'off'
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
   }
 }[CharacterKeysOf<TConfig>]

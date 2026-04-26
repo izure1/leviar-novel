@@ -15,10 +15,15 @@ import { define } from '../define/defineCmdUI'
  * ```
  */
 export interface ConditionCmd<TConfig = any, TLocalVars = any> {
+  /** 분기를 결정할 조건 함수 또는 boolean 값입니다. */
   if: (vars: VarsOf<TConfig> & TLocalVars) => boolean
+  /** 조건이 참일 때 이동할 다음 씬(Scene)의 이름입니다. */
   next?: SceneNamesOf<TConfig>
+  /** 조건이 참일 때 이동할 현재 씬 내의 라벨(Label) 이름입니다. */
   goto?: string
+  /** 조건이 거짓일 때 이동할 현재 씬 내의 라벨 이름 또는 씬 이름입니다. */
   else?: string
+  /** 조건이 거짓일 때 이동할 다음 씬(Scene)의 이름입니다. */
   'else-next'?: SceneNamesOf<TConfig>
 }
 
