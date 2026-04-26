@@ -1,10 +1,28 @@
 {
   "name": "leviar-novel",
   "version": "0.0.1",
-  "description": "",
+  "description": "A powerful and flexible modular visual novel engine based on web technologies.",
   "license": "MIT",
   "author": "izure <admin@izure.org>",
-  "repository": "https://github.com/izure1/leviar-novel",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/izure1/leviar-novel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/izure1/leviar-novel/issues"
+  },
+  "homepage": "https://github.com/izure1/leviar-novel#readme",
+  "keywords": [
+    "visual-novel",
+    "engine",
+    "canvas",
+    "typescript",
+    "modular",
+    "leviar"
+  ],
+  "files": [
+    "dist/**/*"
+  ],
   "type": "module",
   "types": "./dist/types/index.d.ts",
   "main": "./dist/index.cjs",
