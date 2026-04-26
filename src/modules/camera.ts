@@ -19,6 +19,10 @@ export interface CameraPanCmd {
   position: PanPreset
   /** 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
+  /** 커스텀 X 좌표입니다. */
+  x?: number
+  /** 커스텀 Y 좌표입니다. */
+  y?: number
 }
 
 /**
@@ -230,7 +234,7 @@ cameraPanModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } 
 cameraPanModule.defineCommand(function* (cmd, ctx, data) {
   const resolved = cmd.position === 'inherit' ? data.lastPreset : cmd.position
   data.lastPreset = resolved
-  panCamera(ctx, resolved as PanPreset, cmd.duration)
+  panCamera(ctx, resolved as PanPreset, cmd.duration, cmd.x, cmd.y)
   return true
 })
 

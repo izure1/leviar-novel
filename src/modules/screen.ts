@@ -148,7 +148,7 @@ screenFadeModule.defineCommand(function* (cmd, ctx, data) {
   if (dur === 0) return true
 
   if (cmd.disable) {
-    ctx.callbacks.disableInput(dur)
+    ctx.execute({ type: 'control', action: 'disable', duration: dur })
   }
 
   yield false
@@ -324,7 +324,7 @@ screenWipeModule.defineCommand(function* (cmd, ctx, data) {
 
   // 애니메이션 도중 사용자 클릭으로 조기 진행되지 않도록 입력 차단 (disable 옵션이 켜져있을 때만)
   if (cmd.disable) {
-    ctx.callbacks.disableInput(dur)
+    ctx.execute({ type: 'control', action: 'disable', duration: dur })
   }
 
   yield false

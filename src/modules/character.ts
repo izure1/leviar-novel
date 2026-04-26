@@ -1,7 +1,8 @@
 import type { CharDefs, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
-import type { ZoomPreset } from './camera'
+import type { ZoomPreset, CameraPanCmd, CameraZoomCmd } from './camera'
+import type { LeviarObject } from 'leviar'
+import type { CommandResult } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
-import { panCamera, zoomCamera } from './camera'
 import { define } from '../define/defineCmdUI'
 
 export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center' | 'right' | 'far-right' | (string & {})
@@ -82,6 +83,18 @@ function resolvePositionX(position: string): number {
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
+export interface CharacterRenderObj extends LeviarObject<Record<string, any>, Record<string, any>> {
+  _currentImageKey?: string
+  transition?: (src: string, dur: number) => void
+}
+
+interface CharacterViewEntry {
+  show: () => void
+  hide: () => void
+  getObj: (name: string) => CharacterRenderObj | undefined
+  update: (d: CharacterSchema) => void
+}
+
 /**
  * 캐릭터 모듈. `novel.config`의 `modules: { 'character': characterModule }` 형태로 등록합니다.
  */
@@ -91,7 +104,7 @@ const characterModule = define<CharacterCmd<any>, CharacterSchema>({
 
 characterModule.defineView((data, ctx) => {
   // 내부 canvas 오브젝트 맵
-  const _charObjs: Record<string, any> = {}
+  const _charObjs: Record<string, CharacterRenderObj> = {}
 
   const _showCharacter = (
     name: string,
@@ -135,9 +148,9 @@ characterModule.defineView((data, ctx) => {
         zIndex: Z_INDEX.CHARACTER_NORMAL,
       },
       transform: { position: { x: xPos, y: 0, z: zPos } }
-    })
+    }) as CharacterRenderObj
     ctx.renderer.track(obj)
-      ; (obj as any)._currentImageKey = resolvedKey
+    obj._currentImageKey = resolvedKey
     _charObjs[name] = obj
 
     if (dur > 0) {
@@ -216,20 +229,22 @@ characterModule.defineCommand(function* (cmd, ctx, data) {
     if (showCmd.focus) {
       const focusType = typeof showCmd.focus === 'string' ? showCmd.focus : undefined
       const focusDuration = showCmd.duration ?? 800
-      Promise.resolve().then(() => {
-        const entry = ctx.ui.get('character') as any
-        const charObj = entry?.getObj?.(showCmd.name)
-        if (charObj) {
-          const check = () => {
-            if ((charObj as any).__renderedSize?.h > 0) {
-              _focusCharacter(ctx, showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
-            } else {
-              requestAnimationFrame(check)
-            }
-          }
-          check()
+      yield false // proxy microtask 대기
+
+      const entry = ctx.ui.get('character') as CharacterViewEntry | undefined
+      const charObj = entry?.getObj(showCmd.name)
+      if (charObj) {
+        while (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+          yield false
         }
-      })
+        const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
+        for (const c of cmds) {
+          const res = ctx.execute(c)
+          if (res && typeof (res as Generator).next === 'function') {
+            yield* (res as Generator<CommandResult, CommandResult, unknown>)
+          }
+        }
+      }
     }
   } else {
     delete newChars[cmd.name]
@@ -243,30 +258,31 @@ export default characterModule
 
 // ─── character-focus 모듈 ────────────────────────────────────
 
-function _focusCharacter(
-  ctx: any,
+function _calcFocusCommands(
   name: string,
-  target: any,
-  def: any,
+  target: CharacterRenderObj | undefined | null,
+  def: { images: Record<string, { points?: Record<string, { x: number; y: number }>; height?: number; width?: number }> },
   focusType?: string,
-  fit: string = 'inherit',
+  fit: ZoomPreset = 'inherit',
   duration: number = 800
-) {
-  if (!target) return
+): [(CameraPanCmd & { type: 'camera-pan' }), (CameraZoomCmd & { type: 'camera-zoom' })] | [] {
+  if (!target) return []
   const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0]
   const imageDef = def.images[activeImgKey]
   const fp = (focusType && imageDef?.points) ? imageDef.points[focusType] : { x: 0.5, y: 0.5 }
 
   const targetX = target.transform?.position?.x ?? 0
   const charW = target.style?.width ?? 500
-  const rendH = (target as any).__renderedSize?.h
+  const rendH = target.__renderedSize?.h
   const charH = imageDef?.height ?? ((rendH && rendH > 0) ? rendH : charW * 2)
 
   const panX = targetX + charW * (fp.x - 0.5)
   const panY = charH * (0.5 - fp.y)
 
-  panCamera(ctx, 'center', duration, panX, panY)
-  zoomCamera(ctx, fit as any, duration)
+  return [
+    { type: 'camera-pan', position: 'center', duration, x: panX, y: panY },
+    { type: 'camera-zoom', preset: fit, duration }
+  ]
 }
 
 export interface CharacterFocusSchema { _unused: undefined }
@@ -279,22 +295,24 @@ characterFocusModule.defineView((_data, _ctx) => ({
 }))
 
 characterFocusModule.defineCommand(function* (cmd, ctx) {
-  const entry = ctx.ui.get('character') as any
-  const charObj = entry?.getObj?.(cmd.name)
+  const entry = ctx.ui.get('character') as CharacterViewEntry | undefined
+  const charObj = entry?.getObj(cmd.name)
   if (!charObj) return true
 
   const charDefs = ctx.renderer.config.characters as CharDefs
   const def = charDefs[cmd.name]
   if (!def) return true
 
-  const check = () => {
-    if ((charObj as any).__renderedSize?.h > 0) {
-      _focusCharacter(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
-    } else {
-      requestAnimationFrame(check)
+  while (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+    yield false
+  }
+  const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
+  for (const c of cmds) {
+    const res = ctx.execute(c)
+    if (res && typeof (res as Generator).next === 'function') {
+      yield* (res as Generator<CommandResult, CommandResult, unknown>)
     }
   }
-  check()
   return true
 })
 
@@ -321,6 +339,6 @@ export { characterHighlightModule }
 // ─── 하위 호환 헬퍼 ──────────────────────────────────────────
 
 /** @internal Novel.ts rebuildUI 하위 호환용 */
-export function showCharacter(ctx: any, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
-  characterModule.__handler?.({ action: 'show', name, position, image: imageKey, duration }, ctx)
+export function showCharacter(ctx: unknown, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
+  characterModule.__handler?.({ action: 'show', name, position, image: imageKey, duration } as CharacterCmd, ctx as never)
 }
