@@ -418,6 +418,36 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._inputMode = 'none'
   }
 
+  // ─── 전체화면 ─────────────────────────────────────────────
+
+  /** 현재 전체화면 모드인지 확인합니다. */
+  get isFullscreen(): boolean {
+    return document.fullscreenElement === this._option.canvas
+  }
+
+  /** 전체화면 모드로 전환합니다. */
+  async requestFullscreen(): Promise<void> {
+    if (!this.isFullscreen) {
+      await this._option.canvas.requestFullscreen()
+    }
+  }
+
+  /** 전체화면 모드를 해제합니다. */
+  async exitFullscreen(): Promise<void> {
+    if (this.isFullscreen) {
+      await document.exitFullscreen()
+    }
+  }
+
+  /** 전체화면 모드를 토글합니다. */
+  async toggleFullscreen(): Promise<void> {
+    if (this.isFullscreen) {
+      await this.exitFullscreen()
+    } else {
+      await this.requestFullscreen()
+    }
+  }
+
   // ─── rebuild용 SceneContext stub ────────────────────────────
 
   private _makeRebuildCtx(): SceneContext {

@@ -86,6 +86,7 @@ async function main() {
   const btnSkip = document.getElementById('btn-skip') as HTMLButtonElement
   const btnSave = document.getElementById('btn-save') as HTMLButtonElement
   const btnLoad = document.getElementById('btn-load') as HTMLButtonElement
+  const btnFullscreen = document.getElementById('btn-fullscreen') as HTMLButtonElement
 
   // Skip 버튼 — 토글 방식
   btnSkip.addEventListener('click', (e) => {
@@ -137,6 +138,27 @@ async function main() {
     } catch (e) {
       console.error(e)
       showToast('⚠ 불러오기 실패', 'error')
+    }
+  })
+
+  // Fullscreen 버튼
+  btnFullscreen.addEventListener('click', async (e) => {
+    e.stopPropagation()
+    try {
+      await novel.toggleFullscreen()
+    } catch (err) {
+      showToast('⚠ 전체화면 토글 실패', 'error')
+    }
+  })
+
+  // Fullscreen 상태 동기화
+  document.addEventListener('fullscreenchange', () => {
+    if (novel.isFullscreen) {
+      btnFullscreen.textContent = '🔳 Exit Fullscreen'
+      btnFullscreen.classList.add('active')
+    } else {
+      btnFullscreen.textContent = '🔲 Fullscreen'
+      btnFullscreen.classList.remove('active')
     }
   })
 

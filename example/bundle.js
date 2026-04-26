@@ -16020,6 +16020,31 @@ ${addLineNumbers(fragment)}`);
       }
       this._inputMode = "none";
     }
+    // ─── 전체화면 ─────────────────────────────────────────────
+    /** 현재 전체화면 모드인지 확인합니다. */
+    get isFullscreen() {
+      return document.fullscreenElement === this._option.canvas;
+    }
+    /** 전체화면 모드로 전환합니다. */
+    async requestFullscreen() {
+      if (!this.isFullscreen) {
+        await this._option.canvas.requestFullscreen();
+      }
+    }
+    /** 전체화면 모드를 해제합니다. */
+    async exitFullscreen() {
+      if (this.isFullscreen) {
+        await document.exitFullscreen();
+      }
+    }
+    /** 전체화면 모드를 토글합니다. */
+    async toggleFullscreen() {
+      if (this.isFullscreen) {
+        await this.exitFullscreen();
+      } else {
+        await this.requestFullscreen();
+      }
+    }
     // ─── rebuild용 SceneContext stub ────────────────────────────
     _makeRebuildCtx() {
       const noop = () => {
@@ -17611,6 +17636,7 @@ ${addLineNumbers(fragment)}`);
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");
     const btnLoad = document.getElementById("btn-load");
+    const btnFullscreen = document.getElementById("btn-fullscreen");
     btnSkip.addEventListener("click", (e) => {
       e.stopPropagation();
       if (novel.isSkipping) {
@@ -17654,6 +17680,23 @@ ${addLineNumbers(fragment)}`);
       } catch (e2) {
         console.error(e2);
         showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
+      }
+    });
+    btnFullscreen.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      try {
+        await novel.toggleFullscreen();
+      } catch (err) {
+        showToast("\u26A0 \uC804\uCCB4\uD654\uBA74 \uD1A0\uAE00 \uC2E4\uD328", "error");
+      }
+    });
+    document.addEventListener("fullscreenchange", () => {
+      if (novel.isFullscreen) {
+        btnFullscreen.textContent = "\u{1F533} Exit Fullscreen";
+        btnFullscreen.classList.add("active");
+      } else {
+        btnFullscreen.textContent = "\u{1F532} Fullscreen";
+        btnFullscreen.classList.remove("active");
       }
     });
     window.addEventListener("click", () => {
