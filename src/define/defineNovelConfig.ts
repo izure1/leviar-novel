@@ -4,7 +4,7 @@ import type { EffectType } from '../types/dialogue'
 import dialogueModule from '../modules/dialogue'
 import choiceModule from '../modules/choice'
 import backgroundModule from '../modules/background'
-import characterModule, { characterFocusModule, characterHighlightModule } from '../modules/character'
+import characterModule, { characterFocusModule, characterHighlightModule, characterEffectModule } from '../modules/character'
 import moodModule from '../modules/mood'
 import effectModule from '../modules/effect'
 import overlayModule from '../modules/overlay'
@@ -29,6 +29,7 @@ export const BUILTIN_MODULES = {
   'character': characterModule,
   'character-focus': characterFocusModule,
   'character-highlight': characterHighlightModule,
+  'character-effect': characterEffectModule,
   'mood': moodModule,
   'effect': effectModule,
   'overlay': overlayModule,

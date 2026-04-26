@@ -162,7 +162,7 @@ export default defineScene({
     ],
     speed: 10,
   },
-  { type: 'camera-effect', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
+  { type: 'character-effect', name: 'zena', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
   { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
@@ -182,6 +182,7 @@ export default defineScene({
     type: 'dialogue',
     text: '제나는 다시 마이크에서 손을 떼고 억지웃음을 지었다.'
   },
+  { type: 'character-effect', name: 'zena', preset: 'reset' },
   { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
@@ -218,6 +219,8 @@ export default defineScene({
     ],
     speed: 10,
   },
+  { type: 'character-effect', name: 'zena', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed' },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -240,6 +243,7 @@ export default defineScene({
     type: 'dialogue',
     text: '화가 머리끝까지 난 제나가 마침내 이성을 놓아버렸다.'
   },
+  { type: 'camera-effect', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -355,6 +359,8 @@ export default defineScene({
   { type: 'condition', if: () => true, goto: 'stream-end' },
 
   { type: 'label', name: 'stream-end' },
+  { type: 'camera-effect', preset: 'reset', duration: 500 },
+  { type: 'character-effect', name: 'zena', preset: 'reset', duration: 500 },
   {
     type: 'dialogue',
     speaker: 'zena',

@@ -11,7 +11,7 @@
 | 카테고리 | 명령어 (`type`) | 주요 역할 |
 | :--- | :--- | :--- |
 | **기본 연출** | `dialogue`, `character`, `background` | 텍스트 출력, 캐릭터 등장/퇴장, 배경 전환 |
-| **카메라** | `camera-zoom`, `camera-pan`, `camera-effect`, `character-focus` | 시점 조작, 흔들림 효과, 특정 캐릭터 포커싱 |
+| **카메라** | `camera-zoom`, `camera-pan`, `camera-effect`, `character-focus`, `character-effect` | 시점 조작, 특정 캐릭터 포커싱 및 개별/전체 화면 효과 |
 | **화면 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect` | 화면 전환, 분위기 오버레이, 파티클 시스템 |
 | **로직/제어** | `choices`, `condition`, `var`, `label`, `control` | 선택지 분기, 조건부 실행, 변수 조작, 흐름 제어 |
 | **시스템** | `ui` | 특정 모듈 UI 표시 및 숨김 제어 |
@@ -124,7 +124,18 @@
 | :--- | :--- | :---: | :--- |
 | **`preset`** | `EffectPreset` | O | `shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset` |
 | **`intensity`** | `number` | - | 효과의 강도. 프리셋 기본값을 덮어씁니다. |
-| **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. |
+| **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. 음수 지정 시 무한 반복합니다. |
+
+### `character-effect`
+화면 전체가 아닌 특정 캐릭터 객체에만 흔들림 등의 특수 효과를 재생합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`name`** | `string` | O | 효과를 적용할 캐릭터의 에셋 키 |
+| **`preset`** | `EffectPreset` | O | `shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset` |
+| **`intensity`** | `number` | - | 효과의 강도. 프리셋 기본값을 덮어씁니다. |
+| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
+| **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. 음수 지정 시 무한 반복합니다. |
 
 ### `character-focus`
 특정 캐릭터의 특정 부위(Face, Hand 등)를 자동으로 계산하여 카메라를 포커싱합니다.

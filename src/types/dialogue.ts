@@ -25,7 +25,7 @@ import type { BackgroundCmd } from '../modules/background'
 import type { MoodCmd } from '../modules/mood'
 import type { EffectCmd } from '../modules/effect'
 import type { OverlayCmd } from '../modules/overlay'
-import type { CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd } from '../modules/character'
+import type { CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd } from '../modules/character'
 import type { CameraZoomCmd, CameraPanCmd, CameraEffectCmd } from '../modules/camera'
 import type { ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd } from '../modules/screen'
 import type { UICmd } from '../modules/ui'
@@ -34,7 +34,7 @@ import type { ControlCmd } from '../modules/control'
 // 재수출
 export type {
   DialogueCmd, ChoiceCmd, ConditionCmd, VarCmd, LabelCmd, BackgroundCmd,
-  MoodCmd, EffectCmd, OverlayCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd,
+  MoodCmd, EffectCmd, OverlayCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
   UICmd, ControlCmd
 }
@@ -66,6 +66,7 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<CharacterCmd<TConfig>, 'character', TVars, TLocalVars>
   | _WithType<CharacterFocusCmd<TConfig>, 'character-focus', TVars, TLocalVars>
   | _WithType<CharacterHighlightCmd<TConfig>, 'character-highlight', TVars, TLocalVars>
+  | _WithType<CharacterEffectCmd<TConfig>, 'character-effect', TVars, TLocalVars>
   | _WithType<CameraZoomCmd, 'camera-zoom', TVars, TLocalVars>
   | _WithType<CameraPanCmd, 'camera-pan', TVars, TLocalVars>
   | _WithType<CameraEffectCmd, 'camera-effect', TVars, TLocalVars>

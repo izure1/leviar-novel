@@ -61,7 +61,7 @@ const PAN_PRESETS: Record<Exclude<PanPreset, 'inherit'>, { x: number; y: number;
   center: { x: 0, y: 0, duration: 1000 },
 }
 
-const CAMERA_EFFECT_PRESETS: Record<Exclude<CameraEffectPreset, 'reset'>, { intensity: number; duration: number }> = {
+export const CAMERA_EFFECT_PRESETS: Record<Exclude<CameraEffectPreset, 'reset'>, { intensity: number; duration: number }> = {
   shake: { intensity: 10, duration: 500 },
   bounce: { intensity: 15, duration: 600 },
   wave: { intensity: 20, duration: 1000 },
