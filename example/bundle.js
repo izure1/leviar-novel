@@ -536,7 +536,7 @@
         textObj.style.opacity = 1;
       },
       /**
-       * data가 변경될 때 Proxy가 자동으로 호출합니다.
+       * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
        * - lines가 바뀐 경우: 텍스트 재렌더
        * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */

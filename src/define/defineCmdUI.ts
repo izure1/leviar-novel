@@ -92,7 +92,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
   let _onUpdate: ((data: TSchema) => void) | null = null
   let _moduleKey: string | null = null
 
-  // 공유 상태 객체 (순수 객체, 더 이상 Proxy를 사용하지 않음)
+  // 공유 상태 객체
   const data: TSchema = { ...(schema ?? {}) } as TSchema
 
   // 상태 변경 함수. 한 번에 여러 속성을 병합 업데이트하고 즉시 뷰를 동기화함.

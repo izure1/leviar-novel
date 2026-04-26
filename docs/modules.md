@@ -12,7 +12,7 @@
 graph TD
     A[Scenario Command] -- "Execute" --> B[Controller: defineCommand]
     B -- "Update State" --> C[Model: define schema]
-    C -- "Proxy Trigger" --> D[View: defineView]
+    C -- "setState Trigger" --> D[View: defineView]
     D -- "Render" --> E[User UI]
 ```
 
@@ -36,10 +36,22 @@ graph TD
 
 ### 1. 상태 정의 (Model)
 
-`define(schema)`를 통해 생성된 `state`는 단순한 객체가 아닌 **반응형 Proxy**입니다.
+`define(schema)`를 통해 생성된 `state`는 모듈의 상태 구조를 나타냅니다. 상태 변경은 **`setState`** 함수를 통해 이루어집니다.
 
-*   **Scheme 조작**: 핸들러 내부에서 `state.prop = value`와 같이 값을 직접 수정하면, 이는 모듈의 **스키마(Scheme) 데이터를 즉시 변경**합니다.
-*   **Update 호출**: 스키마 데이터가 변경되는 즉시 엔진의 반응형 시스템이 이를 감지하며, 결과적으로 `defineView`에서 정의한 **`update(data)` 함수가 자동으로 호출**되어 화면이 갱신됩니다.
+*   **Scheme 조작**: 핸들러 내부에서 `setState({ prop: value })`와 같이 호출하여 모듈의 **스키마(Scheme) 데이터를 안전하게 변경**합니다. 상태를 직접 변경(mutate)하지 마십시오.
+    ```ts
+    // ❌ 잘못된 예시
+    module.defineCommand(function *(cmd, ctx, state, setState) {
+      state.opacity = 0 // X
+      state.text = "Hello" // X
+    })
+
+    // ✅ 올바른 예시
+    module.defineCommand(function *(cmd, ctx, state, setState) {
+      setState({ opacity: 0, text: "Hello" }); // O
+    })
+    ```
+*   **Update 호출**: `setState`를 통해 상태가 변경되면 엔진이 이를 감지하며, 결과적으로 `defineView`에서 정의한 **`update(data)` 함수가 자동으로 호출**되어 화면이 갱신됩니다. 여러 `setState` 호출은 렌더링 최적화를 위해 동기적으로 일괄 처리(batch)됩니다.
 *   **Initial Override**: 여기에 정의된 기본값은 [Scene의 `initial`](./scenes.md#2-초기-상태-설정-initial) 속성에 의해 씬별로 오버라이드될 수 있습니다.
 
 ---
@@ -53,7 +65,8 @@ graph TD
 | :--- | :--- | :--- |
 | **`cmd`** | **입력 데이터** | 엔진이 **Resolvable 함수를 미리 실행(Resolved)**하여 최종 값으로 변환한 데이터입니다. 개발자는 별도의 타입 체크나 호출 없이 즉시 데이터를 사용할 수 있습니다. |
 | **`ctx`** | **엔진 인터페이스** | 렌더러(`ctx.renderer`), 월드(`ctx.world`), 씬 제어(`ctx.scene`), 타 모듈 UI 접근(`ctx.ui`) 등 엔진의 모든 자원에 접근하기 위한 **통합 게이트웨이**입니다. |
-| **`state`** | **내부 상태** | 위에서 설명한 모듈 전용 반응형 상태 객체입니다. 이 값을 수정하는 것이 곧 UI를 갱신하는 유일한 표준 방식입니다. |
+| **`state`** | **내부 상태** | 모듈의 현재 상태 객체입니다. (읽기 전용) |
+| **`setState`**| **상태 변경 함수** | `setState(newState)` 형태로 호출하여 모듈의 상태를 갱신합니다. 부분 업데이트(Partial Update)를 지원하며, 이 함수를 통해 상태를 변경해야 UI가 올바르게 갱신됩니다. |
 
 #### 💡 실행 흐름 제어 (Yield & Return)
 엔진은 핸들러가 종료될 때까지 반복적으로 `.next()`를 호출하며 실행 흐름을 제어합니다.
