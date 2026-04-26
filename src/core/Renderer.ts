@@ -77,7 +77,6 @@ export class Renderer {
   // ─── 카메라 변환 합성용 ─────────────────────────────────────
   public camBaseObj: LeviarObject | null = null
   public camOffsetObj: LeviarObject | null = null
-  private _camSyncRafId: number | null = null
 
   constructor(world: World, config: NovelConfig<any, any, any, any>, option: RendererOption) {
     this.world = world
@@ -114,9 +113,9 @@ export class Renderer {
           this.world.camera.transform.rotation.z = this.camBaseObj.transform.rotation.z + this.camOffsetObj.transform.rotation.z
         }
       }
-      this._camSyncRafId = requestAnimationFrame(syncLoop)
+      requestAnimationFrame(syncLoop)
     }
-    this._camSyncRafId = requestAnimationFrame(syncLoop)
+    requestAnimationFrame(syncLoop)
   }
 
   /**
@@ -330,6 +329,7 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       getStateStore: () => new Map(),
       getUIRegistry: () => new Map(),
       syncUIState: noop,
+      advance: noop,
     },
     state: {
       set: noop as any,

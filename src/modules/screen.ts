@@ -11,6 +11,8 @@ export interface ScreenFadeCmd {
   dir: 'in' | 'out'
   preset?: FadeColorPreset
   duration?: number
+  /** 애니메이션 진행 중 사용자 입력을 차단할지 여부 */
+  disable?: boolean
 }
 
 /** 화면을 순간 플래시한다 */
@@ -25,6 +27,8 @@ export interface ScreenWipeCmd {
   dir: 'in' | 'out'
   preset?: WipePreset
   duration?: number
+  /** 애니메이션 진행 중 사용자 입력을 차단할지 여부 */
+  disable?: boolean
 }
 
 // ─── 프리셋 테이블 ───────────────────────────────────────────
@@ -58,7 +62,7 @@ export interface ScreenFadeSchema {
   coveredColor: string
 }
 
-const screenFadeModule = define<ScreenFadeCmd, ScreenFadeSchema>({ 
+const screenFadeModule = define<ScreenFadeCmd, ScreenFadeSchema>({
   lastPreset: 'black',
   isCovered: false,
   coveredColor: 'rgba(0,0,0,1)'
@@ -71,7 +75,9 @@ screenFadeModule.defineView((data, ctx) => {
     const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
     rect = ctx.renderer.world.createRectangle({
       style: {
-        color: 'rgba(0,0,0,1)', width: w * 2, height: h * 2,
+        gradientType: 'linear',
+        gradient: '0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%',
+        width: w * 2, height: h * 2,
         opacity: 0, zIndex: Z_INDEX.TRANSITION, pointerEvents: false,
       },
       transform: { position: { x: 0, y: 0, z: 10 } },
@@ -82,7 +88,8 @@ screenFadeModule.defineView((data, ctx) => {
   }
 
   if (data.isCovered) {
-    rect.style.color = data.coveredColor
+    rect.style.gradientType = 'linear'
+    rect.style.gradient = `0deg, ${data.coveredColor} 0%, ${data.coveredColor} 100%`
     rect.style.opacity = 1
     rect.transform.position.x = 0
     rect.transform.position.y = 0
@@ -91,9 +98,9 @@ screenFadeModule.defineView((data, ctx) => {
   }
 
   return {
-    show: () => {},
-    hide: () => {},
-    update: () => {},
+    show: () => { },
+    hide: () => { },
+    update: () => { },
   }
 })
 
@@ -112,7 +119,8 @@ screenFadeModule.defineCommand(function* (cmd, ctx, data) {
   const rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) return true
 
-  rect.style.color = cfg.color
+  rect.style.gradientType = 'linear'
+  rect.style.gradient = `0deg, ${cfg.color} 0%, ${cfg.color} 100%`
   rect.transform.position.x = 0
   rect.transform.position.y = 0
 
@@ -121,7 +129,20 @@ screenFadeModule.defineCommand(function* (cmd, ctx, data) {
   rect.style.opacity = startOpacity
 
   const dur = ctx.renderer.dur(cmd.duration ?? 600)
-  ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, dur, cfg.easing)
+  
+  const onAnimEnd = () => {
+    ctx.callbacks.advance()
+  }
+
+  ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, dur, cfg.easing, onAnimEnd)
+
+  if (dur === 0) return true
+
+  if (cmd.disable) {
+    ctx.callbacks.disableInput(dur)
+  }
+
+  yield false
 
   return true
 })
@@ -222,57 +243,82 @@ screenWipeModule.defineCommand(function* (cmd, ctx, data) {
   const cfg = WIPE_PRESETS[resolvedPreset as Exclude<WipePreset, 'inherit'>]
   if (!cfg) return true
 
-  const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
-  const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
   const dur = ctx.renderer.dur(cmd.duration ?? 800)
-
-  const dx = cfg.x * w * 2
-  const dy = cfg.y * h * 2
 
   // 페이드 색상은 screen-fade 모듈의 state에서 가져옴 (renderer.state 공유)
   const fadeState = ctx.state.get('screen-fade') as ScreenFadeSchema | undefined
   const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset
   const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.color ?? 'rgba(0,0,0,1)'
 
-  if (fadeState) {
-    fadeState.isCovered = cmd.dir === 'out'
-    fadeState.coveredColor = color
-  }
+  // fadeState 업데이트는 애니메이션 종료 후(onEnd) 수행하여, 
+  // in 애니메이션 도중 opacity가 0으로 덮어씌워지는 문제를 방지합니다.
 
   const rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) return true
 
   rect.style.opacity = 1
+  rect.transform.position.x = 0
+  rect.transform.position.y = 0
 
-  let gradDir = ''
-  if (cmd.dir === 'out') {
-    if (cfg.x === -1) gradDir = 'to right'
-    else if (cfg.x === 1) gradDir = 'to left'
-    else if (cfg.y === -1) gradDir = 'to bottom'
-    else if (cfg.y === 1) gradDir = 'to top'
-  } else {
-    if (cfg.x === -1) gradDir = 'to left'
-    else if (cfg.x === 1) gradDir = 'to right'
-    else if (cfg.y === -1) gradDir = 'to top'
-    else if (cfg.y === 1) gradDir = 'to bottom'
-  }
+  let gradDir = 0
+  if (cfg.x === -1) gradDir = 90
+  else if (cfg.x === 1) gradDir = 270
+  else if (cfg.y === -1) gradDir = 180
+  else if (cfg.y === 1) gradDir = 0
 
   let colorTransparent = 'transparent'
   if (color.startsWith('rgba(')) {
     colorTransparent = color.replace(/[\d.]+\)$/, '0)')
   }
 
-  rect.style.color = `linear-gradient(${gradDir}, ${color} 95%, ${colorTransparent} 100%)`
+  rect.style.gradientType = 'linear'
+
+  let startGradient = ''
+  let endGradient = ''
 
   if (cmd.dir === 'out') {
-    rect.transform.position.x = dx
-    rect.transform.position.y = dy
-    ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, dur, 'linear')
+    startGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`
+    endGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`
   } else {
-    rect.transform.position.x = 0
-    rect.transform.position.y = 0
-    ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, dur, 'linear')
+    startGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`
+    endGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`
   }
+
+  rect.style.gradient = startGradient
+
+  const onEnd = () => {
+    if (fadeState) {
+      fadeState.isCovered = cmd.dir === 'out'
+      fadeState.coveredColor = color
+    }
+  }
+
+  const onAnimEnd = () => {
+    onEnd()
+    ctx.callbacks.advance()
+  }
+
+  // 기존 anim stop (renderer.animate 내 snap이 시작 위치 덮어쓰는 문제 방지)
+  const activeAnims = (rect as any).__activeAnims as Map<string, { anim: any }> | undefined
+  if (activeAnims) {
+    const existing = activeAnims.get('style.gradient')
+    if (existing?.anim) {
+      existing.anim.stop?.()
+      activeAnims.delete('style.gradient')
+    }
+  }
+
+  ctx.renderer.animate(rect, { style: { gradient: endGradient } }, dur, 'linear', onAnimEnd)
+
+  // dur === 0이면 animate가 onAnimEnd를 이미 동기 호출했으므로 즉시 완료
+  if (dur === 0) return true
+
+  // 애니메이션 도중 사용자 클릭으로 조기 진행되지 않도록 입력 차단 (disable 옵션이 켜져있을 때만)
+  if (cmd.disable) {
+    ctx.callbacks.disableInput(dur)
+  }
+
+  yield false
 
   return true
 })

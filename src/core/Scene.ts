@@ -72,6 +72,11 @@ export interface SceneCallbacks {
   getUIRegistry(): Map<string, UIRuntimeEntry>
   /** UI 상태 동기화 (입력 모드 갱신 등)를 엔진에 요청합니다. */
   syncUIState(): void
+  /**
+   * 현재 대기 중인 커맨드를 강제로 진행합니다.
+   * 애니메이션 onEnd 콜백 등에서 호출하여 yield false 상태를 resume 시킵니다.
+   */
+  advance(): void
 }
 
 // =============================================================

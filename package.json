@@ -26,6 +26,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
-    "leviar": "^1.0.4"
+    "hookall": "^2.2.0",
+    "leviar": "^1.0.5"
   }
 }

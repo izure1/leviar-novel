@@ -124,7 +124,7 @@ characterModule.defineView((data, ctx) => {
       transform: { position: { x: xPos, y: 0, z: zPos } }
     })
     ctx.renderer.track(obj)
-    ;(obj as any)._currentImageKey = resolvedKey
+      ; (obj as any)._currentImageKey = resolvedKey
     _charObjs[name] = obj
 
     if (dur > 0) {
@@ -261,8 +261,8 @@ export interface CharacterFocusSchema { _unused: undefined }
 const characterFocusModule = define<CharacterFocusCmd<any>, CharacterFocusSchema>({ _unused: undefined })
 
 characterFocusModule.defineView((_data, _ctx) => ({
-  show: () => {},
-  hide: () => {},
+  show: () => { },
+  hide: () => { },
 }))
 
 characterFocusModule.defineCommand(function* (cmd, ctx) {
@@ -294,8 +294,8 @@ export interface CharacterHighlightSchema { _unused: undefined }
 const characterHighlightModule = define<CharacterHighlightCmd<any>, CharacterHighlightSchema>({ _unused: undefined })
 
 characterHighlightModule.defineView((_data, _ctx) => ({
-  show: () => {},
-  hide: () => {},
+  show: () => { },
+  hide: () => { },
 }))
 
 characterHighlightModule.defineCommand(function* (_cmd, _ctx) {

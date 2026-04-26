@@ -232,9 +232,9 @@ export default defineScene({
     type: 'dialogue',
     text: '그리고 가방에서 몬스터 에너지 드링크를 꺼내 원샷을 때렸다.'
   },
-  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 5000 },
   {
     type: 'dialogue',
     text: '이것이 나와 제나의 끔찍한 첫 만남이었다.'
   },
+  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 5000, disable: true },
 ])

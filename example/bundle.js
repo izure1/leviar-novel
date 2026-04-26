@@ -1,5 +1,316 @@
 "use strict";
 (() => {
+  // node_modules/hookall/dist/esm/index.mjs
+  var HookallStore = class extends WeakMap {
+    ensure(obj, key) {
+      if (!this.has(obj)) {
+        const scope2 = {};
+        this.set(obj, scope2);
+      }
+      const scope = this.get(obj);
+      if (!Object.prototype.hasOwnProperty.call(scope, key)) {
+        scope[key] = /* @__PURE__ */ new Map();
+      }
+      return scope[key];
+    }
+  };
+  var Hookall = class _Hookall {
+    static Global = {};
+    static _Store = new HookallStore();
+    beforeHooks;
+    afterHooks;
+    /**
+     * Create hook system. you can pass a target object or undefined.
+     * If you pass a object, the hook system will be work for object locally. You're going to want this kind of usage in general.
+     * If not specified, will be work for global. This is useful when you want to share your work with multiple files.
+     * @param target The object to work with locally. If not specified, will be work for global.
+     */
+    constructor(target) {
+      this.beforeHooks = _Hookall._Store.ensure(target, "before");
+      this.afterHooks = _Hookall._Store.ensure(target, "after");
+    }
+    _ensureCommand(hooks, command) {
+      if (!hooks.has(command)) {
+        hooks.set(command, []);
+      }
+      return hooks.get(command);
+    }
+    _createWrapper(command, callback, repeat) {
+      return {
+        callback,
+        command,
+        repeat
+      };
+    }
+    _on(hooks, command, callback, repeat) {
+      const wrappers = this._ensureCommand(hooks, command);
+      const wrapper = this._createWrapper(command, callback, repeat);
+      wrappers.unshift(wrapper);
+    }
+    /**
+     * You register a preprocessing function, which is called before the callback function of the `trigger` method.
+     * The value returned by this function is passed as a parameter to the `trigger` method's callback function.
+     * If you register multiple preprocessing functions, they are executed in order, with each function receiving the value returned by the previous one as a parameter.
+     * @param command Command to work.
+     * @param callback Preprocessing function to register.
+     */
+    onBefore(command, callback) {
+      this._on(this.beforeHooks, command, callback, -1);
+      return this;
+    }
+    /**
+     * Similar to the `onBefore` method, but it only runs once.
+     * For more details, please refer to the `onBefore` method.
+     * @param command Command to work.
+     * @param callback Preprocessing function to register.
+     */
+    onceBefore(command, callback) {
+      this._on(this.beforeHooks, command, callback, 1);
+      return this;
+    }
+    /**
+     * You register a post-processing function which is called after the callback function of the `trigger` method finishes.
+     * This function receives the value returned by the `trigger` method's callback function as a parameter.
+     * If you register multiple post-processing functions, they are executed in order, with each function receiving the value returned by the previous one as a parameter.
+     * @param command Command to work.
+     * @param callback Post-preprocessing function to register.
+     */
+    onAfter(command, callback) {
+      this._on(this.afterHooks, command, callback, -1);
+      return this;
+    }
+    /**
+     * Similar to the `onAfter` method, but it only runs once.
+     * For more details, please refer to the `onAfter` method.
+     * @param command Command to work.
+     * @param callback Post-preprocessing function to register.
+     */
+    onceAfter(command, callback) {
+      this._on(this.afterHooks, command, callback, 1);
+      return this;
+    }
+    _off(hooks, command, callback) {
+      const wrappers = this._ensureCommand(hooks, command);
+      if (callback) {
+        const i = wrappers.findIndex((wrapper) => wrapper.callback === callback);
+        if (i !== -1) {
+          wrappers.splice(i, 1);
+        }
+      } else {
+        wrappers.length = 0;
+      }
+      return this;
+    }
+    /**
+     * You remove the preprocessing functions registered with `onBefore` or `onceBefore` methods.
+     * If you don't specify a callback parameter, it removes all preprocessing functions registered for that command.
+     * @param command Commands with preprocessing functions to be deleted.
+     * @param callback Preprocessing function to be deleted.
+     */
+    offBefore(command, callback) {
+      this._off(this.beforeHooks, command, callback);
+      return this;
+    }
+    /**
+     * You remove the post-preprocessing functions registered with `onAfter` or `onceAfter` methods.
+     * If you don't specify a callback parameter, it removes all post-preprocessing functions registered for that command.
+     * @param command Commands with post-preprocessing functions to be deleted.
+     * @param callback post-Preprocessing function to be deleted.
+     */
+    offAfter(command, callback) {
+      this._off(this.afterHooks, command, callback);
+      return this;
+    }
+    async _hookWith(hooks, command, value, ...params) {
+      let wrappers = this._ensureCommand(hooks, command);
+      let i = wrappers.length;
+      while (i--) {
+        const wrapper = wrappers[i];
+        value = await wrapper.callback(value, ...params);
+        wrapper.repeat -= 1;
+        if (wrapper.repeat === 0) {
+          this._off(hooks, command, wrapper.callback);
+        }
+      }
+      return value;
+    }
+    /**
+     * You execute the callback function provided as a parameter. This callback function receives the 'initialValue' parameter.
+     * 
+     * If preprocessing functions are registered, they run first, and the value returned by the preprocessing functions becomes the 'initialValue' parameter.
+     * After the callback function finishes, post-processing functions are called.
+     * These post-processing functions receive the value returned by the callback function as a parameter and run sequentially.
+     * 
+     * The final value returned becomes the result of the `trigger` method.
+     * @param command Command to work.
+     * @param initialValue Initial value to be passed to the callback function.
+     * @param callback The callback function to be executed.
+     */
+    async trigger(command, initialValue, callback, ...params) {
+      let value;
+      value = await this._hookWith(this.beforeHooks, command, initialValue, ...params);
+      value = await callback(value, ...params);
+      value = await this._hookWith(this.afterHooks, command, value, ...params);
+      return value;
+    }
+  };
+  var HookallStore2 = class extends WeakMap {
+    ensure(obj, key) {
+      if (!this.has(obj)) {
+        const scope2 = {};
+        this.set(obj, scope2);
+      }
+      const scope = this.get(obj);
+      if (!Object.prototype.hasOwnProperty.call(scope, key)) {
+        scope[key] = /* @__PURE__ */ new Map();
+      }
+      return scope[key];
+    }
+  };
+  var HookallSync = class _HookallSync {
+    static Global = {};
+    static _Store = new HookallStore2();
+    beforeHooks;
+    afterHooks;
+    /**
+     * Create hook system. you can pass a target object or undefined.
+     * If you pass a object, the hook system will be work for object locally. You're going to want this kind of usage in general.
+     * If not specified, will be work for global. This is useful when you want to share your work with multiple files.
+     * @param target The object to work with locally. If not specified, will be work for global.
+     */
+    constructor(target) {
+      this.beforeHooks = _HookallSync._Store.ensure(target, "before");
+      this.afterHooks = _HookallSync._Store.ensure(target, "after");
+    }
+    _ensureCommand(hooks, command) {
+      if (!hooks.has(command)) {
+        hooks.set(command, []);
+      }
+      return hooks.get(command);
+    }
+    _createWrapper(command, callback, repeat) {
+      return {
+        callback,
+        command,
+        repeat
+      };
+    }
+    _on(hooks, command, callback, repeat) {
+      const wrappers = this._ensureCommand(hooks, command);
+      const wrapper = this._createWrapper(command, callback, repeat);
+      wrappers.unshift(wrapper);
+    }
+    /**
+     * You register a preprocessing function, which is called before the callback function of the `trigger` method.
+     * The value returned by this function is passed as a parameter to the `trigger` method's callback function.
+     * If you register multiple preprocessing functions, they are executed in order, with each function receiving the value returned by the previous one as a parameter.
+     * @param command Command to work.
+     * @param callback Preprocessing function to register.
+     */
+    onBefore(command, callback) {
+      this._on(this.beforeHooks, command, callback, -1);
+      return this;
+    }
+    /**
+     * Similar to the `onBefore` method, but it only runs once.
+     * For more details, please refer to the `onBefore` method.
+     * @param command Command to work.
+     * @param callback Preprocessing function to register.
+     */
+    onceBefore(command, callback) {
+      this._on(this.beforeHooks, command, callback, 1);
+      return this;
+    }
+    /**
+     * You register a post-processing function which is called after the callback function of the `trigger` method finishes.
+     * This function receives the value returned by the `trigger` method's callback function as a parameter.
+     * If you register multiple post-processing functions, they are executed in order, with each function receiving the value returned by the previous one as a parameter.
+     * @param command Command to work.
+     * @param callback Post-preprocessing function to register.
+     */
+    onAfter(command, callback) {
+      this._on(this.afterHooks, command, callback, -1);
+      return this;
+    }
+    /**
+     * Similar to the `onAfter` method, but it only runs once.
+     * For more details, please refer to the `onAfter` method.
+     * @param command Command to work.
+     * @param callback Post-preprocessing function to register.
+     */
+    onceAfter(command, callback) {
+      this._on(this.afterHooks, command, callback, 1);
+      return this;
+    }
+    _off(hooks, command, callback) {
+      const wrappers = this._ensureCommand(hooks, command);
+      if (callback) {
+        const i = wrappers.findIndex((wrapper) => wrapper.callback === callback);
+        if (i !== -1) {
+          wrappers.splice(i, 1);
+        }
+      } else {
+        wrappers.length = 0;
+      }
+      return this;
+    }
+    /**
+     * You remove the preprocessing functions registered with `onBefore` or `onceBefore` methods.
+     * If you don't specify a callback parameter, it removes all preprocessing functions registered for that command.
+     * @param command Commands with preprocessing functions to be deleted.
+     * @param callback Preprocessing function to be deleted.
+     */
+    offBefore(command, callback) {
+      this._off(this.beforeHooks, command, callback);
+      return this;
+    }
+    /**
+     * You remove the post-preprocessing functions registered with `onAfter` or `onceAfter` methods.
+     * If you don't specify a callback parameter, it removes all post-preprocessing functions registered for that command.
+     * @param command Commands with post-preprocessing functions to be deleted.
+     * @param callback post-Preprocessing function to be deleted.
+     */
+    offAfter(command, callback) {
+      this._off(this.afterHooks, command, callback);
+      return this;
+    }
+    _hookWith(hooks, command, value, ...params) {
+      let wrappers = this._ensureCommand(hooks, command);
+      let i = wrappers.length;
+      while (i--) {
+        const wrapper = wrappers[i];
+        value = wrapper.callback(value, ...params);
+        wrapper.repeat -= 1;
+        if (wrapper.repeat === 0) {
+          this._off(hooks, command, wrapper.callback);
+        }
+      }
+      return value;
+    }
+    /**
+     * You execute the callback function provided as a parameter. This callback function receives the 'initialValue' parameter.
+     * 
+     * If preprocessing functions are registered, they run first, and the value returned by the preprocessing functions becomes the 'initialValue' parameter.
+     * After the callback function finishes, post-processing functions are called.
+     * These post-processing functions receive the value returned by the callback function as a parameter and run sequentially.
+     * 
+     * The final value returned becomes the result of the `trigger` method.
+     * @param command Command to work.
+     * @param initialValue Initial value to be passed to the callback function.
+     * @param callback The callback function to be executed.
+     */
+    trigger(command, initialValue, callback, ...params) {
+      let value;
+      value = this._hookWith(this.beforeHooks, command, initialValue, ...params);
+      value = callback(value, ...params);
+      value = this._hookWith(this.afterHooks, command, value, ...params);
+      return value;
+    }
+  };
+  function useHookallSync(target = HookallSync.Global) {
+    return new HookallSync(target);
+  }
+
   // src/define/defineCmdUI.ts
   function resolveVal(val, vars) {
     if (typeof val === "function") return val(vars);
@@ -255,7 +566,11 @@
           _prevLines = d.lines;
           const txt = d.lines[d.subIndex ?? 0];
           const spkName = resolveSpeaker(d.speakerKey, charDefs);
-          _renderText(spkName, txt, d.speed);
+          const hooker = useHookallSync(ctx.renderer);
+          hooker.trigger("dialogue:text", { speaker: spkName, text: txt }, (state) => {
+            _renderText(state.speaker, state.text, d.speed);
+            return state;
+          });
         }
       }
     };
@@ -1394,7 +1709,8 @@
       const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
       rect = ctx.renderer.world.createRectangle({
         style: {
-          color: "rgba(0,0,0,1)",
+          gradientType: "linear",
+          gradient: "0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%",
           width: w * 2,
           height: h * 2,
           opacity: 0,
@@ -1408,7 +1724,8 @@
       ctx.renderer.state.set("_transitionObj", rect);
     }
     if (data.isCovered) {
-      rect.style.color = data.coveredColor;
+      rect.style.gradientType = "linear";
+      rect.style.gradient = `0deg, ${data.coveredColor} 0%, ${data.coveredColor} 100%`;
       rect.style.opacity = 1;
       rect.transform.position.x = 0;
       rect.transform.position.y = 0;
@@ -1433,14 +1750,23 @@
     data.coveredColor = cfg.color;
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
-    rect.style.color = cfg.color;
+    rect.style.gradientType = "linear";
+    rect.style.gradient = `0deg, ${cfg.color} 0%, ${cfg.color} 100%`;
     rect.transform.position.x = 0;
     rect.transform.position.y = 0;
     const startOpacity = cmd.dir === "in" ? 1 : 0;
     const endOpacity = cmd.dir === "in" ? 0 : 1;
     rect.style.opacity = startOpacity;
     const dur = ctx.renderer.dur(cmd.duration ?? 600);
-    ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, dur, cfg.easing);
+    const onAnimEnd = () => {
+      ctx.callbacks.advance();
+    };
+    ctx.renderer.animate(rect, { style: { opacity: endOpacity } }, dur, cfg.easing, onAnimEnd);
+    if (dur === 0) return true;
+    if (cmd.disable) {
+      ctx.callbacks.disableInput(dur);
+    }
+    yield false;
     return true;
   });
   var screenFlashModule = define2({ lastPreset: "white" });
@@ -1512,47 +1838,59 @@
     data.lastPreset = resolvedPreset;
     const cfg = WIPE_PRESETS[resolvedPreset];
     if (!cfg) return true;
-    const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
-    const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
     const dur = ctx.renderer.dur(cmd.duration ?? 800);
-    const dx = cfg.x * w * 2;
-    const dy = cfg.y * h * 2;
     const fadeState = ctx.state.get("screen-fade");
     const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset;
     const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
-    if (fadeState) {
-      fadeState.isCovered = cmd.dir === "out";
-      fadeState.coveredColor = color;
-    }
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
     rect.style.opacity = 1;
-    let gradDir = "";
-    if (cmd.dir === "out") {
-      if (cfg.x === -1) gradDir = "to right";
-      else if (cfg.x === 1) gradDir = "to left";
-      else if (cfg.y === -1) gradDir = "to bottom";
-      else if (cfg.y === 1) gradDir = "to top";
-    } else {
-      if (cfg.x === -1) gradDir = "to left";
-      else if (cfg.x === 1) gradDir = "to right";
-      else if (cfg.y === -1) gradDir = "to top";
-      else if (cfg.y === 1) gradDir = "to bottom";
-    }
+    rect.transform.position.x = 0;
+    rect.transform.position.y = 0;
+    let gradDir = 0;
+    if (cfg.x === -1) gradDir = 90;
+    else if (cfg.x === 1) gradDir = 270;
+    else if (cfg.y === -1) gradDir = 180;
+    else if (cfg.y === 1) gradDir = 0;
     let colorTransparent = "transparent";
     if (color.startsWith("rgba(")) {
       colorTransparent = color.replace(/[\d.]+\)$/, "0)");
     }
-    rect.style.color = `linear-gradient(${gradDir}, ${color} 95%, ${colorTransparent} 100%)`;
+    rect.style.gradientType = "linear";
+    let startGradient = "";
+    let endGradient = "";
     if (cmd.dir === "out") {
-      rect.transform.position.x = dx;
-      rect.transform.position.y = dy;
-      ctx.renderer.animate(rect, { transform: { position: { x: 0, y: 0 } } }, dur, "linear");
+      startGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`;
+      endGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`;
     } else {
-      rect.transform.position.x = 0;
-      rect.transform.position.y = 0;
-      ctx.renderer.animate(rect, { transform: { position: { x: dx, y: dy } } }, dur, "linear");
+      startGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`;
+      endGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`;
     }
+    rect.style.gradient = startGradient;
+    const onEnd = () => {
+      if (fadeState) {
+        fadeState.isCovered = cmd.dir === "out";
+        fadeState.coveredColor = color;
+      }
+    };
+    const onAnimEnd = () => {
+      onEnd();
+      ctx.callbacks.advance();
+    };
+    const activeAnims = rect.__activeAnims;
+    if (activeAnims) {
+      const existing = activeAnims.get("style.gradient");
+      if (existing?.anim) {
+        existing.anim.stop?.();
+        activeAnims.delete("style.gradient");
+      }
+    }
+    ctx.renderer.animate(rect, { style: { gradient: endGradient } }, dur, "linear", onAnimEnd);
+    if (dur === 0) return true;
+    if (cmd.disable) {
+      ctx.callbacks.disableInput(dur);
+    }
+    yield false;
     return true;
   });
 
@@ -12528,10 +12866,12 @@ ${addLineNumbers(fragment)}`);
     const stopsStr = degMatch ? gradient.slice(degMatch[0].length) : gradient;
     if (degMatch) direction = parseFloat(degMatch[1]);
     const stops = [];
-    const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+([\d.]+)%/g;
+    const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+(-?[\d.]+)%/g;
     let m;
     while ((m = re.exec(stopsStr)) != null) {
-      stops.push({ offset: parseFloat(m[2]) / 100, color: m[1] });
+      const rawOffset = parseFloat(m[2]) / 100;
+      const clampedOffset = Math.max(0, Math.min(1, rawOffset));
+      stops.push({ offset: clampedOffset, color: m[1] });
     }
     return { direction, stops };
   }
@@ -14591,7 +14931,6 @@ ${addLineNumbers(fragment)}`);
     // ─── 카메라 변환 합성용 ─────────────────────────────────────
     camBaseObj = null;
     camOffsetObj = null;
-    _camSyncRafId = null;
     constructor(world, config, option) {
       this.world = world;
       this.config = config;
@@ -14623,9 +14962,9 @@ ${addLineNumbers(fragment)}`);
             this.world.camera.transform.rotation.z = this.camBaseObj.transform.rotation.z + this.camOffsetObj.transform.rotation.z;
           }
         }
-        this._camSyncRafId = requestAnimationFrame(syncLoop);
+        requestAnimationFrame(syncLoop);
       };
-      this._camSyncRafId = requestAnimationFrame(syncLoop);
+      requestAnimationFrame(syncLoop);
     }
     /**
      * 스킵 모드 상태를 설정합니다. 스킵 모드일 경우 애니메이션 시간이 0으로 처리됩니다.
@@ -15502,6 +15841,13 @@ ${addLineNumbers(fragment)}`);
         getUIRegistry: () => this._uiRegistry,
         syncUIState: () => {
           this._syncUIState();
+        },
+        advance: () => {
+          const scene = this._currentScene;
+          if (scene instanceof DialogueScene && scene.isWaitingInput) {
+            scene.advance();
+            this._syncUIState();
+          }
         }
       };
     }
@@ -15565,7 +15911,8 @@ ${addLineNumbers(fragment)}`);
           disableInput: noop,
           getStateStore: () => stateStore,
           getUIRegistry: () => uiRegistry,
-          syncUIState: noop
+          syncUIState: noop,
+          advance: noop
         },
         state: {
           set: (name, data) => {
@@ -15972,11 +16319,11 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uADF8\uB9AC\uACE0 \uAC00\uBC29\uC5D0\uC11C \uBAAC\uC2A4\uD130 \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uC744 \uB54C\uB838\uB2E4."
     },
-    { type: "screen-wipe", dir: "out", preset: "left", duration: 5e3 },
     {
       type: "dialogue",
       text: "\uC774\uAC83\uC774 \uB098\uC640 \uC81C\uB098\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
-    }
+    },
+    { type: "screen-wipe", dir: "out", preset: "left", duration: 5e3, disable: true }
   ]);
 
   // example/scenes/scene-zena-game.ts
@@ -15992,7 +16339,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-wipe", dir: "out", preset: "left", duration: 0 },
     { type: "background", name: "bg-library", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
-    { type: "screen-wipe", dir: "in", preset: "left", duration: 1e3 },
+    { type: "screen-wipe", dir: "in", preset: "left", duration: 5e3 },
     {
       type: "dialogue",
       text: "\uC81C\uB098\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."

@@ -3,11 +3,11 @@
 // =============================================================
 
 import { World } from 'leviar'
-import { Renderer }         from './Renderer'
+import { Renderer } from './Renderer'
 import { DialogueScene, ExploreScene } from './Scene'
-import type { SceneCallbacks }         from './Scene'
-import type { RendererState }          from './Renderer'
-import type { SceneDefinition }        from '../define/defineScene'
+import type { SceneCallbacks } from './Scene'
+import type { RendererState } from './Renderer'
+import type { SceneDefinition } from '../define/defineScene'
 export type { SceneDefinition }
 import type { ExploreSceneDefinition } from '../define/defineExploreScene'
 import type { NovelConfig, NovelOption } from '../types/config'
@@ -30,13 +30,13 @@ type InputMode = 'dialogue' | 'choice' | 'none'
 /** novel.save()가 반환하는 세이브 데이터 */
 export interface SaveData {
   /** 저장 시점의 씬 이름 */
-  sceneName:     string
+  sceneName: string
   /** 저장 시점의 dialogues 배열 인덱스 */
-  cursor:        number
+  cursor: number
   /** 전역 변수 스냅샷 */
-  globalVars:    Record<string, any>
+  globalVars: Record<string, any>
   /** 지역 변수 스냅샷 */
-  localVars:     Record<string, any>
+  localVars: Record<string, any>
   /** 렌더러 상태 (배경, 캐릭터, 카메라 등) 스냅샷 */
   rendererState: RendererState
   /**
@@ -44,7 +44,7 @@ export interface SaveData {
    * 'dialogue' → { subIndex, lines, speaker }
    * 'background' → { key, fit } 등
    */
-  states:     Record<string, any>
+  states: Record<string, any>
 }
 
 // =============================================================
@@ -55,11 +55,11 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   /** 전역 변수. 씬 전환에도 유지됩니다 */
   readonly vars: TConfig['vars']
 
-  private readonly _config:   TConfig
-  private readonly _option:   { canvas: HTMLCanvasElement; width: number; height: number }
-  private readonly _world:    World
+  private readonly _config: TConfig
+  private readonly _option: { canvas: HTMLCanvasElement; width: number; height: number }
+  private readonly _world: World
   private readonly _renderer: Renderer
-  private readonly _scenes:   Map<string, AnySceneDef> = new Map()
+  private readonly _scenes: Map<string, AnySceneDef> = new Map()
 
   /** State — 씬 전환 후에도 유지, 세이브/로드 대상 */
   private readonly _stateStore: Map<string, any> = new Map()
@@ -73,12 +73,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
   private readonly _uiRegistry: Map<string, UIRuntimeEntry> = new Map()
 
-  private _currentScene:    ActiveScene | null    = null
-  private _currentSceneDef: AnySceneDef | null    = null
-  private _inputMode:       InputMode              = 'none'
-  private _isSkipping:      boolean               = false
+  private _currentScene: ActiveScene | null = null
+  private _currentSceneDef: AnySceneDef | null = null
+  private _inputMode: InputMode = 'none'
+  private _isSkipping: boolean = false
   /** 사용자 입력 무시 만료 시간 (ms) */
-  private _inputDisabledUntil: number             = 0
+  private _inputDisabledUntil: number = 0
 
   constructor(
     config: TConfig,
@@ -89,13 +89,13 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const canvas = option.canvas
     this._option = {
       canvas,
-      width:  config.width  ?? canvas.width,
+      width: config.width ?? canvas.width,
       height: config.height ?? canvas.height,
     }
 
     this._world = new World({ canvas })
     this._renderer = new Renderer(this._world, config, {
-      width:  this._option.width,
+      width: this._option.width,
       height: this._option.height,
     })
 
@@ -182,9 +182,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       ? new DialogueScene(this._renderer, callbacks, def)
       : new ExploreScene(this._renderer, callbacks, def)
 
-    this._currentScene    = scene
+    this._currentScene = scene
     this._currentSceneDef = def
-    this._inputMode       = 'none'
+    this._inputMode = 'none'
     scene.start()
     this._syncUIState()
   }
@@ -276,12 +276,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     }
 
     return {
-      sceneName:     this._currentSceneDef.name as string,
-      cursor:        this._currentScene.getCursor(),
-      globalVars:    { ...this.vars as object },
-      localVars:     this._currentScene.getLocalVars(),
+      sceneName: this._currentSceneDef.name as string,
+      cursor: this._currentScene.getCursor(),
+      globalVars: { ...this.vars as object },
+      localVars: this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
-      states:     Object.fromEntries(this._stateStore),
+      states: Object.fromEntries(this._stateStore),
     }
   }
 
@@ -321,15 +321,15 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
     // 새 씬 인스턴스 생성 (start() 호출 없이)
     const callbacks = this._buildCallbacks()
-    const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any,any,any,any,any>)
+    const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
 
     // 지역 변수 + cursor 복원
     const subIndex = (data.states?.['dialogue'] as any)?.subIndex ?? 0
     scene.restoreState(data.cursor, data.localVars, subIndex)
 
-    this._currentScene    = scene
+    this._currentScene = scene
     this._currentSceneDef = def
-    this._inputMode       = 'none'
+    this._inputMode = 'none'
     this._syncUIState()
   }
 
@@ -353,15 +353,22 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   private _buildCallbacks(): SceneCallbacks {
     return {
-      getGlobalVars:   ()             => ({ ...this.vars as object }),
-      setGlobalVar:    (name, value)  => { (this.vars as any)[name] = value },
-      loadScene:       (name)         => { this.loadScene(name) },
-      captureRenderer: ()             => this._renderer.captureState(),
-      isSkipping:      ()             => this._isSkipping,
-      disableInput:    (duration)     => { this._inputDisabledUntil = Date.now() + duration },
-      getStateStore: ()            => this._stateStore,
-      getUIRegistry:    ()            => this._uiRegistry,
-      syncUIState:      ()            => { this._syncUIState() },
+      getGlobalVars: () => ({ ...this.vars as object }),
+      setGlobalVar: (name, value) => { (this.vars as any)[name] = value },
+      loadScene: (name) => { this.loadScene(name) },
+      captureRenderer: () => this._renderer.captureState(),
+      isSkipping: () => this._isSkipping,
+      disableInput: (duration) => { this._inputDisabledUntil = Date.now() + duration },
+      getStateStore: () => this._stateStore,
+      getUIRegistry: () => this._uiRegistry,
+      syncUIState: () => { this._syncUIState() },
+      advance: () => {
+        const scene = this._currentScene
+        if (scene instanceof DialogueScene && scene.isWaitingInput) {
+          scene.advance()
+          this._syncUIState()
+        }
+      },
     }
   }
 
@@ -390,7 +397,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     if (!this._currentScene || this._currentScene.isEnded) {
       this._inputMode = 'none'
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
-        const next = (this._currentSceneDef as SceneDefinition<any,any,any,any,any>).nextScene
+        const next = (this._currentSceneDef as SceneDefinition<any, any, any, any, any>).nextScene
         if (next) { this.loadScene(next); return }
       }
       return
@@ -416,32 +423,33 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   private _makeRebuildCtx(): SceneContext {
     const noop = () => { /* no-op */ }
     const stateStore = this._stateStore
-    const uiRegistry    = this._uiRegistry
+    const uiRegistry = this._uiRegistry
     return {
-      world:      this._world,
-      renderer:   this._renderer,
+      world: this._world,
+      renderer: this._renderer,
       globalVars: {},
-      localVars:  {},
+      localVars: {},
       callbacks: {
-        getGlobalVars:    () => ({}),
-        setGlobalVar:     noop as any,
-        loadScene:        noop as any,
-        captureRenderer:  () => this._renderer.captureState(),
-        isSkipping:       () => true,
-        disableInput:     noop as any,
+        getGlobalVars: () => ({}),
+        setGlobalVar: noop as any,
+        loadScene: noop as any,
+        captureRenderer: () => this._renderer.captureState(),
+        isSkipping: () => true,
+        disableInput: noop as any,
         getStateStore: () => stateStore,
-        getUIRegistry:    () => uiRegistry,
-        syncUIState:      noop,
+        getUIRegistry: () => uiRegistry,
+        syncUIState: noop,
+        advance: noop,
       },
       state: {
         set: (name, data) => { stateStore.set(name, data) },
-        get: (name)       => stateStore.get(name),
+        get: (name) => stateStore.get(name),
       },
       ui: {
         register: (name, entry) => { uiRegistry.set(name, entry) },
-        get:      (name)        => uiRegistry.get(name),
-        show:     (name, dur)   => uiRegistry.get(name)?.show(dur),
-        hide:     (name, dur)   => uiRegistry.get(name)?.hide(dur),
+        get: (name) => uiRegistry.get(name),
+        show: (name, dur) => uiRegistry.get(name)?.show(dur),
+        hide: (name, dur) => uiRegistry.get(name)?.hide(dur),
       },
       scene: {
         getTextSubIndex: () => 0,

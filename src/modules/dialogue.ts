@@ -1,8 +1,18 @@
 import type { Style } from 'leviar'
 import type { CharDefs, CharacterKeysOf } from '../types/config'
+import { type IHookallSync, useHookallSync } from 'hookall'
 import { define } from '../define/defineCmdUI'
 
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
+
+export interface DialogueHook {
+  'dialogue:text': (
+    s: { speaker: string | undefined, text: string }
+  ) => {
+    speaker: string | undefined
+    text: string
+  }
+}
 
 /** dialogueModule이 공유하는 데이터 스키마 */
 export interface DialogueSchema {
@@ -261,7 +271,11 @@ dialogueModule.defineView((data, ctx) => {
         _prevLines = d.lines
         const txt = d.lines[d.subIndex ?? 0] as string
         const spkName = resolveSpeaker(d.speakerKey, charDefs)
-        _renderText(spkName, txt, d.speed)
+        const hooker = useHookallSync<DialogueHook>(ctx.renderer)
+        hooker.trigger('dialogue:text', { speaker: spkName, text: txt }, (state) => {
+          _renderText(state.speaker, state.text, d.speed)
+          return state
+        })
       }
     },
   }
