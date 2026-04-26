@@ -8,7 +8,7 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-stream',
 }, [
-  { type: 'background', name: 'bg-library', duration: 0, skip: true },
+  { type: 'background', name: 'room', duration: 0, skip: true },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0, skip: true },
 
   { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },

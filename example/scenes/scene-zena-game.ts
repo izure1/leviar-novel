@@ -13,7 +13,7 @@ export default defineScene({
   next: 'scene-zena-food',
 }, [
   { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 0 },
-  { type: 'background', name: 'bg-library', duration: 0 },
+  { type: 'background', name: 'room', duration: 0 },
   { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
 

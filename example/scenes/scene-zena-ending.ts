@@ -10,7 +10,7 @@ export default defineScene({
   next: 'scene-zena',
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
-  { type: 'background', name: 'bg-library', duration: 0, skip: true },
+  { type: 'background', name: 'room', duration: 0, skip: true },
   { type: 'mood', mood: 'sunset', intensity: 0.8, duration: 0, skip: true },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 2000 },
 

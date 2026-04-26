@@ -9,7 +9,7 @@ export default defineScene({
   next: 'scene-zena-ending',
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
-  { type: 'background', name: 'bg-park', duration: 0, skip: true },
+  { type: 'background', name: 'park', duration: 0, skip: true },
   { type: 'mood', mood: 'day', intensity: 1, duration: 0, skip: true },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
 
