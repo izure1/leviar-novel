@@ -8,16 +8,14 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-ending',
 }, [
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0, skip: true },
-  { type: 'background', name: 'park', duration: 0, skip: true },
-  { type: 'mood', mood: 'day', intensity: 1, duration: 0, skip: true },
-  { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
-
+  { type: 'background', name: 'park', duration: 0 },
+  { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
   { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
+
   {
     type: 'dialogue',
     text: [
-      '공원을 걷던 중,',
+      '그렇게 공원을 걷던 중,',
       '갑자기 제나가 발걸음을 멈추고 굳어버렸다.'
     ]
   },

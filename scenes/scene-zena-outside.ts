@@ -134,6 +134,5 @@ export default defineScene({
   {
     type: 'dialogue',
     text: '자연을 보고 렌더링을 운운하다니, 이 녀석의 뇌 구조는 정말 알 수가 없다.'
-  },
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 1500 },
+  }
 ])
