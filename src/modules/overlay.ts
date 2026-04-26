@@ -117,8 +117,8 @@ overlayModule.defineView((data, ctx) => {
   }
 })
 
-overlayModule.defineCommand(function* (cmd, ctx, data) {
-  const newOverlays = { ...data.overlays }
+overlayModule.defineCommand(function* (cmd, ctx, state, setState) {
+  const newOverlays = { ...state.overlays }
 
   if (cmd.action === 'add') {
     if (cmd.text) newOverlays[cmd.preset ?? 'caption'] = cmd.text
@@ -128,7 +128,7 @@ overlayModule.defineCommand(function* (cmd, ctx, data) {
     for (const k of Object.keys(newOverlays)) delete newOverlays[k]
   }
 
-  data.overlays = newOverlays
+  setState({ overlays: newOverlays })
   return true
 })
 

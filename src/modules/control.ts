@@ -16,12 +16,12 @@ const controlModule = define<ControlCmd, ControlSchema>({ expireAt: 0 })
 
 controlModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-controlModule.defineCommand(function* (cmd, ctx, data) {
+controlModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'disable' && typeof cmd.duration === 'number') {
-    const expireAt = data.expireAt > Date.now() ? data.expireAt : Date.now() + cmd.duration
+    const expireAt = state.expireAt > Date.now() ? state.expireAt : Date.now() + cmd.duration
 
-    if (data.expireAt <= Date.now()) {
-      data.expireAt = expireAt
+    if (state.expireAt <= Date.now()) {
+      setState({ expireAt })
       ctx.callbacks.disableInput(cmd.duration)
     }
 
@@ -29,7 +29,7 @@ controlModule.defineCommand(function* (cmd, ctx, data) {
       yield false
     }
     
-    data.expireAt = 0
+    setState({ expireAt: 0 })
     return true
   }
   return true

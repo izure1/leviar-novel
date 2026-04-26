@@ -190,9 +190,9 @@ moodModule.defineView((data, ctx) => {
   }
 })
 
-moodModule.defineCommand(function* (cmd, ctx, data) {
-  const newMoods = { ...data.activeMoods }
-  const newFlickers = { ...(data.flickers || {}) }
+moodModule.defineCommand(function* (cmd, ctx, state, setState) {
+  const newMoods = { ...state.activeMoods }
+  const newFlickers = { ...(state.flickers || {}) }
 
   const targetDur = cmd.duration ?? 800
 
@@ -219,9 +219,11 @@ moodModule.defineCommand(function* (cmd, ctx, data) {
     }
   }
 
-  data.lastDuration = targetDur
-  data.activeMoods = newMoods
-  data.flickers = newFlickers
+  setState({
+    lastDuration: targetDur,
+    activeMoods: newMoods,
+    flickers: newFlickers
+  })
 
   // duration은 애니메이션 시간만 제어합니다.
   // disable: true일 때만 해당 시간동안 입력을 차단하고 대기합니다.
@@ -237,12 +239,6 @@ moodModule.defineCommand(function* (cmd, ctx, data) {
       yield false
       clearTimeout(timeoutId)
     }
-  } else if (targetDur === 0) {
-    // duration:0 → 즉시 설정이지만, Proxy 배칭으로 인해 view.update()가 microtask로 예약됨.
-    // 다음 커맨드가 그 microtask보다 먼저 실행되어 초기 상태를 덮어쓰는 것을 방지하기 위해
-    // 한 microtask 주기를 기다린 후 진행합니다.
-    Promise.resolve().then(() => ctx.callbacks.advance())
-    yield false
   }
 
   return true

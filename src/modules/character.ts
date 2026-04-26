@@ -205,8 +205,8 @@ characterModule.defineView((data, ctx) => {
   }
 })
 
-characterModule.defineCommand(function* (cmd, ctx, data) {
-  const newChars = { ...data.characters }
+characterModule.defineCommand(function* (cmd, ctx, state, setState) {
+  const newChars = { ...state.characters }
 
   if (cmd.action === 'show') {
     const showCmd = cmd
@@ -221,20 +221,27 @@ characterModule.defineCommand(function* (cmd, ctx, data) {
     const resolvedKey = showCmd.image ?? Object.keys(def.images)[0]
 
     newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey as string }
-    data.characters = newChars
+    setState({ characters: newChars })
 
     // focus 처리 (view의 getObj 사용)
-    // data.characters 변경 → proxy microtask로 update() 예약됨
+    // state.characters 변경 → proxy microtask로 update() 예약됨
     // → 동기 호출 시 _charObjs 미갱신 → Promise.resolve().then()으로 연기
     if (showCmd.focus) {
       const focusType = typeof showCmd.focus === 'string' ? showCmd.focus : undefined
       const focusDuration = showCmd.duration ?? 800
-      yield false // proxy microtask 대기
 
       const entry = ctx.ui.get('character') as CharacterViewEntry | undefined
       const charObj = entry?.getObj(showCmd.name)
       if (charObj) {
-        while (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+        if (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+          const checkSize = () => {
+            if (charObj.__renderedSize && charObj.__renderedSize.h > 0) {
+              ctx.callbacks.advance()
+            } else {
+              requestAnimationFrame(checkSize)
+            }
+          }
+          requestAnimationFrame(checkSize)
           yield false
         }
         const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
@@ -248,7 +255,7 @@ characterModule.defineCommand(function* (cmd, ctx, data) {
     }
   } else {
     delete newChars[cmd.name]
-    data.characters = newChars
+    setState({ characters: newChars })
   }
 
   return true
@@ -303,7 +310,15 @@ characterFocusModule.defineCommand(function* (cmd, ctx) {
   const def = charDefs[cmd.name]
   if (!def) return true
 
-  while (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+  if (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+    const checkSize = () => {
+      if (charObj.__renderedSize && charObj.__renderedSize.h > 0) {
+        ctx.callbacks.advance()
+      } else {
+        requestAnimationFrame(checkSize)
+      }
+    }
+    requestAnimationFrame(checkSize)
     yield false
   }
   const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)

@@ -17,7 +17,7 @@ const labelModule = define<LabelCmd>({})
 
 labelModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
-labelModule.defineCommand(function* (_cmd, _ctx) {
+labelModule.defineCommand(function* (_cmd, _ctx, state, setState) {
   return true
 })
 

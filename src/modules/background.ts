@@ -172,17 +172,20 @@ backgroundModule.defineView((data, ctx) => {
   }
 })
 
-backgroundModule.defineCommand(function* (cmd, ctx, data) {
+backgroundModule.defineCommand(function* (cmd, ctx, state, setState) {
   const bgDefs = ctx.renderer.config.backgrounds as BgDefs
   const def = bgDefs[cmd.name as string]
   if (!def) return true
 
   const fit = cmd.fit === 'inherit' || !cmd.fit ? 'cover' : cmd.fit
-  data.key = cmd.name as string
-  data.fit = fit
-  data.duration = cmd.duration ?? 1000
-  data.parallax = def.parallax ?? true
-  data.isVideo = cmd.isVideo ?? false
+  
+  setState({
+    key: cmd.name as string,
+    fit,
+    duration: cmd.duration ?? 1000,
+    parallax: def.parallax ?? true,
+    isVideo: cmd.isVideo ?? false
+  })
 
   return true
 })

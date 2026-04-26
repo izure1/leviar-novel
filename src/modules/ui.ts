@@ -15,7 +15,7 @@ const uiModule = define<UICmd<any>>({})
 
 uiModule.defineView((_data, _ctx) => ({ show: () => {}, hide: () => {} }))
 
-uiModule.defineCommand(function* (cmd, ctx) {
+uiModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'show') {
     ctx.ui.show(cmd.name, cmd.duration)
   } else {

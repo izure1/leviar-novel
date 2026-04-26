@@ -158,9 +158,9 @@ effectModule.defineView((data, ctx) => {
   }
 })
 
-effectModule.defineCommand(function* (rawCmd, ctx, data) {
+effectModule.defineCommand(function* (rawCmd, ctx, state, setState) {
   const cmd = rawCmd as any
-  const newEffects = { ...data.activeEffects }
+  const newEffects = { ...state.activeEffects }
 
   if (cmd.action === 'add') {
     newEffects[cmd.effect] = { rate: cmd.rate, srcKey: cmd.src as string }
@@ -168,7 +168,7 @@ effectModule.defineCommand(function* (rawCmd, ctx, data) {
     delete newEffects[cmd.effect]
   }
 
-  data.activeEffects = newEffects
+  setState({ activeEffects: newEffects })
   return true
 })
 

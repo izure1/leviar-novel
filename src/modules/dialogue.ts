@@ -281,17 +281,19 @@ dialogueModule.defineView((data, ctx) => {
   }
 })
 
-dialogueModule.defineCommand(function* (cmd, ctx, data) {
+dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
 
   const ui = ctx.ui.get('dialogue') as any
 
   for (let index = 0; index < lines.length; index++) {
-    data.speed = cmd.speed
-    data.speakerKey = cmd.speaker as string | undefined
-    data.subIndex = index
-    data.lines = [...lines]
+    setState({
+      speed: cmd.speed,
+      speakerKey: cmd.speaker as string | undefined,
+      subIndex: index,
+      lines: [...lines]
+    })
 
     ctx.scene.setTextSubIndex(index + 1)
 

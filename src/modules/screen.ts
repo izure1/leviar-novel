@@ -113,17 +113,19 @@ screenFadeModule.defineView((data, ctx) => {
   }
 })
 
-screenFadeModule.defineCommand(function* (cmd, ctx, data) {
+screenFadeModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
-    ? data.lastPreset
+    ? state.lastPreset
     : cmd.preset
-  data.lastPreset = resolvedPreset
 
   const cfg = FADE_PRESETS[resolvedPreset as Exclude<FadeColorPreset, 'inherit'>]
   if (!cfg) return true
 
-  data.isCovered = cmd.dir === 'out'
-  data.coveredColor = cfg.color
+  setState({
+    lastPreset: resolvedPreset,
+    isCovered: cmd.dir === 'out',
+    coveredColor: cfg.color
+  })
 
   const rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) return true
@@ -192,11 +194,11 @@ screenFlashModule.defineView((_data, ctx) => {
   }
 })
 
-screenFlashModule.defineCommand(function* (cmd, ctx, data) {
+screenFlashModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
-    ? data.lastPreset
+    ? state.lastPreset
     : cmd.preset
-  data.lastPreset = resolvedPreset
+  setState({ lastPreset: resolvedPreset })
 
   const cfg = FLASH_PRESETS[resolvedPreset as Exclude<FlashPreset, 'inherit'>]
   if (!cfg) return true
@@ -243,11 +245,11 @@ screenWipeModule.defineView((_data, _ctx) => ({
   hide: () => { },
 }))
 
-screenWipeModule.defineCommand(function* (cmd, ctx, data) {
+screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
-    ? data.lastPreset
+    ? state.lastPreset
     : cmd.preset
-  data.lastPreset = resolvedPreset
+  setState({ lastPreset: resolvedPreset })
 
   const cfg = WIPE_PRESETS[resolvedPreset as Exclude<WipePreset, 'inherit'>]
   if (!cfg) return true
@@ -256,7 +258,7 @@ screenWipeModule.defineCommand(function* (cmd, ctx, data) {
 
   // 페이드 색상은 screen-fade 모듈의 state에서 가져옴 (renderer.state 공유)
   const fadeState = ctx.state.get('screen-fade') as ScreenFadeSchema | undefined
-  const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset
+  const colorPreset = fadeState?.lastPreset ?? state.lastFadePreset
   const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.color ?? 'rgba(0,0,0,1)'
 
   // fadeState 업데이트는 애니메이션 종료 후(onEnd) 수행하여, 

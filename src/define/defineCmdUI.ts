@@ -31,6 +31,12 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
   return resolveObj(params, ctx.scene.getVars())
 }
 
+// ─── 상태 변경 함수 타입 ─────────────────────────────────────
+
+export type SetStateFn<TSchema> = (
+  partial: Partial<TSchema> | ((prev: Readonly<TSchema>) => Partial<TSchema>)
+) => void
+
 // ─── NovelModule 타입 ────────────────────────────────────────
 
 /**
@@ -62,18 +68,16 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
      * 커맨드 핸들러를 등록합니다.
      * - `cmd`: `{ type: 'key', ...TCmd }` 에서 type을 제외한 커맨드 속성
      * - `ctx`: SceneContext
-     * - `state`: define() schema 인수로부터 자동 추론된 공유 상태
+     * - `state`: 현재 공유 상태 (Readonly)
+     * - `setState`: 부분적으로 상태를 병합하고 뷰를 갱신하는 함수
      */
     defineCommand(
-      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => Generator<CommandResult, CommandResult, any>
+      handler: (cmd: TCmd, ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => Generator<CommandResult, CommandResult, any>
     ): NovelModule<TCmd, TSchema>
     defineView(
-      builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
+      builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
     ): NovelModule<TCmd, TSchema>
   }
-
-// ─── 하위 호환 타입 alias ─────────────────────────────────────
-
 
 // ─── define() 팩토리 ─────────────────────────────────────────
 
@@ -81,61 +85,22 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
  * MVC 구조의 Novel 모듈을 정의하는 팩토리입니다.
  *
  * - `schema`: 공유 상태 초깃값 (Model)
- * - `.defineCommand(handler)`: 커맨드 핸들러 등록 (Controller). 핸들러 실행 후 자동으로 state를 `ctx.state`에 저장합니다.
- * - `.defineView(builder)`: View 빌더 등록. `data` 변경 시 `entry.update(data)`가 자동 호출됩니다 (반응형).
- *
- * 반환된 모듈 객체를 `novel.config`의 `modules`에 key-value로 등록하면
- * `{ type: 'my-key' }` 커맨드로 사용할 수 있습니다.
- *
- * @example
- * ```ts
- * const dialogueModule = define<DialogueSchema>({
- *   lines: [], subIndex: 0, speakerKey: undefined, speed: undefined,
- * })
- *
- * dialogueModule.defineCommand<DialogueCmd>((cmd, ctx, data) => {
- *   data.lines = [cmd.text]  // → 자동으로 entry.update(data) 호출
- *   return false
- * })
- *
- * dialogueModule.defineView((data, ctx) => ({
- *   show: () => { ... },
- *   hide: () => { ... },
- *   update: (d) => { ... },
- * }))
- *
- * export default dialogueModule
- *
- * // novel.config.ts
- * modules: { 'dialogue': dialogueModule }
- * ```
+ * - `.defineCommand(handler)`: 커맨드 핸들러 등록 (Controller). 핸들러 내부에서 setState() 호출 시 _onUpdate() 자동 호출.
+ * - `.defineView(builder)`: View 빌더 등록.
  */
 export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>>(schema?: TSchema): NovelModule<TCmd, TSchema> {
-  // ─── 반응형 구독자 ──────────────────────────────────────────
   let _onUpdate: ((data: TSchema) => void) | null = null
-  /**
-   * 버전 카운터: 빌더 초기화 중 발생한 set을 무시하기 위해 사용.
-   * `__viewBuilder` 내부에서 ++_version하면 초기화 중 예약된 microtask들이 스킵됩니다.
-   */
-  let _version = 0
   let _moduleKey: string | null = null
 
-  // ─── 공유 data (Proxy로 래핑) ─────────────────────────────
-  const _raw: TSchema = { ...(schema ?? {}) } as TSchema
+  // 공유 상태 객체 (순수 객체, 더 이상 Proxy를 사용하지 않음)
+  const data: TSchema = { ...(schema ?? {}) } as TSchema
 
-  const data = new Proxy(_raw, {
-    set(target, key, value) {
-      ; (target as any)[key] = value
-      const v = ++_version
-      // 동일 틱의 여러 set을 microtask로 배치 처리
-      Promise.resolve().then(() => {
-        if (_version === v) {
-          _onUpdate?.(data)
-        }
-      })
-      return true
-    },
-  })
+  // 상태 변경 함수. 한 번에 여러 속성을 병합 업데이트하고 즉시 뷰를 동기화함.
+  const setState: SetStateFn<TSchema> = (partial) => {
+    const updates = typeof partial === 'function' ? partial(data) : partial
+    Object.assign(data, updates)
+    _onUpdate?.(data)
+  }
 
   // ─── 내부 핸들러 참조 ─────────────────────────────────────
   let _handlerFn: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null = null
@@ -154,21 +119,21 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
     },
 
     defineCommand(
-      handler: (cmd: TCmd, ctx: SceneContext, state: TSchema) => Generator<CommandResult, CommandResult, any>
+      handler: (cmd: TCmd, ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => Generator<CommandResult, CommandResult, any>
     ): NovelModule<TCmd, TSchema> {
       _handlerFn = function* (rawParams: any, ctx: SceneContext) {
         const resolved = resolveParams(rawParams, ctx)
-        const gen = handler(resolved as TCmd, ctx, data)
+        const gen = handler(resolved as TCmd, ctx, data, setState)
         let res = gen.next()
         while (!res.done) {
           if (_moduleKey) {
-            ctx.state.set(_moduleKey, { ..._raw })
+            ctx.state.set(_moduleKey, { ...data })
           }
           yield res.value
           res = gen.next()
         }
         if (_moduleKey) {
-          ctx.state.set(_moduleKey, { ..._raw })
+          ctx.state.set(_moduleKey, { ...data })
         }
         return res.value
       }
@@ -176,28 +141,17 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
     },
 
     defineView(
-      builder: (data: TSchema, ctx: SceneContext) => UIRuntimeEntry
+      builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
     ): NovelModule<TCmd, TSchema> {
       /**
        * `__viewBuilder`: Novel 엔진이 씬 시작 / 세이브 로드 시 직접 호출.
-       * 1) mergedData를 data proxy에 반영 (저장된 state 또는 initial 데이터)
-       * 2) builder 실행 → UIRuntimeEntry 획득
-       * 3) entry.update를 반응형 구독자로 등록
-       * 4) 초기화 중 예약된 microtask 무효화 (버전 bump)
        */
       _viewBuilderFn = (mergedData: TSchema, ctx: SceneContext): UIRuntimeEntry => {
-        // 저장된 state를 proxy data에 반영 (proxy set → microtask 예약됨)
-        for (const key in mergedData) {
-          if ((mergedData as any)[key] !== undefined) {
-            ; (data as any)[key] = (mergedData as any)[key]
-          }
-        }
+        // 저장된 state 또는 initial 데이터를 병합
+        Object.assign(data, mergedData)
 
         const entry = builder(data, ctx)
-
-        // 구독자 등록 후 버전 bump → 초기화 중 예약된 microtask 무효화
         _onUpdate = (d) => entry.update?.(d)
-        ++_version
 
         return entry
       }
@@ -207,3 +161,4 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
 
   return module
 }
+

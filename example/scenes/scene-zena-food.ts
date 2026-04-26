@@ -9,12 +9,12 @@ export default defineScene({
   next: 'scene-zena-stream',
 }, [
   { type: 'background', name: 'room', duration: 0 },
-  { type: 'mood', mood: 'sunset', intensity: 1, duration: 0 },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
+  { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 0 },
   { type: 'mood', mood: 'sunset', action: 'remove', duration: 3000 },
   { type: 'mood', mood: 'night', action: 'add', intensity: 0.7, duration: 3000, disable: true },
   { type: 'dialogue', text: '해가 진다.' },
 
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
   {
     type: 'dialogue',
     speaker: 'zena',

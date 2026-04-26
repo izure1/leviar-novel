@@ -31,7 +31,7 @@ const conditionModule = define<ConditionCmd<any, any>>({})
 
 conditionModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
-conditionModule.defineCommand(function* (cmd, ctx) {
+conditionModule.defineCommand(function* (cmd, ctx, state, setState) {
   const result = typeof cmd.if === 'function' ? cmd.if(ctx.scene.getVars()) : (cmd.if as unknown as boolean)
 
   if (result) {

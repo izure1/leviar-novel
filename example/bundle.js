@@ -333,22 +333,13 @@
   }
   function define2(schema) {
     let _onUpdate = null;
-    let _version = 0;
     let _moduleKey = null;
-    const _raw = { ...schema ?? {} };
-    const data = new Proxy(_raw, {
-      set(target, key, value) {
-        ;
-        target[key] = value;
-        const v = ++_version;
-        Promise.resolve().then(() => {
-          if (_version === v) {
-            _onUpdate?.(data);
-          }
-        });
-        return true;
-      }
-    });
+    const data = { ...schema ?? {} };
+    const setState = (partial) => {
+      const updates = typeof partial === "function" ? partial(data) : partial;
+      Object.assign(data, updates);
+      _onUpdate?.(data);
+    };
     let _handlerFn = null;
     let _viewBuilderFn = null;
     const module = {
@@ -366,17 +357,17 @@
       defineCommand(handler) {
         _handlerFn = function* (rawParams, ctx) {
           const resolved = resolveParams(rawParams, ctx);
-          const gen = handler(resolved, ctx, data);
+          const gen = handler(resolved, ctx, data, setState);
           let res = gen.next();
           while (!res.done) {
             if (_moduleKey) {
-              ctx.state.set(_moduleKey, { ..._raw });
+              ctx.state.set(_moduleKey, { ...data });
             }
             yield res.value;
             res = gen.next();
           }
           if (_moduleKey) {
-            ctx.state.set(_moduleKey, { ..._raw });
+            ctx.state.set(_moduleKey, { ...data });
           }
           return res.value;
         };
@@ -384,15 +375,9 @@
       },
       defineView(builder) {
         _viewBuilderFn = (mergedData, ctx) => {
-          for (const key in mergedData) {
-            if (mergedData[key] !== void 0) {
-              ;
-              data[key] = mergedData[key];
-            }
-          }
+          Object.assign(data, mergedData);
           const entry = builder(data, ctx);
           _onUpdate = (d) => entry.update?.(d);
-          ++_version;
           return entry;
         };
         return module;
@@ -575,15 +560,17 @@
       }
     };
   });
-  dialogueModule.defineCommand(function* (cmd, ctx, data) {
+  dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
     const ui = ctx.ui.get("dialogue");
     for (let index = 0; index < lines.length; index++) {
-      data.speed = cmd.speed;
-      data.speakerKey = cmd.speaker;
-      data.subIndex = index;
-      data.lines = [...lines];
+      setState({
+        speed: cmd.speed,
+        speakerKey: cmd.speaker,
+        subIndex: index,
+        lines: [...lines]
+      });
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
       if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
@@ -748,7 +735,7 @@
       }
     };
   });
-  choiceModule.defineCommand(function* (cmd, ctx) {
+  choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     const entry = ctx.ui.get("choice");
     if (!entry) {
       console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
@@ -911,16 +898,18 @@
       }
     };
   });
-  backgroundModule.defineCommand(function* (cmd, ctx, data) {
+  backgroundModule.defineCommand(function* (cmd, ctx, state, setState) {
     const bgDefs = ctx.renderer.config.backgrounds;
     const def = bgDefs[cmd.name];
     if (!def) return true;
     const fit = cmd.fit === "inherit" || !cmd.fit ? "cover" : cmd.fit;
-    data.key = cmd.name;
-    data.fit = fit;
-    data.duration = cmd.duration ?? 1e3;
-    data.parallax = def.parallax ?? true;
-    data.isVideo = cmd.isVideo ?? false;
+    setState({
+      key: cmd.name,
+      fit,
+      duration: cmd.duration ?? 1e3,
+      parallax: def.parallax ?? true,
+      isVideo: cmd.isVideo ?? false
+    });
     return true;
   });
   var background_default = backgroundModule;
@@ -1033,8 +1022,8 @@
       }
     };
   });
-  characterModule.defineCommand(function* (cmd, ctx, data) {
-    const newChars = { ...data.characters };
+  characterModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const newChars = { ...state.characters };
     if (cmd.action === "show") {
       const showCmd = cmd;
       const charDefs = ctx.renderer.config.characters;
@@ -1044,15 +1033,22 @@
       const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
       const resolvedKey = showCmd.image ?? Object.keys(def.images)[0];
       newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
-      data.characters = newChars;
+      setState({ characters: newChars });
       if (showCmd.focus) {
         const focusType = typeof showCmd.focus === "string" ? showCmd.focus : void 0;
         const focusDuration = showCmd.duration ?? 800;
-        yield false;
         const entry = ctx.ui.get("character");
         const charObj = entry?.getObj(showCmd.name);
         if (charObj) {
-          while (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+          if (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+            const checkSize = () => {
+              if (charObj.__renderedSize && charObj.__renderedSize.h > 0) {
+                ctx.callbacks.advance();
+              } else {
+                requestAnimationFrame(checkSize);
+              }
+            };
+            requestAnimationFrame(checkSize);
             yield false;
           }
           const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, "inherit", focusDuration);
@@ -1066,7 +1062,7 @@
       }
     } else {
       delete newChars[cmd.name];
-      data.characters = newChars;
+      setState({ characters: newChars });
     }
     return true;
   });
@@ -1101,7 +1097,15 @@
     const charDefs = ctx.renderer.config.characters;
     const def = charDefs[cmd.name];
     if (!def) return true;
-    while (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+    if (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
+      const checkSize = () => {
+        if (charObj.__renderedSize && charObj.__renderedSize.h > 0) {
+          ctx.callbacks.advance();
+        } else {
+          requestAnimationFrame(checkSize);
+        }
+      };
+      requestAnimationFrame(checkSize);
       yield false;
     }
     const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
@@ -1248,9 +1252,9 @@
       }
     };
   });
-  moodModule.defineCommand(function* (cmd, ctx, data) {
-    const newMoods = { ...data.activeMoods };
-    const newFlickers = { ...data.flickers || {} };
+  moodModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const newMoods = { ...state.activeMoods };
+    const newFlickers = { ...state.flickers || {} };
     const targetDur = cmd.duration ?? 800;
     if (cmd.action === "remove") {
       delete newMoods[cmd.mood];
@@ -1271,9 +1275,11 @@
         }
       }
     }
-    data.lastDuration = targetDur;
-    data.activeMoods = newMoods;
-    data.flickers = newFlickers;
+    setState({
+      lastDuration: targetDur,
+      activeMoods: newMoods,
+      flickers: newFlickers
+    });
     if (cmd.disable) {
       const dur = ctx.renderer.dur(targetDur);
       if (dur > 0) {
@@ -1284,9 +1290,6 @@
         yield false;
         clearTimeout(timeoutId);
       }
-    } else if (targetDur === 0) {
-      Promise.resolve().then(() => ctx.callbacks.advance());
-      yield false;
     }
     return true;
   });
@@ -1430,15 +1433,15 @@
       }
     };
   });
-  effectModule.defineCommand(function* (rawCmd, ctx, data) {
+  effectModule.defineCommand(function* (rawCmd, ctx, state, setState) {
     const cmd = rawCmd;
-    const newEffects = { ...data.activeEffects };
+    const newEffects = { ...state.activeEffects };
     if (cmd.action === "add") {
       newEffects[cmd.effect] = { rate: cmd.rate, srcKey: cmd.src };
     } else {
       delete newEffects[cmd.effect];
     }
-    data.activeEffects = newEffects;
+    setState({ activeEffects: newEffects });
     return true;
   });
   var effect_default = effectModule;
@@ -1522,8 +1525,8 @@
       }
     };
   });
-  overlayModule.defineCommand(function* (cmd, ctx, data) {
-    const newOverlays = { ...data.overlays };
+  overlayModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const newOverlays = { ...state.overlays };
     if (cmd.action === "add") {
       if (cmd.text) newOverlays[cmd.preset ?? "caption"] = cmd.text;
     } else if (cmd.action === "remove") {
@@ -1531,7 +1534,7 @@
     } else if (cmd.action === "clear") {
       for (const k of Object.keys(newOverlays)) delete newOverlays[k];
     }
-    data.overlays = newOverlays;
+    setState({ overlays: newOverlays });
     return true;
   });
   var overlay_default = overlayModule;
@@ -1599,13 +1602,15 @@
       }
     };
   });
-  screenFadeModule.defineCommand(function* (cmd, ctx, data) {
-    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
-    data.lastPreset = resolvedPreset;
+  screenFadeModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state.lastPreset : cmd.preset;
     const cfg = FADE_PRESETS[resolvedPreset];
     if (!cfg) return true;
-    data.isCovered = cmd.dir === "out";
-    data.coveredColor = cfg.color;
+    setState({
+      lastPreset: resolvedPreset,
+      isCovered: cmd.dir === "out",
+      coveredColor: cfg.color
+    });
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
     rect.style.gradientType = "linear";
@@ -1658,9 +1663,9 @@
       }
     };
   });
-  screenFlashModule.defineCommand(function* (cmd, ctx, data) {
-    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
-    data.lastPreset = resolvedPreset;
+  screenFlashModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state.lastPreset : cmd.preset;
+    setState({ lastPreset: resolvedPreset });
     const cfg = FLASH_PRESETS[resolvedPreset];
     if (!cfg) return true;
     const rect = ctx.renderer.state.get("_flashObj");
@@ -1691,14 +1696,14 @@
     hide: () => {
     }
   }));
-  screenWipeModule.defineCommand(function* (cmd, ctx, data) {
-    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? data.lastPreset : cmd.preset;
-    data.lastPreset = resolvedPreset;
+  screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state.lastPreset : cmd.preset;
+    setState({ lastPreset: resolvedPreset });
     const cfg = WIPE_PRESETS[resolvedPreset];
     if (!cfg) return true;
     const dur = ctx.renderer.dur(cmd.duration ?? 800);
     const fadeState = ctx.state.get("screen-fade");
-    const colorPreset = fadeState?.lastPreset ?? data.lastFadePreset;
+    const colorPreset = fadeState?.lastPreset ?? state.lastFadePreset;
     const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
@@ -1892,9 +1897,9 @@
   cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  cameraZoomModule.defineCommand(function* (cmd, ctx, data) {
-    const resolved = cmd.preset === "inherit" ? data.lastPreset : cmd.preset;
-    data.lastPreset = resolved;
+  cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolved = cmd.preset === "inherit" ? state.lastPreset : cmd.preset;
+    setState({ lastPreset: resolved });
     zoomCamera(ctx, resolved, cmd.duration);
     return true;
   });
@@ -1902,9 +1907,9 @@
   cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  cameraPanModule.defineCommand(function* (cmd, ctx, data) {
-    const resolved = cmd.position === "inherit" ? data.lastPreset : cmd.position;
-    data.lastPreset = resolved;
+  cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolved = cmd.position === "inherit" ? state.lastPreset : cmd.position;
+    setState({ lastPreset: resolved });
     panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y);
     return true;
   });
@@ -1912,8 +1917,8 @@
   cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  cameraEffectModule.defineCommand(function* (cmd, ctx, data) {
-    data.lastPreset = cmd.preset;
+  cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
+    setState({ lastPreset: cmd.preset });
     cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
     return true;
   });
@@ -1923,7 +1928,7 @@
   conditionModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  conditionModule.defineCommand(function* (cmd, ctx) {
+  conditionModule.defineCommand(function* (cmd, ctx, state, setState) {
     const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
     if (result) {
       if (cmd.goto) {
@@ -1961,7 +1966,7 @@
   varModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  varModule.defineCommand(function* (cmd, ctx) {
+  varModule.defineCommand(function* (cmd, ctx, state, setState) {
     const nameStr = cmd.name;
     const val = cmd.value;
     if (nameStr.startsWith("_")) {
@@ -1978,7 +1983,7 @@
   labelModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  labelModule.defineCommand(function* (_cmd, _ctx) {
+  labelModule.defineCommand(function* (_cmd, _ctx, state, setState) {
     return true;
   });
   var label_default = labelModule;
@@ -1988,7 +1993,7 @@
   uiModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  uiModule.defineCommand(function* (cmd, ctx) {
+  uiModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.action === "show") {
       ctx.ui.show(cmd.name, cmd.duration);
     } else {
@@ -2003,17 +2008,17 @@
   controlModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  controlModule.defineCommand(function* (cmd, ctx, data) {
+  controlModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.action === "disable" && typeof cmd.duration === "number") {
-      const expireAt = data.expireAt > Date.now() ? data.expireAt : Date.now() + cmd.duration;
-      if (data.expireAt <= Date.now()) {
-        data.expireAt = expireAt;
+      const expireAt = state.expireAt > Date.now() ? state.expireAt : Date.now() + cmd.duration;
+      if (state.expireAt <= Date.now()) {
+        setState({ expireAt });
         ctx.callbacks.disableInput(cmd.duration);
       }
       while (Date.now() < expireAt) {
         yield false;
       }
-      data.expireAt = 0;
+      setState({ expireAt: 0 });
       return true;
     }
     return true;
@@ -16548,11 +16553,11 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-stream"
   }, [
     { type: "background", name: "room", duration: 0 },
-    { type: "mood", mood: "sunset", intensity: 1, duration: 0 },
+    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
+    { type: "mood", mood: "sunset", intensity: 0.7, duration: 0 },
     { type: "mood", mood: "sunset", action: "remove", duration: 3e3 },
     { type: "mood", mood: "night", action: "add", intensity: 0.7, duration: 3e3, disable: true },
     { type: "dialogue", text: "\uD574\uAC00 \uC9C4\uB2E4." },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
       type: "dialogue",
       speaker: "zena",
