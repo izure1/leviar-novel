@@ -23,6 +23,8 @@ export type MoodCmd =
     flicker?: FlickerPreset
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 애니메이션 진행 중 사용자 입력을 차단할지 여부입니다. */
+    disable?: boolean
   }
   | {
     /** 수행할 동작입니다. ('remove': 무드 제거) */
@@ -31,6 +33,8 @@ export type MoodCmd =
     mood: MoodType
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 애니메이션 진행 중 사용자 입력을 차단할지 여부입니다. */
+    disable?: boolean
   }
 
 const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
@@ -59,6 +63,8 @@ export interface MoodSchema {
   activeMoods: Record<string, number>
   /** mood → flicker 맵 */
   flickers: Record<string, FlickerPreset>
+  /** 최근 전환 애니메이션 지속 시간 (ms) */
+  lastDuration?: number
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -69,6 +75,7 @@ export interface MoodSchema {
 const moodModule = define<MoodCmd, MoodSchema>({
   activeMoods: {},
   flickers: {},
+  lastDuration: 800,
 })
 
 moodModule.defineView((data, ctx) => {
@@ -159,16 +166,17 @@ moodModule.defineView((data, ctx) => {
     // flicker용 오브젝트 접근
     getObj: (mood: string) => _moodObjs[mood],
     update: (d: MoodSchema) => {
+      const dur = d.lastDuration ?? 800
       const newMoods = new Set(Object.keys(d.activeMoods))
       // 제거된 무드
       for (const mood of Object.keys(_moodObjs)) {
         if (!newMoods.has(mood)) {
-          _removeMoodObj(mood as MoodType, 800)
+          _removeMoodObj(mood as MoodType, dur)
         }
       }
       // 추가/변경된 무드
       for (const [mood, intensity] of Object.entries(d.activeMoods)) {
-        _addMoodObj(mood as MoodType, intensity, 800)
+        _addMoodObj(mood as MoodType, intensity, dur)
         const preset = d.flickers?.[mood]
         const obj = _moodObjs[mood]
         if (preset && obj) {
@@ -186,16 +194,21 @@ moodModule.defineCommand(function* (cmd, ctx, data) {
   const newMoods = { ...data.activeMoods }
   const newFlickers = { ...(data.flickers || {}) }
 
+  const targetDur = cmd.duration ?? 800
+
   if (cmd.action === 'remove') {
     delete newMoods[cmd.mood]
     delete newFlickers[cmd.mood]
   } else {
     const addCmd = cmd as Extract<MoodCmd, { action?: 'add' }>
-    if (addCmd.mood === 'none') {
-      // 전체 제거
+
+    // action이 명시적으로 'add'가 아닐 경우(undefined) 덮어쓰기로 간주하여 기존 무드 초기화
+    if (addCmd.action !== 'add') {
       for (const k of Object.keys(newMoods)) delete newMoods[k]
       for (const k of Object.keys(newFlickers)) delete newFlickers[k]
-    } else {
+    }
+
+    if (addCmd.mood !== 'none') {
       const preset = MOOD_PRESETS[addCmd.mood]
       newMoods[addCmd.mood] = addCmd.intensity ?? preset?.defaultIntensity ?? 1
       if (addCmd.flicker) {
@@ -206,8 +219,32 @@ moodModule.defineCommand(function* (cmd, ctx, data) {
     }
   }
 
+  data.lastDuration = targetDur
   data.activeMoods = newMoods
   data.flickers = newFlickers
+
+  // duration은 애니메이션 시간만 제어합니다.
+  // disable: true일 때만 해당 시간동안 입력을 차단하고 대기합니다.
+  if (cmd.disable) {
+    const dur = ctx.renderer.dur(targetDur)
+    if (dur > 0) {
+      const timeoutId = setTimeout(() => {
+        ctx.callbacks.advance()
+      }, dur)
+
+      ctx.execute({ type: 'control', action: 'disable', duration: dur })
+
+      yield false
+      clearTimeout(timeoutId)
+    }
+  } else if (targetDur === 0) {
+    // duration:0 → 즉시 설정이지만, Proxy 배칭으로 인해 view.update()가 microtask로 예약됨.
+    // 다음 커맨드가 그 microtask보다 먼저 실행되어 초기 상태를 덮어쓰는 것을 방지하기 위해
+    // 한 microtask 주기를 기다린 후 진행합니다.
+    Promise.resolve().then(() => ctx.callbacks.advance())
+    yield false
+  }
+
   return true
 })
 

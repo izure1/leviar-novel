@@ -1145,7 +1145,8 @@
   };
   var moodModule = define2({
     activeMoods: {},
-    flickers: {}
+    flickers: {},
+    lastDuration: 800
   });
   moodModule.defineView((data, ctx) => {
     const _moodObjs = {};
@@ -1226,14 +1227,15 @@
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
       update: (d) => {
+        const dur = d.lastDuration ?? 800;
         const newMoods = new Set(Object.keys(d.activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
           if (!newMoods.has(mood)) {
-            _removeMoodObj(mood, 800);
+            _removeMoodObj(mood, dur);
           }
         }
         for (const [mood, intensity] of Object.entries(d.activeMoods)) {
-          _addMoodObj(mood, intensity, 800);
+          _addMoodObj(mood, intensity, dur);
           const preset = d.flickers?.[mood];
           const obj = _moodObjs[mood];
           if (preset && obj) {
@@ -1249,15 +1251,17 @@
   moodModule.defineCommand(function* (cmd, ctx, data) {
     const newMoods = { ...data.activeMoods };
     const newFlickers = { ...data.flickers || {} };
+    const targetDur = cmd.duration ?? 800;
     if (cmd.action === "remove") {
       delete newMoods[cmd.mood];
       delete newFlickers[cmd.mood];
     } else {
       const addCmd = cmd;
-      if (addCmd.mood === "none") {
+      if (addCmd.action !== "add") {
         for (const k of Object.keys(newMoods)) delete newMoods[k];
         for (const k of Object.keys(newFlickers)) delete newFlickers[k];
-      } else {
+      }
+      if (addCmd.mood !== "none") {
         const preset = MOOD_PRESETS[addCmd.mood];
         newMoods[addCmd.mood] = addCmd.intensity ?? preset?.defaultIntensity ?? 1;
         if (addCmd.flicker) {
@@ -1267,8 +1271,23 @@
         }
       }
     }
+    data.lastDuration = targetDur;
     data.activeMoods = newMoods;
     data.flickers = newFlickers;
+    if (cmd.disable) {
+      const dur = ctx.renderer.dur(targetDur);
+      if (dur > 0) {
+        const timeoutId = setTimeout(() => {
+          ctx.callbacks.advance();
+        }, dur);
+        ctx.execute({ type: "control", action: "disable", duration: dur });
+        yield false;
+        clearTimeout(timeoutId);
+      }
+    } else if (targetDur === 0) {
+      Promise.resolve().then(() => ctx.callbacks.advance());
+      yield false;
+    }
     return true;
   });
   function _setFlicker(ctx, target, mood, baseOpacity, flickerPreset) {
@@ -16048,14 +16067,14 @@ ${addLineNumbers(fragment)}`);
       "zena": zena_default
     },
     backgrounds: {
-      "bg-floor": { src: "bg_floor", parallax: true },
-      "bg-library": { src: "bg_library", parallax: true },
-      "bg-park": { src: "bg_park", parallax: true }
+      "floor": { src: "bg_floor", parallax: true },
+      "room": { src: "bg_room", parallax: true },
+      "park": { src: "bg_park", parallax: true }
     },
     assets: {
       // 배경
       bg_floor: "./assets/bg_floor.png",
-      bg_library: "./assets/bg_library.png",
+      bg_room: "./assets/bg_room.png",
       bg_park: "./assets/bg_park.png",
       // 캐릭터
       girl_normal: "./assets/girl_normal.png",
@@ -16134,7 +16153,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-game"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-floor", duration: 0 },
+    { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
     { type: "effect", action: "add", effect: "dust", src: "dust", rate: 25 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
@@ -16354,6 +16373,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC774\uAC83\uC774 \uB098\uC640 \uC81C\uB098\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
     },
+    { type: "mood", mood: "sunset", intensity: 1, duration: 3e3 },
     { type: "screen-wipe", dir: "out", preset: "left", duration: 3e3, disable: true }
   ]);
 
@@ -16368,9 +16388,9 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-food"
   }, [
     { type: "screen-wipe", dir: "out", preset: "left", duration: 0 },
-    { type: "background", name: "bg-library", duration: 0 },
-    { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
+    { type: "background", name: "room", duration: 0 },
     { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
+    { type: "mood", mood: "sunset", intensity: 0.7, duration: 3e3 },
     {
       type: "dialogue",
       text: "\uC81C\uB098\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."
@@ -16527,8 +16547,11 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-zena-stream"
   }, [
-    { type: "background", name: "bg-library", duration: 0, skip: true },
-    { type: "mood", mood: "night", intensity: 0.7, duration: 0, skip: true },
+    { type: "background", name: "room", duration: 0 },
+    { type: "mood", mood: "sunset", intensity: 1, duration: 0 },
+    { type: "mood", mood: "sunset", action: "remove", duration: 3e3 },
+    { type: "mood", mood: "night", action: "add", intensity: 0.7, duration: 3e3, disable: true },
+    { type: "dialogue", text: "\uD574\uAC00 \uC9C4\uB2E4." },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
       type: "dialogue",
@@ -16672,7 +16695,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-outside"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-library", duration: 0 },
+    { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 800 },
@@ -17042,7 +17065,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-bug"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "bg-park", duration: 0 },
+    { type: "background", name: "park", duration: 0 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
@@ -17173,7 +17196,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena-ending"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
-    { type: "background", name: "bg-park", duration: 0, skip: true },
+    { type: "background", name: "park", duration: 0, skip: true },
     { type: "mood", mood: "day", intensity: 1, duration: 0, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
@@ -17308,7 +17331,7 @@ ${addLineNumbers(fragment)}`);
     next: "scene-zena"
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0, skip: true },
-    { type: "background", name: "bg-library", duration: 0, skip: true },
+    { type: "background", name: "room", duration: 0, skip: true },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0, skip: true },
     { type: "screen-fade", dir: "in", preset: "black", duration: 2e3 },
     {
