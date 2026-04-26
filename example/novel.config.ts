@@ -57,6 +57,9 @@ export default defineNovelConfig({
     'room': { src: 'bg_room', parallax: true },
     'park': { src: 'bg_park', parallax: true },
   },
+  audios: {
+    'am223': './assets/bgm_am223.mp3',
+  },
   assets: {
     // 배경
     bg_floor: './assets/bg_floor.png',

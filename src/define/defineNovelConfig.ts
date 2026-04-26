@@ -15,6 +15,7 @@ import varModule from '../modules/var'
 import labelModule from '../modules/label'
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
+import audioModule from '../modules/audio'
 
 // ─── 내장 모듈 맵 ────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ export const BUILTIN_MODULES = {
   'label': labelModule,
   'ui': uiModule,
   'control': controlModule,
+  'audio': audioModule,
 } as const
 
 /** 내장 모듈 타입 */
@@ -80,7 +82,8 @@ export function defineNovelConfig<
   const TScenes extends readonly string[],
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
-  TAssets extends Record<string, string>,
+  TAssets extends Record<string, string> = Record<string, string>,
+  TAudios extends Record<string, string> = Record<string, string>,
   TModules extends Record<string, NovelModule<any>> = Record<never, never>,
 >(
   config: {
@@ -92,10 +95,11 @@ export function defineNovelConfig<
     backgrounds: TBackgrounds
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets
+    audios?: TAudios
     fallback?: FallbackRuleOf<any>[]
     modules?: TModules
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, BuiltinModules & TModules> {
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TAudios, BuiltinModules & TModules> {
   // 내장 모듈 + 유저 모듈 merge (유저 모듈이 덮어쓸 수 있음)
   const mergedModules = { ...BUILTIN_MODULES, ...(config.modules ?? {}) }
   return { ...config, modules: mergedModules } as any

@@ -160,6 +160,7 @@ export interface NovelConfig<
   TCharacters extends CharDefs,
   TBackgrounds extends BgDefs,
   TAssets extends Record<string, string> = Record<string, string>,
+  TAudios extends Record<string, string> = Record<string, string>,
   TModules extends Record<string, NovelModule<any>> = Record<string, NovelModule<any>>,
 > {
   /** 
@@ -191,6 +192,10 @@ export interface NovelConfig<
    * 엔진 초기화 시점에 이 경로를 바탕으로 에셋을 자동 로드합니다.
    */
   assets?: TAssets
+  /**
+   * 오디오의 키와 경로 매핑 목록입니다.
+   */
+  audios?: TAudios
   /** 
    * 스크립트 실행 중 에셋이나 명령어가 누락되었을 때 적용할 기본값(폴백) 규칙 목록입니다. 
    * 배열의 첫 번째부터 순차적으로 매칭되어 적용됩니다.
@@ -248,7 +253,7 @@ export interface NovelOption {
  * ```
  */
 export type CharacterKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? keyof TChars & string
   : string
 
@@ -261,7 +266,7 @@ export type CharacterKeysOf<TConfig> =
  * ```
  */
 export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? TCharKey extends keyof TChars
   ? TChars[TCharKey] extends { images: infer TImgs }
   ? keyof TImgs & string
@@ -278,7 +283,7 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
  * ```
  */
 export type AssetKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any>
+  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any>
   ? keyof TAssets & string
   : string
 
@@ -291,7 +296,7 @@ export type AssetKeysOf<TConfig> =
  * ```
  */
 export type BackgroundKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any>
+  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any>
   ? keyof TBgs & string
   : string
 
@@ -304,7 +309,7 @@ export type BackgroundKeysOf<TConfig> =
  * ```
  */
 export type SceneNamesOf<TConfig> =
-  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any>
+  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any>
   ? TScenes[number]
   : string
 
@@ -317,7 +322,7 @@ export type SceneNamesOf<TConfig> =
  * ```
  */
 export type VarsOf<TConfig> =
-  TConfig extends NovelConfig<infer TVars, any, any, any, any, any>
+  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any>
   ? TVars
   : Record<string, any>
 
@@ -331,7 +336,7 @@ export type VarsOf<TConfig> =
  * ```
  */
 export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? TName extends keyof TChars
   ? TChars[TName] extends { images: infer TImgs }
   ? TImgs[keyof TImgs] extends { points?: infer P }
@@ -350,7 +355,7 @@ export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = Character
  * ```
  */
 export type ModulesOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, infer TMods>
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
   ? TMods
   : Record<never, never>
 
@@ -363,6 +368,19 @@ export type ModulesOf<TConfig> =
  * ```
  */
 export type ModuleKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, infer TMods>
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
   ? keyof TMods & string
+  : string
+
+/**
+ * `NovelConfig`에서 오디오 키(`audios`의 key) 유니온을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type AudioKey = AudioKeysOf<typeof config>  // 'bgm-01' | 'sfx-02' | ...
+ * ```
+ */
+export type AudioKeysOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, infer TAudios, any>
+  ? keyof TAudios & string
   : string

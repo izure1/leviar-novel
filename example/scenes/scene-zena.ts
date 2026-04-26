@@ -22,6 +22,7 @@ export default defineScene({
     type: 'dialogue',
     text: '주말 오후의 카페. 창밖으로 내리쬐는 햇살이 평화롭다.'
   },
+  { type: 'audio', action: 'play', name: 'bgm', src: 'am223', repeat: true, duration: 3000, volume: 0.3 },
   {
     type: 'dialogue',
     text: '향긋한 커피 향과 사람들의 웅성거림 사이로...'
@@ -34,6 +35,7 @@ export default defineScene({
     type: 'dialogue',
     text: '그곳에는 마치 세상 모든 짐을 짊어진 듯한 표정의 소녀가 있었다.'
   },
+  { type: 'audio', action: 'play', name: 'bgm', src: 'am223', repeat: true, duration: 3000, volume: 1 },
   { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',

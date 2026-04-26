@@ -2119,6 +2119,172 @@
   });
   var control_default = controlModule;
 
+  // src/modules/audio.ts
+  function fadeVolume(audio, targetVolume, duration) {
+    return new Promise((resolve) => {
+      if (duration <= 0) {
+        audio.volume = targetVolume;
+        resolve();
+        return;
+      }
+      const startVolume = audio.volume;
+      const startTime = performance.now();
+      const tick = (now) => {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        audio.volume = startVolume + (targetVolume - startVolume) * t;
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          audio.volume = targetVolume;
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+  var pool = /* @__PURE__ */ new Map();
+  var audioModule = define2({ tracks: {} });
+  audioModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    },
+    update: () => {
+    }
+  }));
+  audioModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const audioMap = ctx.renderer.config.audios;
+    if (cmd.action === "play") {
+      const playCmd = cmd;
+      const url = audioMap?.[playCmd.src];
+      if (!url) {
+        console.warn(`[audio] \uB4F1\uB85D\uB418\uC9C0 \uC54A\uC740 \uC624\uB514\uC624 \uD0A4: "${String(playCmd.src)}"`);
+        return true;
+      }
+      const targetVolume = playCmd.volume ?? 1;
+      const speed = playCmd.speed ?? 1;
+      const repeat = playCmd.repeat ?? false;
+      const startSec = playCmd.start ?? 0;
+      const endSec = playCmd.end ?? 0;
+      const duration = playCmd.duration ?? 0;
+      const existing = pool.get(playCmd.name);
+      const existingSrc = existing ? state.tracks[playCmd.name]?.src : void 0;
+      if (existing && existingSrc === playCmd.src) {
+        existing.playbackRate = speed;
+        existing.loop = repeat;
+        if (existing.paused) {
+          existing.play().catch((e) => {
+            console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328: "${String(playCmd.src)}"`, e);
+          });
+        }
+        fadeVolume(existing, targetVolume, duration);
+        const newTracks = { ...state.tracks };
+        newTracks[playCmd.name] = {
+          ...newTracks[playCmd.name],
+          volume: targetVolume,
+          speed,
+          repeat,
+          paused: false
+        };
+        setState({ tracks: newTracks });
+        return true;
+      }
+      if (existing) {
+        const old = existing;
+        fadeVolume(old, 0, duration).then(() => {
+          old.pause();
+          old.src = "";
+        });
+      }
+      const audio = new Audio(url);
+      audio.volume = duration > 0 ? 0 : targetVolume;
+      audio.playbackRate = speed;
+      audio.loop = repeat;
+      audio.currentTime = startSec;
+      if (endSec > 0) {
+        audio.addEventListener("timeupdate", () => {
+          if (audio.currentTime >= endSec) {
+            audio.pause();
+            audio.currentTime = startSec;
+            if (repeat) audio.play();
+          }
+        });
+      }
+      pool.set(playCmd.name, audio);
+      audio.play().catch((e) => {
+        console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328: "${String(playCmd.src)}"`, e);
+      });
+      if (duration > 0) {
+        fadeVolume(audio, targetVolume, duration);
+      }
+      const newPlayTracks = { ...state.tracks };
+      newPlayTracks[playCmd.name] = {
+        src: playCmd.src,
+        volume: targetVolume,
+        speed,
+        repeat,
+        start: startSec,
+        end: endSec,
+        paused: false
+      };
+      setState({ tracks: newPlayTracks });
+      return true;
+    }
+    if (cmd.action === "pause") {
+      const pauseCmd = cmd;
+      const audio = pool.get(pauseCmd.name);
+      if (!audio) return true;
+      const duration = pauseCmd.duration ?? 0;
+      if (duration > 0) {
+        fadeVolume(audio, 0, duration).then(() => {
+          audio.pause();
+          const track = state.tracks[pauseCmd.name];
+          if (track) audio.volume = track.volume;
+          ctx.callbacks.advance();
+        });
+        yield false;
+      } else {
+        audio.pause();
+        const track = state.tracks[pauseCmd.name];
+        if (track) audio.volume = track.volume;
+      }
+      const newPauseTracks = { ...state.tracks };
+      if (newPauseTracks[pauseCmd.name]) {
+        newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
+      }
+      setState({ tracks: newPauseTracks });
+      return true;
+    }
+    if (cmd.action === "stop") {
+      const stopCmd = cmd;
+      const audio = pool.get(stopCmd.name);
+      if (!audio) return true;
+      const duration = stopCmd.duration ?? 0;
+      if (duration > 0) {
+        fadeVolume(audio, 0, duration).then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = "";
+          pool.delete(stopCmd.name);
+          ctx.callbacks.advance();
+        });
+        yield false;
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = "";
+        pool.delete(stopCmd.name);
+      }
+      const newStopTracks = { ...state.tracks };
+      delete newStopTracks[stopCmd.name];
+      setState({ tracks: newStopTracks });
+      return true;
+    }
+    return true;
+  });
+  var audio_default = audioModule;
+
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
@@ -2141,7 +2307,8 @@
     "var": var_default,
     "label": label_default,
     "ui": ui_default,
-    "control": control_default
+    "control": control_default,
+    "audio": audio_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -15284,7 +15451,8 @@ ${addLineNumbers(fragment)}`);
     "screen-flash": (p, c) => screenFlashModule.__handler(p, c),
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
-    "control": (p, c) => control_default.__handler(p, c)
+    "control": (p, c) => control_default.__handler(p, c),
+    "audio": (p, c) => audio_default.__handler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -16196,6 +16364,9 @@ ${addLineNumbers(fragment)}`);
       "room": { src: "bg_room", parallax: true },
       "park": { src: "bg_park", parallax: true }
     },
+    audios: {
+      "am223": "./assets/bgm_am223.mp3"
+    },
     assets: {
       // 배경
       bg_floor: "./assets/bg_floor.png",
@@ -16286,6 +16457,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
     },
+    { type: "audio", action: "play", name: "bgm", src: "am223", repeat: true, duration: 3e3, volume: 0.3 },
     {
       type: "dialogue",
       text: "\uD5A5\uAE0B\uD55C \uCEE4\uD53C \uD5A5\uACFC \uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C..."
@@ -16298,6 +16470,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
     },
+    { type: "audio", action: "play", name: "bgm", src: "am223", repeat: true, duration: 3e3, volume: 1 },
     { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
     {
       type: "dialogue",

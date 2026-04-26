@@ -18,6 +18,7 @@ import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../module
 import { screenFadeModule, screenFlashModule, screenWipeModule } from '../modules/screen'
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
+import audioModule from '../modules/audio'
 import { setBackground } from '../modules/background'
 import type { NovelModule } from '../define/defineCmdUI'
 
@@ -43,6 +44,7 @@ const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generato
   'screen-wipe':          (p, c) => screenWipeModule.__handler!(p, c),
   'ui':                   (p, c) => uiModule.__handler!(p, c),
   'control':              (p, c) => controlModule.__handler!(p, c),
+  'audio':                (p, c) => audioModule.__handler!(p, c),
 }
 
 // =============================================================

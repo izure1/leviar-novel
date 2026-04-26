@@ -30,13 +30,14 @@ import type { CameraZoomCmd, CameraPanCmd, CameraEffectCmd } from '../modules/ca
 import type { ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd } from '../modules/screen'
 import type { UICmd } from '../modules/ui'
 import type { ControlCmd } from '../modules/control'
+import type { AudioCmd } from '../modules/audio'
 
 // 재수출
 export type {
   DialogueCmd, ChoiceCmd, ConditionCmd, VarCmd, LabelCmd, BackgroundCmd,
   MoodCmd, EffectCmd, OverlayCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
-  UICmd, ControlCmd
+  UICmd, ControlCmd, AudioCmd
 }
 
 export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
@@ -75,6 +76,7 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<ScreenWipeCmd, 'screen-wipe', TVars, TLocalVars>
   | _WithType<UICmd<TConfig>, 'ui', TVars, TLocalVars>
   | _WithType<ControlCmd, 'control', TVars, TLocalVars>
+  | _WithType<AudioCmd<TConfig>, 'audio', TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 
 type _WithSkip<T> = T extends any ? T & {
