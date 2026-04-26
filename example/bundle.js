@@ -1848,7 +1848,7 @@
     };
     ctx.renderer.state.set("_activeCamEffectStop", stop);
     const loop = () => {
-      if (!active || frame++ >= repeat) {
+      if (!active || repeat >= 0 && frame++ >= repeat) {
         stop();
         return;
       }
@@ -16852,6 +16852,7 @@ ${addLineNumbers(fragment)}`);
       ],
       speed: 10
     },
+    { type: "camera-effect", preset: "shake", intensity: 30, duration: 500, repeat: -1 },
     { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
@@ -16953,6 +16954,7 @@ ${addLineNumbers(fragment)}`);
       ],
       speed: 10
     },
+    { type: "camera-effect", preset: "reset" },
     { type: "condition", if: () => true, goto: "stream-end" },
     { type: "label", name: "troll" },
     {

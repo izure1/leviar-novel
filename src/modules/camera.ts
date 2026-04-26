@@ -155,7 +155,7 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
   ctx.renderer.state.set('_activeCamEffectStop', stop)
 
   const loop = () => {
-    if (!active || frame++ >= repeat) {
+    if (!active || (repeat >= 0 && frame++ >= repeat)) {
       stop()
       return
     }
