@@ -6,11 +6,12 @@
   "author": "izure <admin@izure.org>",
   "repository": "https://github.com/izure1/leviar-novel",
   "type": "module",
+  "types": "./dist/types/index.d.ts",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs",
       "default": "./dist/index.mjs"
@@ -18,6 +19,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node build/index.js && tsc -p tsconfig.build.json",
     "example:build": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap",
     "example:dev": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap --watch"
   },
