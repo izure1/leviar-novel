@@ -1,5 +1,402 @@
 "use strict";
 (() => {
+  // node_modules/animalese-tts/dist/animalese.browser.mjs
+  var M = class {
+    static float32ToInt16(e) {
+      let t = new Int16Array(e.length);
+      for (let n = 0; n < e.length; n++) {
+        let o = Math.max(-1, Math.min(1, e[n]));
+        t[n] = o < 0 ? o * 32768 : o * 32767;
+      }
+      return t;
+    }
+    static int16ToFloat32(e) {
+      let t = new Float32Array(e.length);
+      for (let n = 0; n < e.length; n++) {
+        let o = e[n];
+        t[n] = o / (o < 0 ? 32768 : 32767);
+      }
+      return t;
+    }
+  };
+  var I = class {
+    constructor(e, t, n) {
+      this.text = e;
+      this.asInt16 = t;
+      this.config = n;
+      this.punctuations = this.config.punctuations || [".", ",", "!", "?", "'", '"', "(", ")", "~", "\u3002", "\u3001", "\uFF01", "\uFF1F", "\u3063", "\u30C3", "\u30FC"], this.config = { ...this.config, spaceDelay: this.config.spaceDelay ?? 0.03, punctuationDelay: this.config.punctuationDelay ?? 0.3 };
+    }
+    punctuations;
+    async *speak() {
+      let e = this.config.analyzer.analyze(this.text), t = this.text.split(""), n = 0, o = 0, s = 0, r = 0, l = "";
+      for (let i = 0; i < e.length; i++) {
+        let p = e[i];
+        if (p.length === 0) continue;
+        let a = t[i] || "", m = i + 1;
+        for (; m < e.length && e[m].length === 0; ) a += t[m] || "", m++;
+        let u = 0, b = null, y = "", A = false;
+        for (let c of p) {
+          if (!c.phoneme) continue;
+          let h = c.phoneme === " " || c.phoneme === "\u3000", C = this.punctuations.includes(c.phoneme);
+          if (C && (n = 0, o = 0, s = 0, r = 0), h && this.config.spaceDelay) {
+            let S = this.config.sampler.sampleRate ?? 44100, f = Math.floor(this.config.spaceDelay * S);
+            if (f > 0) {
+              let g = new Float32Array(f);
+              o += f, s += f;
+              let x = u === 0 ? l + a : "";
+              l = "", u++, yield { char: x, phoneme: " ", pitch: 1, buffer: this.asInt16 ? M.float32ToInt16(g) : g };
+            }
+            continue;
+          } else if (h) continue;
+          if (C && this.config.punctuationDelay) {
+            let S = this.config.sampler.sampleRate ?? 44100, f = Math.floor(this.config.punctuationDelay * S);
+            if (f > 0) {
+              let g = new Float32Array(f);
+              o += f, s += f;
+              let x = u === 0 ? l + a : "";
+              l = "", u++, yield { char: x, phoneme: c.phoneme, pitch: 1, buffer: this.asInt16 ? M.float32ToInt16(g) : g };
+            }
+            continue;
+          } else if (C) continue;
+          let w = await this.config.sampler.getSample(c.phoneme);
+          if (w) if (A && b) {
+            let S = Math.max(b.length, w.length), f = new Float32Array(S);
+            for (let g = 0; g < S; g++) {
+              let x = g < b.length ? b[g] : 0, P = g < w.length ? w[g] : 0, T = x + P;
+              f[g] = Math.max(-1, Math.min(1, T));
+            }
+            if (c.mergeWithNext) b = f, y = y + c.phoneme, A = true;
+            else {
+              let g = this.config.effect.calculatePitch(n++), x = this.config.effect.apply(f, g);
+              r === 0 && (r = x.length), s += r;
+              let P = u === 0 ? l + a : "";
+              if (l = "", u++, o > s) {
+                let T = new Float32Array(0);
+                yield { char: P, phoneme: y + c.phoneme, pitch: g, buffer: this.asInt16 ? M.float32ToInt16(T) : T };
+              } else {
+                r = x.length, o += x.length;
+                let T = this.asInt16 ? M.float32ToInt16(x) : x;
+                yield { char: P, phoneme: y + c.phoneme, pitch: g, buffer: T };
+              }
+              b = null, y = "", A = false;
+            }
+          } else {
+            if (b) {
+              let S = this.config.effect.calculatePitch(n++), f = this.config.effect.apply(b, S);
+              r === 0 && (r = f.length), s += r;
+              let g = u === 0 ? l + a : "";
+              if (l = "", u++, o > s) {
+                let x = new Float32Array(0);
+                yield { char: g, phoneme: y, pitch: S, buffer: this.asInt16 ? M.float32ToInt16(x) : x };
+              } else {
+                r = f.length, o += f.length;
+                let x = this.asInt16 ? M.float32ToInt16(f) : f;
+                yield { char: g, phoneme: y, pitch: S, buffer: x };
+              }
+            }
+            if (c.mergeWithNext) b = w, y = c.phoneme, A = true;
+            else {
+              let S = this.config.effect.calculatePitch(n++), f = this.config.effect.apply(w, S);
+              r === 0 && (r = f.length), s += r;
+              let g = u === 0 ? l + a : "";
+              if (l = "", u++, o > s) {
+                let x = new Float32Array(0);
+                yield { char: g, phoneme: c.phoneme, pitch: S, buffer: this.asInt16 ? M.float32ToInt16(x) : x };
+              } else {
+                r = f.length, o += f.length;
+                let x = this.asInt16 ? M.float32ToInt16(f) : f;
+                yield { char: g, phoneme: c.phoneme, pitch: S, buffer: x };
+              }
+              b = null, y = "", A = false;
+            }
+          }
+        }
+        if (b) {
+          let c = this.config.effect.calculatePitch(n++), h = this.config.effect.apply(b, c);
+          r === 0 && (r = h.length), s += r;
+          let C = u === 0 ? l + a : "";
+          if (l = "", u++, o > s) {
+            let w = new Float32Array(0);
+            yield { char: C, phoneme: y, pitch: c, buffer: this.asInt16 ? M.float32ToInt16(w) : w };
+          } else {
+            r = h.length, o += h.length;
+            let w = this.asInt16 ? M.float32ToInt16(h) : h;
+            yield { char: C, phoneme: y, pitch: c, buffer: w };
+          }
+        }
+        u === 0 && (l += a);
+      }
+      if (l !== "") {
+        let i = new Float32Array(0);
+        yield { char: l, phoneme: "", pitch: 1, buffer: this.asInt16 ? M.float32ToInt16(i) : i };
+      }
+    }
+  };
+  var z = class {
+    constructor(e) {
+      this.config = e;
+    }
+    synthesize(e, t = false) {
+      return new I(e, t, this.config);
+    }
+    async load() {
+      return this.config.sampler.load();
+    }
+  };
+  var v = class {
+    analyze(e) {
+      let t = [];
+      for (let n of e.split("")) t.push(this.decompose(n));
+      return t;
+    }
+  };
+  var R = class extends v {
+    CHOSEONG = ["\u3131", "\u3132", "\u3134", "\u3137", "\u3138", "\u3139", "\u3141", "\u3142", "\u3143", "\u3145", "\u3146", "\u3147", "\u3148", "\u3149", "\u314A", "\u314B", "\u314C", "\u314D", "\u314E"];
+    JUNGSEONG = ["\u314F", "\u3150", "\u3151", "\u3152", "\u3153", "\u3154", "\u3155", "\u3156", "\u3157", "\u3158", "\u3159", "\u315A", "\u315B", "\u315C", "\u315D", "\u315E", "\u315F", "\u3160", "\u3161", "\u3162", "\u3163"];
+    JONGSEONG = ["", "\u3131", "\u3132", "\u3133", "\u3134", "\u3135", "\u3136", "\u3137", "\u3139", "\u313A", "\u313B", "\u313C", "\u313D", "\u313E", "\u313F", "\u3140", "\u3141", "\u3142", "\u3144", "\u3145", "\u3146", "\u3147", "\u3148", "\u314A", "\u314B", "\u314C", "\u314D", "\u314E"];
+    decompose(e) {
+      let t = e.charCodeAt(0) - 44032;
+      if (t < 0 || t > 11171) return [{ phoneme: e, mergeWithNext: false }];
+      let n = t % 28, o = (t - n) / 28 % 21, s = Math.floor((t - n) / 28 / 21), r = [];
+      return this.CHOSEONG[s] !== "\u3147" && r.push({ phoneme: this.CHOSEONG[s], mergeWithNext: true }), this.JONGSEONG[n] !== "" ? (r.push({ phoneme: this.JUNGSEONG[o], mergeWithNext: true }), r.push({ phoneme: this.JONGSEONG[n], mergeWithNext: false })) : r.push({ phoneme: this.JUNGSEONG[o], mergeWithNext: false }), r;
+    }
+  };
+  var B = class {
+    decode(e, t = true) {
+      let n = e instanceof Uint8Array ? e.buffer : e, o = e instanceof Uint8Array ? e.byteOffset : 0, s = e.byteLength, r = new DataView(n, o, s), l = new Uint8Array(n, o, s), i = 1, p = 44100, a = 44, m = 0, u = 12;
+      for (; u < s - 8; ) {
+        let c = "";
+        for (let C = 0; C < 4; C++) c += String.fromCharCode(l[u + C]);
+        let h = r.getUint32(u + 4, true);
+        if (c === "fmt ") i = r.getUint16(u + 10, true), p = r.getUint32(u + 12, true);
+        else if (c === "data") {
+          a = u + 8, m = h;
+          break;
+        }
+        u += 8 + h;
+      }
+      m === 0 && (a = 44, i = r.getUint16(22, true), p = r.getUint32(24, true), m = s - 44);
+      let b = Math.floor(m / (2 * i)), y = new Float32Array(b), A = a;
+      for (let c = 0, h = b; c < h; c++) {
+        let C = 0;
+        for (let w = 0; w < i && !(A >= s - 1); w++) {
+          let S = r.getInt16(A, true);
+          C += S < 0 ? S / 32768 : S / 32767, A += 2;
+        }
+        y[c] = C / i;
+      }
+      return { buffer: t ? this.trimSilence(y) : y, sampleRate: p };
+    }
+    trimSilence(e, t = 0.02) {
+      let n = 0;
+      for (; n < e.length && Math.abs(e[n]) <= t; ) n++;
+      let o = e.length - 1;
+      for (; o > n && Math.abs(e[o]) <= t; ) o--;
+      return n >= o ? new Float32Array(0) : e.slice(n, o + 1);
+    }
+  };
+  var k = class d {
+    static globalCache = /* @__PURE__ */ new Map();
+    static globalFailureCount = /* @__PURE__ */ new Map();
+    decoder = new B();
+    spriteDefinition;
+    minSilenceDurationMs;
+    initPromise;
+    _sampleRate;
+    maxRetries;
+    silenceThreshold;
+    get sampleRate() {
+      return this._sampleRate;
+    }
+    set sampleRate(e) {
+      this._sampleRate = e;
+    }
+    constructor(e, t = {}) {
+      this._sampleRate = t.sampleRate, this.maxRetries = t.maxRetries ?? 3, this.silenceThreshold = t.silenceThreshold ?? 0.01, this.spriteDefinition = e, this.minSilenceDurationMs = t.minSilenceDurationMs ?? 20;
+    }
+    getCacheKey(e) {
+      return e;
+    }
+    async load() {
+      await this.ensureInitialized();
+    }
+    async getSample(e) {
+      let t = this.getCacheKey(e);
+      if (d.globalCache.has(t)) return d.globalCache.get(t);
+      let n = d.globalFailureCount.get(t) || 0;
+      if (!(n >= this.maxRetries)) try {
+        let o = await this.fetchSample(e);
+        if (o) return d.globalCache.set(t, o), o;
+        d.globalFailureCount.set(t, n + 1);
+        return;
+      } catch (o) {
+        throw d.globalFailureCount.set(t, n + 1), o;
+      }
+    }
+    async fetchSample(e) {
+      return await this.ensureInitialized(), d.globalCache.get(this.getCacheKey(e));
+    }
+    isCached(e) {
+      return d.globalCache.has(this.getCacheKey(e));
+    }
+    async loadSample(e, t) {
+      d.globalCache.set(this.getCacheKey(e), t);
+    }
+    async ensureInitialized() {
+      return this.initPromise || (this.initPromise = this._initialize()), this.initPromise;
+    }
+    async _initialize() {
+      let e = await this.fetchBuffer(), { buffer: t, sampleRate: n } = this.decoder.decode(e, false);
+      this.sampleRate = n;
+      let o = Array.isArray(this.spriteDefinition) ? this.detectSprites(t, n, this.spriteDefinition) : this.spriteDefinition;
+      for (let [s, { startMs: r, durationMs: l }] of Object.entries(o)) {
+        let i = Math.floor(r / 1e3 * n), p = Math.floor(l / 1e3 * n), a = Math.min(i + p, t.length), m = t.slice(i, a), u = this.trimSilence(m);
+        d.globalCache.set(this.getCacheKey(s), u);
+      }
+    }
+    detectSprites(e, t, n) {
+      let o = Math.floor(this.minSilenceDurationMs / 1e3 * t), s = {}, r = [], l = false, i = 0, p = 0;
+      for (let m = 0; m < e.length; m++) {
+        let u = Math.abs(e[m]) <= this.silenceThreshold;
+        !l && !u ? (l = true, i = m, p = 0) : l && u ? (p++, p >= o && (r.push({ start: i, end: m - p }), l = false, p = 0)) : l && !u && (p = 0);
+      }
+      l && r.push({ start: i, end: e.length - 1 }), r.length !== n.length && console.warn(`[${this.constructor.name}] \uAC10\uC9C0\uB41C \uC138\uADF8\uBA3C\uD2B8 \uC218(${r.length})\uC640 \uB77C\uBCA8 \uC218(${n.length})\uAC00 \uB2E4\uB985\uB2C8\uB2E4.`);
+      let a = Math.min(r.length, n.length);
+      for (let m = 0; m < a; m++) {
+        let { start: u, end: b } = r[m];
+        s[n[m]] = { startMs: u / t * 1e3, durationMs: (b - u) / t * 1e3 };
+      }
+      return s;
+    }
+    resample(e, t, n) {
+      if (t === n) return e;
+      let o = Math.floor(e.length * n / t), s = new Float32Array(o), r = t / n;
+      for (let l = 0; l < o; l++) {
+        let i = l * r, p = Math.floor(i), a = Math.min(p + 1, e.length - 1), m = i - p;
+        s[l] = e[p] * (1 - m) + e[a] * m;
+      }
+      return s;
+    }
+    trimSilence(e) {
+      if (e.length === 0) return e;
+      let t = this.silenceThreshold, n = 64, o = 0;
+      for (let i = 0; i < e.length; i++) if (Math.abs(e[i]) > t) {
+        o = i;
+        break;
+      }
+      let s = e.length - 1;
+      for (let i = e.length - 1; i >= o; i--) if (Math.abs(e[i]) > t) {
+        s = i;
+        break;
+      }
+      let r = Math.max(0, o - n), l = Math.min(e.length, s + n + 1);
+      return e.slice(r, l);
+    }
+  };
+  var G = class extends k {
+    audioSrc;
+    constructor(e, t, n = {}) {
+      super(t, n), this.audioSrc = e;
+    }
+    getCacheKey(e) {
+      return `${this.audioSrc}_${e}`;
+    }
+    async fetchBuffer() {
+      let e = await fetch(this.audioSrc);
+      if (!e.ok) throw new Error(`[WebSampler] \uD30C\uC77C \uB85C\uB4DC \uC2E4\uD328: ${e.status} ${e.statusText} (${this.audioSrc})`);
+      return e.arrayBuffer();
+    }
+  };
+  var j = class {
+    pitch;
+    speed;
+    randomness;
+    melodyRate;
+    melodyAmplitude;
+    constructor(e = {}) {
+      this.pitch = e.pitch ?? 1.5, this.speed = e.speed ?? 4, this.randomness = e.randomness ?? 0.1, this.melodyRate = e.melodyRate ?? 0.05, this.melodyAmplitude = e.melodyAmplitude ?? 0.1;
+    }
+    calculatePitch(e) {
+      let t = this.pitch, o = 360 * this.melodyRate * (Math.PI / 180);
+      return t += Math.sin(e * o) * this.melodyAmplitude, t + (Math.random() - 0.5) * this.randomness;
+    }
+    apply(e, t) {
+      if (t === 1 && this.speed === 1 || e.length === 0) return e;
+      let n = e;
+      if (t > 1) {
+        let a = 0;
+        for (let h = 1; h < e.length; h++) (e[h] >= 0 && e[h - 1] < 0 || e[h] < 0 && e[h - 1] >= 0) && a++;
+        let m = a / e.length, u = Math.max(0, Math.min(1, (m - 0.1) / 0.2)), b = 0.85 - 0.55 * u, y = Math.min(1, b / t), A = new Float32Array(e.length), c = 0;
+        for (let h = 0; h < e.length; h++) c = c + y * (e[h] - c), A[h] = c;
+        c = 0;
+        for (let h = e.length - 1; h >= 0; h--) c = c + y * (A[h] - c), A[h] = c;
+        if (u > 0.5) {
+          c = 0;
+          for (let h = 0; h < e.length; h++) c = c + y * (A[h] - c), A[h] = c;
+          c = 0;
+          for (let h = e.length - 1; h >= 0; h--) c = c + y * (A[h] - c), A[h] = c;
+        }
+        n = A;
+      }
+      let o = Math.floor(n.length / t), s = new Float32Array(o);
+      for (let a = 0; a < o; a++) {
+        let m = a * t, u = Math.floor(m), b = m - u, y = n[u] || 0, A = n[u + 1] || 0;
+        s[a] = y + b * (A - y);
+      }
+      let r = Math.floor(e.length / this.speed), l = new Float32Array(r);
+      for (let a = 0; a < r; a++) l[a] = a < o ? s[a] : 0;
+      let i = Math.min(256, Math.floor(o / 4)), p = Math.min(r, o);
+      for (let a = 0; a < i; a++) {
+        a < r && (l[a] *= a / i);
+        let m = p - 1 - a;
+        m >= 0 && m < r && (l[m] *= a / i);
+      }
+      return l;
+    }
+  };
+  var U = class {
+    volume = 1;
+    _audioContext;
+    _sampleRate;
+    constructor(e) {
+      this._sampleRate = e, e !== void 0 && this._initAudioContext(e);
+    }
+    get sampleRate() {
+      return this._sampleRate;
+    }
+    set sampleRate(e) {
+      this._sampleRate !== e && (this._sampleRate = e, this._audioContext?.close(), this._initAudioContext(e));
+    }
+    _initAudioContext(e) {
+      let t = window.AudioContext || window.webkitAudioContext;
+      if (!t) throw new Error("\uC774 \uBE0C\uB77C\uC6B0\uC800\uB294 Web Audio API\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
+      this._audioContext = new t({ sampleRate: e });
+    }
+    get audioContext() {
+      if (!this._audioContext) {
+        let e = window.AudioContext || window.webkitAudioContext;
+        if (!e) throw new Error("\uC774 \uBE0C\uB77C\uC6B0\uC800\uB294 Web Audio API\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
+        this._audioContext = new e(), this._sampleRate = this._audioContext.sampleRate;
+      }
+      return this._audioContext;
+    }
+    async play(e) {
+      let t = this.audioContext, n = this._sampleRate ?? t.sampleRate, o = t.createBuffer(1, e.length, n);
+      o.copyToChannel(e, 0);
+      let s = t.createBufferSource();
+      s.buffer = o, s.playbackRate.value = 1;
+      let r = t.createGain();
+      return r.gain.value = this.volume, s.connect(r), r.connect(t.destination), new Promise((l) => {
+        s.onended = () => l(), s.start(0);
+      });
+    }
+    async drainAndPlay(e) {
+      let t = e.reduce((s, r) => s + r.length, 0), n = new Float32Array(t), o = 0;
+      for (let s of e) n.set(s, o), o += s.length;
+      return this.play(n);
+    }
+  };
+
   // node_modules/hookall/dist/esm/index.mjs
   var HookallStore = class extends WeakMap {
     ensure(obj, key) {
@@ -377,7 +774,7 @@
         _viewBuilderFn = (mergedData, ctx) => {
           Object.assign(data, mergedData);
           const entry = builder(data, ctx);
-          _onUpdate = (d) => entry.update?.(d);
+          _onUpdate = (d2) => entry.update?.(d2);
           return entry;
         };
         return module;
@@ -540,20 +937,20 @@
        * - lines가 바뀐 경우: 텍스트 재렌더
        * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */
-      update: (d) => {
-        const newBgCfg = { ...DEFAULT_BG, ...d.bg ?? {}, ...d.style ?? {} };
-        const newSpkCfg = { ...DEFAULT_SPEAKER, ...d.speaker ?? {} };
-        const newTxtCfg = { ...DEFAULT_TEXT, ...d.text ?? {} };
+      update: (d2) => {
+        const newBgCfg = { ...DEFAULT_BG, ...d2.bg ?? {}, ...d2.style ?? {} };
+        const newSpkCfg = { ...DEFAULT_SPEAKER, ...d2.speaker ?? {} };
+        const newTxtCfg = { ...DEFAULT_TEXT, ...d2.text ?? {} };
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, newSpkCfg);
         Object.assign(textObj.style, newTxtCfg);
-        if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
-          _prevLines = d.lines;
-          const txt = d.lines[d.subIndex ?? 0];
-          const spkName = resolveSpeaker(d.speakerKey, charDefs);
-          const hooker = useHookallSync(ctx.renderer);
+        if (d2.lines && d2.lines !== _prevLines && d2.lines.length > 0) {
+          _prevLines = d2.lines;
+          const txt = d2.lines[d2.subIndex ?? 0];
+          const spkName = resolveSpeaker(d2.speakerKey, charDefs);
+          const hooker = useHookallSync(ctx.novel);
           hooker.trigger("dialogue:text", { speaker: spkName, text: txt }, (state) => {
-            _renderText(state.speaker, state.text, d.speed);
+            _renderText(state.speaker, state.text, d2.speed);
             return state;
           });
         }
@@ -730,8 +1127,8 @@
           _btnObjs.push(btnObj);
         });
       },
-      update: (d) => {
-        Object.assign(cfg, DEFAULT_CHOICE, d);
+      update: (d2) => {
+        Object.assign(cfg, DEFAULT_CHOICE, d2);
       }
     };
   });
@@ -866,15 +1263,15 @@
       hide: (dur = 300) => {
         _bgObj?.fadeOut?.(dur, "easeIn");
       },
-      update: (d) => {
-        if (!d.key) return;
+      update: (d2) => {
+        if (!d2.key) return;
         const bgDefs = ctx.renderer.config.backgrounds;
-        const def = bgDefs[d.key];
+        const def = bgDefs[d2.key];
         if (!def) return;
-        const src = def.src ?? d.key;
+        const src = def.src ?? d2.key;
         const useParallax = def.parallax ?? true;
-        const dur = ctx.renderer.dur(d.duration);
-        ctx.renderer.state.set("backgroundKey", d.key);
+        const dur = ctx.renderer.dur(d2.duration);
+        ctx.renderer.state.set("backgroundKey", d2.key);
         if (_bgObj) {
           const sameParallax = _bgParallax === useParallax;
           if (sameParallax) {
@@ -891,7 +1288,7 @@
           _bgObj = null;
         }
         _bgParallax = useParallax;
-        _bgObj = _createBg(d.key, d.fit, useParallax, d.isVideo, dur > 0 ? 0 : 1);
+        _bgObj = _createBg(d2.key, d2.fit, useParallax, d2.isVideo, dur > 0 ? 0 : 1);
         if (dur > 0 && _bgObj) {
           ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
         }
@@ -968,8 +1365,8 @@
       const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
       if (m) {
         const n = parseInt(m[1], 10);
-        const d = parseInt(m[2], 10);
-        if (d > 0) ratio = n / (d + 1);
+        const d2 = parseInt(m[2], 10);
+        if (d2 > 0) ratio = n / (d2 + 1);
       }
       targetX = ctx.renderer.width * (ratio - 0.5);
       targetY = 0;
@@ -1096,8 +1493,8 @@
     const m = position.match(/^(\d+)\/(\d+)$/);
     if (m) {
       const n = parseInt(m[1], 10);
-      const d = parseInt(m[2], 10);
-      if (d > 0) return n / (d + 1);
+      const d2 = parseInt(m[2], 10);
+      if (d2 > 0) return n / (d2 + 1);
     }
     return 0.5;
   }
@@ -1175,15 +1572,15 @@
       },
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
-      update: (d) => {
-        const dur = d.lastDuration;
-        const newNames = new Set(Object.keys(d.characters));
+      update: (d2) => {
+        const dur = d2.lastDuration;
+        const newNames = new Set(Object.keys(d2.characters));
         for (const name of Object.keys(_charObjs)) {
           if (!newNames.has(name)) {
             _removeCharacter(name, dur);
           }
         }
-        for (const [name, info] of Object.entries(d.characters)) {
+        for (const [name, info] of Object.entries(d2.characters)) {
           _showCharacter(name, info.position, info.imageKey, dur);
         }
       }
@@ -1490,17 +1887,17 @@
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
-      update: (d) => {
-        const dur = d.lastDuration ?? 800;
-        const newMoods = new Set(Object.keys(d.activeMoods));
+      update: (d2) => {
+        const dur = d2.lastDuration ?? 800;
+        const newMoods = new Set(Object.keys(d2.activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
           if (!newMoods.has(mood)) {
             _removeMoodObj(mood, dur);
           }
         }
-        for (const [mood, intensity] of Object.entries(d.activeMoods)) {
+        for (const [mood, intensity] of Object.entries(d2.activeMoods)) {
           _addMoodObj(mood, intensity, dur);
-          const preset = d.flickers?.[mood];
+          const preset = d2.flickers?.[mood];
           const obj = _moodObjs[mood];
           if (preset && obj) {
             const currentState = ctx.renderer.state.get("_flickerState");
@@ -1522,8 +1919,8 @@
     } else {
       const addCmd = cmd;
       if (addCmd.action !== "add") {
-        for (const k of Object.keys(newMoods)) delete newMoods[k];
-        for (const k of Object.keys(newFlickers)) delete newFlickers[k];
+        for (const k2 of Object.keys(newMoods)) delete newMoods[k2];
+        for (const k2 of Object.keys(newFlickers)) delete newFlickers[k2];
       }
       if (addCmd.mood !== "none") {
         const preset = MOOD_PRESETS[addCmd.mood];
@@ -1680,12 +2077,12 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      update: (d) => {
-        const newTypes = new Set(Object.keys(d.activeEffects));
+      update: (d2) => {
+        const newTypes = new Set(Object.keys(d2.activeEffects));
         for (const type of Object.keys(_effectObjs)) {
           if (!newTypes.has(type)) _removeEffect(type, 600);
         }
-        for (const [type, info] of Object.entries(d.activeEffects)) {
+        for (const [type, info] of Object.entries(d2.activeEffects)) {
           if (!_effectObjs[type]) {
             _addEffect(type, info.rate, info.srcKey);
           }
@@ -1772,12 +2169,12 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      update: (d) => {
-        const newPresets = new Set(Object.keys(d.overlays));
+      update: (d2) => {
+        const newPresets = new Set(Object.keys(d2.overlays));
         for (const preset of Object.keys(_overlayObjs)) {
           if (!newPresets.has(preset)) _removeOverlay(preset, 600);
         }
-        for (const [preset, text] of Object.entries(d.overlays)) {
+        for (const [preset, text] of Object.entries(d2.overlays)) {
           if (!_overlayObjs[preset]) {
             _addOverlay(preset, text);
           }
@@ -1792,7 +2189,7 @@
     } else if (cmd.action === "remove") {
       delete newOverlays[cmd.preset ?? "caption"];
     } else if (cmd.action === "clear") {
-      for (const k of Object.keys(newOverlays)) delete newOverlays[k];
+      for (const k2 of Object.keys(newOverlays)) delete newOverlays[k2];
     }
     setState({ overlays: newOverlays });
     return true;
@@ -2119,6 +2516,172 @@
   });
   var control_default = controlModule;
 
+  // src/modules/audio.ts
+  function fadeVolume(audio, targetVolume, duration) {
+    return new Promise((resolve) => {
+      if (duration <= 0) {
+        audio.volume = targetVolume;
+        resolve();
+        return;
+      }
+      const startVolume = audio.volume;
+      const startTime = performance.now();
+      const tick = (now) => {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        audio.volume = startVolume + (targetVolume - startVolume) * t;
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          audio.volume = targetVolume;
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+  var pool = /* @__PURE__ */ new Map();
+  var audioModule = define2({ tracks: {} });
+  audioModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    },
+    update: () => {
+    }
+  }));
+  audioModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const audioMap = ctx.renderer.config.audios;
+    if (cmd.action === "play") {
+      const playCmd = cmd;
+      const url = audioMap?.[playCmd.src];
+      if (!url) {
+        console.warn(`[audio] \uB4F1\uB85D\uB418\uC9C0 \uC54A\uC740 \uC624\uB514\uC624 \uD0A4: "${String(playCmd.src)}"`);
+        return true;
+      }
+      const targetVolume = playCmd.volume ?? 1;
+      const speed = playCmd.speed ?? 1;
+      const repeat = playCmd.repeat ?? false;
+      const startSec = playCmd.start ?? 0;
+      const endSec = playCmd.end ?? 0;
+      const duration = playCmd.duration ?? 0;
+      const existing = pool.get(playCmd.name);
+      const existingSrc = existing ? state.tracks[playCmd.name]?.src : void 0;
+      if (existing && existingSrc === playCmd.src) {
+        existing.playbackRate = speed;
+        existing.loop = repeat;
+        if (existing.paused) {
+          existing.play().catch((e) => {
+            console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328: "${String(playCmd.src)}"`, e);
+          });
+        }
+        fadeVolume(existing, targetVolume, duration);
+        const newTracks = { ...state.tracks };
+        newTracks[playCmd.name] = {
+          ...newTracks[playCmd.name],
+          volume: targetVolume,
+          speed,
+          repeat,
+          paused: false
+        };
+        setState({ tracks: newTracks });
+        return true;
+      }
+      if (existing) {
+        const old = existing;
+        fadeVolume(old, 0, duration).then(() => {
+          old.pause();
+          old.src = "";
+        });
+      }
+      const audio = new Audio(url);
+      audio.volume = duration > 0 ? 0 : targetVolume;
+      audio.playbackRate = speed;
+      audio.loop = repeat;
+      audio.currentTime = startSec;
+      if (endSec > 0) {
+        audio.addEventListener("timeupdate", () => {
+          if (audio.currentTime >= endSec) {
+            audio.pause();
+            audio.currentTime = startSec;
+            if (repeat) audio.play();
+          }
+        });
+      }
+      pool.set(playCmd.name, audio);
+      audio.play().catch((e) => {
+        console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328: "${String(playCmd.src)}"`, e);
+      });
+      if (duration > 0) {
+        fadeVolume(audio, targetVolume, duration);
+      }
+      const newPlayTracks = { ...state.tracks };
+      newPlayTracks[playCmd.name] = {
+        src: playCmd.src,
+        volume: targetVolume,
+        speed,
+        repeat,
+        start: startSec,
+        end: endSec,
+        paused: false
+      };
+      setState({ tracks: newPlayTracks });
+      return true;
+    }
+    if (cmd.action === "pause") {
+      const pauseCmd = cmd;
+      const audio = pool.get(pauseCmd.name);
+      if (!audio) return true;
+      const duration = pauseCmd.duration ?? 0;
+      if (duration > 0) {
+        fadeVolume(audio, 0, duration).then(() => {
+          audio.pause();
+          const track = state.tracks[pauseCmd.name];
+          if (track) audio.volume = track.volume;
+          ctx.callbacks.advance();
+        });
+        yield false;
+      } else {
+        audio.pause();
+        const track = state.tracks[pauseCmd.name];
+        if (track) audio.volume = track.volume;
+      }
+      const newPauseTracks = { ...state.tracks };
+      if (newPauseTracks[pauseCmd.name]) {
+        newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
+      }
+      setState({ tracks: newPauseTracks });
+      return true;
+    }
+    if (cmd.action === "stop") {
+      const stopCmd = cmd;
+      const audio = pool.get(stopCmd.name);
+      if (!audio) return true;
+      const duration = stopCmd.duration ?? 0;
+      if (duration > 0) {
+        fadeVolume(audio, 0, duration).then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = "";
+          pool.delete(stopCmd.name);
+          ctx.callbacks.advance();
+        });
+        yield false;
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = "";
+        pool.delete(stopCmd.name);
+      }
+      const newStopTracks = { ...state.tracks };
+      delete newStopTracks[stopCmd.name];
+      setState({ tracks: newStopTracks });
+      return true;
+    }
+    return true;
+  });
+  var audio_default = audioModule;
+
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
@@ -2141,7 +2704,8 @@
     "var": var_default,
     "label": label_default,
     "ui": ui_default,
-    "control": control_default
+    "control": control_default,
+    "audio": audio_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -2355,10 +2919,10 @@
                 };
                 Common.shuffle = function(array) {
                   for (var i = array.length - 1; i > 0; i--) {
-                    var j = Math.floor(Common.random() * (i + 1));
+                    var j2 = Math.floor(Common.random() * (i + 1));
                     var temp = array[i];
-                    array[i] = array[j];
-                    array[j] = temp;
+                    array[i] = array[j2];
+                    array[j2] = temp;
                   }
                   return array;
                 };
@@ -2732,11 +3296,11 @@
                   return Vertices.create(points, body);
                 };
                 Vertices.centre = function(vertices) {
-                  var area = Vertices.area(vertices, true), centre = { x: 0, y: 0 }, cross2, temp, j;
+                  var area = Vertices.area(vertices, true), centre = { x: 0, y: 0 }, cross2, temp, j2;
                   for (var i = 0; i < vertices.length; i++) {
-                    j = (i + 1) % vertices.length;
-                    cross2 = Vector.cross(vertices[i], vertices[j]);
-                    temp = Vector.mult(Vector.add(vertices[i], vertices[j]), cross2);
+                    j2 = (i + 1) % vertices.length;
+                    cross2 = Vector.cross(vertices[i], vertices[j2]);
+                    temp = Vector.mult(Vector.add(vertices[i], vertices[j2]), cross2);
                     centre = Vector.add(centre, temp);
                   }
                   return Vector.div(centre, 6 * area);
@@ -2750,21 +3314,21 @@
                   return Vector.div(average, vertices.length);
                 };
                 Vertices.area = function(vertices, signed) {
-                  var area = 0, j = vertices.length - 1;
+                  var area = 0, j2 = vertices.length - 1;
                   for (var i = 0; i < vertices.length; i++) {
-                    area += (vertices[j].x - vertices[i].x) * (vertices[j].y + vertices[i].y);
-                    j = i;
+                    area += (vertices[j2].x - vertices[i].x) * (vertices[j2].y + vertices[i].y);
+                    j2 = i;
                   }
                   if (signed)
                     return area / 2;
                   return Math.abs(area) / 2;
                 };
                 Vertices.inertia = function(vertices, mass) {
-                  var numerator = 0, denominator = 0, v = vertices, cross2, j;
-                  for (var n = 0; n < v.length; n++) {
-                    j = (n + 1) % v.length;
-                    cross2 = Math.abs(Vector.cross(v[j], v[n]));
-                    numerator += cross2 * (Vector.dot(v[j], v[j]) + Vector.dot(v[j], v[n]) + Vector.dot(v[n], v[n]));
+                  var numerator = 0, denominator = 0, v2 = vertices, cross2, j2;
+                  for (var n = 0; n < v2.length; n++) {
+                    j2 = (n + 1) % v2.length;
+                    cross2 = Math.abs(Vector.cross(v2[j2], v2[n]));
+                    numerator += cross2 * (Vector.dot(v2[j2], v2[j2]) + Vector.dot(v2[j2], v2[n]) + Vector.dot(v2[n], v2[n]));
                     denominator += cross2;
                   }
                   return mass / 6 * (numerator / denominator);
@@ -2848,8 +3412,8 @@
                     if (precision % 2 === 1)
                       precision += 1;
                     var alpha = Math.acos(Vector.dot(prevNormal, nextNormal)), theta = alpha / precision;
-                    for (var j = 0; j < precision; j++) {
-                      newVertices.push(Vector.add(Vector.rotate(radiusVector, theta * j), scaledVertex));
+                    for (var j2 = 0; j2 < precision; j2++) {
+                      newVertices.push(Vector.add(Vector.rotate(radiusVector, theta * j2), scaledVertex));
                     }
                   }
                   return newVertices;
@@ -2862,17 +3426,17 @@
                   return vertices;
                 };
                 Vertices.isConvex = function(vertices) {
-                  var flag = 0, n = vertices.length, i, j, k, z;
+                  var flag = 0, n = vertices.length, i, j2, k2, z2;
                   if (n < 3)
                     return null;
                   for (i = 0; i < n; i++) {
-                    j = (i + 1) % n;
-                    k = (i + 2) % n;
-                    z = (vertices[j].x - vertices[i].x) * (vertices[k].y - vertices[j].y);
-                    z -= (vertices[j].y - vertices[i].y) * (vertices[k].x - vertices[j].x);
-                    if (z < 0) {
+                    j2 = (i + 1) % n;
+                    k2 = (i + 2) % n;
+                    z2 = (vertices[j2].x - vertices[i].x) * (vertices[k2].y - vertices[j2].y);
+                    z2 -= (vertices[j2].y - vertices[i].y) * (vertices[k2].x - vertices[j2].x);
+                    if (z2 < 0) {
                       flag |= 1;
-                    } else if (z > 0) {
+                    } else if (z2 > 0) {
                       flag |= 2;
                     }
                     if (flag === 3) {
@@ -3433,9 +3997,9 @@
                   for (var i = 0; i < names.length; i++) {
                     var callbacks = object.events[names[i]], newCallbacks = [];
                     if (callback && callbacks) {
-                      for (var j = 0; j < callbacks.length; j++) {
-                        if (callbacks[j] !== callback)
-                          newCallbacks.push(callbacks[j]);
+                      for (var j2 = 0; j2 < callbacks.length; j2++) {
+                        if (callbacks[j2] !== callback)
+                          newCallbacks.push(callbacks[j2]);
                       }
                     }
                     object.events[names[i]] = newCallbacks;
@@ -3455,8 +4019,8 @@
                         eventClone = Common.clone(event, false);
                         eventClone.name = name;
                         eventClone.source = object;
-                        for (var j = 0; j < callbacks.length; j++) {
-                          callbacks[j].apply(object, [eventClone]);
+                        for (var j2 = 0; j2 < callbacks.length; j2++) {
+                          callbacks[j2].apply(object, [eventClone]);
                         }
                       }
                     }
@@ -3929,19 +4493,19 @@
                   return collision;
                 };
                 Collision._overlapAxes = function(result, verticesA, verticesB, axes) {
-                  var verticesALength = verticesA.length, verticesBLength = verticesB.length, verticesAX = verticesA[0].x, verticesAY = verticesA[0].y, verticesBX = verticesB[0].x, verticesBY = verticesB[0].y, axesLength = axes.length, overlapMin = Number.MAX_VALUE, overlapAxisNumber = 0, overlap, overlapAB, overlapBA, dot4, i, j;
+                  var verticesALength = verticesA.length, verticesBLength = verticesB.length, verticesAX = verticesA[0].x, verticesAY = verticesA[0].y, verticesBX = verticesB[0].x, verticesBY = verticesB[0].y, axesLength = axes.length, overlapMin = Number.MAX_VALUE, overlapAxisNumber = 0, overlap, overlapAB, overlapBA, dot4, i, j2;
                   for (i = 0; i < axesLength; i++) {
                     var axis = axes[i], axisX = axis.x, axisY = axis.y, minA = verticesAX * axisX + verticesAY * axisY, minB = verticesBX * axisX + verticesBY * axisY, maxA = minA, maxB = minB;
-                    for (j = 1; j < verticesALength; j += 1) {
-                      dot4 = verticesA[j].x * axisX + verticesA[j].y * axisY;
+                    for (j2 = 1; j2 < verticesALength; j2 += 1) {
+                      dot4 = verticesA[j2].x * axisX + verticesA[j2].y * axisY;
                       if (dot4 > maxA) {
                         maxA = dot4;
                       } else if (dot4 < minA) {
                         minA = dot4;
                       }
                     }
-                    for (j = 1; j < verticesBLength; j += 1) {
-                      dot4 = verticesB[j].x * axisX + verticesB[j].y * axisY;
+                    for (j2 = 1; j2 < verticesBLength; j2 += 1) {
+                      dot4 = verticesB[j2].x * axisX + verticesB[j2].y * axisY;
                       if (dot4 > maxB) {
                         maxB = dot4;
                       } else if (dot4 < minB) {
@@ -3963,9 +4527,9 @@
                   result.overlap = overlapMin;
                 };
                 Collision._findSupports = function(bodyA, bodyB, normal, direction) {
-                  var vertices = bodyB.vertices, verticesLength = vertices.length, bodyAPositionX = bodyA.position.x, bodyAPositionY = bodyA.position.y, normalX = normal.x * direction, normalY = normal.y * direction, vertexA = vertices[0], vertexB = vertexA, nearestDistance = normalX * (bodyAPositionX - vertexB.x) + normalY * (bodyAPositionY - vertexB.y), vertexC, distance2, j;
-                  for (j = 1; j < verticesLength; j += 1) {
-                    vertexB = vertices[j];
+                  var vertices = bodyB.vertices, verticesLength = vertices.length, bodyAPositionX = bodyA.position.x, bodyAPositionY = bodyA.position.y, normalX = normal.x * direction, normalY = normal.y * direction, vertexA = vertices[0], vertexB = vertexA, nearestDistance = normalX * (bodyAPositionX - vertexB.x) + normalY * (bodyAPositionY - vertexB.y), vertexC, distance2, j2;
+                  for (j2 = 1; j2 < verticesLength; j2 += 1) {
+                    vertexB = vertices[j2];
                     distance2 = normalX * (bodyAPositionX - vertexB.x) + normalY * (bodyAPositionY - vertexB.y);
                     if (distance2 < nearestDistance) {
                       nearestDistance = distance2;
@@ -4195,17 +4759,17 @@
                       continue;
                     }
                     Sleeping.set(body, false);
-                    for (var j = 0; j < body.parts.length; j++) {
-                      var part = body.parts[j];
+                    for (var j2 = 0; j2 < body.parts.length; j2++) {
+                      var part = body.parts[j2];
                       Vertices.translate(part.vertices, impulse);
-                      if (j > 0) {
+                      if (j2 > 0) {
                         part.position.x += impulse.x;
                         part.position.y += impulse.y;
                       }
                       if (impulse.angle !== 0) {
                         Vertices.rotate(part.vertices, impulse.angle, body.position);
                         Axes.rotate(part.axes, impulse.angle);
-                        if (j > 0) {
+                        if (j2 > 0) {
                           Vector.rotateAbout(part.position, impulse.angle, body.position, part.position);
                         }
                       }
@@ -4250,9 +4814,9 @@
                 Axes.fromVertices = function(vertices) {
                   var axes = {};
                   for (var i = 0; i < vertices.length; i++) {
-                    var j = (i + 1) % vertices.length, normal = Vector.normalise({
-                      x: vertices[j].y - vertices[i].y,
-                      y: vertices[i].x - vertices[j].x
+                    var j2 = (i + 1) % vertices.length, normal = Vector.normalise({
+                      x: vertices[j2].y - vertices[i].y,
+                      y: vertices[i].x - vertices[j2].x
                     }), gradient = normal.y === 0 ? Infinity : normal.x / normal.y;
                     gradient = gradient.toFixed(3).toString();
                     axes[gradient] = normal;
@@ -4374,7 +4938,7 @@
                   return Body.create(Common.extend({}, polygon, options));
                 };
                 Bodies.fromVertices = function(x, y, vertexSets, options, flagInternal, removeCollinear, minimumArea, removeDuplicatePoints) {
-                  var decomp = Common.getDecomp(), canDecomp, body, parts, isConvex, isConcave, vertices, i, j, k, v, z;
+                  var decomp = Common.getDecomp(), canDecomp, body, parts, isConvex, isConcave, vertices, i, j2, k2, v2, z2;
                   canDecomp = Boolean(decomp && decomp.quickDecomp);
                   options = options || {};
                   parts = [];
@@ -4385,8 +4949,8 @@
                   if (!Common.isArray(vertexSets[0])) {
                     vertexSets = [vertexSets];
                   }
-                  for (v = 0; v < vertexSets.length; v += 1) {
-                    vertices = vertexSets[v];
+                  for (v2 = 0; v2 < vertexSets.length; v2 += 1) {
+                    vertices = vertexSets[v2];
                     isConvex = Vertices.isConvex(vertices);
                     isConcave = !isConvex;
                     if (isConcave && !canDecomp) {
@@ -4438,16 +5002,16 @@
                     var coincident_max_dist = 5;
                     for (i = 0; i < parts.length; i++) {
                       var partA = parts[i];
-                      for (j = i + 1; j < parts.length; j++) {
-                        var partB = parts[j];
+                      for (j2 = i + 1; j2 < parts.length; j2++) {
+                        var partB = parts[j2];
                         if (Bounds.overlaps(partA.bounds, partB.bounds)) {
                           var pav = partA.vertices, pbv = partB.vertices;
-                          for (k = 0; k < partA.vertices.length; k++) {
-                            for (z = 0; z < partB.vertices.length; z++) {
-                              var da = Vector.magnitudeSquared(Vector.sub(pav[(k + 1) % pav.length], pbv[z])), db = Vector.magnitudeSquared(Vector.sub(pav[k], pbv[(z + 1) % pbv.length]));
+                          for (k2 = 0; k2 < partA.vertices.length; k2++) {
+                            for (z2 = 0; z2 < partB.vertices.length; z2++) {
+                              var da = Vector.magnitudeSquared(Vector.sub(pav[(k2 + 1) % pav.length], pbv[z2])), db = Vector.magnitudeSquared(Vector.sub(pav[k2], pbv[(z2 + 1) % pbv.length]));
                               if (da < coincident_max_dist && db < coincident_max_dist) {
-                                pav[k].isInternal = true;
-                                pbv[z].isInternal = true;
+                                pav[k2].isInternal = true;
+                                pbv[z2].isInternal = true;
                               }
                             }
                           }
@@ -4489,12 +5053,12 @@
                   detector.collisions = [];
                 };
                 Detector.collisions = function(detector) {
-                  var pairs = detector.pairs, bodies = detector.bodies, bodiesLength = bodies.length, canCollide = Detector.canCollide, collides = Collision.collides, collisions = detector.collisions, collisionIndex = 0, i, j;
+                  var pairs = detector.pairs, bodies = detector.bodies, bodiesLength = bodies.length, canCollide = Detector.canCollide, collides = Collision.collides, collisions = detector.collisions, collisionIndex = 0, i, j2;
                   bodies.sort(Detector._compareBoundsX);
                   for (i = 0; i < bodiesLength; i++) {
                     var bodyA = bodies[i], boundsA = bodyA.bounds, boundXMax = bodyA.bounds.max.x, boundYMax = bodyA.bounds.max.y, boundYMin = bodyA.bounds.min.y, bodyAStatic = bodyA.isStatic || bodyA.isSleeping, partsALength = bodyA.parts.length, partsASingle = partsALength === 1;
-                    for (j = i + 1; j < bodiesLength; j++) {
-                      var bodyB = bodies[j], boundsB = bodyB.bounds;
+                    for (j2 = i + 1; j2 < bodiesLength; j2++) {
+                      var bodyB = bodies[j2], boundsB = bodyB.bounds;
                       if (boundsB.min.x > boundXMax) {
                         break;
                       }
@@ -4515,10 +5079,10 @@
                         }
                       } else {
                         var partsAStart = partsALength > 1 ? 1 : 0, partsBStart = partsBLength > 1 ? 1 : 0;
-                        for (var k = partsAStart; k < partsALength; k++) {
-                          var partA = bodyA.parts[k], boundsA = partA.bounds;
-                          for (var z = partsBStart; z < partsBLength; z++) {
-                            var partB = bodyB.parts[z], boundsB = partB.bounds;
+                        for (var k2 = partsAStart; k2 < partsALength; k2++) {
+                          var partA = bodyA.parts[k2], boundsA = partA.bounds;
+                          for (var z2 = partsBStart; z2 < partsBLength; z2++) {
+                            var partB = bodyB.parts[z2], boundsB = partB.bounds;
                             if (boundsA.min.x > boundsB.max.x || boundsA.max.x < boundsB.min.x || boundsA.max.y < boundsB.min.y || boundsA.min.y > boundsB.max.y) {
                               continue;
                             }
@@ -4833,28 +5397,28 @@
                 };
                 Plugin.versionSatisfies = function(version, range) {
                   range = range || "*";
-                  var r = Plugin.versionParse(range), v = Plugin.versionParse(version);
+                  var r = Plugin.versionParse(range), v2 = Plugin.versionParse(version);
                   if (r.isRange) {
                     if (r.operator === "*" || version === "*") {
                       return true;
                     }
                     if (r.operator === ">") {
-                      return v.number > r.number;
+                      return v2.number > r.number;
                     }
                     if (r.operator === ">=") {
-                      return v.number >= r.number;
+                      return v2.number >= r.number;
                     }
                     if (r.operator === "~") {
-                      return v.major === r.major && v.minor === r.minor && v.patch >= r.patch;
+                      return v2.major === r.major && v2.minor === r.minor && v2.patch >= r.patch;
                     }
                     if (r.operator === "^") {
                       if (r.major > 0) {
-                        return v.major === r.major && v.number >= r.number;
+                        return v2.major === r.major && v2.number >= r.number;
                       }
                       if (r.minor > 0) {
-                        return v.minor === r.minor && v.patch >= r.patch;
+                        return v2.minor === r.minor && v2.patch >= r.patch;
                       }
-                      return v.patch === r.patch;
+                      return v2.patch === r.patch;
                     }
                   }
                   return version === range || version === "*";
@@ -5130,8 +5694,8 @@
                     var body = bodies[i], positionImpulse = body.positionImpulse, positionImpulseX = positionImpulse.x, positionImpulseY = positionImpulse.y, velocity = body.velocity;
                     body.totalContacts = 0;
                     if (positionImpulseX !== 0 || positionImpulseY !== 0) {
-                      for (var j = 0; j < body.parts.length; j++) {
-                        var part = body.parts[j];
+                      for (var j2 = 0; j2 < body.parts.length; j2++) {
+                        var part = body.parts[j2];
                         verticesTranslate(part.vertices, positionImpulse);
                         boundsUpdate(part.bounds, part.vertices, velocity);
                         part.position.x += positionImpulseX;
@@ -5150,14 +5714,14 @@
                   }
                 };
                 Resolver.preSolveVelocity = function(pairs) {
-                  var pairsLength = pairs.length, i, j;
+                  var pairsLength = pairs.length, i, j2;
                   for (i = 0; i < pairsLength; i++) {
                     var pair = pairs[i];
                     if (!pair.isActive || pair.isSensor)
                       continue;
                     var contacts = pair.contacts, contactCount = pair.contactCount, collision = pair.collision, bodyA = collision.parentA, bodyB = collision.parentB, normal = collision.normal, tangent = collision.tangent;
-                    for (j = 0; j < contactCount; j++) {
-                      var contact = contacts[j], contactVertex = contact.vertex, normalImpulse = contact.normalImpulse, tangentImpulse = contact.tangentImpulse;
+                    for (j2 = 0; j2 < contactCount; j2++) {
+                      var contact = contacts[j2], contactVertex = contact.vertex, normalImpulse = contact.normalImpulse, tangentImpulse = contact.tangentImpulse;
                       if (normalImpulse !== 0 || tangentImpulse !== 0) {
                         var impulseX = normal.x * normalImpulse + tangent.x * tangentImpulse, impulseY = normal.y * normalImpulse + tangent.y * tangentImpulse;
                         if (!(bodyA.isStatic || bodyA.isSleeping)) {
@@ -5175,15 +5739,15 @@
                   }
                 };
                 Resolver.solveVelocity = function(pairs, delta) {
-                  var timeScale = delta / Common._baseDelta, timeScaleSquared = timeScale * timeScale, timeScaleCubed = timeScaleSquared * timeScale, restingThresh = -Resolver._restingThresh * timeScale, restingThreshTangent = Resolver._restingThreshTangent, frictionNormalMultiplier = Resolver._frictionNormalMultiplier * timeScale, frictionMaxStatic = Resolver._frictionMaxStatic, pairsLength = pairs.length, tangentImpulse, maxFriction, i, j;
+                  var timeScale = delta / Common._baseDelta, timeScaleSquared = timeScale * timeScale, timeScaleCubed = timeScaleSquared * timeScale, restingThresh = -Resolver._restingThresh * timeScale, restingThreshTangent = Resolver._restingThreshTangent, frictionNormalMultiplier = Resolver._frictionNormalMultiplier * timeScale, frictionMaxStatic = Resolver._frictionMaxStatic, pairsLength = pairs.length, tangentImpulse, maxFriction, i, j2;
                   for (i = 0; i < pairsLength; i++) {
                     var pair = pairs[i];
                     if (!pair.isActive || pair.isSensor)
                       continue;
                     var collision = pair.collision, bodyA = collision.parentA, bodyB = collision.parentB, normalX = collision.normal.x, normalY = collision.normal.y, tangentX = collision.tangent.x, tangentY = collision.tangent.y, inverseMassTotal = pair.inverseMass, friction = pair.friction * pair.frictionStatic * frictionNormalMultiplier, contacts = pair.contacts, contactCount = pair.contactCount, contactShare = 1 / contactCount;
                     var bodyAVelocityX = bodyA.position.x - bodyA.positionPrev.x, bodyAVelocityY = bodyA.position.y - bodyA.positionPrev.y, bodyAAngularVelocity = bodyA.angle - bodyA.anglePrev, bodyBVelocityX = bodyB.position.x - bodyB.positionPrev.x, bodyBVelocityY = bodyB.position.y - bodyB.positionPrev.y, bodyBAngularVelocity = bodyB.angle - bodyB.anglePrev;
-                    for (j = 0; j < contactCount; j++) {
-                      var contact = contacts[j], contactVertex = contact.vertex;
+                    for (j2 = 0; j2 < contactCount; j2++) {
+                      var contact = contacts[j2], contactVertex = contact.vertex;
                       var offsetAX = contactVertex.x - bodyA.position.x, offsetAY = contactVertex.y - bodyA.position.y, offsetBX = contactVertex.x - bodyB.position.x, offsetBY = contactVertex.y - bodyB.position.y;
                       var velocityPointAX = bodyAVelocityX - offsetAY * bodyAAngularVelocity, velocityPointAY = bodyAVelocityY + offsetAX * bodyAAngularVelocity, velocityPointBX = bodyBVelocityX - offsetBY * bodyBAngularVelocity, velocityPointBY = bodyBVelocityY + offsetBX * bodyBAngularVelocity;
                       var relativeVelocityX = velocityPointAX - velocityPointBX, relativeVelocityY = velocityPointAY - velocityPointBY;
@@ -5657,13 +6221,13 @@
                   }
                 };
                 Grid._createActivePairsList = function(grid) {
-                  var pair, gridPairs = grid.pairs, pairKeys = Common.keys(gridPairs), pairKeysLength = pairKeys.length, pairs = [], k;
-                  for (k = 0; k < pairKeysLength; k++) {
-                    pair = gridPairs[pairKeys[k]];
+                  var pair, gridPairs = grid.pairs, pairKeys = Common.keys(gridPairs), pairKeysLength = pairKeys.length, pairs = [], k2;
+                  for (k2 = 0; k2 < pairKeysLength; k2++) {
+                    pair = gridPairs[pairKeys[k2]];
                     if (pair[2] > 0) {
                       pairs.push(pair);
                     } else {
-                      delete gridPairs[pairKeys[k]];
+                      delete gridPairs[pairKeys[k2]];
                     }
                   }
                   return pairs;
@@ -5736,8 +6300,8 @@
                       for (var i = 0; i < bodies.length; i++) {
                         body = bodies[i];
                         if (Bounds.contains(body.bounds, mouse.position) && Detector.canCollide(body.collisionFilter, mouseConstraint.collisionFilter)) {
-                          for (var j = body.parts.length > 1 ? 1 : 0; j < body.parts.length; j++) {
-                            var part = body.parts[j];
+                          for (var j2 = body.parts.length > 1 ? 1 : 0; j2 < body.parts.length; j2++) {
+                            var part = body.parts[j2];
                             if (Vertices.contains(part.vertices, mouse.position)) {
                               constraint.pointA = mouse.position;
                               constraint.bodyB = mouseConstraint.body = body;
@@ -5789,8 +6353,8 @@
                   for (var i = 0; i < bodiesLength; i++) {
                     var bodyA = bodies[i], partsALength = bodyA.parts.length, partsAStart = partsALength === 1 ? 0 : 1;
                     if (overlaps(bodyA.bounds, bounds)) {
-                      for (var j = partsAStart; j < partsALength; j++) {
-                        var part = bodyA.parts[j];
+                      for (var j2 = partsAStart; j2 < partsALength; j2++) {
+                        var part = bodyA.parts[j2];
                         if (overlaps(part.bounds, bounds)) {
                           var collision = collides(part, body);
                           if (collision) {
@@ -5826,8 +6390,8 @@
                   for (var i = 0; i < bodies.length; i++) {
                     var body = bodies[i];
                     if (Bounds.contains(body.bounds, point)) {
-                      for (var j = body.parts.length === 1 ? 0 : 1; j < body.parts.length; j++) {
-                        var part = body.parts[j];
+                      for (var j2 = body.parts.length === 1 ? 0 : 1; j2 < body.parts.length; j2++) {
+                        var part = body.parts[j2];
                         if (Bounds.contains(part.bounds, point) && Vertices.contains(part.vertices, point)) {
                           result.push(body);
                           break;
@@ -6283,11 +6847,11 @@
                       c.moveTo(start.x, start.y);
                       if (constraint.render.type === "spring") {
                         var delta = Vector.sub(end, start), normal = Vector.perp(Vector.normalise(delta)), coils = Math.ceil(Common.clamp(constraint.length / 5, 12, 20)), offset;
-                        for (var j = 1; j < coils; j += 1) {
-                          offset = j % 2 === 0 ? 1 : -1;
+                        for (var j2 = 1; j2 < coils; j2 += 1) {
+                          offset = j2 % 2 === 0 ? 1 : -1;
                           c.lineTo(
-                            start.x + delta.x * (j / coils) + normal.x * offset * 4,
-                            start.y + delta.y * (j / coils) + normal.y * offset * 4
+                            start.x + delta.x * (j2 / coils) + normal.x * offset * 4,
+                            start.y + delta.y * (j2 / coils) + normal.y * offset * 4
                           );
                         }
                       }
@@ -6309,13 +6873,13 @@
                   }
                 };
                 Render.bodies = function(render, bodies, context) {
-                  var c = context, engine = render.engine, options = render.options, showInternalEdges = options.showInternalEdges || !options.wireframes, body, part, i, k;
+                  var c = context, engine = render.engine, options = render.options, showInternalEdges = options.showInternalEdges || !options.wireframes, body, part, i, k2;
                   for (i = 0; i < bodies.length; i++) {
                     body = bodies[i];
                     if (!body.render.visible)
                       continue;
-                    for (k = body.parts.length > 1 ? 1 : 0; k < body.parts.length; k++) {
-                      part = body.parts[k];
+                    for (k2 = body.parts.length > 1 ? 1 : 0; k2 < body.parts.length; k2++) {
+                      part = body.parts[k2];
                       if (!part.render.visible)
                         continue;
                       if (options.showSleeping && body.isSleeping) {
@@ -6343,14 +6907,14 @@
                         } else {
                           c.beginPath();
                           c.moveTo(part.vertices[0].x, part.vertices[0].y);
-                          for (var j = 1; j < part.vertices.length; j++) {
-                            if (!part.vertices[j - 1].isInternal || showInternalEdges) {
-                              c.lineTo(part.vertices[j].x, part.vertices[j].y);
+                          for (var j2 = 1; j2 < part.vertices.length; j2++) {
+                            if (!part.vertices[j2 - 1].isInternal || showInternalEdges) {
+                              c.lineTo(part.vertices[j2].x, part.vertices[j2].y);
                             } else {
-                              c.moveTo(part.vertices[j].x, part.vertices[j].y);
+                              c.moveTo(part.vertices[j2].x, part.vertices[j2].y);
                             }
-                            if (part.vertices[j].isInternal && !showInternalEdges) {
-                              c.moveTo(part.vertices[(j + 1) % part.vertices.length].x, part.vertices[(j + 1) % part.vertices.length].y);
+                            if (part.vertices[j2].isInternal && !showInternalEdges) {
+                              c.moveTo(part.vertices[(j2 + 1) % part.vertices.length].x, part.vertices[(j2 + 1) % part.vertices.length].y);
                             }
                           }
                           c.lineTo(part.vertices[0].x, part.vertices[0].y);
@@ -6375,23 +6939,23 @@
                   }
                 };
                 Render.bodyWireframes = function(render, bodies, context) {
-                  var c = context, showInternalEdges = render.options.showInternalEdges, body, part, i, j, k;
+                  var c = context, showInternalEdges = render.options.showInternalEdges, body, part, i, j2, k2;
                   c.beginPath();
                   for (i = 0; i < bodies.length; i++) {
                     body = bodies[i];
                     if (!body.render.visible)
                       continue;
-                    for (k = body.parts.length > 1 ? 1 : 0; k < body.parts.length; k++) {
-                      part = body.parts[k];
+                    for (k2 = body.parts.length > 1 ? 1 : 0; k2 < body.parts.length; k2++) {
+                      part = body.parts[k2];
                       c.moveTo(part.vertices[0].x, part.vertices[0].y);
-                      for (j = 1; j < part.vertices.length; j++) {
-                        if (!part.vertices[j - 1].isInternal || showInternalEdges) {
-                          c.lineTo(part.vertices[j].x, part.vertices[j].y);
+                      for (j2 = 1; j2 < part.vertices.length; j2++) {
+                        if (!part.vertices[j2 - 1].isInternal || showInternalEdges) {
+                          c.lineTo(part.vertices[j2].x, part.vertices[j2].y);
                         } else {
-                          c.moveTo(part.vertices[j].x, part.vertices[j].y);
+                          c.moveTo(part.vertices[j2].x, part.vertices[j2].y);
                         }
-                        if (part.vertices[j].isInternal && !showInternalEdges) {
-                          c.moveTo(part.vertices[(j + 1) % part.vertices.length].x, part.vertices[(j + 1) % part.vertices.length].y);
+                        if (part.vertices[j2].isInternal && !showInternalEdges) {
+                          c.moveTo(part.vertices[(j2 + 1) % part.vertices.length].x, part.vertices[(j2 + 1) % part.vertices.length].y);
                         }
                       }
                       c.lineTo(part.vertices[0].x, part.vertices[0].y);
@@ -6402,15 +6966,15 @@
                   c.stroke();
                 };
                 Render.bodyConvexHulls = function(render, bodies, context) {
-                  var c = context, body, part, i, j, k;
+                  var c = context, body, part, i, j2, k2;
                   c.beginPath();
                   for (i = 0; i < bodies.length; i++) {
                     body = bodies[i];
                     if (!body.render.visible || body.parts.length === 1)
                       continue;
                     c.moveTo(body.vertices[0].x, body.vertices[0].y);
-                    for (j = 1; j < body.vertices.length; j++) {
-                      c.lineTo(body.vertices[j].x, body.vertices[j].y);
+                    for (j2 = 1; j2 < body.vertices.length; j2++) {
+                      c.lineTo(body.vertices[j2].x, body.vertices[j2].y);
                     }
                     c.lineTo(body.vertices[0].x, body.vertices[0].y);
                   }
@@ -6419,14 +6983,14 @@
                   c.stroke();
                 };
                 Render.vertexNumbers = function(render, bodies, context) {
-                  var c = context, i, j, k;
+                  var c = context, i, j2, k2;
                   for (i = 0; i < bodies.length; i++) {
                     var parts = bodies[i].parts;
-                    for (k = parts.length > 1 ? 1 : 0; k < parts.length; k++) {
-                      var part = parts[k];
-                      for (j = 0; j < part.vertices.length; j++) {
+                    for (k2 = parts.length > 1 ? 1 : 0; k2 < parts.length; k2++) {
+                      var part = parts[k2];
+                      for (j2 = 0; j2 < part.vertices.length; j2++) {
                         c.fillStyle = "rgba(255,255,255,0.2)";
-                        c.fillText(i + "_" + j, part.position.x + (part.vertices[j].x - part.position.x) * 0.8, part.position.y + (part.vertices[j].y - part.position.y) * 0.8);
+                        c.fillText(i + "_" + j2, part.position.x + (part.vertices[j2].x - part.position.x) * 0.8, part.position.y + (part.vertices[j2].y - part.position.y) * 0.8);
                       }
                     }
                   }
@@ -6443,8 +7007,8 @@
                     var body = bodies[i];
                     if (body.render.visible) {
                       var parts = bodies[i].parts;
-                      for (var j = parts.length > 1 ? 1 : 0; j < parts.length; j++) {
-                        var part = parts[j];
+                      for (var j2 = parts.length > 1 ? 1 : 0; j2 < parts.length; j2++) {
+                        var part = parts[j2];
                         c.rect(part.bounds.min.x, part.bounds.min.y, part.bounds.max.x - part.bounds.min.x, part.bounds.max.y - part.bounds.min.y);
                       }
                     }
@@ -6458,25 +7022,25 @@
                   c.stroke();
                 };
                 Render.bodyAxes = function(render, bodies, context) {
-                  var c = context, engine = render.engine, options = render.options, part, i, j, k;
+                  var c = context, engine = render.engine, options = render.options, part, i, j2, k2;
                   c.beginPath();
                   for (i = 0; i < bodies.length; i++) {
                     var body = bodies[i], parts = body.parts;
                     if (!body.render.visible)
                       continue;
                     if (options.showAxes) {
-                      for (j = parts.length > 1 ? 1 : 0; j < parts.length; j++) {
-                        part = parts[j];
-                        for (k = 0; k < part.axes.length; k++) {
-                          var axis = part.axes[k];
+                      for (j2 = parts.length > 1 ? 1 : 0; j2 < parts.length; j2++) {
+                        part = parts[j2];
+                        for (k2 = 0; k2 < part.axes.length; k2++) {
+                          var axis = part.axes[k2];
                           c.moveTo(part.position.x, part.position.y);
                           c.lineTo(part.position.x + axis.x * 20, part.position.y + axis.y * 20);
                         }
                       }
                     } else {
-                      for (j = parts.length > 1 ? 1 : 0; j < parts.length; j++) {
-                        part = parts[j];
-                        for (k = 0; k < part.axes.length; k++) {
+                      for (j2 = parts.length > 1 ? 1 : 0; j2 < parts.length; j2++) {
+                        part = parts[j2];
+                        for (k2 = 0; k2 < part.axes.length; k2++) {
                           c.moveTo(part.position.x, part.position.y);
                           c.lineTo(
                             (part.vertices[0].x + part.vertices[part.vertices.length - 1].x) / 2,
@@ -6498,14 +7062,14 @@
                   c.globalCompositeOperation = "source-over";
                 };
                 Render.bodyPositions = function(render, bodies, context) {
-                  var c = context, engine = render.engine, options = render.options, body, part, i, k;
+                  var c = context, engine = render.engine, options = render.options, body, part, i, k2;
                   c.beginPath();
                   for (i = 0; i < bodies.length; i++) {
                     body = bodies[i];
                     if (!body.render.visible)
                       continue;
-                    for (k = 0; k < body.parts.length; k++) {
-                      part = body.parts[k];
+                    for (k2 = 0; k2 < body.parts.length; k2++) {
+                      part = body.parts[k2];
                       c.arc(part.position.x, part.position.y, 3, 0, 2 * Math.PI, false);
                       c.closePath();
                     }
@@ -6543,13 +7107,13 @@
                   c.stroke();
                 };
                 Render.bodyIds = function(render, bodies, context) {
-                  var c = context, i, j;
+                  var c = context, i, j2;
                   for (i = 0; i < bodies.length; i++) {
                     if (!bodies[i].render.visible)
                       continue;
                     var parts = bodies[i].parts;
-                    for (j = parts.length > 1 ? 1 : 0; j < parts.length; j++) {
-                      var part = parts[j];
+                    for (j2 = parts.length > 1 ? 1 : 0; j2 < parts.length; j2++) {
+                      var part = parts[j2];
                       c.font = "12px Arial";
                       c.fillStyle = "rgba(255,255,255,0.5)";
                       c.fillText(part.id, part.position.x + 10, part.position.y - 10);
@@ -6557,15 +7121,15 @@
                   }
                 };
                 Render.collisions = function(render, pairs, context) {
-                  var c = context, options = render.options, pair, collision, corrected, bodyA, bodyB, i, j;
+                  var c = context, options = render.options, pair, collision, corrected, bodyA, bodyB, i, j2;
                   c.beginPath();
                   for (i = 0; i < pairs.length; i++) {
                     pair = pairs[i];
                     if (!pair.isActive)
                       continue;
                     collision = pair.collision;
-                    for (j = 0; j < pair.contactCount; j++) {
-                      var contact = pair.contacts[j], vertex = contact.vertex;
+                    for (j2 = 0; j2 < pair.contactCount; j2++) {
+                      var contact = pair.contacts[j2], vertex = contact.vertex;
                       c.rect(vertex.x - 1.5, vertex.y - 1.5, 3.5, 3.5);
                     }
                   }
@@ -6604,7 +7168,7 @@
                   c.stroke();
                 };
                 Render.separations = function(render, pairs, context) {
-                  var c = context, options = render.options, pair, collision, corrected, bodyA, bodyB, i, j;
+                  var c = context, options = render.options, pair, collision, corrected, bodyA, bodyB, i, j2;
                   c.beginPath();
                   for (i = 0; i < pairs.length; i++) {
                     pair = pairs[i];
@@ -6613,16 +7177,16 @@
                     collision = pair.collision;
                     bodyA = collision.bodyA;
                     bodyB = collision.bodyB;
-                    var k = 1;
-                    if (!bodyB.isStatic && !bodyA.isStatic) k = 0.5;
-                    if (bodyB.isStatic) k = 0;
+                    var k2 = 1;
+                    if (!bodyB.isStatic && !bodyA.isStatic) k2 = 0.5;
+                    if (bodyB.isStatic) k2 = 0;
                     c.moveTo(bodyB.position.x, bodyB.position.y);
-                    c.lineTo(bodyB.position.x - collision.penetration.x * k, bodyB.position.y - collision.penetration.y * k);
-                    k = 1;
-                    if (!bodyB.isStatic && !bodyA.isStatic) k = 0.5;
-                    if (bodyA.isStatic) k = 0;
+                    c.lineTo(bodyB.position.x - collision.penetration.x * k2, bodyB.position.y - collision.penetration.y * k2);
+                    k2 = 1;
+                    if (!bodyB.isStatic && !bodyA.isStatic) k2 = 0.5;
+                    if (bodyA.isStatic) k2 = 0;
                     c.moveTo(bodyA.position.x, bodyA.position.y);
-                    c.lineTo(bodyA.position.x + collision.penetration.x * k, bodyA.position.y + collision.penetration.y * k);
+                    c.lineTo(bodyA.position.x + collision.penetration.x * k2, bodyA.position.y + collision.penetration.y * k2);
                   }
                   if (options.wireframes) {
                     c.strokeStyle = "rgba(255,165,0,0.5)";
@@ -7166,8 +7730,8 @@
   function length(a) {
     let x = a[0];
     let y = a[1];
-    let z = a[2];
-    return Math.sqrt(x * x + y * y + z * z);
+    let z2 = a[2];
+    return Math.sqrt(x * x + y * y + z2 * z2);
   }
   function copy(out, a) {
     out[0] = a[0];
@@ -7175,10 +7739,10 @@
     out[2] = a[2];
     return out;
   }
-  function set(out, x, y, z) {
+  function set(out, x, y, z2) {
     out[0] = x;
     out[1] = y;
-    out[2] = z;
+    out[2] = z2;
     return out;
   }
   function add(out, a, b) {
@@ -7214,20 +7778,20 @@
   function distance(a, b) {
     let x = b[0] - a[0];
     let y = b[1] - a[1];
-    let z = b[2] - a[2];
-    return Math.sqrt(x * x + y * y + z * z);
+    let z2 = b[2] - a[2];
+    return Math.sqrt(x * x + y * y + z2 * z2);
   }
   function squaredDistance(a, b) {
     let x = b[0] - a[0];
     let y = b[1] - a[1];
-    let z = b[2] - a[2];
-    return x * x + y * y + z * z;
+    let z2 = b[2] - a[2];
+    return x * x + y * y + z2 * z2;
   }
   function squaredLength(a) {
     let x = a[0];
     let y = a[1];
-    let z = a[2];
-    return x * x + y * y + z * z;
+    let z2 = a[2];
+    return x * x + y * y + z2 * z2;
   }
   function negate(out, a) {
     out[0] = -a[0];
@@ -7244,8 +7808,8 @@
   function normalize(out, a) {
     let x = a[0];
     let y = a[1];
-    let z = a[2];
-    let len = x * x + y * y + z * z;
+    let z2 = a[2];
+    let len = x * x + y * y + z2 * z2;
     if (len > 0) {
       len = 1 / Math.sqrt(len);
     }
@@ -7285,35 +7849,35 @@
     return out;
   }
   function transformMat4(out, a, m) {
-    let x = a[0], y = a[1], z = a[2];
-    let w = m[3] * x + m[7] * y + m[11] * z + m[15];
+    let x = a[0], y = a[1], z2 = a[2];
+    let w = m[3] * x + m[7] * y + m[11] * z2 + m[15];
     w = w || 1;
-    out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
-    out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
-    out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
+    out[0] = (m[0] * x + m[4] * y + m[8] * z2 + m[12]) / w;
+    out[1] = (m[1] * x + m[5] * y + m[9] * z2 + m[13]) / w;
+    out[2] = (m[2] * x + m[6] * y + m[10] * z2 + m[14]) / w;
     return out;
   }
   function scaleRotateMat4(out, a, m) {
-    let x = a[0], y = a[1], z = a[2];
-    let w = m[3] * x + m[7] * y + m[11] * z + m[15];
+    let x = a[0], y = a[1], z2 = a[2];
+    let w = m[3] * x + m[7] * y + m[11] * z2 + m[15];
     w = w || 1;
-    out[0] = (m[0] * x + m[4] * y + m[8] * z) / w;
-    out[1] = (m[1] * x + m[5] * y + m[9] * z) / w;
-    out[2] = (m[2] * x + m[6] * y + m[10] * z) / w;
+    out[0] = (m[0] * x + m[4] * y + m[8] * z2) / w;
+    out[1] = (m[1] * x + m[5] * y + m[9] * z2) / w;
+    out[2] = (m[2] * x + m[6] * y + m[10] * z2) / w;
     return out;
   }
   function transformMat3(out, a, m) {
-    let x = a[0], y = a[1], z = a[2];
-    out[0] = x * m[0] + y * m[3] + z * m[6];
-    out[1] = x * m[1] + y * m[4] + z * m[7];
-    out[2] = x * m[2] + y * m[5] + z * m[8];
+    let x = a[0], y = a[1], z2 = a[2];
+    out[0] = x * m[0] + y * m[3] + z2 * m[6];
+    out[1] = x * m[1] + y * m[4] + z2 * m[7];
+    out[2] = x * m[2] + y * m[5] + z2 * m[8];
     return out;
   }
   function transformQuat(out, a, q) {
-    let x = a[0], y = a[1], z = a[2];
+    let x = a[0], y = a[1], z2 = a[2];
     let qx = q[0], qy = q[1], qz = q[2], qw = q[3];
-    let uvx = qy * z - qz * y;
-    let uvy = qz * x - qx * z;
+    let uvx = qy * z2 - qz * y;
+    let uvy = qz * x - qx * z2;
     let uvz = qx * y - qy * x;
     let uuvx = qy * uvz - qz * uvy;
     let uuvy = qz * uvx - qx * uvz;
@@ -7327,7 +7891,7 @@
     uuvz *= 2;
     out[0] = x + uvx + uuvx;
     out[1] = y + uvy + uuvy;
-    out[2] = z + uvz + uuvz;
+    out[2] = z2 + uvz + uuvz;
     return out;
   }
   var angle = /* @__PURE__ */ (function() {
@@ -7352,8 +7916,8 @@
     return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
   }
   var Vec3 = class _Vec3 extends Array {
-    constructor(x = 0, y = x, z = x) {
-      super(x, y, z);
+    constructor(x = 0, y = x, z2 = x) {
+      super(x, y, z2);
       return this;
     }
     get x() {
@@ -7365,22 +7929,22 @@
     get z() {
       return this[2];
     }
-    set x(v) {
-      this[0] = v;
+    set x(v2) {
+      this[0] = v2;
     }
-    set y(v) {
-      this[1] = v;
+    set y(v2) {
+      this[1] = v2;
     }
-    set z(v) {
-      this[2] = v;
+    set z(v2) {
+      this[2] = v2;
     }
-    set(x, y = x, z = x) {
+    set(x, y = x, z2 = x) {
       if (x.length) return this.copy(x);
-      set(this, x, y, z);
+      set(this, x, y, z2);
       return this;
     }
-    copy(v) {
-      copy(this, v);
+    copy(v2) {
+      copy(this, v2);
       return this;
     }
     add(va, vb) {
@@ -7393,37 +7957,37 @@
       else subtract(this, this, va);
       return this;
     }
-    multiply(v) {
-      if (v.length) multiply(this, this, v);
-      else scale(this, this, v);
+    multiply(v2) {
+      if (v2.length) multiply(this, this, v2);
+      else scale(this, this, v2);
       return this;
     }
-    divide(v) {
-      if (v.length) divide(this, this, v);
-      else scale(this, this, 1 / v);
+    divide(v2) {
+      if (v2.length) divide(this, this, v2);
+      else scale(this, this, 1 / v2);
       return this;
     }
-    inverse(v = this) {
-      inverse(this, v);
+    inverse(v2 = this) {
+      inverse(this, v2);
       return this;
     }
     // Can't use 'length' as Array.prototype uses it
     len() {
       return length(this);
     }
-    distance(v) {
-      if (v) return distance(this, v);
+    distance(v2) {
+      if (v2) return distance(this, v2);
       else return length(this);
     }
     squaredLen() {
       return squaredLength(this);
     }
-    squaredDistance(v) {
-      if (v) return squaredDistance(this, v);
+    squaredDistance(v2) {
+      if (v2) return squaredDistance(this, v2);
       else return squaredLength(this);
     }
-    negate(v = this) {
-      negate(this, v);
+    negate(v2 = this) {
+      negate(this, v2);
       return this;
     }
     cross(va, vb) {
@@ -7431,19 +7995,19 @@
       else cross(this, this, va);
       return this;
     }
-    scale(v) {
-      scale(this, this, v);
+    scale(v2) {
+      scale(this, this, v2);
       return this;
     }
     normalize() {
       normalize(this, this);
       return this;
     }
-    dot(v) {
-      return dot(this, v);
+    dot(v2) {
+      return dot(this, v2);
     }
-    equals(v) {
-      return exactEquals(this, v);
+    equals(v2) {
+      return exactEquals(this, v2);
     }
     applyMatrix3(mat3) {
       transformMat3(this, this, mat3);
@@ -7461,15 +8025,15 @@
       transformQuat(this, this, q);
       return this;
     }
-    angle(v) {
-      return angle(this, v);
+    angle(v2) {
+      return angle(this, v2);
     }
-    lerp(v, t) {
-      lerp(this, this, v, t);
+    lerp(v2, t) {
+      lerp(this, this, v2, t);
       return this;
     }
-    smoothLerp(v, decay, dt) {
-      smoothLerp(this, this, v, decay, dt);
+    smoothLerp(v2, decay, dt) {
+      smoothLerp(this, this, v2, decay, dt);
       return this;
     }
     clone() {
@@ -7490,10 +8054,10 @@
     transformDirection(mat4) {
       const x = this[0];
       const y = this[1];
-      const z = this[2];
-      this[0] = mat4[0] * x + mat4[4] * y + mat4[8] * z;
-      this[1] = mat4[1] * x + mat4[5] * y + mat4[9] * z;
-      this[2] = mat4[2] * x + mat4[6] * y + mat4[10] * z;
+      const z2 = this[2];
+      this[0] = mat4[0] * x + mat4[4] * y + mat4[8] * z2;
+      this[1] = mat4[1] * x + mat4[5] * y + mat4[9] * z2;
+      this[2] = mat4[2] * x + mat4[6] * y + mat4[10] * z2;
       return this.normalize();
     }
   };
@@ -7665,13 +8229,13 @@
       for (let i = 0, l = array.length; i < l; i += stride) {
         const x = array[i];
         const y = array[i + 1];
-        const z = array[i + 2];
+        const z2 = array[i + 2];
         min.x = Math.min(x, min.x);
         min.y = Math.min(y, min.y);
-        min.z = Math.min(z, min.z);
+        min.z = Math.min(z2, min.z);
         max.x = Math.max(x, max.x);
         max.y = Math.max(y, max.y);
-        max.z = Math.max(z, max.z);
+        max.z = Math.max(z2, max.z);
       }
       scale5.sub(max, min);
       center.add(min, max).divide(2);
@@ -8267,25 +8831,25 @@ ${addLineNumbers(fragment)}`);
     out[3] = a[3];
     return out;
   }
-  function set2(out, x, y, z, w) {
+  function set2(out, x, y, z2, w) {
     out[0] = x;
     out[1] = y;
-    out[2] = z;
+    out[2] = z2;
     out[3] = w;
     return out;
   }
   function normalize2(out, a) {
     let x = a[0];
     let y = a[1];
-    let z = a[2];
+    let z2 = a[2];
     let w = a[3];
-    let len = x * x + y * y + z * z + w * w;
+    let len = x * x + y * y + z2 * z2 + w * w;
     if (len > 0) {
       len = 1 / Math.sqrt(len);
     }
     out[0] = x * len;
     out[1] = y * len;
-    out[2] = z * len;
+    out[2] = z2 * len;
     out[3] = w * len;
     return out;
   }
@@ -8405,14 +8969,14 @@ ${addLineNumbers(fragment)}`);
       let i = 0;
       if (m[4] > m[0]) i = 1;
       if (m[8] > m[i * 3 + i]) i = 2;
-      let j = (i + 1) % 3;
-      let k = (i + 2) % 3;
-      fRoot = Math.sqrt(m[i * 3 + i] - m[j * 3 + j] - m[k * 3 + k] + 1);
+      let j2 = (i + 1) % 3;
+      let k2 = (i + 2) % 3;
+      fRoot = Math.sqrt(m[i * 3 + i] - m[j2 * 3 + j2] - m[k2 * 3 + k2] + 1);
       out[i] = 0.5 * fRoot;
       fRoot = 0.5 / fRoot;
-      out[3] = (m[j * 3 + k] - m[k * 3 + j]) * fRoot;
-      out[j] = (m[j * 3 + i] + m[i * 3 + j]) * fRoot;
-      out[k] = (m[k * 3 + i] + m[i * 3 + k]) * fRoot;
+      out[3] = (m[j2 * 3 + k2] - m[k2 * 3 + j2]) * fRoot;
+      out[j2] = (m[j2 * 3 + i] + m[i * 3 + j2]) * fRoot;
+      out[k2] = (m[k2 * 3 + i] + m[i * 3 + k2]) * fRoot;
     }
     return out;
   }
@@ -8461,8 +9025,8 @@ ${addLineNumbers(fragment)}`);
   var dot3 = dot2;
   var normalize3 = normalize2;
   var Quat = class extends Array {
-    constructor(x = 0, y = 0, z = 0, w = 1) {
-      super(x, y, z, w);
+    constructor(x = 0, y = 0, z2 = 0, w = 1) {
+      super(x, y, z2, w);
       this.onChange = () => {
       };
       this._target = this;
@@ -8487,20 +9051,20 @@ ${addLineNumbers(fragment)}`);
     get w() {
       return this[3];
     }
-    set x(v) {
-      this._target[0] = v;
+    set x(v2) {
+      this._target[0] = v2;
       this.onChange();
     }
-    set y(v) {
-      this._target[1] = v;
+    set y(v2) {
+      this._target[1] = v2;
       this.onChange();
     }
-    set z(v) {
-      this._target[2] = v;
+    set z(v2) {
+      this._target[2] = v2;
       this.onChange();
     }
-    set w(v) {
-      this._target[3] = v;
+    set w(v2) {
+      this._target[3] = v2;
       this.onChange();
     }
     identity() {
@@ -8508,9 +9072,9 @@ ${addLineNumbers(fragment)}`);
       this.onChange();
       return this;
     }
-    set(x, y, z, w) {
+    set(x, y, z2, w) {
       if (x.length) return this.copy(x);
-      set3(this._target, x, y, z, w);
+      set3(this._target, x, y, z2, w);
       this.onChange();
       return this;
     }
@@ -8558,8 +9122,8 @@ ${addLineNumbers(fragment)}`);
       this.onChange();
       return this;
     }
-    dot(v) {
-      return dot3(this._target, v);
+    dot(v2) {
+      return dot3(this._target, v2);
     }
     fromMatrix3(matrix3) {
       fromMat3(this._target, matrix3);
@@ -8750,16 +9314,16 @@ ${addLineNumbers(fragment)}`);
     out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
     return out;
   }
-  function translate(out, a, v) {
-    let x = v[0], y = v[1], z = v[2];
+  function translate(out, a, v2) {
+    let x = v2[0], y = v2[1], z2 = v2[2];
     let a00, a01, a02, a03;
     let a10, a11, a12, a13;
     let a20, a21, a22, a23;
     if (a === out) {
-      out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
-      out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
-      out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
-      out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+      out[12] = a[0] * x + a[4] * y + a[8] * z2 + a[12];
+      out[13] = a[1] * x + a[5] * y + a[9] * z2 + a[13];
+      out[14] = a[2] * x + a[6] * y + a[10] * z2 + a[14];
+      out[15] = a[3] * x + a[7] * y + a[11] * z2 + a[15];
     } else {
       a00 = a[0];
       a01 = a[1];
@@ -8785,15 +9349,15 @@ ${addLineNumbers(fragment)}`);
       out[9] = a21;
       out[10] = a22;
       out[11] = a23;
-      out[12] = a00 * x + a10 * y + a20 * z + a[12];
-      out[13] = a01 * x + a11 * y + a21 * z + a[13];
-      out[14] = a02 * x + a12 * y + a22 * z + a[14];
-      out[15] = a03 * x + a13 * y + a23 * z + a[15];
+      out[12] = a00 * x + a10 * y + a20 * z2 + a[12];
+      out[13] = a01 * x + a11 * y + a21 * z2 + a[13];
+      out[14] = a02 * x + a12 * y + a22 * z2 + a[14];
+      out[15] = a03 * x + a13 * y + a23 * z2 + a[15];
     }
     return out;
   }
-  function scale3(out, a, v) {
-    let x = v[0], y = v[1], z = v[2];
+  function scale3(out, a, v2) {
+    let x = v2[0], y = v2[1], z2 = v2[2];
     out[0] = a[0] * x;
     out[1] = a[1] * x;
     out[2] = a[2] * x;
@@ -8802,10 +9366,10 @@ ${addLineNumbers(fragment)}`);
     out[5] = a[5] * y;
     out[6] = a[6] * y;
     out[7] = a[7] * y;
-    out[8] = a[8] * z;
-    out[9] = a[9] * z;
-    out[10] = a[10] * z;
-    out[11] = a[11] * z;
+    out[8] = a[8] * z2;
+    out[9] = a[9] * z2;
+    out[10] = a[10] * z2;
+    out[11] = a[11] * z2;
     out[12] = a[12];
     out[13] = a[13];
     out[14] = a[14];
@@ -8813,8 +9377,8 @@ ${addLineNumbers(fragment)}`);
     return out;
   }
   function rotate(out, a, rad, axis) {
-    let x = axis[0], y = axis[1], z = axis[2];
-    let len = Math.hypot(x, y, z);
+    let x = axis[0], y = axis[1], z2 = axis[2];
+    let len = Math.hypot(x, y, z2);
     let s, c, t;
     let a00, a01, a02, a03;
     let a10, a11, a12, a13;
@@ -8828,7 +9392,7 @@ ${addLineNumbers(fragment)}`);
     len = 1 / len;
     x *= len;
     y *= len;
-    z *= len;
+    z2 *= len;
     s = Math.sin(rad);
     c = Math.cos(rad);
     t = 1 - c;
@@ -8845,14 +9409,14 @@ ${addLineNumbers(fragment)}`);
     a22 = a[10];
     a23 = a[11];
     b00 = x * x * t + c;
-    b01 = y * x * t + z * s;
-    b02 = z * x * t - y * s;
-    b10 = x * y * t - z * s;
+    b01 = y * x * t + z2 * s;
+    b02 = z2 * x * t - y * s;
+    b10 = x * y * t - z2 * s;
     b11 = y * y * t + c;
-    b12 = z * y * t + x * s;
-    b20 = x * z * t + y * s;
-    b21 = y * z * t - x * s;
-    b22 = z * z * t + c;
+    b12 = z2 * y * t + x * s;
+    b20 = x * z2 * t + y * s;
+    b21 = y * z2 * t - x * s;
+    b22 = z2 * z2 * t + c;
     out[0] = a00 * b00 + a10 * b01 + a20 * b02;
     out[1] = a01 * b00 + a11 * b01 + a21 * b02;
     out[2] = a02 * b00 + a12 * b01 + a22 * b02;
@@ -8906,8 +9470,8 @@ ${addLineNumbers(fragment)}`);
     let m33 = mat[10];
     const x = m11 * m11 + m12 * m12 + m13 * m13;
     const y = m21 * m21 + m22 * m22 + m23 * m23;
-    const z = m31 * m31 + m32 * m32 + m33 * m33;
-    return Math.sqrt(Math.max(x, y, z));
+    const z2 = m31 * m31 + m32 * m32 + m33 * m33;
+    return Math.sqrt(Math.max(x, y, z2));
   }
   var getRotation = /* @__PURE__ */ (function() {
     const temp = [1, 1, 1];
@@ -8985,11 +9549,11 @@ ${addLineNumbers(fragment)}`);
   }
   function compose(dstMat, srcRotation, srcTranslation, srcScale) {
     const te = dstMat;
-    const x = srcRotation[0], y = srcRotation[1], z = srcRotation[2], w = srcRotation[3];
-    const x2 = x + x, y2 = y + y, z2 = z + z;
-    const xx = x * x2, xy = x * y2, xz = x * z2;
-    const yy = y * y2, yz = y * z2, zz = z * z2;
-    const wx = w * x2, wy = w * y2, wz = w * z2;
+    const x = srcRotation[0], y = srcRotation[1], z2 = srcRotation[2], w = srcRotation[3];
+    const x2 = x + x, y2 = y + y, z22 = z2 + z2;
+    const xx = x * x2, xy = x * y2, xz = x * z22;
+    const yy = y * y2, yz = y * z22, zz = z2 * z22;
+    const wx = w * x2, wy = w * y2, wz = w * z22;
     const sx = srcScale[0], sy = srcScale[1], sz = srcScale[2];
     te[0] = (1 - (yy + zz)) * sx;
     te[1] = (xy + wz) * sx;
@@ -9010,19 +9574,19 @@ ${addLineNumbers(fragment)}`);
     return te;
   }
   function fromQuat(out, q) {
-    let x = q[0], y = q[1], z = q[2], w = q[3];
+    let x = q[0], y = q[1], z2 = q[2], w = q[3];
     let x2 = x + x;
     let y2 = y + y;
-    let z2 = z + z;
+    let z22 = z2 + z2;
     let xx = x * x2;
     let yx = y * x2;
     let yy = y * y2;
-    let zx = z * x2;
-    let zy = z * y2;
-    let zz = z * z2;
+    let zx = z2 * x2;
+    let zy = z2 * y2;
+    let zz = z2 * z22;
     let wx = w * x2;
     let wy = w * y2;
-    let wz = w * z2;
+    let wz = w * z22;
     out[0] = 1 - yy - zz;
     out[1] = yx + wz;
     out[2] = zx - wy;
@@ -9205,33 +9769,33 @@ ${addLineNumbers(fragment)}`);
     get w() {
       return this[15];
     }
-    set x(v) {
-      this[12] = v;
+    set x(v2) {
+      this[12] = v2;
     }
-    set y(v) {
-      this[13] = v;
+    set y(v2) {
+      this[13] = v2;
     }
-    set z(v) {
-      this[14] = v;
+    set z(v2) {
+      this[14] = v2;
     }
-    set w(v) {
-      this[15] = v;
+    set w(v2) {
+      this[15] = v2;
     }
     set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
       if (m00.length) return this.copy(m00);
       set4(this, m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
       return this;
     }
-    translate(v, m = this) {
-      translate(this, m, v);
+    translate(v2, m = this) {
+      translate(this, m, v2);
       return this;
     }
-    rotate(v, axis, m = this) {
-      rotate(this, m, v, axis);
+    rotate(v2, axis, m = this) {
+      rotate(this, m, v2, axis);
       return this;
     }
-    scale(v, m = this) {
-      scale3(this, m, typeof v === "number" ? [v, v, v] : v);
+    scale(v2, m = this) {
+      scale3(this, m, typeof v2 === "number" ? [v2, v2, v2] : v2);
       return this;
     }
     add(ma, mb) {
@@ -9274,10 +9838,10 @@ ${addLineNumbers(fragment)}`);
       fromQuat(this, q);
       return this;
     }
-    setPosition(v) {
-      this.x = v[0];
-      this.y = v[1];
-      this.z = v[2];
+    setPosition(v2) {
+      this.x = v2[0];
+      this.y = v2[1];
+      this.z = v2[2];
       return this;
     }
     inverse(m = this) {
@@ -9413,8 +9977,8 @@ ${addLineNumbers(fragment)}`);
   }
   var tmpMat4 = /* @__PURE__ */ new Mat4();
   var Euler = class extends Array {
-    constructor(x = 0, y = x, z = x, order = "YXZ") {
-      super(x, y, z);
+    constructor(x = 0, y = x, z2 = x, order = "YXZ") {
+      super(x, y, z2);
       this.order = order;
       this.onChange = () => {
       };
@@ -9437,30 +10001,30 @@ ${addLineNumbers(fragment)}`);
     get z() {
       return this[2];
     }
-    set x(v) {
-      this._target[0] = v;
+    set x(v2) {
+      this._target[0] = v2;
       this.onChange();
     }
-    set y(v) {
-      this._target[1] = v;
+    set y(v2) {
+      this._target[1] = v2;
       this.onChange();
     }
-    set z(v) {
-      this._target[2] = v;
+    set z(v2) {
+      this._target[2] = v2;
       this.onChange();
     }
-    set(x, y = x, z = x) {
+    set(x, y = x, z2 = x) {
       if (x.length) return this.copy(x);
       this._target[0] = x;
       this._target[1] = y;
-      this._target[2] = z;
+      this._target[2] = z2;
       this.onChange();
       return this;
     }
-    copy(v) {
-      this._target[0] = v[0];
-      this._target[1] = v[1];
-      this._target[2] = v[2];
+    copy(v2) {
+      this._target[0] = v2[0];
+      this._target[1] = v2[1];
+      this._target[2] = v2[2];
       this.onChange();
       return this;
     }
@@ -9614,15 +10178,15 @@ ${addLineNumbers(fragment)}`);
       return this;
     }
     // Project 3D coordinate to 2D point
-    project(v) {
-      v.applyMatrix4(this.viewMatrix);
-      v.applyMatrix4(this.projectionMatrix);
+    project(v2) {
+      v2.applyMatrix4(this.viewMatrix);
+      v2.applyMatrix4(this.projectionMatrix);
       return this;
     }
     // Unproject 2D point to 3D coordinate
-    unproject(v) {
-      v.applyMatrix4(tempMat4.inverse(this.projectionMatrix));
-      v.applyMatrix4(this.worldMatrix);
+    unproject(v2) {
+      v2.applyMatrix4(tempMat4.inverse(this.projectionMatrix));
+      v2.applyMatrix4(this.worldMatrix);
       return this;
     }
     updateFrustum() {
@@ -9675,19 +10239,19 @@ ${addLineNumbers(fragment)}`);
     return out;
   }
   function fromQuat2(out, q) {
-    let x = q[0], y = q[1], z = q[2], w = q[3];
+    let x = q[0], y = q[1], z2 = q[2], w = q[3];
     let x2 = x + x;
     let y2 = y + y;
-    let z2 = z + z;
+    let z22 = z2 + z2;
     let xx = x * x2;
     let yx = y * x2;
     let yy = y * y2;
-    let zx = z * x2;
-    let zy = z * y2;
-    let zz = z * z2;
+    let zx = z2 * x2;
+    let zy = z2 * y2;
+    let zz = z2 * z22;
     let wx = w * x2;
     let wy = w * y2;
-    let wz = w * z2;
+    let wz = w * z22;
     out[0] = 1 - yy - zz;
     out[3] = yx - wz;
     out[6] = zx + wy;
@@ -9776,8 +10340,8 @@ ${addLineNumbers(fragment)}`);
     out[8] = b20 * a02 + b21 * a12 + b22 * a22;
     return out;
   }
-  function translate2(out, a, v) {
-    let a00 = a[0], a01 = a[1], a02 = a[2], a10 = a[3], a11 = a[4], a12 = a[5], a20 = a[6], a21 = a[7], a22 = a[8], x = v[0], y = v[1];
+  function translate2(out, a, v2) {
+    let a00 = a[0], a01 = a[1], a02 = a[2], a10 = a[3], a11 = a[4], a12 = a[5], a20 = a[6], a21 = a[7], a22 = a[8], x = v2[0], y = v2[1];
     out[0] = a00;
     out[1] = a01;
     out[2] = a02;
@@ -9802,8 +10366,8 @@ ${addLineNumbers(fragment)}`);
     out[8] = a22;
     return out;
   }
-  function scale4(out, a, v) {
-    let x = v[0], y = v[1];
+  function scale4(out, a, v2) {
+    let x = v2[0], y = v2[1];
     out[0] = x * a[0];
     out[1] = x * a[1];
     out[2] = x * a[2];
@@ -9858,16 +10422,16 @@ ${addLineNumbers(fragment)}`);
       set5(this, m00, m01, m02, m10, m11, m12, m20, m21, m22);
       return this;
     }
-    translate(v, m = this) {
-      translate2(this, m, v);
+    translate(v2, m = this) {
+      translate2(this, m, v2);
       return this;
     }
-    rotate(v, m = this) {
-      rotate2(this, m, v);
+    rotate(v2, m = this) {
+      rotate2(this, m, v2);
       return this;
     }
-    scale(v, m = this) {
-      scale4(this, m, v);
+    scale(v2, m = this) {
+      scale4(this, m, v2);
       return this;
     }
     multiply(ma, mb) {
@@ -10273,8 +10837,8 @@ ${addLineNumbers(fragment)}`);
           const angleMatchF = fStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/);
           const angleMatchT = tStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/);
           if (angleMatchF && angleMatchT && angleMatchF[2] === angleMatchT[2]) {
-            const v = parseFloat(angleMatchF[1]) + (parseFloat(angleMatchT[1]) - parseFloat(angleMatchF[1])) * t;
-            resultParts.push(`${v}${angleMatchF[2]}`);
+            const v2 = parseFloat(angleMatchF[1]) + (parseFloat(angleMatchT[1]) - parseFloat(angleMatchF[1])) * t;
+            resultParts.push(`${v2}${angleMatchF[2]}`);
             continue;
           }
           const stopRegex = /^(.+?)(?:\s+(-?\d*\.?\d+%?))?$/;
@@ -12239,12 +12803,12 @@ ${addLineNumbers(fragment)}`);
         const obj = this.objMap.get(id);
         if (!obj) continue;
         if (obj.attribute.collisionCategory != null || obj.attribute.collisionMask != null) continue;
-        const z = obj.transform.position.z ?? 0;
-        if (!this.zGroupMap.has(z)) {
+        const z2 = obj.transform.position.z ?? 0;
+        if (!this.zGroupMap.has(z2)) {
           const bit = 1 << (this.nextZGroup++ - 1) % 31 + 1;
-          this.zGroupMap.set(z, bit);
+          this.zGroupMap.set(z2, bit);
         }
-        const category = this.zGroupMap.get(z);
+        const category = this.zGroupMap.get(z2);
         const cf = body.collisionFilter;
         if (cf.group !== 0 || cf.category !== category || cf.mask !== category) {
           import_matter_js2.default.Body.set(body, {
@@ -14699,9 +15263,9 @@ ${addLineNumbers(fragment)}`);
       const modelMat = new Mat4();
       const pointInPoly = (px, py, poly) => {
         let inside = false;
-        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        for (let i = 0, j2 = poly.length - 1; i < poly.length; j2 = i++) {
           const xi = poly[i].x, yi = poly[i].y;
-          const xj = poly[j].x, yj = poly[j].y;
+          const xj = poly[j2].x, yj = poly[j2].y;
           const intersect = yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi;
           if (intersect) inside = !inside;
         }
@@ -15102,8 +15666,8 @@ ${addLineNumbers(fragment)}`);
      * @param d 원본 소요 시간(ms)
      * @returns 스킵 중이면 0, 아니면 원본 시간
      */
-    dur(d) {
-      return this._isSkipping ? 0 : d;
+    dur(d2) {
+      return this._isSkipping ? 0 : d2;
     }
     /**
      * 객체에 애니메이션을 적용합니다. 
@@ -15118,7 +15682,7 @@ ${addLineNumbers(fragment)}`);
      * @returns 생성된 애니메이션 인스턴스 (즉시 적용 시 null)
      */
     animate(obj, props, duration, easing = "linear", onEnd) {
-      const d = this.dur(duration);
+      const d2 = this.dur(duration);
       const propKeys = _extractPropKeys(props);
       if (!obj.__activeAnims) obj.__activeAnims = /* @__PURE__ */ new Map();
       for (const key of propKeys) {
@@ -15128,13 +15692,13 @@ ${addLineNumbers(fragment)}`);
           _applyPropsImmediate(obj, existing.target);
         }
       }
-      if (d === 0) {
+      if (d2 === 0) {
         _applyPropsImmediate(obj, props);
         for (const key of propKeys) obj.__activeAnims.delete(key);
         onEnd?.();
         return null;
       }
-      const anim = obj.animate(props, d, easing);
+      const anim = obj.animate(props, d2, easing);
       const entry = { anim, target: props };
       for (const key of propKeys) obj.__activeAnims.set(key, entry);
       const cleanup = () => {
@@ -15284,7 +15848,8 @@ ${addLineNumbers(fragment)}`);
     "screen-flash": (p, c) => screenFlashModule.__handler(p, c),
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
-    "control": (p, c) => control_default.__handler(p, c)
+    "control": (p, c) => control_default.__handler(p, c),
+    "audio": (p, c) => audio_default.__handler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -15357,6 +15922,7 @@ ${addLineNumbers(fragment)}`);
       const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
       const ctx = {
+        novel: this.callbacks.getNovel(),
         world: r.world,
         globalVars: this.callbacks.getGlobalVars(),
         localVars: this.localVars,
@@ -15503,6 +16069,7 @@ ${addLineNumbers(fragment)}`);
       const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
       const ctx = {
+        novel: this.callbacks.getNovel(),
         world: r.world,
         globalVars: this.callbacks.getGlobalVars(),
         localVars: this.localVars,
@@ -15920,8 +16487,8 @@ ${addLineNumbers(fragment)}`);
       this.stopSkip();
       Object.assign(this.vars, data.globalVars);
       this._stateStore.clear();
-      for (const [k, v] of Object.entries(data.states ?? {})) {
-        this._stateStore.set(k, v);
+      for (const [k2, v2] of Object.entries(data.states ?? {})) {
+        this._stateStore.set(k2, v2);
       }
       this._uiRegistry.clear();
       this._renderer.clear();
@@ -15954,6 +16521,7 @@ ${addLineNumbers(fragment)}`);
     // ─── 콜백 팩토리 ─────────────────────────────────────────────
     _buildCallbacks() {
       return {
+        getNovel: () => this,
         getGlobalVars: () => ({ ...this.vars }),
         setGlobalVar: (name, value) => {
           this.vars[name] = value;
@@ -16052,11 +16620,13 @@ ${addLineNumbers(fragment)}`);
       const stateStore = this._stateStore;
       const uiRegistry = this._uiRegistry;
       return {
+        novel: this,
         world: this._world,
         renderer: this._renderer,
         globalVars: {},
         localVars: {},
         callbacks: {
+          getNovel: () => this,
           getGlobalVars: () => ({}),
           setGlobalVar: noop,
           loadScene: noop,
@@ -16196,6 +16766,9 @@ ${addLineNumbers(fragment)}`);
       "room": { src: "bg_room", parallax: true },
       "park": { src: "bg_park", parallax: true }
     },
+    audios: {
+      "am223": "./assets/bgm_am223.mp3"
+    },
     assets: {
       // 배경
       bg_floor: "./assets/bg_floor.png",
@@ -16286,6 +16859,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
     },
+    { type: "audio", action: "play", name: "bgm", src: "am223", repeat: true, duration: 3e3, volume: 0.1 },
     {
       type: "dialogue",
       text: "\uD5A5\uAE0B\uD55C \uCEE4\uD53C \uD5A5\uACFC \uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C..."
@@ -17618,6 +18192,59 @@ ${addLineNumbers(fragment)}`);
   }
   async function main() {
     const canvas = document.getElementById("canvas");
+    const player = new U();
+    const engine = new z({
+      analyzer: new R(),
+      sampler: new G(
+        "./assets/audio_sprite_kor.wav",
+        [
+          "\u3131",
+          "\u3132",
+          "\u3134",
+          "\u3137",
+          "\u3138",
+          "\u3139",
+          "\u3141",
+          "\u3142",
+          "\u3143",
+          "\u3145",
+          "\u3146",
+          "\u3147",
+          "\u3148",
+          "\u3149",
+          "\u314A",
+          "\u314B",
+          "\u314C",
+          "\u314D",
+          "\u314E",
+          "\u314F",
+          "\u3150",
+          "\u3151",
+          "\u3152",
+          "\u3153",
+          "\u3154",
+          "\u3155",
+          "\u3156",
+          "\u3157",
+          "\u3158",
+          "\u3159",
+          "\u315A",
+          "\u315B",
+          "\u315C",
+          "\u315D",
+          "\u315E",
+          "\u315F",
+          "\u3160",
+          "\u3161",
+          "\u3162",
+          "\u3163"
+        ]
+      ),
+      effect: new j({
+        pitch: 1.15,
+        speed: 3
+      })
+    });
     const novel = new Novel(novel_config_default, {
       canvas,
       scenes: {
@@ -17630,8 +18257,22 @@ ${addLineNumbers(fragment)}`);
         "scene-zena-ending": scene_zena_ending_default
       }
     });
+    await engine.load();
     await novel.load();
     await novel.loadAssets(OBJECTS);
+    const hooker = useHookallSync(novel);
+    hooker.onBefore("dialogue:text", (state) => {
+      const { speaker, text } = state;
+      if (speaker === "\uC81C\uB098") {
+        const speaker2 = engine.synthesize(text, false);
+        (async () => {
+          for await (const output of speaker2.speak()) {
+            await player.play(output.buffer);
+          }
+        })();
+      }
+      return state;
+    });
     novel.start("scene-zena");
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");

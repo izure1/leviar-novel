@@ -22,6 +22,7 @@ export default defineScene({
     type: 'dialogue',
     text: '주말 오후의 카페. 창밖으로 내리쬐는 햇살이 평화롭다.'
   },
+  { type: 'audio', action: 'play', name: 'bgm', src: 'am223', repeat: true, duration: 3000, volume: 0.1 },
   {
     type: 'dialogue',
     text: '향긋한 커피 향과 사람들의 웅성거림 사이로...'

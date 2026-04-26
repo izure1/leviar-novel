@@ -1,4 +1,12 @@
 // example/main.ts — 기능 테스트 진입점
+import {
+  AnimaleseEngine,
+  WebSampler,
+  WebPlayer,
+  PitchManager,
+  KoreanAnalyzer,
+} from 'animalese-tts'
+import { useHookallSync } from 'hookall'
 import { Novel } from '../src'
 import config from './novel.config'
 
@@ -57,6 +65,24 @@ function showToast(msg: string, type: 'success' | 'error' | 'info' = 'success'):
 async function main() {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement
 
+  const player = new WebPlayer()
+  const engine = new AnimaleseEngine({
+    analyzer: new KoreanAnalyzer(),
+    sampler: new WebSampler(
+      './assets/audio_sprite_kor.wav',
+      [
+        "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ",
+        "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+        "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ",
+        "ㅘ", "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
+      ],
+    ),
+    effect: new PitchManager({
+      pitch: 1.15,
+      speed: 3.0,
+    })
+  })
+
   const novel = new Novel(config, {
     canvas,
     scenes: {
@@ -70,11 +96,27 @@ async function main() {
     },
   })
 
+  await engine.load()
+
   // ── 에셋 로드 (경로는 novel.config.ts의 assets에서 관리)
   await novel.load()
 
   // ── SVG 오브젝트는 런타임에만 생성되므로 직접 추가 로드
   await novel.loadAssets(OBJECTS)
+
+  const hooker = useHookallSync(novel)
+  hooker.onBefore('dialogue:text', (state) => {
+    const { speaker, text } = state
+    if (speaker === '제나') {
+      const speaker = engine.synthesize(text, false);
+      (async () => {
+        for await (const output of speaker.speak()) {
+          await player.play(output.buffer as any)
+        }
+      })()
+    }
+    return state
+  })
 
   // ── 시작
   novel.start('scene-zena')
