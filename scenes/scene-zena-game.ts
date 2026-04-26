@@ -14,9 +14,8 @@ export default defineScene({
 }, [
   { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
-  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
-
+  { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 3000 },
   {
     type: 'dialogue',
     text: '제나의 아지트. 낡은 책상 위에는 화려한 RGB 조명이 번쩍이는 키보드와 듀얼 모니터가 놓여 있다.'

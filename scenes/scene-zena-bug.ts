@@ -71,7 +71,7 @@ export default defineScene({
   { type: 'label', name: 'run' },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
   { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
-  { type: 'mood', mood: 'horror', action: 'add', flicker: 'strobe' },
+  { type: 'mood', mood: 'horror', action: 'add', intensity: 0.3, flicker: 'strobe' },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -87,20 +87,8 @@ export default defineScene({
       '겨우 멈춰 섰다.'
     ]
   },
+  { type: 'mood', mood: 'horror', action: 'remove', duration: 1000 },
   { type: 'condition', if: () => true, goto: 'calm' },
-
-  { type: 'label', name: 'calm' },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 500 },
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: [
-      '하아... 하아...',
-      '역시 현실 세계는 버그 덩어리야.',
-      '빨리 아지트로 복귀하자.'
-    ]
-  },
-  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 1500 },
 
   { type: 'label', name: 'prank' },
   {
@@ -141,4 +129,17 @@ export default defineScene({
       '강제 달리기 운동으로 오늘치 칼로리 소모는 완벽하다.'
     ]
   },
+
+  { type: 'label', name: 'calm' },
+  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 500 },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: [
+      '하아... 하아...',
+      '역시 현실 세계는 버그 덩어리야.',
+      '빨리 아지트로 복귀하자.'
+    ]
+  },
+  { type: 'screen-fade', dir: 'out', preset: 'black', duration: 1500 },
 ])

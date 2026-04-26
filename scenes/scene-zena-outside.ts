@@ -26,6 +26,7 @@ export default defineScene({
     text: '방구석에만 박혀있다가는 정말로 곰팡이가 피어오를 것 같았기 때문이다.'
   },
   { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
+  { type: 'mood', mood: 'day', intensity: 1, duration: 800, flicker: 'candle' },
   {
     type: 'dialogue',
     text: [
