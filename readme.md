@@ -1,82 +1,72 @@
-# 개선 사항
+# 🌌 Leviar-novel
 
-## 1. defineCmd, defineUI 병합. 이제 따로 이용할 수 없음. define 모듈에서만 접근 허용.
+**Leviar-novel**은 웹 기반의 강력하고 유연한 모듈형 비주얼 노벨 엔진입니다.
 
-일부 함수 개명이 필요함.
+### 💡 왜 Leviar-novel인가? (Rationale)
+기존의 웹 기반 노벨 엔진들은 DOM 조작의 한계로 인해 복잡한 카메라 연출이나 고성능 파티클 효과를 구현하는 데 성능적 제약이 있었습니다. `leviar-novel`은 **Canvas 기반의 고성능 렌더러**와 **반응형 상태 관리(MVC)**를 결합하여, 웹 환경에서도 고품질 게임에 버금가는 입체적인 연출을 쉽고 직관적인 코드로 구현하기 위해 탄생했습니다.
 
-defineCmd → defineCommand
-defineUI → defineView
+---
 
-```typescript
-const myModule = define<DialogueSchema>({
-  bg: undefined,
-  speaker: undefined,
-  text: undefined,
-  subIndex: 0,
-  lines: [],
-  speakerKey: undefined,
-  speed: undefined,
-})
+## ✨ 핵심 기능 요약
 
-myModule.defineCommand(((cmd, ctx, data) => { ... })
-myModule.defineView((data, ctx) => {
-  return {
-    show: ...,
-    hide: ...,
-  }
-})
+| 기능 | 설명 | 도입 이유 (Why) |
+| :--- | :--- | :--- |
+| **모듈형 MVC** | 모든 기능이 독립 모듈로 구성 | 기능 간 간섭 최소화 및 무한한 확장성 |
+| **선언적 DSL** | JSON 객체 배열 형태의 시나리오 작성 | 프로그래밍 지식 없이도 고수준 연출 가능 |
+| **타입 안전성** | TypeScript 기반의 자동 완성 지원 | 오타 방지 및 개발 생산성 극대화 |
+| **시스템 내장** | 세이브/로드, 스킵, 변수 시스템 포함 | 게임의 핵심 기능을 즉시 사용 가능 |
 
-export default myModule
+---
+
+## 🏗️ 프로젝트 구조
+
+| 폴더/파일 | 역할 | 비고 |
+| :--- | :--- | :--- |
+| **`src/core/`** | 엔진 핵심 로직 | Novel, Renderer, Context 관리 |
+| **`src/modules/`** | 내장 기능 모듈 | Dialogue, Character, Camera 등 |
+| **`docs/`** | 상세 가이드 문서 | 각 기능의 심층 명세 |
+
+---
+
+## 📖 가이드 문서 목록
+
+엔진의 설계 철학과 세부 기능을 파악하기 위해 아래 문서를 참조하십시오.
+
+| 문서명 | 주요 내용 |
+| :--- | :--- |
+| **[⚙️ Configuration](./docs/configuration.md)** | 프로젝트 전역 설정 및 폴백 규칙 명세 |
+| **[💡 Core Concepts](./docs/concepts.md)** | Resolvable, Skip, MVC 등 엔진 작동 철학 해설 |
+| **[🎭 Characters](./docs/characters.md)** | 캐릭터 정의 및 상대 좌표 포인트 시스템 가이드 |
+| **[🎬 Scenes](./docs/scenes.md)** | 씬 구성, 지역 변수 및 초기 상태 주입 방법 |
+| **[🧩 Custom Modules](./docs/modules.md)** | 신규 기능 및 UI 확장을 위한 모듈 제작 방법 |
+| **[📜 Command Reference](./docs/commands.md)** | 모든 내장 시나리오 명령어의 속성 레퍼런스 |
+
+---
+
+## 🚀 빠른 시작 (Quick Start)
+
+### 1. 설치 (Installation)
+
+```bash
+npm install leviar-novel
 ```
 
-## 2. config.cmds, ui 제거. 대신 config.modules 추가.
-
-## 3. config.modules에 모듈을 key-value로 추가.
+### 2. 최소 구동 예제
 
 ```typescript
-// dialogue.ts
+import { Novel } from 'leviar-novel'
+import config from './novel.config'
+import sceneIntro from './scenes/scene-intro'
 
-const myModule = define<DialogueSchema>({
-  bg: undefined,
-  speaker: undefined,
-  text: undefined,
-  subIndex: 0,
-  lines: [],
-  speakerKey: undefined,
-  speed: undefined,
-})
+const init = async () => {
+  const novel = new Novel(config, {
+    canvas: document.getElementById('canvas') as HTMLCanvasElement,
+    scenes: { 'scene-intro': sceneIntro }
+  })
 
-myModule.defineCommand(((cmd, ctx, data) => { ... })
-myModule.defineView((data, ctx) => {
-  return {
-    show: ...,
-    hide: ...,
-    update: ...,
-  }
-})
+  await novel.load()
+  novel.start('scene-intro')
+}
 
-export default myModule
+init().catch(console.error)
 ```
-
-```typescript
-// novel.ts
-import myModule from './dialogue'
-
-export const novel = defineNovel({
-  modules: {
-    'my-module': myModule,
-  },
-})
-```
-
-이로써 이제 `{ type: 'my-module' }` 등을 사용할 수 있게 됨.
-
-## 4. 기존의 모든 cmds는 이제 위 사양을 따라야만 함
-
-일부 cmd (mood, effect, character, screen 등)은 현재 위 구조를 따르지 않음. 따라서 해당 사항을 수정해야함.
-
-- define으로 사용된 state는 반드시 게임 저장 시 상태가 저장되어야 함.
-- 모든 세이브 데이터는 state로만 관리될 것. 복원 또한 state, defineView를 통해 이루어짐.
-- screen 모듈의 경우, 저장할 필요가 없어서 state 자체는 필요하지 않음. 하지만 defineView를 사용하도록 강제해야 함.
-- 마찬가지로 character 모듈의 경우에는 현재 별도의 저장 구조를 가지고 있는 것으로 파악됨. 따라서 해당 사항도 확인 필요.
-- mood 모듈의 경우에는 여러 오브젝트가 동시에 렌더링되어야 하는 특수 경우가 있지만, 상태 정의를 통해 해결 가능.

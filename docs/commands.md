@@ -1,0 +1,293 @@
+# 📜 Command Reference
+
+`leviar-novel` 시나리오에서 사용할 수 있는 모든 내장 명령어의 상세 참조 문서입니다.
+
+이 문서는 **Reference(참조)** 성격을 띠며, 각 명령어의 정확한 속성 타입과 사용 예시를 제공합니다. 모든 명령어는 속성값에 [Resolvable 함수](./concepts.md#1-동적-속성-resolvable-및-자동-해석)를 사용하여 게임의 변수 상태에 따라 동적으로 변화하는 연출을 구현할 수 있습니다.
+
+---
+
+## 💎 명령어 요약 (Quick Reference)
+
+| 카테고리 | 명령어 (`type`) | 주요 역할 |
+| :--- | :--- | :--- |
+| **기본 연출** | `dialogue`, `character`, `background` | 텍스트 출력, 캐릭터 등장/퇴장, 배경 전환 |
+| **카메라** | `camera-zoom`, `camera-pan`, `camera-effect`, `character-focus` | 시점 조작, 흔들림 효과, 특정 캐릭터 포커싱 |
+| **화면 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect` | 화면 전환, 분위기 오버레이, 파티클 시스템 |
+| **로직/제어** | `choices`, `condition`, `var`, `label`, `control` | 선택지 분기, 조건부 실행, 변수 조작, 흐름 제어 |
+| **시스템** | `ui` | 특정 모듈 UI 표시 및 숨김 제어 |
+
+---
+
+## 🎭 1. 기본 연출 (Core Rendering)
+
+### `dialogue` (대사 출력)
+화면에 대사를 출력합니다. 나레이션 또는 캐릭터의 말을 처리하며, 한 글자씩 출력되는 타이핑 효과를 지원합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`text`** | `string \| string[]` | O | 출력할 대사. 배열 전달 시 순차적으로 출력됩니다. |
+| **`speaker`** | `string` | - | 화자의 에셋 키 (`config.characters`에 정의된 키) |
+| **`speed`** | `number` | - | 타이핑 속도(ms). 미지정 시 기본값(30ms) 사용. |
+
+**사용 예시:**
+```typescript
+{ 
+  type: 'dialogue', 
+  speaker: 'hero', 
+  text: '안녕하세요, 레비아 엔진의 세계에 오신 것을 환영합니다.' 
+}
+
+// 여러 줄 출력 (사용자 클릭 시 다음 줄로 진행)
+{ 
+  type: 'dialogue', 
+  text: ['첫 번째 줄입니다.', '두 번째 줄입니다.'] 
+}
+```
+
+### `character` (캐릭터 조작)
+캐릭터를 화면에 등장시키거나, 이동시키거나, 퇴장시킵니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'show' \| 'remove'` | O | 캐릭터를 보이게 할지(`show`) 제거할지(`remove`) 결정 |
+| **`name`** | `string` | O | 조작할 캐릭터의 에셋 키 |
+| **`image`** | `string` | - | 표시할 표정/의상 이미지 키 |
+| **`position`** | `PositionPreset` | - | 위치 (`far-left`, `left`, `center`, `right`, `far-right`) |
+| **`focus`** | `boolean \| string` | - | 등장과 동시에 카메라를 캐릭터(또는 특정 포인트)에 포커스 |
+| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 400ms. |
+
+**사용 예시:**
+```typescript
+{ 
+  type: 'character', 
+  action: 'show', 
+  name: 'elena', 
+  image: 'smile', 
+  position: 'right', 
+  focus: 'face' 
+}
+
+// 캐릭터 퇴장
+{ 
+  type: 'character', 
+  action: 'remove', 
+  name: 'elena', 
+  duration: 800 
+}
+```
+
+### `background` (배경 전환)
+현재 장면의 배경 이미지를 전환합니다. 부드러운 크로스페이드를 지원합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`name`** | `string` | O | 배경 에셋 키 (`config.backgrounds`에 정의됨) |
+| **`fit`** | `'cover' \| 'contain'` | - | 배경 맞춤 방식. 기본값 `'cover'`. |
+| **`duration`** | `number` | - | 전환 소요 시간(ms). 기본값 1000ms. |
+| **`isVideo`** | `boolean` | - | 대상 에셋을 비디오로 처리할지 여부. 기본값 `false`. |
+
+**사용 예시:**
+```typescript
+{ 
+  type: 'background', 
+  name: 'forest_day', 
+  duration: 1500, 
+  fit: 'cover' 
+}
+```
+
+---
+
+## 📸 2. 카메라 제어 (Camera Control)
+
+### `camera-zoom`
+카메라의 줌 비율을 조작하여 화면을 확대하거나 축소합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`preset`** | `ZoomPreset` | O | `close-up`(1.5배), `medium`(1.2배), `wide`(0.92배), `reset`(1배), `inherit` |
+| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
+
+### `camera-pan`
+카메라의 위치를 이동시켜 특정 지점을 비춥니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`position`** | `PanPreset` | O | `left`, `right`, `up`, `down`, `center`, `inherit` 또는 `"1/3"` 형태의 분할 좌표 |
+| **`x`**, **`y`** | `number` | - | 커스텀 좌표 (픽셀 단위). 프리셋을 무시하고 직접 지정합니다. |
+| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 1000ms. |
+
+### `camera-effect`
+화면 흔들림 등 카메라 특수 효과를 재생합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`preset`** | `EffectPreset` | O | `shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset` |
+| **`intensity`** | `number` | - | 효과의 강도. 프리셋 기본값을 덮어씁니다. |
+| **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. |
+
+### `character-focus`
+특정 캐릭터의 특정 부위(Face, Hand 등)를 자동으로 계산하여 카메라를 포커싱합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`name`** | `string` | O | 포커싱할 캐릭터의 에셋 키 |
+| **`point`** | `string` | - | 캐릭터 정의 내 `points` 키 (예: `'face'`). 미지정 시 중앙. |
+| **`zoom`** | `ZoomPreset` | - | 적용할 줌 배율. 기본값 `inherit`. |
+
+---
+
+## ✨ 3. 화면 효과 (Visual Effects)
+
+### `screen-fade`
+화면 전체를 특정 색상으로 덮거나(Out), 덮인 상태에서 다시 나타나게(In) 합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`dir`** | `'in' \| 'out'` | O | `'in'`(화면 나타남), `'out'`(화면 덮임) |
+| **`preset`** | `FadePreset` | - | `black`, `white`, `red`, `dream`, `sepia`. 기본값 `black`. |
+| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 600ms. |
+| **`disable`** | `boolean` | - | 효과 진행 중 사용자 입력을 차단할지 여부. |
+
+### `screen-wipe`
+그라데이션 와이프 효과를 사용하여 화면을 전환합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`dir`** | `'in' \| 'out'` | O | `'in'`(화면 나타남), `'out'`(화면 덮임) |
+| **`preset`** | `WipePreset` | - | `left`, `right`, `up`, `down`. (진행 방향) |
+| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 800ms. |
+
+### `mood` (분위기 오버레이)
+화면 전체에 색조 필터, 비네팅, 블렌드 모드 등을 적용하여 특정 분위기를 연출합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'add' \| 'remove'` | - | 무드 추가(`add`) 또는 제거(`remove`). 기본값 `add`. |
+| **`mood`** | `MoodType` | O | `day`, `night`, `dawn`, `sunset`, `sepia`, `noir`, `horror`, `dream` 등 |
+| **`intensity`** | `number` | - | 무드 효과의 강도 (0~1). |
+| **`flicker`** | `FlickerPreset` | - | 조명 깜빡임 효과 (`candle`, `flicker`, `strobe`) |
+
+### `effect` (파티클 시스템)
+비, 눈, 벚꽃 등 화면 전체에 날리는 파티클 효과를 추가합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'add' \| 'remove'` | O | 효과 추가(`add`) 또는 제거(`remove`) |
+| **`effect`** | `EffectType` | O | `rain`, `snow`, `sakura`, `dust`, `sparkle`, `fog`, `leaves`, `fireflies` |
+| **`src`** | `string` | O | 파티클에 사용할 이미지 에셋 키 |
+| **`rate`** | `number` | - | 파티클 생성 밀도. |
+
+---
+
+## ⚙️ 4. 로직 및 흐름 제어 (Logic & Flow)
+
+### `choices` (선택지 분기)
+사용자에게 여러 선택지를 제시하고, 선택 결과에 따라 변수를 변경하거나 장면을 전환합니다.
+
+**개별 선택지(`choices` 배열 요소) 속성:**
+*   **`text`**: 버튼에 표시될 텍스트 (Resolvable 지원)
+*   **`next`**: 선택 시 이동할 **다른 씬**의 이름
+*   **`goto`**: 선택 시 현재 씬 내의 **라벨**로 점프
+*   **`var`**: 선택 시 즉시 변경할 **전역 변수 맵** (예: `{ courage: 10 }`)
+
+**사용 예시:**
+```typescript
+{
+  type: 'choices',
+  choices: [
+    { 
+      text: '정면으로 돌파한다', 
+      var: { courage: 10 }, 
+      goto: 'battle_start' 
+    },
+    { 
+      text: ({ money }) => `뇌물을 준다 (소지금: ${money})`, 
+      next: 'bribe_success_scene' 
+    }
+  ]
+}
+```
+
+### `condition` (조건부 분기)
+현재 변수 상태에 따라 시나리오의 흐름을 자동으로 분기합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`if`** | `function` | O | `(vars) => boolean` 형태의 조건 함수 |
+| **`next`** | `string` | - | 조건이 참(`true`)일 때 이동할 씬 이름 |
+| **`goto`** | `string` | - | 조건이 참(`true`)일 때 이동할 라벨 이름 |
+| **`else`** | `string` | - | 거짓일 때 이동할 라벨 또는 씬 이름 (자동 판단) |
+
+**사용 예시:**
+```typescript
+{
+  type: 'condition',
+  if: ({ love }) => love >= 50,
+  goto: 'happy_ending',
+  else: 'normal_ending'
+}
+```
+
+### `var` (변수 조작)
+전역 변수(Global) 또는 현재 씬의 지역 변수(Local, `_`로 시작) 값을 변경합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`name`** | `string` | O | 변수명. **`_`로 시작하면 지역 변수**로 간주됩니다. |
+| **`value`** | `any` | O | 설정할 값 (현재 값을 바탕으로 계산하는 함수 가능) |
+
+### `label` (마커)
+`goto` 명령어나 `choices`에서 점프할 수 있는 위치를 표시합니다.
+
+---
+
+## 🛠️ 5. 시스템 및 기타 (System & Misc)
+
+### `ui` (UI 모듈 제어)
+등록된 UI 모듈(대화창, 선택지 등)을 명시적으로 숨기거나 보이게 합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`name`** | `string` | O | 제어할 모듈의 키 (예: `'dialogue'`, `'choice'`) |
+| **`action`** | `'show' \| 'hide'` | O | 보이기(`show`) 또는 숨기기(`hide`) |
+| **`duration`** | `number` | - | 페이드 시간(ms). |
+
+### `control` (입력 제어)
+일정 시간 동안 사용자의 클릭 입력을 차단합니다. 긴 연출 도중 클릭으로 인한 스킵을 방지할 때 사용합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'disable'` | O | 현재 `'disable'`만 지원 |
+| **`duration`** | `number` | O | 입력이 차단될 시간(ms) |
+
+---
+
+## 🚀 고급: 동적 속성 (Dynamic Attributes)
+
+레비아 엔진의 강력함은 모든 명령어의 속성에 **함수(Resolvable)**를 사용할 수 있다는 점에 있습니다.
+
+### Resolvable의 원리
+명령어가 실행될 때, 엔진은 속성값이 함수인지 확인합니다. 함수라면 현재의 모든 변수(`vars`)를 인자로 전달하여 실행하고, 그 결과값을 실제 속성값으로 사용합니다.
+
+**예시: 변수에 따라 달라지는 대사 및 속도**
+```typescript
+{
+  type: 'dialogue',
+  speaker: 'boss',
+  text: ({ playerLevel }) => playerLevel > 99 
+    ? '설마 벌써 만렙이라니...' 
+    : '아직 멀었구나, 애송이.',
+  speed: ({ isFastMode }) => isFastMode ? 0 : 30
+}
+```
+
+### 텍스트 보간 (Text Interpolation)
+대사(`text`)나 선택지 텍스트 등에서는 `${varName}` 문법을 사용하여 변수를 직접 삽입할 수 있습니다.
+
+```typescript
+{
+  type: 'dialogue',
+  text: '현재 당신의 점수는 ${score}점입니다.'
+}
+```
