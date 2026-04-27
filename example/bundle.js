@@ -2125,42 +2125,99 @@
     whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
   };
   var overlayModule = define2({
-    overlays: {}
+    overlays: {},
+    textStyle: void 0,
+    imageStyle: void 0
   });
   overlayModule.defineView((data, ctx) => {
     const _overlayObjs = {};
-    const _addOverlay = (preset, text, immediate = false) => {
-      const defaults = OVERLAY_PRESETS[preset];
-      if (!defaults) return;
-      if (_overlayObjs[preset]) {
-        _removeOverlay(preset, 0, true);
-      }
+    const _resolvePresetPos = (y) => {
+      const cam = ctx.renderer.world.camera;
       const yMap = {
         top: ctx.renderer.height * 0.1,
         center: ctx.renderer.height * 0.5,
         bottom: ctx.renderer.height * 0.85
       };
+      return cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[y]) : { x: 0, y: 0, z: 100 };
+    };
+    const _resolveNormPos = (nx, ny) => {
       const cam = ctx.renderer.world.camera;
-      const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[defaults.y]) : { x: 0, y: 0, z: 100 };
+      const cx = ctx.renderer.width * nx;
+      const cy = ctx.renderer.height * ny;
+      return cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - ctx.renderer.width / 2, y: -(cy - ctx.renderer.height / 2), z: 100 };
+    };
+    const _addTextOverlay = (preset, text, immediate = false) => {
+      const defaults = OVERLAY_PRESETS[preset];
+      if (!defaults) return;
+      if (_overlayObjs[preset]) _removeOverlay(preset, 0, true);
+      const pos = _resolvePresetPos(defaults.y);
+      const mergedStyle = {
+        fontSize: defaults.fontSize,
+        color: defaults.color,
+        opacity: defaults.opacity,
+        zIndex: defaults.zIndex,
+        pointerEvents: false,
+        ...data.textStyle ?? {}
+      };
       const textObj = ctx.renderer.world.createText({
         attribute: { text },
-        style: {
-          fontSize: defaults.fontSize,
-          color: defaults.color,
-          opacity: defaults.opacity,
-          zIndex: defaults.zIndex,
-          pointerEvents: false
-        },
+        style: mergedStyle,
         transform: { position: pos }
       });
       ctx.renderer.world.camera?.addChild(textObj);
       ctx.renderer.track(textObj);
       _overlayObjs[preset] = textObj;
+      if (!immediate) textObj.fadeIn(300, "easeOut");
     };
-    const _removeOverlay = (preset, duration, immediate = false) => {
-      const obj = _overlayObjs[preset];
+    const _addImageOverlay = (entry, immediate = false) => {
+      const { id, src, x, y, width, height, fit = "contain", zIndex, opacity = 1 } = entry;
+      if (_overlayObjs[id]) _removeOverlay(id, 0, true);
+      const pos = _resolveNormPos(x, y);
+      const imgW = width ?? ctx.renderer.width * 0.5;
+      const imgH = height ?? 0;
+      const targetZIndex = zIndex ?? Z_INDEX.OVERLAY_CAPTION;
+      const imgObj = ctx.renderer.world.createImage({
+        attribute: { src },
+        style: {
+          width: imgW,
+          ...imgH > 0 ? { height: imgH } : {},
+          zIndex: targetZIndex,
+          opacity: immediate ? opacity : 0,
+          pointerEvents: false,
+          ...data.imageStyle ?? {}
+        },
+        transform: { position: pos }
+      });
+      ctx.renderer.world.camera?.addChild(imgObj);
+      ctx.renderer.track(imgObj);
+      _overlayObjs[id] = imgObj;
+      if (fit !== "stretch" && imgH === 0) {
+        const checkFit = () => {
+          const rw = imgObj.__renderedSize?.w;
+          const rh = imgObj.__renderedSize?.h;
+          if (rw > 0 && rh > 0) {
+            const imgRatio = rw / rh;
+            if (fit === "contain") {
+              imgObj.style.height = imgW / imgRatio;
+            } else if (fit === "cover") {
+              const targetH = ctx.renderer.height;
+              imgObj.style.width = targetH * imgRatio;
+              imgObj.style.height = targetH;
+            }
+          } else {
+            requestAnimationFrame(checkFit);
+          }
+        };
+        checkFit();
+      }
+      if (!immediate) {
+        ctx.renderer.animate(imgObj, { style: { opacity } }, 300, "easeOut");
+      }
+    };
+    const _removeOverlay = (key, duration, immediate = false) => {
+      const obj = _overlayObjs[key];
       if (obj) {
-        delete _overlayObjs[preset];
+        delete _overlayObjs[key];
         const dur = immediate ? 0 : ctx.renderer.dur(duration);
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
@@ -2173,8 +2230,15 @@
         }
       }
     };
-    for (const [preset, text] of Object.entries(data.overlays)) {
-      _addOverlay(preset, text, true);
+    const _addOverlay = (entry, immediate = false) => {
+      if (entry.kind === "text") {
+        _addTextOverlay(entry.preset, entry.text, immediate);
+      } else {
+        _addImageOverlay(entry, immediate);
+      }
+    };
+    for (const entry of Object.values(data.overlays)) {
+      _addOverlay(entry, true);
     }
     return {
       show: () => {
@@ -2185,13 +2249,13 @@
         }
       },
       update: (d2) => {
-        const newPresets = new Set(Object.keys(d2.overlays));
-        for (const preset of Object.keys(_overlayObjs)) {
-          if (!newPresets.has(preset)) _removeOverlay(preset, 600);
+        const newKeys = new Set(Object.keys(d2.overlays));
+        for (const key of Object.keys(_overlayObjs)) {
+          if (!newKeys.has(key)) _removeOverlay(key, 600);
         }
-        for (const [preset, text] of Object.entries(d2.overlays)) {
-          if (!_overlayObjs[preset]) {
-            _addOverlay(preset, text);
+        for (const [key, entry] of Object.entries(d2.overlays)) {
+          if (!_overlayObjs[key]) {
+            _addOverlay(entry);
           }
         }
       }
@@ -2200,9 +2264,31 @@
   overlayModule.defineCommand(function* (cmd, ctx, state, setState) {
     const newOverlays = { ...state.overlays };
     if (cmd.action === "add") {
-      if (cmd.text) newOverlays[cmd.preset ?? "caption"] = cmd.text;
+      if (cmd.image) {
+        const id = cmd.id ?? cmd.image;
+        newOverlays[id] = {
+          kind: "image",
+          id,
+          src: cmd.image,
+          x: cmd.x ?? 0.5,
+          y: cmd.y ?? 0.5,
+          width: cmd.width,
+          height: cmd.height,
+          fit: cmd.fit,
+          zIndex: cmd.zIndex,
+          opacity: cmd.opacity
+        };
+      } else if (cmd.text) {
+        const preset = cmd.preset ?? "caption";
+        newOverlays[preset] = {
+          kind: "text",
+          text: cmd.text,
+          preset
+        };
+      }
     } else if (cmd.action === "remove") {
-      delete newOverlays[cmd.preset ?? "caption"];
+      const key = cmd.id ?? cmd.image ?? cmd.preset ?? "caption";
+      delete newOverlays[key];
     } else if (cmd.action === "clear") {
       for (const k2 of Object.keys(newOverlays)) delete newOverlays[k2];
     }
