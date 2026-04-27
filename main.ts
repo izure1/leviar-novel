@@ -103,19 +103,26 @@ async function main() {
 
   // ── 에셋 로드 (경로는 novel.config.ts의 assets에서 관리)
   await novel.load()
-
   // ── SVG 오브젝트는 런타임에만 생성되므로 직접 추가 로드
   await novel.loadAssets(OBJECTS)
+  // ── 모든 모듈의 onBoot를 실행
+  await novel.boot()
 
   const hooker = useHookallSync(novel)
+  let before = 0
   hooker.onBefore('dialogue:text', (state) => {
     if (novel.isSkipping) return state
     const { speaker, text } = state
+    const now = performance.now()
+    before = now
     if (speaker === '제나') {
       const speaker = engine.synthesize(text, false);
       (async () => {
         for await (const output of speaker.speak()) {
           await player.play(output.buffer as any)
+          if (now !== before) {
+            break
+          }
         }
       })()
     }
