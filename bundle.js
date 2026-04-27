@@ -2308,7 +2308,7 @@
       newOverlays[cmd.name] = {
         kind: "text",
         name: cmd.name,
-        text: cmd.text ?? "",
+        text: cmd.text,
         preset
       };
     } else {
@@ -2329,7 +2329,7 @@
       newOverlays[cmd.name] = {
         kind: "image",
         name: cmd.name,
-        src: cmd.src ?? "",
+        src: cmd.src,
         x: cmd.x ?? 0.5,
         y: cmd.y ?? 0.5,
         width: cmd.width,
