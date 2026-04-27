@@ -2124,43 +2124,129 @@
     title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
     whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
   };
-  var overlayModule = define2({
-    overlays: {}
-  });
-  overlayModule.defineView((data, ctx) => {
+  function _isSameEntry(a, b) {
+    if (a.kind !== b.kind || a.name !== b.name) return false;
+    if (a.kind === "text" && b.kind === "text") {
+      return a.text === b.text && a.preset === b.preset;
+    }
+    if (a.kind === "image" && b.kind === "image") {
+      return a.src === b.src && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height && a.fit === b.fit && a.zIndex === b.zIndex && a.opacity === b.opacity;
+    }
+    return false;
+  }
+  function buildOverlayView(data, ctx) {
     const _overlayObjs = {};
-    const _addOverlay = (preset, text, immediate = false) => {
-      const defaults = OVERLAY_PRESETS[preset];
-      if (!defaults) return;
-      if (_overlayObjs[preset]) {
-        _removeOverlay(preset, 0, true);
-      }
+    const _overlayEntries = {};
+    const _resolvePresetPos = (y) => {
+      const cam = ctx.renderer.world.camera;
       const yMap = {
         top: ctx.renderer.height * 0.1,
         center: ctx.renderer.height * 0.5,
         bottom: ctx.renderer.height * 0.85
       };
+      return cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[y]) : { x: 0, y: 0, z: 100 };
+    };
+    const _resolveNormPos = (nx, ny) => {
       const cam = ctx.renderer.world.camera;
-      const pos = cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(ctx.renderer.width / 2, yMap[defaults.y]) : { x: 0, y: 0, z: 100 };
+      const cx = ctx.renderer.width * nx;
+      const cy = ctx.renderer.height * ny;
+      return cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - ctx.renderer.width / 2, y: -(cy - ctx.renderer.height / 2), z: 100 };
+    };
+    const _addTextOverlay = (entry, immediate = false, duration) => {
+      const { name, preset, text } = entry;
+      const defaults = OVERLAY_PRESETS[preset];
+      if (!defaults) return;
+      const existing = _overlayObjs[name];
+      if (existing) {
+        const prevEntry = _overlayEntries[name];
+        if (prevEntry?.preset === preset) {
+          if (existing.attribute) existing.attribute.text = text;
+          _overlayEntries[name] = entry;
+          return;
+        }
+        _removeOverlay(name, 0, true);
+      }
+      const pos = _resolvePresetPos(defaults.y);
+      const mergedStyle = {
+        fontSize: defaults.fontSize,
+        color: defaults.color,
+        opacity: defaults.opacity,
+        zIndex: defaults.zIndex,
+        pointerEvents: false,
+        ...data.textStyle ?? {}
+      };
       const textObj = ctx.renderer.world.createText({
         attribute: { text },
-        style: {
-          fontSize: defaults.fontSize,
-          color: defaults.color,
-          opacity: defaults.opacity,
-          zIndex: defaults.zIndex,
-          pointerEvents: false
-        },
+        style: mergedStyle,
         transform: { position: pos }
       });
       ctx.renderer.world.camera?.addChild(textObj);
       ctx.renderer.track(textObj);
-      _overlayObjs[preset] = textObj;
+      _overlayObjs[name] = textObj;
+      _overlayEntries[name] = entry;
+      if (!immediate) textObj.fadeIn(duration ?? 300, "easeOut");
     };
-    const _removeOverlay = (preset, duration, immediate = false) => {
-      const obj = _overlayObjs[preset];
+    const _addImageOverlay = (entry, immediate = false, duration) => {
+      const { name, src, x, y, width, height, fit = "contain", zIndex, opacity = 1 } = entry;
+      const existing = _overlayObjs[name];
+      if (existing) {
+        const dur = immediate ? 0 : duration ?? 300;
+        if (dur > 0 && typeof existing.transition === "function") {
+          existing.transition(src, dur);
+        } else {
+          if (existing.attribute) existing.attribute.src = src;
+        }
+        _overlayEntries[name] = entry;
+        return;
+      }
+      const pos = _resolveNormPos(x, y);
+      const imgW = width ?? ctx.renderer.width * 0.5;
+      const imgH = height ?? 0;
+      const targetZIndex = zIndex ?? Z_INDEX.OVERLAY_CAPTION;
+      const imgObj = ctx.renderer.world.createImage({
+        attribute: { src },
+        style: {
+          width: imgW,
+          ...imgH > 0 ? { height: imgH } : {},
+          zIndex: targetZIndex,
+          opacity: immediate ? opacity : 0,
+          pointerEvents: false,
+          ...data.imageStyle ?? {}
+        },
+        transform: { position: pos }
+      });
+      ctx.renderer.world.camera?.addChild(imgObj);
+      ctx.renderer.track(imgObj);
+      _overlayObjs[name] = imgObj;
+      _overlayEntries[name] = entry;
+      if (fit !== "stretch" && imgH === 0) {
+        const checkFit = () => {
+          const rw = imgObj.__renderedSize?.w;
+          const rh = imgObj.__renderedSize?.h;
+          if (rw > 0 && rh > 0) {
+            const imgRatio = rw / rh;
+            if (fit === "contain") {
+              imgObj.style.height = imgW / imgRatio;
+            } else if (fit === "cover") {
+              const targetH = ctx.renderer.height;
+              imgObj.style.width = targetH * imgRatio;
+              imgObj.style.height = targetH;
+            }
+          } else {
+            requestAnimationFrame(checkFit);
+          }
+        };
+        checkFit();
+      }
+      if (!immediate) {
+        ctx.renderer.animate(imgObj, { style: { opacity } }, duration ?? 300, "easeOut");
+      }
+    };
+    const _removeOverlay = (key, duration, immediate = false) => {
+      const obj = _overlayObjs[key];
       if (obj) {
-        delete _overlayObjs[preset];
+        delete _overlayObjs[key];
+        delete _overlayEntries[key];
         const dur = immediate ? 0 : ctx.renderer.dur(duration);
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
@@ -2173,8 +2259,15 @@
         }
       }
     };
-    for (const [preset, text] of Object.entries(data.overlays)) {
-      _addOverlay(preset, text, true);
+    const _addOverlay = (entry, immediate = false, duration) => {
+      if (entry.kind === "text") {
+        _addTextOverlay(entry, immediate, duration);
+      } else {
+        _addImageOverlay(entry, immediate, duration);
+      }
+    };
+    for (const entry of Object.values(data.overlays)) {
+      _addOverlay(entry, true);
     }
     return {
       show: () => {
@@ -2184,32 +2277,167 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
+      getObj: (name) => _overlayObjs[name],
       update: (d2) => {
-        const newPresets = new Set(Object.keys(d2.overlays));
-        for (const preset of Object.keys(_overlayObjs)) {
-          if (!newPresets.has(preset)) _removeOverlay(preset, 600);
+        const dur = d2.lastDuration;
+        const newKeys = new Set(Object.keys(d2.overlays));
+        for (const key of Object.keys(_overlayObjs)) {
+          if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600);
         }
-        for (const [preset, text] of Object.entries(d2.overlays)) {
-          if (!_overlayObjs[preset]) {
-            _addOverlay(preset, text);
+        for (const [key, entry] of Object.entries(d2.overlays)) {
+          const prev = _overlayEntries[key];
+          if (!_overlayObjs[key]) {
+            _addOverlay(entry, false, dur);
+          } else if (prev && !_isSameEntry(prev, entry)) {
+            _addOverlay(entry, false, dur);
           }
         }
       }
     };
+  }
+  var overlayTextModule = define2({
+    overlays: {},
+    textStyle: void 0,
+    imageStyle: void 0
   });
-  overlayModule.defineCommand(function* (cmd, ctx, state, setState) {
+  overlayTextModule.defineView(buildOverlayView);
+  overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
     const newOverlays = { ...state.overlays };
-    if (cmd.action === "add") {
-      if (cmd.text) newOverlays[cmd.preset ?? "caption"] = cmd.text;
-    } else if (cmd.action === "remove") {
-      delete newOverlays[cmd.preset ?? "caption"];
-    } else if (cmd.action === "clear") {
-      for (const k2 of Object.keys(newOverlays)) delete newOverlays[k2];
+    if (cmd.action === "show") {
+      const preset = cmd.preset ?? "caption";
+      newOverlays[cmd.name] = {
+        kind: "text",
+        name: cmd.name,
+        text: cmd.text ?? "",
+        preset
+      };
+    } else {
+      delete newOverlays[cmd.name];
     }
-    setState({ overlays: newOverlays });
+    setState({ overlays: newOverlays, lastDuration: cmd.duration });
     return true;
   });
-  var overlay_default = overlayModule;
+  var overlayImageModule = define2({
+    overlays: {},
+    textStyle: void 0,
+    imageStyle: void 0
+  });
+  overlayImageModule.defineView(buildOverlayView);
+  overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
+    const newOverlays = { ...state.overlays };
+    if (cmd.action === "show") {
+      newOverlays[cmd.name] = {
+        kind: "image",
+        name: cmd.name,
+        src: cmd.src ?? "",
+        x: cmd.x ?? 0.5,
+        y: cmd.y ?? 0.5,
+        width: cmd.width,
+        height: cmd.height,
+        fit: cmd.fit,
+        zIndex: cmd.zIndex,
+        opacity: cmd.opacity
+      };
+    } else {
+      delete newOverlays[cmd.name];
+    }
+    setState({ overlays: newOverlays, lastDuration: cmd.duration });
+    return true;
+  });
+  var overlayEffectModule = define2({ _unused: void 0 });
+  overlayEffectModule.defineView((_data, _ctx) => ({
+    show: () => {
+    },
+    hide: () => {
+    }
+  }));
+  overlayEffectModule.defineCommand(function* (cmd, ctx) {
+    const textEntry = ctx.ui.get("overlay-text");
+    const imageEntry = ctx.ui.get("overlay-image");
+    const overlayObj = textEntry?.getObj(cmd.name) ?? imageEntry?.getObj(cmd.name);
+    if (!overlayObj) return true;
+    if (cmd.preset === "reset") {
+      const stopFn2 = overlayObj.__activeOverlayEffectStop;
+      if (stopFn2) stopFn2();
+      return true;
+    }
+    const stopFn = overlayObj.__activeOverlayEffectStop;
+    if (stopFn) stopFn();
+    const cfg = CAMERA_EFFECT_PRESETS[cmd.preset];
+    if (!cfg) return true;
+    const finalIntensity = cmd.intensity ?? cfg.intensity;
+    const finalDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration);
+    if (finalDuration <= 0) return true;
+    let active = true;
+    let frame = 0;
+    const repeat = cmd.repeat ?? 1;
+    const originX = overlayObj.transform?.position?.x ?? 0;
+    const originY = overlayObj.transform?.position?.y ?? 0;
+    const originZRotation = overlayObj.transform?.rotation?.z ?? 0;
+    const stop = () => {
+      active = false;
+      overlayObj.__activeOverlayEffectStop = null;
+      if (overlayObj.transform?.position) {
+        overlayObj.transform.position.x = originX;
+        overlayObj.transform.position.y = originY;
+      }
+      if (overlayObj.transform?.rotation) {
+        overlayObj.transform.rotation.z = originZRotation;
+      }
+    };
+    overlayObj.__activeOverlayEffectStop = stop;
+    const loop = () => {
+      if (!active || repeat >= 0 && frame++ >= repeat) {
+        stop();
+        return;
+      }
+      let elapsed = 0;
+      const stepTime = 16;
+      const tick = () => {
+        if (!active) return;
+        elapsed += stepTime;
+        if (elapsed > finalDuration) {
+          loop();
+          return;
+        }
+        const progress = elapsed / finalDuration;
+        let dx = 0, dy = 0, dz = 0;
+        switch (cmd.preset) {
+          case "shake":
+            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "shake-x":
+            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "bounce":
+            dy = Math.sin(progress * Math.PI) * finalIntensity;
+            break;
+          case "wave":
+            dx = Math.sin(progress * Math.PI * 2) * finalIntensity;
+            dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2);
+            break;
+          case "nod":
+            dy = Math.sin(progress * Math.PI) * finalIntensity;
+            break;
+          case "fall":
+            dy = Math.pow(progress, 2) * finalIntensity * 5;
+            break;
+        }
+        if (overlayObj.transform?.position) {
+          overlayObj.transform.position.x = originX + dx;
+          overlayObj.transform.position.y = originY + dy;
+        }
+        if (overlayObj.transform?.rotation) {
+          overlayObj.transform.rotation.z = originZRotation + dz;
+        }
+        setTimeout(tick, stepTime);
+      };
+      tick();
+    };
+    loop();
+    return true;
+  });
 
   // src/modules/screen.ts
   var FADE_PRESETS = {
@@ -2708,7 +2936,9 @@
     "character-effect": characterEffectModule,
     "mood": mood_default,
     "effect": effect_default,
-    "overlay": overlay_default,
+    "overlay-text": overlayTextModule,
+    "overlay-image": overlayImageModule,
+    "overlay-effect": overlayEffectModule,
     "screen-fade": screenFadeModule,
     "screen-flash": screenFlashModule,
     "screen-wipe": screenWipeModule,
@@ -15852,7 +16082,8 @@ ${addLineNumbers(fragment)}`);
     "background": (p, c) => background_default.__handler(p, c),
     "mood": (p, c) => mood_default.__handler(p, c),
     "effect": (p, c) => effect_default.__handler(p, c),
-    "overlay": (p, c) => overlay_default.__handler(p, c),
+    "overlay-text": (p, c) => overlayTextModule.__handler(p, c),
+    "overlay-image": (p, c) => overlayImageModule.__handler(p, c),
     "character": (p, c) => character_default.__handler(p, c),
     "character-focus": (p, c) => characterFocusModule.__handler(p, c),
     "character-highlight": (p, c) => characterHighlightModule.__handler(p, c),
