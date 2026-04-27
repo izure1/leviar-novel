@@ -1,7 +1,7 @@
 import type { Style } from 'leviar'
 import type { AssetKeysOf } from '../types/config'
 import type { CameraEffectPreset } from './camera'
-import { CAMERA_EFFECT_PRESETS } from './camera'
+import { playMotionEffect } from '../core/motion'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
 
@@ -524,97 +524,15 @@ overlayEffectModule.defineCommand(function* (cmd, ctx) {
 
   if (!overlayObj) return true
 
-  if (cmd.preset === 'reset') {
-    const stopFn = overlayObj.__activeOverlayEffectStop
-    if (stopFn) stopFn()
-    return true
-  }
-
-  const stopFn = overlayObj.__activeOverlayEffectStop
-  if (stopFn) stopFn()
-
-  const cfg = CAMERA_EFFECT_PRESETS[cmd.preset as Exclude<CameraEffectPreset, 'reset'>]
-  if (!cfg) return true
-
-  const finalIntensity = cmd.intensity ?? cfg.intensity
-  const finalDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration)
-  if (finalDuration <= 0) return true
-
-  let active = true
-  let frame = 0
-  const repeat = cmd.repeat ?? 1
-
-  const originX = overlayObj.transform?.position?.x ?? 0
-  const originY = overlayObj.transform?.position?.y ?? 0
-  const originZRotation = overlayObj.transform?.rotation?.z ?? 0
-
-  const stop = () => {
-    active = false
-    overlayObj.__activeOverlayEffectStop = null
-    if (overlayObj.transform?.position) {
-      overlayObj.transform.position.x = originX
-      overlayObj.transform.position.y = originY
-    }
-    if (overlayObj.transform?.rotation) {
-      overlayObj.transform.rotation.z = originZRotation
-    }
-  }
-  overlayObj.__activeOverlayEffectStop = stop
-
-  const loop = () => {
-    if (!active || (repeat >= 0 && frame++ >= repeat)) {
-      stop()
-      return
-    }
-
-    let elapsed = 0
-    const stepTime = 16
-    const tick = () => {
-      if (!active) return
-      elapsed += stepTime
-      if (elapsed > finalDuration) {
-        loop()
-        return
-      }
-      const progress = elapsed / finalDuration
-      let dx = 0, dy = 0, dz = 0
-
-      switch (cmd.preset) {
-        case 'shake':
-          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          dy = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          break
-        case 'shake-x':
-          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          break
-        case 'bounce':
-          dy = Math.sin(progress * Math.PI) * finalIntensity
-          break
-        case 'wave':
-          dx = Math.sin(progress * Math.PI * 2) * finalIntensity
-          dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2)
-          break
-        case 'nod':
-          dy = Math.sin(progress * Math.PI) * finalIntensity
-          break
-        case 'fall':
-          dy = Math.pow(progress, 2) * finalIntensity * 5
-          break
-      }
-
-      if (overlayObj.transform?.position) {
-        overlayObj.transform.position.x = originX + dx
-        overlayObj.transform.position.y = originY + dy
-      }
-      if (overlayObj.transform?.rotation) {
-        overlayObj.transform.rotation.z = originZRotation + dz
-      }
-
-      setTimeout(tick, stepTime)
-    }
-    tick()
-  }
-  loop()
+  playMotionEffect(
+    ctx,
+    overlayObj,
+    cmd.preset,
+    cmd.duration,
+    cmd.intensity,
+    cmd.repeat,
+    '__activeOverlayEffectStop'
+  )
 
   return true
 })

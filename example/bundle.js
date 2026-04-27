@@ -1323,95 +1323,64 @@
     backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx);
   }
 
-  // src/modules/camera.ts
-  var ZOOM_PRESETS = {
-    "close-up": { scale: 1.5, duration: 800 },
-    "medium": { scale: 1.2, duration: 600 },
-    "wide": { scale: 0.92, duration: 800 },
-    "reset": { scale: 1, duration: 600 }
-  };
-  var PAN_PRESETS = {
-    left: { x: -200, y: 0, duration: 1e3 },
-    right: { x: 200, y: 0, duration: 1e3 },
-    up: { x: 0, y: 200, duration: 1e3 },
-    down: { x: 0, y: -200, duration: 1e3 },
-    center: { x: 0, y: 0, duration: 1e3 }
-  };
-  var CAMERA_EFFECT_PRESETS = {
+  // src/core/motion.ts
+  var MOTION_EFFECT_PRESETS = {
     shake: { intensity: 10, duration: 500 },
+    "shake-x": { intensity: 15, duration: 500 },
+    "shake-y": { intensity: 15, duration: 500 },
     bounce: { intensity: 15, duration: 600 },
     wave: { intensity: 20, duration: 1e3 },
     nod: { intensity: 10, duration: 400 },
-    "shake-x": { intensity: 15, duration: 500 },
-    fall: { intensity: 15, duration: 800 }
+    fall: { intensity: 15, duration: 800 },
+    pulse: { intensity: 1.1, duration: 600 },
+    spin: { intensity: 360, duration: 1e3 },
+    "spin-x": { intensity: 360, duration: 1e3 },
+    "spin-y": { intensity: 360, duration: 1e3 },
+    "spin-z": { intensity: 360, duration: 1e3 },
+    float: { intensity: 10, duration: 2e3 },
+    jolt: { intensity: 30, duration: 200 }
   };
-  function zoomCamera(ctx, preset, duration) {
-    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
-    ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
-    const cfg = ZOOM_PRESETS[resolvedPreset];
-    if (!cfg) return;
-    const focalLength = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
-    const targetZ = focalLength * (1 - 1 / cfg.scale);
-    if (ctx.renderer.camBaseObj) {
-      const dur = ctx.renderer.dur(duration ?? cfg.duration);
-      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
-    }
-  }
-  function panCamera(ctx, position, duration, customX, customY) {
-    if (position === "inherit") return;
-    const resolvedPreset = position;
-    ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
-    const cfg = PAN_PRESETS[resolvedPreset];
-    let targetX = customX ?? 0;
-    let targetY = customY ?? 0;
-    let finalDur = duration ?? 1e3;
-    if (cfg && customX === void 0 && customY === void 0) {
-      targetX = cfg.x;
-      targetY = cfg.y;
-      if (duration === void 0) finalDur = cfg.duration;
-    } else if (typeof resolvedPreset === "string" && customX === void 0) {
-      let ratio = 0.5;
-      const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
-      if (m) {
-        const n = parseInt(m[1], 10);
-        const d2 = parseInt(m[2], 10);
-        if (d2 > 0) ratio = n / (d2 + 1);
-      }
-      targetX = ctx.renderer.width * (ratio - 0.5);
-      targetY = 0;
-    }
-    if (ctx.renderer.camBaseObj) {
-      const dur = ctx.renderer.dur(finalDur);
-      ctx.renderer.animate(ctx.renderer.camBaseObj, {
-        transform: { position: { x: targetX, y: targetY } }
-      }, dur, "easeInOutQuad");
-    }
-  }
-  function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
+  function playMotionEffect(ctx, obj, preset, duration, intensity, repeat = 1, stateKey = "__activeMotionStop") {
+    if (!obj) return;
     if (preset === "reset") {
-      const stopFn2 = ctx.renderer.state.get("_activeCamEffectStop");
+      const stopFn2 = obj[stateKey];
       if (stopFn2) stopFn2();
       return;
     }
-    const stopFn = ctx.renderer.state.get("_activeCamEffectStop");
+    const stopFn = obj[stateKey];
     if (stopFn) stopFn();
-    const cfg = CAMERA_EFFECT_PRESETS[preset];
+    const cfg = MOTION_EFFECT_PRESETS[preset];
     if (!cfg) return;
     const finalIntensity = intensity ?? cfg.intensity;
     const finalDuration = ctx.renderer.dur(duration ?? cfg.duration);
     if (finalDuration <= 0) return;
-    const offsetObj = ctx.renderer.camOffsetObj;
-    if (!offsetObj) return;
     let active = true;
     let frame = 0;
+    const originX = obj.transform?.position?.x ?? 0;
+    const originY = obj.transform?.position?.y ?? 0;
+    const originScaleX = obj.transform?.scale?.x ?? 1;
+    const originScaleY = obj.transform?.scale?.y ?? 1;
+    const originXRotation = obj.transform?.rotation?.x ?? 0;
+    const originYRotation = obj.transform?.rotation?.y ?? 0;
+    const originZRotation = obj.transform?.rotation?.z ?? 0;
     const stop = () => {
       active = false;
-      ctx.renderer.state.set("_activeCamEffectStop", null);
-      offsetObj.transform.position.x = 0;
-      offsetObj.transform.position.y = 0;
-      if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = 0;
+      obj[stateKey] = null;
+      if (obj.transform?.position) {
+        obj.transform.position.x = originX;
+        obj.transform.position.y = originY;
+      }
+      if (obj.transform?.scale) {
+        obj.transform.scale.x = originScaleX;
+        obj.transform.scale.y = originScaleY;
+      }
+      if (obj.transform?.rotation) {
+        obj.transform.rotation.x = originXRotation;
+        obj.transform.rotation.y = originYRotation;
+        obj.transform.rotation.z = originZRotation;
+      }
     };
-    ctx.renderer.state.set("_activeCamEffectStop", stop);
+    obj[stateKey] = stop;
     const loop = () => {
       if (!active || repeat >= 0 && frame++ >= repeat) {
         stop();
@@ -1427,7 +1396,7 @@
           return;
         }
         const progress = elapsed / finalDuration;
-        let dx = 0, dy = 0, dz = 0;
+        let dx = 0, dy = 0, dz = 0, ds = 0, dRotX = 0, dRotY = 0;
         switch (preset) {
           case "shake":
             dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
@@ -1435,6 +1404,9 @@
             break;
           case "shake-x":
             dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
+            break;
+          case "shake-y":
+            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
             break;
           case "bounce":
             dy = Math.sin(progress * Math.PI) * finalIntensity;
@@ -1449,45 +1421,46 @@
           case "fall":
             dy = Math.pow(progress, 2) * finalIntensity * 5;
             break;
+          case "pulse":
+            ds = Math.sin(progress * Math.PI) * (finalIntensity - 1);
+            break;
+          case "spin-x":
+            dRotX = progress * finalIntensity;
+            break;
+          case "spin-y":
+            dRotY = progress * finalIntensity;
+            break;
+          case "spin":
+          case "spin-z":
+            dz = progress * finalIntensity;
+            break;
+          case "float":
+            dy = Math.sin(progress * Math.PI * 2) * finalIntensity;
+            break;
+          case "jolt":
+            dx = (Math.random() - 0.5) * finalIntensity * Math.exp(-progress * 5);
+            dy = (Math.random() - 0.5) * finalIntensity * Math.exp(-progress * 5);
+            break;
         }
-        offsetObj.transform.position.x = dx;
-        offsetObj.transform.position.y = dy;
-        if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = dz;
+        if (obj.transform?.position) {
+          obj.transform.position.x = originX + dx;
+          obj.transform.position.y = originY + dy;
+        }
+        if (obj.transform?.scale && preset === "pulse") {
+          obj.transform.scale.x = originScaleX + ds;
+          obj.transform.scale.y = originScaleY + ds;
+        }
+        if (obj.transform?.rotation) {
+          obj.transform.rotation.x = originXRotation + dRotX;
+          obj.transform.rotation.y = originYRotation + dRotY;
+          obj.transform.rotation.z = originZRotation + dz;
+        }
         setTimeout(tick, stepTime);
       };
       tick();
     };
     loop();
   }
-  var cameraZoomModule = define2({ lastPreset: "reset" });
-  cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolved = cmd.preset === "inherit" ? state.lastPreset : cmd.preset;
-    setState({ lastPreset: resolved });
-    zoomCamera(ctx, resolved, cmd.duration);
-    return true;
-  });
-  var cameraPanModule = define2({ lastPreset: "center" });
-  cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolved = cmd.position === "inherit" ? state.lastPreset : cmd.position;
-    setState({ lastPreset: resolved });
-    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y);
-    return true;
-  });
-  var cameraEffectModule = define2({ lastPreset: "shake" });
-  cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
-    setState({ lastPreset: cmd.preset });
-    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
-    return true;
-  });
 
   // src/modules/character.ts
   var CHARACTER_X_RATIO = {
@@ -1711,86 +1684,15 @@
     const entry = ctx.ui.get("character");
     const charObj = entry?.getObj(cmd.name);
     if (!charObj) return true;
-    if (cmd.preset === "reset") {
-      const stopFn2 = charObj.__activeCharEffectStop;
-      if (stopFn2) stopFn2();
-      return true;
-    }
-    const stopFn = charObj.__activeCharEffectStop;
-    if (stopFn) stopFn();
-    const cfg = CAMERA_EFFECT_PRESETS[cmd.preset];
-    if (!cfg) return true;
-    const finalIntensity = cmd.intensity ?? cfg.intensity;
-    const finalDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration);
-    if (finalDuration <= 0) return true;
-    let active = true;
-    let frame = 0;
-    const repeat = cmd.repeat ?? 1;
-    const originX = charObj.transform?.position?.x ?? 0;
-    const originY = charObj.transform?.position?.y ?? 0;
-    const originZRotation = charObj.transform?.rotation?.z ?? 0;
-    const stop = () => {
-      active = false;
-      charObj.__activeCharEffectStop = null;
-      if (charObj.transform?.position) {
-        charObj.transform.position.x = originX;
-        charObj.transform.position.y = originY;
-      }
-      if (charObj.transform?.rotation) {
-        charObj.transform.rotation.z = originZRotation;
-      }
-    };
-    charObj.__activeCharEffectStop = stop;
-    const loop = () => {
-      if (!active || repeat >= 0 && frame++ >= repeat) {
-        stop();
-        return;
-      }
-      let elapsed = 0;
-      const stepTime = 16;
-      const tick = () => {
-        if (!active) return;
-        elapsed += stepTime;
-        if (elapsed > finalDuration) {
-          loop();
-          return;
-        }
-        const progress = elapsed / finalDuration;
-        let dx = 0, dy = 0, dz = 0;
-        switch (cmd.preset) {
-          case "shake":
-            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            break;
-          case "shake-x":
-            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            break;
-          case "bounce":
-            dy = Math.sin(progress * Math.PI) * finalIntensity;
-            break;
-          case "wave":
-            dx = Math.sin(progress * Math.PI * 2) * finalIntensity;
-            dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2);
-            break;
-          case "nod":
-            dy = Math.sin(progress * Math.PI) * finalIntensity;
-            break;
-          case "fall":
-            dy = Math.pow(progress, 2) * finalIntensity * 5;
-            break;
-        }
-        if (charObj.transform?.position) {
-          charObj.transform.position.x = originX + dx;
-          charObj.transform.position.y = originY + dy;
-        }
-        if (charObj.transform?.rotation) {
-          charObj.transform.rotation.z = originZRotation + dz;
-        }
-        setTimeout(tick, stepTime);
-      };
-      tick();
-    };
-    loop();
+    playMotionEffect(
+      ctx,
+      charObj,
+      cmd.preset,
+      cmd.duration,
+      cmd.intensity,
+      cmd.repeat,
+      "__activeCharEffectStop"
+    );
     return true;
   });
 
@@ -2308,7 +2210,7 @@
       newOverlays[cmd.name] = {
         kind: "text",
         name: cmd.name,
-        text: cmd.text ?? "",
+        text: cmd.text,
         preset
       };
     } else {
@@ -2329,7 +2231,7 @@
       newOverlays[cmd.name] = {
         kind: "image",
         name: cmd.name,
-        src: cmd.src ?? "",
+        src: cmd.src,
         x: cmd.x ?? 0.5,
         y: cmd.y ?? 0.5,
         width: cmd.width,
@@ -2356,86 +2258,15 @@
     const imageEntry = ctx.ui.get("overlay-image");
     const overlayObj = textEntry?.getObj(cmd.name) ?? imageEntry?.getObj(cmd.name);
     if (!overlayObj) return true;
-    if (cmd.preset === "reset") {
-      const stopFn2 = overlayObj.__activeOverlayEffectStop;
-      if (stopFn2) stopFn2();
-      return true;
-    }
-    const stopFn = overlayObj.__activeOverlayEffectStop;
-    if (stopFn) stopFn();
-    const cfg = CAMERA_EFFECT_PRESETS[cmd.preset];
-    if (!cfg) return true;
-    const finalIntensity = cmd.intensity ?? cfg.intensity;
-    const finalDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration);
-    if (finalDuration <= 0) return true;
-    let active = true;
-    let frame = 0;
-    const repeat = cmd.repeat ?? 1;
-    const originX = overlayObj.transform?.position?.x ?? 0;
-    const originY = overlayObj.transform?.position?.y ?? 0;
-    const originZRotation = overlayObj.transform?.rotation?.z ?? 0;
-    const stop = () => {
-      active = false;
-      overlayObj.__activeOverlayEffectStop = null;
-      if (overlayObj.transform?.position) {
-        overlayObj.transform.position.x = originX;
-        overlayObj.transform.position.y = originY;
-      }
-      if (overlayObj.transform?.rotation) {
-        overlayObj.transform.rotation.z = originZRotation;
-      }
-    };
-    overlayObj.__activeOverlayEffectStop = stop;
-    const loop = () => {
-      if (!active || repeat >= 0 && frame++ >= repeat) {
-        stop();
-        return;
-      }
-      let elapsed = 0;
-      const stepTime = 16;
-      const tick = () => {
-        if (!active) return;
-        elapsed += stepTime;
-        if (elapsed > finalDuration) {
-          loop();
-          return;
-        }
-        const progress = elapsed / finalDuration;
-        let dx = 0, dy = 0, dz = 0;
-        switch (cmd.preset) {
-          case "shake":
-            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            dy = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            break;
-          case "shake-x":
-            dx = (Math.random() - 0.5) * finalIntensity * (1 - progress);
-            break;
-          case "bounce":
-            dy = Math.sin(progress * Math.PI) * finalIntensity;
-            break;
-          case "wave":
-            dx = Math.sin(progress * Math.PI * 2) * finalIntensity;
-            dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2);
-            break;
-          case "nod":
-            dy = Math.sin(progress * Math.PI) * finalIntensity;
-            break;
-          case "fall":
-            dy = Math.pow(progress, 2) * finalIntensity * 5;
-            break;
-        }
-        if (overlayObj.transform?.position) {
-          overlayObj.transform.position.x = originX + dx;
-          overlayObj.transform.position.y = originY + dy;
-        }
-        if (overlayObj.transform?.rotation) {
-          overlayObj.transform.rotation.z = originZRotation + dz;
-        }
-        setTimeout(tick, stepTime);
-      };
-      tick();
-    };
-    loop();
+    playMotionEffect(
+      ctx,
+      overlayObj,
+      cmd.preset,
+      cmd.duration,
+      cmd.intensity,
+      cmd.repeat,
+      "__activeOverlayEffectStop"
+    );
     return true;
   });
 
@@ -2654,6 +2485,106 @@
       ctx.execute({ type: "control", action: "disable", duration: dur });
     }
     yield false;
+    return true;
+  });
+
+  // src/modules/camera.ts
+  var ZOOM_PRESETS = {
+    "close-up": { scale: 1.5, duration: 800 },
+    "medium": { scale: 1.2, duration: 600 },
+    "wide": { scale: 0.92, duration: 800 },
+    "reset": { scale: 1, duration: 600 }
+  };
+  var PAN_PRESETS = {
+    left: { x: -200, y: 0, duration: 1e3 },
+    right: { x: 200, y: 0, duration: 1e3 },
+    up: { x: 0, y: 200, duration: 1e3 },
+    down: { x: 0, y: -200, duration: 1e3 },
+    center: { x: 0, y: 0, duration: 1e3 }
+  };
+  function zoomCamera(ctx, preset, duration) {
+    const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
+    ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
+    const cfg = ZOOM_PRESETS[resolvedPreset];
+    if (!cfg) return;
+    const focalLength = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
+    const targetZ = focalLength * (1 - 1 / cfg.scale);
+    if (ctx.renderer.camBaseObj) {
+      const dur = ctx.renderer.dur(duration ?? cfg.duration);
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
+    }
+  }
+  function panCamera(ctx, position, duration, customX, customY) {
+    if (position === "inherit") return;
+    const resolvedPreset = position;
+    ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
+    const cfg = PAN_PRESETS[resolvedPreset];
+    let targetX = customX ?? 0;
+    let targetY = customY ?? 0;
+    let finalDur = duration ?? 1e3;
+    if (cfg && customX === void 0 && customY === void 0) {
+      targetX = cfg.x;
+      targetY = cfg.y;
+      if (duration === void 0) finalDur = cfg.duration;
+    } else if (typeof resolvedPreset === "string" && customX === void 0) {
+      let ratio = 0.5;
+      const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        const d2 = parseInt(m[2], 10);
+        if (d2 > 0) ratio = n / (d2 + 1);
+      }
+      targetX = ctx.renderer.width * (ratio - 0.5);
+      targetY = 0;
+    }
+    if (ctx.renderer.camBaseObj) {
+      const dur = ctx.renderer.dur(finalDur);
+      ctx.renderer.animate(ctx.renderer.camBaseObj, {
+        transform: { position: { x: targetX, y: targetY } }
+      }, dur, "easeInOutQuad");
+    }
+  }
+  function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
+    const offsetObj = ctx.renderer.camOffsetObj;
+    if (!offsetObj) return;
+    const objWrapper = {
+      transform: offsetObj.transform,
+      get _activeCamEffectStop() {
+        return ctx.renderer.state.get("_activeCamEffectStop");
+      },
+      set _activeCamEffectStop(val) {
+        ctx.renderer.state.set("_activeCamEffectStop", val);
+      }
+    };
+    playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, "_activeCamEffectStop");
+  }
+  var cameraZoomModule = define2({ lastPreset: "reset" });
+  cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolved = cmd.preset === "inherit" ? state.lastPreset : cmd.preset;
+    setState({ lastPreset: resolved });
+    zoomCamera(ctx, resolved, cmd.duration);
+    return true;
+  });
+  var cameraPanModule = define2({ lastPreset: "center" });
+  cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const resolved = cmd.position === "inherit" ? state.lastPreset : cmd.position;
+    setState({ lastPreset: resolved });
+    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y);
+    return true;
+  });
+  var cameraEffectModule = define2({ lastPreset: "shake" });
+  cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
+  }, hide: () => {
+  } }));
+  cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
+    setState({ lastPreset: cmd.preset });
+    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
     return true;
   });
 

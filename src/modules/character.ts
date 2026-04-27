@@ -1,6 +1,6 @@
 import type { CharDefs, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
 import type { ZoomPreset, CameraPanCmd, CameraZoomCmd, CameraEffectPreset } from './camera'
-import { CAMERA_EFFECT_PRESETS } from './camera'
+import { playMotionEffect } from '../core/motion'
 import type { LeviarObject } from 'leviar'
 import type { CommandResult } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
@@ -395,97 +395,15 @@ characterEffectModule.defineCommand(function* (cmd, ctx) {
   const charObj = entry?.getObj(cmd.name)
   if (!charObj) return true
 
-  if (cmd.preset === 'reset') {
-    const stopFn = charObj.__activeCharEffectStop
-    if (stopFn) stopFn()
-    return true
-  }
-
-  const stopFn = charObj.__activeCharEffectStop
-  if (stopFn) stopFn()
-
-  const cfg = CAMERA_EFFECT_PRESETS[cmd.preset as Exclude<CameraEffectPreset, 'reset'>]
-  if (!cfg) return true
-
-  const finalIntensity = cmd.intensity ?? cfg.intensity
-  const finalDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration)
-  if (finalDuration <= 0) return true
-
-  let active = true
-  let frame = 0
-  const repeat = cmd.repeat ?? 1
-
-  const originX = charObj.transform?.position?.x ?? 0
-  const originY = charObj.transform?.position?.y ?? 0
-  const originZRotation = charObj.transform?.rotation?.z ?? 0
-
-  const stop = () => {
-    active = false
-    charObj.__activeCharEffectStop = null
-    if (charObj.transform?.position) {
-      charObj.transform.position.x = originX
-      charObj.transform.position.y = originY
-    }
-    if (charObj.transform?.rotation) {
-      charObj.transform.rotation.z = originZRotation
-    }
-  }
-  charObj.__activeCharEffectStop = stop
-
-  const loop = () => {
-    if (!active || (repeat >= 0 && frame++ >= repeat)) {
-      stop()
-      return
-    }
-
-    let elapsed = 0
-    const stepTime = 16
-    const tick = () => {
-      if (!active) return
-      elapsed += stepTime
-      if (elapsed > finalDuration) {
-        loop()
-        return
-      }
-      const progress = elapsed / finalDuration
-      let dx = 0, dy = 0, dz = 0
-
-      switch (cmd.preset) {
-        case 'shake':
-          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          dy = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          break
-        case 'shake-x':
-          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          break
-        case 'bounce':
-          dy = Math.sin(progress * Math.PI) * finalIntensity
-          break
-        case 'wave':
-          dx = Math.sin(progress * Math.PI * 2) * finalIntensity
-          dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2)
-          break
-        case 'nod':
-          dy = Math.sin(progress * Math.PI) * finalIntensity
-          break
-        case 'fall':
-          dy = Math.pow(progress, 2) * finalIntensity * 5
-          break
-      }
-
-      if (charObj.transform?.position) {
-        charObj.transform.position.x = originX + dx
-        charObj.transform.position.y = originY + dy
-      }
-      if (charObj.transform?.rotation) {
-        charObj.transform.rotation.z = originZRotation + dz
-      }
-
-      setTimeout(tick, stepTime)
-    }
-    tick()
-  }
-  loop()
+  playMotionEffect(
+    ctx,
+    charObj,
+    cmd.preset,
+    cmd.duration,
+    cmd.intensity,
+    cmd.repeat,
+    '__activeCharEffectStop'
+  )
 
   return true
 })

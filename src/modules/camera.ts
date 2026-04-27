@@ -1,9 +1,10 @@
 import type { SceneContext } from '../core/SceneContext'
 import { define } from '../define/defineCmdUI'
+import { playMotionEffect, type MotionEffectPreset } from '../core/motion'
 
 export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
 export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit' | (string & {})
-export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall' | 'reset'
+export type CameraEffectPreset = MotionEffectPreset
 
 /** 카메라를 줌한다 */
 export interface CameraZoomCmd {
@@ -61,14 +62,7 @@ const PAN_PRESETS: Record<Exclude<PanPreset, 'inherit'>, { x: number; y: number;
   center: { x: 0, y: 0, duration: 1000 },
 }
 
-export const CAMERA_EFFECT_PRESETS: Record<Exclude<CameraEffectPreset, 'reset'>, { intensity: number; duration: number }> = {
-  shake: { intensity: 10, duration: 500 },
-  bounce: { intensity: 15, duration: 600 },
-  wave: { intensity: 20, duration: 1000 },
-  nod: { intensity: 10, duration: 400 },
-  'shake-x': { intensity: 15, duration: 500 },
-  fall: { intensity: 15, duration: 800 },
-}
+export { MOTION_EFFECT_PRESETS as CAMERA_EFFECT_PRESETS } from '../core/motion'
 
 // ─── 공유 헬퍼 ───────────────────────────────────────────────
 
@@ -123,87 +117,17 @@ export function panCamera(ctx: SceneContext, position: PanPreset, duration?: num
 }
 
 function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: number, intensity?: number, repeat: number = 1) {
-  if (preset === 'reset') {
-    const stopFn = ctx.renderer.state.get('_activeCamEffectStop')
-    if (stopFn) stopFn()
-    return
-  }
-
-  const stopFn = ctx.renderer.state.get('_activeCamEffectStop')
-  if (stopFn) stopFn()
-
-  const cfg = CAMERA_EFFECT_PRESETS[preset]
-  if (!cfg) return
-
-  const finalIntensity = intensity ?? cfg.intensity
-  const finalDuration = ctx.renderer.dur(duration ?? cfg.duration)
-  if (finalDuration <= 0) return
-
   const offsetObj = ctx.renderer.camOffsetObj
   if (!offsetObj) return
-
-  let active = true
-  let frame = 0
-
-  const stop = () => {
-    active = false
-    ctx.renderer.state.set('_activeCamEffectStop', null)
-    offsetObj.transform.position.x = 0
-    offsetObj.transform.position.y = 0
-    if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = 0
+  
+  // renderer state 기반의 stateKey 동작 모방
+  const objWrapper = {
+    transform: offsetObj.transform,
+    get _activeCamEffectStop() { return ctx.renderer.state.get('_activeCamEffectStop') },
+    set _activeCamEffectStop(val) { ctx.renderer.state.set('_activeCamEffectStop', val) }
   }
-  ctx.renderer.state.set('_activeCamEffectStop', stop)
 
-  const loop = () => {
-    if (!active || (repeat >= 0 && frame++ >= repeat)) {
-      stop()
-      return
-    }
-
-    let elapsed = 0
-    const stepTime = 16
-    const tick = () => {
-      if (!active) return
-      elapsed += stepTime
-      if (elapsed > finalDuration) {
-        loop()
-        return
-      }
-      const progress = elapsed / finalDuration
-      let dx = 0, dy = 0, dz = 0
-
-      switch (preset) {
-        case 'shake':
-          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          dy = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          break
-        case 'shake-x':
-          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
-          break
-        case 'bounce':
-          dy = Math.sin(progress * Math.PI) * finalIntensity
-          break
-        case 'wave':
-          dx = Math.sin(progress * Math.PI * 2) * finalIntensity
-          dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2)
-          break
-        case 'nod':
-          dy = Math.sin(progress * Math.PI) * finalIntensity
-          break
-        case 'fall':
-          dy = Math.pow(progress, 2) * finalIntensity * 5
-          break
-      }
-
-      offsetObj.transform.position.x = dx
-      offsetObj.transform.position.y = dy
-      if (offsetObj.transform.rotation) offsetObj.transform.rotation.z = dz
-
-      setTimeout(tick, stepTime)
-    }
-    tick()
-  }
-  loop()
+  playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, '_activeCamEffectStop')
 }
 
 // ─── camera-zoom 모듈 ────────────────────────────────────────
