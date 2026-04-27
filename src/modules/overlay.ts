@@ -52,53 +52,71 @@ export type OverlayEntry = OverlayTextEntry | OverlayImageEntry
 // ─── 커맨드 타입 ─────────────────────────────────────────────
 
 /** 텍스트 오버레이를 표시하거나 숨긴다 */
-export interface OverlayTextCmd {
-  /** 수행할 동작입니다. (표시, 숨기기) */
-  action: 'show' | 'hide'
-  /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
-  name: string
-  /** 화면에 표시할 텍스트입니다. (show 시 필수) */
-  text?: string
-  /**
-   * 텍스트 오버레이의 스타일 프리셋입니다.
-   * 기본값: 'caption'
-   */
-  preset?: OverlayPreset
-  /** 전환 애니메이션의 지속 시간(ms)입니다. */
-  duration?: number
-}
+export type OverlayTextCmd =
+  | {
+      /** 수행할 동작입니다. (표시) */
+      action: 'show'
+      /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
+      name: string
+      /** 화면에 표시할 텍스트입니다. */
+      text: string
+      /**
+       * 텍스트 오버레이의 스타일 프리셋입니다.
+       * 기본값: 'caption'
+       */
+      preset?: OverlayPreset
+      /** 전환 애니메이션의 지속 시간(ms)입니다. */
+      duration?: number
+    }
+  | {
+      /** 수행할 동작입니다. (숨기기) */
+      action: 'hide'
+      /** 오버레이 고유 이름. */
+      name: string
+      /** 전환 애니메이션의 지속 시간(ms)입니다. */
+      duration?: number
+    }
 
 /** 이미지 오버레이를 표시하거나 숨긴다 */
-export interface OverlayImageCmd<TConfig = any> {
-  /** 수행할 동작입니다. (표시, 숨기기) */
-  action: 'show' | 'hide'
-  /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
-  name: string
-  /** 화면에 표시할 이미지 에셋 키입니다. (show 시 필수) */
-  src?: AssetKeysOf<TConfig>
-  /**
-   * 이미지 가로 위치 (0~1). (image 전용)
-   * 기본값: 0.5 (중앙)
-   */
-  x?: number
-  /**
-   * 이미지 세로 위치 (0~1). (image 전용)
-   * 기본값: 0.5 (중앙)
-   */
-  y?: number
-  /** 이미지 너비(px) */
-  width?: number
-  /** 이미지 높이(px) */
-  height?: number
-  /** 이미지 화면 맞춤 방식 (기본값: 'contain') */
-  fit?: 'cover' | 'contain' | 'stretch'
-  /** 이미지 z-index */
-  zIndex?: number
-  /** 이미지 불투명도 (0~1). 기본값: 1 */
-  opacity?: number
-  /** 전환 애니메이션의 지속 시간(ms)입니다. */
-  duration?: number
-}
+export type OverlayImageCmd<TConfig = any> =
+  | {
+      /** 수행할 동작입니다. (표시) */
+      action: 'show'
+      /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
+      name: string
+      /** 화면에 표시할 이미지 에셋 키입니다. */
+      src: AssetKeysOf<TConfig>
+      /**
+       * 이미지 가로 위치 (0~1). (image 전용)
+       * 기본값: 0.5 (중앙)
+       */
+      x?: number
+      /**
+       * 이미지 세로 위치 (0~1). (image 전용)
+       * 기본값: 0.5 (중앙)
+       */
+      y?: number
+      /** 이미지 너비(px) */
+      width?: number
+      /** 이미지 높이(px) */
+      height?: number
+      /** 이미지 화면 맞춤 방식 (기본값: 'contain') */
+      fit?: 'cover' | 'contain' | 'stretch'
+      /** 이미지 z-index */
+      zIndex?: number
+      /** 이미지 불투명도 (0~1). 기본값: 1 */
+      opacity?: number
+      /** 전환 애니메이션의 지속 시간(ms)입니다. */
+      duration?: number
+    }
+  | {
+      /** 수행할 동작입니다. (숨기기) */
+      action: 'hide'
+      /** 오버레이 고유 이름. */
+      name: string
+      /** 전환 애니메이션의 지속 시간(ms)입니다. */
+      duration?: number
+    }
 
 // ─── 텍스트 프리셋 기본값 ────────────────────────────────────
 
@@ -390,7 +408,7 @@ overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
     newOverlays[cmd.name] = {
       kind: 'text',
       name: cmd.name,
-      text: cmd.text ?? '',
+      text: cmd.text,
       preset,
     } satisfies OverlayTextEntry
   } else {
@@ -434,7 +452,7 @@ overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
     newOverlays[cmd.name] = {
       kind: 'image',
       name: cmd.name,
-      src: cmd.src ?? '',
+      src: cmd.src as string,
       x: cmd.x ?? 0.5,
       y: cmd.y ?? 0.5,
       width: cmd.width,
