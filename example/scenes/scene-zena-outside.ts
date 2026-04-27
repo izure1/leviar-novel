@@ -6,12 +6,32 @@ import { commonInitial } from './common-initial'
 export default defineScene({
   config,
   initial: commonInitial,
-  next: 'scene-zena-bug',
+  next: {
+    scene: 'scene-zena-bug',
+    preserve: true,
+  },
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
-  { type: 'background', name: 'park', duration: 0 },
+  { type: 'background', name: 'park', duration: 1000 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
+  {
+    type: 'audio',
+    action: 'play',
+    name: 'bgm',
+    src: 'daytime',
+    duration: 1000,
+    repeat: true,
+    volume: 0.1,
+  },
+  {
+    type: 'effect',
+    action: 'add',
+    effect: 'sakura',
+    src: 'sakura',
+    rate: 25,
+    duration: 1000,
+  },
 
   {
     type: 'dialogue',

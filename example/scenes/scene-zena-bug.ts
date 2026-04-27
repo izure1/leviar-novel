@@ -8,10 +8,6 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-ending',
 }, [
-  { type: 'background', name: 'park', duration: 0 },
-  { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
-
   {
     type: 'dialogue',
     text: [

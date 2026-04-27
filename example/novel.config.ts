@@ -64,6 +64,7 @@ export default defineNovelConfig({
   },
   audios: {
     'am223': './assets/bgm_am223.mp3',
+    'daytime': './assets/bgm_daytime.mp3',
   },
   assets: {
     // 배경
@@ -86,5 +87,14 @@ export default defineNovelConfig({
     { type: 'character', action: 'show', defaults: { duration: 300 } },
     { type: 'character', action: 'remove', defaults: { duration: 1000 } },
   ],
+  effects: {
+    sakura: {
+      clip: {
+        size: [
+          [1.0, 2.0],
+        ]
+      }
+    }
+  }
 })
 
