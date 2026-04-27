@@ -12,7 +12,8 @@
 | :--- | :--- | :--- |
 | **기본 연출** | `dialogue`, `character`, `background` | 텍스트 출력, 캐릭터 등장/퇴장, 배경 전환 |
 | **카메라** | `camera-zoom`, `camera-pan`, `camera-effect`, `character-focus`, `character-effect` | 시점 조작, 특정 캐릭터 포커싱 및 개별/전체 화면 효과 |
-| **화면 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect` | 화면 전환, 분위기 오버레이, 파티클 시스템 |
+| **화면 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect`, `overlay-text`, `overlay-image`, `overlay-effect` | 화면 전환, 분위기 오버레이, 파티클 시스템, 오버레이 제어 |
+| **사운드** | `audio` | 배경음악(BGM) 및 효과음(SE) 재생, 일시정지, 정지 |
 | **로직/제어** | `choices`, `condition`, `var`, `label`, `control` | 선택지 분기, 조건부 실행, 변수 조작, 흐름 제어 |
 | **시스템** | `ui` | 특정 모듈 UI 표시 및 숨김 제어 |
 
@@ -189,9 +190,64 @@
 | **`src`** | `string` | O | 파티클에 사용할 이미지 에셋 키 |
 | **`rate`** | `number` | - | 파티클 생성 밀도. |
 
+### `overlay-text` (텍스트 오버레이)
+화면의 특정 위치에 텍스트를 띄웁니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'show' \| 'hide'` | O | 표시(`show`) 또는 숨기기(`hide`) |
+| **`name`** | `string` | O | 오버레이 객체의 고유 이름 |
+| **`text`** | `string` | △ | 표시할 텍스트 (show 시 필수) |
+| **`preset`** | `OverlayPreset` | - | 텍스트 스타일 프리셋 (`caption`, `title`, `whisper`) |
+| **`duration`** | `number` | - | 전환 애니메이션 시간(ms) |
+
+### `overlay-image` (이미지 오버레이)
+화면의 특정 위치에 이미지를 띄웁니다. `x`, `y` 좌표는 0~1 사이의 정규화된 값을 사용합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'show' \| 'hide'` | O | 표시(`show`) 또는 숨기기(`hide`) |
+| **`name`** | `string` | O | 오버레이 객체의 고유 이름 |
+| **`src`** | `string` | △ | 표시할 이미지 에셋 키 (show 시 필수) |
+| **`x`**, **`y`** | `number` | - | 화면 내 가로/세로 위치 (0~1). 기본값: 0.5 (중앙) |
+| **`width`**, **`height`**| `number` | - | 이미지의 크기(px). |
+| **`fit`** | `string` | - | 화면 맞춤 방식 (`cover`, `contain`, `stretch`) |
+| **`zIndex`** | `number` | - | z-index 값 |
+| **`opacity`** | `number` | - | 불투명도 (0~1) |
+| **`duration`** | `number` | - | 전환 애니메이션 시간(ms) |
+
+### `overlay-effect` (오버레이 특수 효과)
+오버레이 객체(텍스트 또는 이미지)에 흔들림 등의 카메라 효과를 적용합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`name`** | `string` | O | 효과를 적용할 오버레이의 고유 이름 |
+| **`preset`** | `CameraEffectPreset` | O | 연출 효과 프리셋 (`shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset`) |
+| **`intensity`** | `number` | - | 효과의 강도 |
+| **`repeat`** | `number` | - | 효과 반복 횟수 (음수일 경우 무한 반복) |
+| **`duration`** | `number` | - | 효과의 전체 지속 시간(ms) |
+
 ---
 
-## ⚙️ 4. 로직 및 흐름 제어 (Logic & Flow)
+## 🎵 4. 사운드 (Audio)
+
+### `audio` (오디오 재생/제어)
+설정에 등록된 배경음악(BGM) 또는 효과음(SE)을 재생하고 제어합니다. 같은 `name`으로 재생 시 자동으로 크로스페이드(부드러운 전환)를 지원합니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`action`** | `'play' \| 'pause' \| 'stop'` | O | 재생, 일시정지, 또는 정지 동작 |
+| **`name`** | `string` | O | 오디오 재생 트랙의 고유 이름 |
+| **`src`** | `string` | △ | 재생할 오디오 에셋 키 (`action: 'play'`일 때 필수) |
+| **`duration`** | `number` | - | 페이드인/아웃 지속 시간(ms) |
+| **`volume`** | `number` | - | 볼륨 (0~1). (play 전용) |
+| **`speed`** | `number` | - | 재생 속도. (play 전용) |
+| **`repeat`** | `boolean` | - | 반복 재생 여부. (play 전용) |
+| **`start`**, **`end`** | `number` | - | 재생 시작 및 종료 시점(초). (play 전용) |
+
+---
+
+## ⚙️ 5. 로직 및 흐름 제어 (Logic & Flow)
 
 ### `choices` (선택지 분기)
 사용자에게 여러 선택지를 제시하고, 선택 결과에 따라 변수를 변경하거나 장면을 전환합니다.
@@ -253,7 +309,7 @@
 
 ---
 
-## 🛠️ 5. 시스템 및 기타 (System & Misc)
+## 🛠️ 6. 시스템 및 기타 (System & Misc)
 
 ### `ui` (UI 모듈 제어)
 등록된 UI 모듈(대화창, 선택지 등)을 명시적으로 숨기거나 보이게 합니다.

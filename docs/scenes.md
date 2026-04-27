@@ -11,7 +11,7 @@
 | **`config`** | O | `object` | 타입 추론을 위한 설정 객체 참조 |
 | **`variables`** | - | `object` | 씬 내 전용 임시 상태 관리 (캡슐화 및 메모리 격리) |
 | **`initial`** | - | `object` | 씬 로드 즉시 **모듈의 Scheme State를 강제 초기화** |
-| **`next`** | - | `string` | 시나리오 종료 후 자동 이동 경로 지정 |
+| **`next`** | - | `string \| { scene: string, preserve: boolean }` | 시나리오 종료 후 자동 이동 경로 지정 |
 
 ---
 
@@ -88,3 +88,4 @@ export default defineScene({
 
 **상세 설명 (Rationale):**
 시나리오 흐름의 연속성을 위해 설정합니다. 마지막 명령어가 실행된 후 엔진이 `syncUIState`를 호출할 때 자동으로 `next` 경로를 찾아 이동함으로써, 불필요한 `goto` 커맨드의 반복을 줄이고 코드 구조를 깔끔하게 유지합니다.
+문자열을 직접 지정하여 해당 씬으로 이동할 수도 있고, `{ scene: string, preserve: boolean }` 형태의 객체를 전달하여 `preserve: true`로 설정할 경우 배경, 캐릭터, 파티클 등 기존 렌더러 오브젝트들을 지우지 않고 상태를 유지한 채 부드럽게 씬을 전환할 수 있습니다.
