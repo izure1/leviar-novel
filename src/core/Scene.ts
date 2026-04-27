@@ -12,7 +12,7 @@ import labelModule from '../modules/label'
 import backgroundModule from '../modules/background'
 import moodModule from '../modules/mood'
 import effectModule from '../modules/effect'
-import overlayModule from '../modules/overlay'
+import { overlayTextModule, overlayImageModule } from '../modules/overlay'
 import characterModule, { characterFocusModule, characterHighlightModule } from '../modules/character'
 import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../modules/camera'
 import { screenFadeModule, screenFlashModule, screenWipeModule } from '../modules/screen'
@@ -32,7 +32,8 @@ const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generato
   'background':           (p, c) => backgroundModule.__handler!(p, c),
   'mood':                 (p, c) => moodModule.__handler!(p, c),
   'effect':               (p, c) => effectModule.__handler!(p, c),
-  'overlay':              (p, c) => overlayModule.__handler!(p, c),
+  'overlay-text':         (p, c) => overlayTextModule.__handler!(p, c),
+  'overlay-image':        (p, c) => overlayImageModule.__handler!(p, c),
   'character':            (p, c) => characterModule.__handler!(p, c),
   'character-focus':      (p, c) => characterFocusModule.__handler!(p, c),
   'character-highlight':  (p, c) => characterHighlightModule.__handler!(p, c),

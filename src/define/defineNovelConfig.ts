@@ -7,7 +7,7 @@ import backgroundModule from '../modules/background'
 import characterModule, { characterFocusModule, characterHighlightModule, characterEffectModule } from '../modules/character'
 import moodModule from '../modules/mood'
 import effectModule from '../modules/effect'
-import overlayModule from '../modules/overlay'
+import { overlayTextModule, overlayImageModule } from '../modules/overlay'
 import { screenFadeModule, screenFlashModule, screenWipeModule } from '../modules/screen'
 import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../modules/camera'
 import conditionModule from '../modules/condition'
@@ -33,7 +33,8 @@ export const BUILTIN_MODULES = {
   'character-effect': characterEffectModule,
   'mood': moodModule,
   'effect': effectModule,
-  'overlay': overlayModule,
+  'overlay-text': overlayTextModule,
+  'overlay-image': overlayImageModule,
   'screen-fade': screenFadeModule,
   'screen-flash': screenFlashModule,
   'screen-wipe': screenWipeModule,

@@ -2124,13 +2124,19 @@
     title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
     whisper: { fontSize: 18, color: "#cccccc", opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: "bottom" }
   };
-  var overlayModule = define2({
-    overlays: {},
-    textStyle: void 0,
-    imageStyle: void 0
-  });
-  overlayModule.defineView((data, ctx) => {
+  function _isSameEntry(a, b) {
+    if (a.kind !== b.kind || a.name !== b.name) return false;
+    if (a.kind === "text" && b.kind === "text") {
+      return a.text === b.text && a.preset === b.preset;
+    }
+    if (a.kind === "image" && b.kind === "image") {
+      return a.src === b.src && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height && a.fit === b.fit && a.zIndex === b.zIndex && a.opacity === b.opacity;
+    }
+    return false;
+  }
+  function buildOverlayView(data, ctx) {
     const _overlayObjs = {};
+    const _overlayEntries = {};
     const _resolvePresetPos = (y) => {
       const cam = ctx.renderer.world.camera;
       const yMap = {
@@ -2146,10 +2152,20 @@
       const cy = ctx.renderer.height * ny;
       return cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - ctx.renderer.width / 2, y: -(cy - ctx.renderer.height / 2), z: 100 };
     };
-    const _addTextOverlay = (preset, text, immediate = false) => {
+    const _addTextOverlay = (entry, immediate = false, duration) => {
+      const { name, preset, text } = entry;
       const defaults = OVERLAY_PRESETS[preset];
       if (!defaults) return;
-      if (_overlayObjs[preset]) _removeOverlay(preset, 0, true);
+      const existing = _overlayObjs[name];
+      if (existing) {
+        const prevEntry = _overlayEntries[name];
+        if (prevEntry?.preset === preset) {
+          if (existing.attribute) existing.attribute.text = text;
+          _overlayEntries[name] = entry;
+          return;
+        }
+        _removeOverlay(name, 0, true);
+      }
       const pos = _resolvePresetPos(defaults.y);
       const mergedStyle = {
         fontSize: defaults.fontSize,
@@ -2166,12 +2182,23 @@
       });
       ctx.renderer.world.camera?.addChild(textObj);
       ctx.renderer.track(textObj);
-      _overlayObjs[preset] = textObj;
-      if (!immediate) textObj.fadeIn(300, "easeOut");
+      _overlayObjs[name] = textObj;
+      _overlayEntries[name] = entry;
+      if (!immediate) textObj.fadeIn(duration ?? 300, "easeOut");
     };
-    const _addImageOverlay = (entry, immediate = false) => {
-      const { id, src, x, y, width, height, fit = "contain", zIndex, opacity = 1 } = entry;
-      if (_overlayObjs[id]) _removeOverlay(id, 0, true);
+    const _addImageOverlay = (entry, immediate = false, duration) => {
+      const { name, src, x, y, width, height, fit = "contain", zIndex, opacity = 1 } = entry;
+      const existing = _overlayObjs[name];
+      if (existing) {
+        const dur = immediate ? 0 : duration ?? 300;
+        if (dur > 0 && typeof existing.transition === "function") {
+          existing.transition(src, dur);
+        } else {
+          if (existing.attribute) existing.attribute.src = src;
+        }
+        _overlayEntries[name] = entry;
+        return;
+      }
       const pos = _resolveNormPos(x, y);
       const imgW = width ?? ctx.renderer.width * 0.5;
       const imgH = height ?? 0;
@@ -2190,7 +2217,8 @@
       });
       ctx.renderer.world.camera?.addChild(imgObj);
       ctx.renderer.track(imgObj);
-      _overlayObjs[id] = imgObj;
+      _overlayObjs[name] = imgObj;
+      _overlayEntries[name] = entry;
       if (fit !== "stretch" && imgH === 0) {
         const checkFit = () => {
           const rw = imgObj.__renderedSize?.w;
@@ -2211,13 +2239,14 @@
         checkFit();
       }
       if (!immediate) {
-        ctx.renderer.animate(imgObj, { style: { opacity } }, 300, "easeOut");
+        ctx.renderer.animate(imgObj, { style: { opacity } }, duration ?? 300, "easeOut");
       }
     };
     const _removeOverlay = (key, duration, immediate = false) => {
       const obj = _overlayObjs[key];
       if (obj) {
         delete _overlayObjs[key];
+        delete _overlayEntries[key];
         const dur = immediate ? 0 : ctx.renderer.dur(duration);
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
@@ -2230,11 +2259,11 @@
         }
       }
     };
-    const _addOverlay = (entry, immediate = false) => {
+    const _addOverlay = (entry, immediate = false, duration) => {
       if (entry.kind === "text") {
-        _addTextOverlay(entry.preset, entry.text, immediate);
+        _addTextOverlay(entry, immediate, duration);
       } else {
-        _addImageOverlay(entry, immediate);
+        _addImageOverlay(entry, immediate, duration);
       }
     };
     for (const entry of Object.values(data.overlays)) {
@@ -2249,53 +2278,71 @@
         }
       },
       update: (d2) => {
+        const dur = d2.lastDuration;
         const newKeys = new Set(Object.keys(d2.overlays));
         for (const key of Object.keys(_overlayObjs)) {
-          if (!newKeys.has(key)) _removeOverlay(key, 600);
+          if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600);
         }
         for (const [key, entry] of Object.entries(d2.overlays)) {
+          const prev = _overlayEntries[key];
           if (!_overlayObjs[key]) {
-            _addOverlay(entry);
+            _addOverlay(entry, false, dur);
+          } else if (prev && !_isSameEntry(prev, entry)) {
+            _addOverlay(entry, false, dur);
           }
         }
       }
     };
+  }
+  var overlayTextModule = define2({
+    overlays: {},
+    textStyle: void 0,
+    imageStyle: void 0
   });
-  overlayModule.defineCommand(function* (cmd, ctx, state, setState) {
+  overlayTextModule.defineView(buildOverlayView);
+  overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
     const newOverlays = { ...state.overlays };
-    if (cmd.action === "add") {
-      if (cmd.image) {
-        const id = cmd.id ?? cmd.image;
-        newOverlays[id] = {
-          kind: "image",
-          id,
-          src: cmd.image,
-          x: cmd.x ?? 0.5,
-          y: cmd.y ?? 0.5,
-          width: cmd.width,
-          height: cmd.height,
-          fit: cmd.fit,
-          zIndex: cmd.zIndex,
-          opacity: cmd.opacity
-        };
-      } else if (cmd.text) {
-        const preset = cmd.preset ?? "caption";
-        newOverlays[preset] = {
-          kind: "text",
-          text: cmd.text,
-          preset
-        };
-      }
-    } else if (cmd.action === "remove") {
-      const key = cmd.id ?? cmd.image ?? cmd.preset ?? "caption";
-      delete newOverlays[key];
-    } else if (cmd.action === "clear") {
-      for (const k2 of Object.keys(newOverlays)) delete newOverlays[k2];
+    if (cmd.action === "show") {
+      const preset = cmd.preset ?? "caption";
+      newOverlays[cmd.name] = {
+        kind: "text",
+        name: cmd.name,
+        text: cmd.text ?? "",
+        preset
+      };
+    } else {
+      delete newOverlays[cmd.name];
     }
-    setState({ overlays: newOverlays });
+    setState({ overlays: newOverlays, lastDuration: cmd.duration });
     return true;
   });
-  var overlay_default = overlayModule;
+  var overlayImageModule = define2({
+    overlays: {},
+    textStyle: void 0,
+    imageStyle: void 0
+  });
+  overlayImageModule.defineView(buildOverlayView);
+  overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
+    const newOverlays = { ...state.overlays };
+    if (cmd.action === "show") {
+      newOverlays[cmd.name] = {
+        kind: "image",
+        name: cmd.name,
+        src: cmd.src ?? "",
+        x: cmd.x ?? 0.5,
+        y: cmd.y ?? 0.5,
+        width: cmd.width,
+        height: cmd.height,
+        fit: cmd.fit,
+        zIndex: cmd.zIndex,
+        opacity: cmd.opacity
+      };
+    } else {
+      delete newOverlays[cmd.name];
+    }
+    setState({ overlays: newOverlays, lastDuration: cmd.duration });
+    return true;
+  });
 
   // src/modules/screen.ts
   var FADE_PRESETS = {
@@ -2794,7 +2841,8 @@
     "character-effect": characterEffectModule,
     "mood": mood_default,
     "effect": effect_default,
-    "overlay": overlay_default,
+    "overlay-text": overlayTextModule,
+    "overlay-image": overlayImageModule,
     "screen-fade": screenFadeModule,
     "screen-flash": screenFlashModule,
     "screen-wipe": screenWipeModule,
@@ -15938,7 +15986,8 @@ ${addLineNumbers(fragment)}`);
     "background": (p, c) => background_default.__handler(p, c),
     "mood": (p, c) => mood_default.__handler(p, c),
     "effect": (p, c) => effect_default.__handler(p, c),
-    "overlay": (p, c) => overlay_default.__handler(p, c),
+    "overlay-text": (p, c) => overlayTextModule.__handler(p, c),
+    "overlay-image": (p, c) => overlayImageModule.__handler(p, c),
     "character": (p, c) => character_default.__handler(p, c),
     "character-focus": (p, c) => characterFocusModule.__handler(p, c),
     "character-highlight": (p, c) => characterHighlightModule.__handler(p, c),
@@ -16997,13 +17046,33 @@ ${addLineNumbers(fragment)}`);
     { type: "effect", action: "add", effect: "dust", src: "dust", rate: 25 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
     {
+      type: "overlay-image",
+      name: "test",
+      action: "show",
+      src: "sakura",
+      duration: 1e3
+    },
+    {
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
+    },
+    {
+      type: "overlay-image",
+      name: "test",
+      action: "show",
+      src: "fog",
+      duration: 3e3
     },
     { type: "audio", action: "play", name: "bgm", src: "am223", repeat: true, duration: 3e3, volume: 0.1 },
     {
       type: "dialogue",
       text: "\uD5A5\uAE0B\uD55C \uCEE4\uD53C \uD5A5\uACFC \uC0AC\uB78C\uB4E4\uC758 \uC6C5\uC131\uAC70\uB9BC \uC0AC\uC774\uB85C..."
+    },
+    {
+      type: "overlay-image",
+      name: "test",
+      action: "hide",
+      duration: 3e3
     },
     {
       type: "dialogue",
