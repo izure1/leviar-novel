@@ -317,6 +317,24 @@ export type SceneNamesOf<TConfig> =
   : string
 
 /**
+ * 씬 전환 대상 타입입니다.
+ * - `string`: 씬 이름 (현재 씬의 오브젝트 전부 파기 후 전환)
+ * - `{ scene, preserve }`: preserve가 true이면 현재씬의 렌더러 추적 오브젝트를 파기하지 않고 다음 씬을 시작합니다.
+ *
+ * @example
+ * ```ts
+ * // 단순 전환
+ * next: 'scene-b'
+ *
+ * // preserve 모드 (배경·캐릭터·무드·파티클 유지)
+ * next: { scene: 'scene-b', preserve: true }
+ * ```
+ */
+export type SceneNextTarget<TConfig> =
+  | SceneNamesOf<TConfig>
+  | { scene: SceneNamesOf<TConfig>; preserve: boolean }
+
+/**
  * `NovelConfig`에서 전역 변수 타입(`vars`)을 추출합니다.
  *
  * @example

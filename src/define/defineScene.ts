@@ -2,7 +2,7 @@
 // defineScene.ts — DialogueScene 정의 헬퍼
 // =============================================================
 
-import type { NovelConfig, CharDefs, BgDefs } from '../types/config'
+import type { NovelConfig, CharDefs, BgDefs, SceneNextTarget } from '../types/config'
 import type { NovelModule } from '../define/defineCmdUI'
 import type { DialogueStep } from '../types/dialogue'
 
@@ -56,8 +56,8 @@ export interface SceneDefinition<
   name?: string
   readonly dialogues: DialogueStep<any>[]
   readonly localVars?: TLocalVars
-  /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
-  readonly nextScene?: string
+  /** 씬 종료 시 자동으로 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. */
+  readonly nextScene?: string | { scene: string; preserve: boolean }
   /**
    * 씬 시작 시 자동으로 초기화할 모듈 데이터.
    * `novel.config`의 `modules` 키를 기반으로 타입이 추론됩니다.
@@ -120,8 +120,8 @@ export function defineScene<
         ? unknown
         : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
     )
-    /** 씬 종료 시 자동으로 이동할 다음 씬 이름 */
-    next?: TConfig['scenes'][number]
+    /** 씬 종료 시 자동으로 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. */
+    next?: SceneNextTarget<TConfig>
   },
   dialogues: DialogueStep<TConfig, TLocalVars>[]
 ): SceneDefinition<
@@ -136,7 +136,7 @@ export function defineScene<
     kind: 'dialogue',
     dialogues: dialogues as any,
     localVars: variables,
-    nextScene: next as string | undefined,
+    nextScene: next as string | { scene: string; preserve: boolean } | undefined,
     initial: initial as Record<string, unknown> | undefined,
   }
 }

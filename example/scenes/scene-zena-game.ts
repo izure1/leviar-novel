@@ -28,7 +28,7 @@ export default defineScene({
     type: 'dialogue',
     text: '화면 속에서는 정체불명의 몬스터가 기괴한 폴리곤을 흩뿌리며 춤을 추고 있다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
+  // { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'zena',

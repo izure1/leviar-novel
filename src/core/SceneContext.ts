@@ -31,8 +31,8 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
     setGlobalVar: (key: string, value: any) => void
     /** 지역 변수 설정 (현재 씬 안에서만 유지됨) */
     setLocalVar: (key: string, value: any) => void
-    /** 지정된 이름의 새로운 씬으로 전환 (현재 씬 종료) */
-    loadScene: (name: string) => void
+    /** 지정된 이름의 새로운 씬으로 전환 (현재 씬 종료). 문자열 또는 { scene, preserve } 객체. */
+    loadScene: (target: string | { scene: string; preserve: boolean }) => void
     /** 현재 씬의 진행을 즉시 종료 */
     end: () => void
   }

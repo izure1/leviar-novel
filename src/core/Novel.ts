@@ -170,14 +170,17 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this.loadScene(name as string)
   }
 
-  loadScene(name: string): void {
-    const def = this._scenes.get(name)
+  loadScene(target: string | { scene: string; preserve: boolean }): void {
+    const sceneName = typeof target === 'string' ? target : target.scene
+    const preserve = typeof target === 'object' && target.preserve === true
+
+    const def = this._scenes.get(sceneName)
     if (!def) {
-      console.error(`[leviar-novel] 씬 '${name}'이 등록되어 있지 않습니다.`)
+      console.error(`[leviar-novel] 씬 '${sceneName}'이 등록되어 있지 않습니다.`)
       return
     }
 
-    const prevState: RendererState | null = this._currentScene
+    const prevState: RendererState | null = (!preserve && this._currentScene)
       ? this._renderer.captureState()
       : null
 
@@ -188,13 +191,15 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._cleanupChoiceUI()
     this._currentScene = null
 
-    this._renderer.clear()
-    if (prevState) {
-      this._renderer.restoreState(prevState)
+    if (!preserve) {
+      this._renderer.clear()
+      if (prevState) {
+        this._renderer.restoreState(prevState)
+      }
+      // UI 레지스트리 초기화 (새 씬에서 view 빌더가 재등록)
+      this._uiRegistry.clear()
     }
-
-    // UI 레지스트리 초기화 (새 씬에서 view 빌더가 재등록)
-    this._uiRegistry.clear()
+    // preserve=true 시: 추적 오브젝트, state 맵, UIRegistry 모두 유지
 
     const callbacks = this._buildCallbacks()
     const scene = def.kind === 'dialogue'
@@ -204,7 +209,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._currentScene = scene
     this._currentSceneDef = def
     this._inputMode = 'none'
-    scene.start()
+    scene.start(preserve)
     this._syncUIState()
   }
 
@@ -375,7 +380,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       getNovel: () => this as any,
       getGlobalVars: () => ({ ...this.vars as object }),
       setGlobalVar: (name, value) => { (this.vars as any)[name] = value },
-      loadScene: (name) => { this.loadScene(name) },
+      loadScene: (target) => { this.loadScene(target) },
       captureRenderer: () => this._renderer.captureState(),
       isSkipping: () => this._isSkipping,
       disableInput: (duration) => { this._inputDisabledUntil = Date.now() + duration },

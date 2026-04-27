@@ -15919,10 +15919,12 @@ ${addLineNumbers(fragment)}`);
       });
     }
     /** 씬 실행 시작 */
-    start() {
+    start(preserve = false) {
       this.cursor = 0;
       this.textSubIndex = 0;
-      this._runInitial();
+      if (!preserve) {
+        this._runInitial();
+      }
       this._executeNext();
     }
     /**
@@ -15970,7 +15972,7 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (name) => this.callbacks.loadScene(name),
+          loadScene: (target) => this.callbacks.loadScene(target),
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16117,7 +16119,7 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (name) => this.callbacks.loadScene(name),
+          loadScene: (target) => this.callbacks.loadScene(target),
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16253,7 +16255,7 @@ ${addLineNumbers(fragment)}`);
       this.callbacks = callbacks;
       this.definition = definition;
     }
-    start() {
+    start(_preserve = false) {
       const { background, objects } = this.definition.options;
       setBackground(
         { renderer: this.renderer },
@@ -16400,29 +16402,33 @@ ${addLineNumbers(fragment)}`);
     start(name) {
       this.loadScene(name);
     }
-    loadScene(name) {
-      const def = this._scenes.get(name);
+    loadScene(target) {
+      const sceneName = typeof target === "string" ? target : target.scene;
+      const preserve = typeof target === "object" && target.preserve === true;
+      const def = this._scenes.get(sceneName);
       if (!def) {
-        console.error(`[leviar-novel] \uC52C '${name}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
+        console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      const prevState = this._currentScene ? this._renderer.captureState() : null;
+      const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
       }
       this._cleanupChoiceUI();
       this._currentScene = null;
-      this._renderer.clear();
-      if (prevState) {
-        this._renderer.restoreState(prevState);
+      if (!preserve) {
+        this._renderer.clear();
+        if (prevState) {
+          this._renderer.restoreState(prevState);
+        }
+        this._uiRegistry.clear();
       }
-      this._uiRegistry.clear();
       const callbacks = this._buildCallbacks();
       const scene = def.kind === "dialogue" ? new DialogueScene(this._renderer, callbacks, def) : new ExploreScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
-      scene.start();
+      scene.start(preserve);
       this._syncUIState();
     }
     /** 씬 전환 시 choice HTML 컨테이너 정리 */
@@ -16559,8 +16565,8 @@ ${addLineNumbers(fragment)}`);
         setGlobalVar: (name, value) => {
           this.vars[name] = value;
         },
-        loadScene: (name) => {
-          this.loadScene(name);
+        loadScene: (target) => {
+          this.loadScene(target);
         },
         captureRenderer: () => this._renderer.captureState(),
         isSkipping: () => this._isSkipping,
@@ -16884,7 +16890,10 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     initial: commonInitial,
-    next: "scene-zena-game"
+    next: {
+      scene: "scene-zena-game",
+      preserve: true
+    }
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
@@ -17138,7 +17147,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD654\uBA74 \uC18D\uC5D0\uC11C\uB294 \uC815\uCCB4\uBD88\uBA85\uC758 \uBAAC\uC2A4\uD130\uAC00 \uAE30\uAD34\uD55C \uD3F4\uB9AC\uACE4\uC744 \uD769\uBFCC\uB9AC\uBA70 \uCDA4\uC744 \uCD94\uACE0 \uC788\uB2E4."
     },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", focus: "face", duration: 800 },
+    // { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
     {
       type: "dialogue",
       speaker: "zena",

@@ -19,6 +19,7 @@ export type {
   AssetKeysOf,
   BackgroundKeysOf,
   SceneNamesOf,
+  SceneNextTarget,
   VarsOf,
   PointsOf,
   // modules 유틸리티 타입

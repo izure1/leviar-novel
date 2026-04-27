@@ -63,7 +63,7 @@ export interface SceneCallbacks {
   /** 특정 전역 변수의 값을 설정합니다. */
   setGlobalVar(name: string, value: any): void
   /** 지정된 이름의 새로운 씬을 로드하고 현재 씬을 종료합니다. */
-  loadScene(name: string): void
+  loadScene(target: string | { scene: string; preserve: boolean }): void
   /** 세이브 저장을 위해 현재 렌더러 상태를 캡처하여 반환합니다. */
   captureRenderer(): RendererState
   /** 현재 스킵 모드 활성화 여부를 반환합니다. */
@@ -161,10 +161,12 @@ export class DialogueScene {
   }
 
   /** 씬 실행 시작 */
-  start(): void {
+  start(preserve: boolean = false): void {
     this.cursor = 0
     this.textSubIndex = 0
-    this._runInitial()
+    if (!preserve) {
+      this._runInitial()
+    }
     this._executeNext()
   }
 
@@ -208,7 +210,7 @@ export class DialogueScene {
         getVars: () => this._vars,
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
         setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
-        loadScene: (name: string) => this.callbacks.loadScene(name),
+        loadScene: (target: string | { scene: string; preserve: boolean }) => this.callbacks.loadScene(target),
         end: () => {
           this._ended = true
           this.callbacks.syncUIState()
@@ -371,7 +373,7 @@ export class DialogueScene {
         getVars: () => this._vars,
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
         setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
-        loadScene: (name: string) => this.callbacks.loadScene(name),
+        loadScene: (target: string | { scene: string; preserve: boolean }) => this.callbacks.loadScene(target),
         end: () => {
           this._ended = true
           this.callbacks.syncUIState()
@@ -533,7 +535,7 @@ export class ExploreScene {
     this.definition = definition
   }
 
-  start(): void {
+  start(_preserve: boolean = false): void {
     const { background, objects } = this.definition.options
     setBackground(
       { renderer: this.renderer } as any,

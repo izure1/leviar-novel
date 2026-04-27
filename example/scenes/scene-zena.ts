@@ -10,7 +10,10 @@ export default defineScene({
     _test: 0,
   },
   initial: commonInitial,
-  next: 'scene-zena-game',
+  next: {
+    scene: 'scene-zena-game',
+    preserve: true,
+  },
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
