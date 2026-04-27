@@ -103,9 +103,10 @@ async function main() {
 
   // ── 에셋 로드 (경로는 novel.config.ts의 assets에서 관리)
   await novel.load()
-
   // ── SVG 오브젝트는 런타임에만 생성되므로 직접 추가 로드
   await novel.loadAssets(OBJECTS)
+  // ── 모든 모듈의 onBoot를 실행
+  await novel.boot()
 
   const hooker = useHookallSync(novel)
   hooker.onBefore('dialogue:text', (state) => {

@@ -138,6 +138,25 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     await this._world.loader.load(assets)
   }
 
+  /**
+   * 등록된 모든 모듈의 `onBoot` 콜백을 순차적으로 실행합니다.
+   * `load()` 이후, `start()` 이전에 한 번 호출하십시오.
+   *
+   * @example
+   * ```ts
+   * await novel.load()
+   * await novel.boot()
+   * novel.start('scene-intro')
+   * ```
+   */
+  async boot(): Promise<void> {
+    for (const module of this._modules.values()) {
+      if (module.__bootFn) {
+        await module.__bootFn(this._world)
+      }
+    }
+  }
+
   // ─── 씬 등록 ─────────────────────────────────────────────────
 
   register(scene: AnySceneDef): this {

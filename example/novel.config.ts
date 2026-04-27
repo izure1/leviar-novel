@@ -4,11 +4,15 @@ import chat from './characters/chat'
 import zena from './characters/zena'
 
 const testModule = define<{ message: string }>()
-testModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
-testModule.defineCommand(function* (cmd, ctx) {
-  console.log('[test-cmd]', cmd.message, ctx.globalVars)
-  return true
-})
+testModule
+  .onBoot(async (world) => {
+    console.log('booting...')
+  })
+  .defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
+  .defineCommand(function* (cmd, ctx) {
+    console.log('[test-cmd]', cmd.message, ctx.globalVars)
+    return true
+  })
 
 const forModule = define<{
   start: number
@@ -19,13 +23,14 @@ const forModule = define<{
   end: number
   acc: number
 }>({ start: 0, end: 0, acc: 1 })
-forModule.defineView(() => ({ show: () => { }, hide: () => { } }))
-forModule.defineCommand(function* (cmd, ctx, state) {
-  for (let i = cmd.start; i < cmd.end; i += (cmd.acc ?? 1)) {
-    yield* ctx.execute({ type: 'dialogue', text: () => `dialog ${i}` })
-  }
-  return true
-})
+forModule
+  .defineView(() => ({ show: () => { }, hide: () => { } }))
+  .defineCommand(function* (cmd, ctx, state) {
+    for (let i = cmd.start; i < cmd.end; i += (cmd.acc ?? 1)) {
+      yield* ctx.execute({ type: 'dialogue', text: () => `dialog ${i}` })
+    }
+    return true
+  })
 
 export default defineNovelConfig({
   width: 800,

@@ -739,6 +739,7 @@
     };
     let _handlerFn = null;
     let _viewBuilderFn = null;
+    let _bootFn = null;
     const module = {
       __isModule: true,
       __schemaDefault: schema ?? {},
@@ -747,6 +748,9 @@
       },
       get __viewBuilder() {
         return _viewBuilderFn;
+      },
+      get __bootFn() {
+        return _bootFn;
       },
       __setKey(key) {
         _moduleKey = key;
@@ -777,6 +781,10 @@
           _onUpdate = (d2) => entry.update?.(d2);
           return entry;
         };
+        return module;
+      },
+      onBoot(callback) {
+        _bootFn = callback;
         return module;
       }
     };
@@ -16358,6 +16366,24 @@ ${addLineNumbers(fragment)}`);
     async loadAssets(assets) {
       await this._world.loader.load(assets);
     }
+    /**
+     * 등록된 모든 모듈의 `onBoot` 콜백을 순차적으로 실행합니다.
+     * `load()` 이후, `start()` 이전에 한 번 호출하십시오.
+     *
+     * @example
+     * ```ts
+     * await novel.load()
+     * await novel.boot()
+     * novel.start('scene-intro')
+     * ```
+     */
+    async boot() {
+      for (const module of this._modules.values()) {
+        if (module.__bootFn) {
+          await module.__bootFn(this._world);
+        }
+      }
+    }
     // ─── 씬 등록 ─────────────────────────────────────────────────
     register(scene) {
       this._scenes.set(scene.name, scene);
@@ -16719,18 +16745,18 @@ ${addLineNumbers(fragment)}`);
 
   // example/novel.config.ts
   var testModule = define2();
-  testModule.defineView((_data, _ctx) => ({ show: () => {
+  testModule.onBoot(async (world) => {
+    console.log("booting...");
+  }).defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
-  } }));
-  testModule.defineCommand(function* (cmd, ctx) {
+  } })).defineCommand(function* (cmd, ctx) {
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
   var forModule = define2({ start: 0, end: 0, acc: 1 });
   forModule.defineView(() => ({ show: () => {
   }, hide: () => {
-  } }));
-  forModule.defineCommand(function* (cmd, ctx, state) {
+  } })).defineCommand(function* (cmd, ctx, state) {
     for (let i = cmd.start; i < cmd.end; i += cmd.acc ?? 1) {
       yield* ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
     }
@@ -18263,6 +18289,7 @@ ${addLineNumbers(fragment)}`);
     await engine.load();
     await novel.load();
     await novel.loadAssets(OBJECTS);
+    await novel.boot();
     const hooker = useHookallSync(novel);
     hooker.onBefore("dialogue:text", (state) => {
       if (novel.isSkipping) return state;

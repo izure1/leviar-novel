@@ -2,8 +2,14 @@
 // defineCmdUI.ts — NovelModule 팩토리 (MVC 통합)
 // =============================================================
 
+import type { World } from 'leviar'
 import type { SceneContext, CommandResult } from '../core/SceneContext'
 import type { UIRuntimeEntry } from '../core/UIRegistry'
+
+// ─── onBoot 콜백 타입 ────────────────────────────────────────
+
+/** `module.onBoot()`에 등록하는 비동기 초기화 콜백 */
+export type BootCallback = (world: World) => Promise<void>
 
 // ─── 내부 resolve 헬퍼 ──────────────────────────────────────
 
@@ -51,6 +57,8 @@ export interface NovelModuleMeta<TSchema extends Record<string, any> = any> {
   readonly __handler: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null
   /** defineView로 등록된 View 빌더 (없으면 null) */
   readonly __viewBuilder: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null
+  /** onBoot()로 등록된 비동기 초기화 콜백 (없으면 null) */
+  readonly __bootFn: BootCallback | null
   /** Novel 엔진이 등록 시 key를 주입합니다 */
   __setKey(key: string): void
 }
@@ -77,6 +85,19 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
     defineView(
       builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
     ): NovelModule<TCmd, TSchema>
+    /**
+     * 모듈이 Novel world에 등록될 때 딱 한 번 호출되는 비동기 초기화 콜백을 등록합니다.
+     * `novel.boot()` 호출 시 실행됩니다.
+     *
+     * @example
+     * ```ts
+     * myModule.onBoot(async (world) => {
+     *   await world.loader.load({ myAsset: '/path/to/asset.png' })
+     *   world.particleManager.create('explosion', { ... })
+     * })
+     * ```
+     */
+    onBoot(callback: BootCallback): NovelModule<TCmd, TSchema>
   }
 
 // ─── define() 팩토리 ─────────────────────────────────────────
@@ -105,6 +126,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
   // ─── 내부 핸들러 참조 ─────────────────────────────────────
   let _handlerFn: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null = null
   let _viewBuilderFn: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null = null
+  let _bootFn: BootCallback | null = null
 
   // ─── 모듈 객체 ───────────────────────────────────────────
   const module: NovelModule<TCmd, TSchema> = {
@@ -113,6 +135,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
 
     get __handler() { return _handlerFn },
     get __viewBuilder() { return _viewBuilderFn },
+    get __bootFn() { return _bootFn },
 
     __setKey(key: string) {
       _moduleKey = key
@@ -155,6 +178,11 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
 
         return entry
       }
+      return module
+    },
+
+    onBoot(callback: BootCallback): NovelModule<TCmd, TSchema> {
+      _bootFn = callback
       return module
     },
   }

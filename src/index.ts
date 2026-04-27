@@ -75,7 +75,7 @@ export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from 
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
 export { define } from './define/defineCmdUI'
-export type { NovelModule, NovelModuleMeta } from './define/defineCmdUI'
+export type { NovelModule, NovelModuleMeta, BootCallback } from './define/defineCmdUI'
 
 // ─── UI 시스템 ───────────────────────────────────────────────
 export type { UIRuntimeEntry } from './core/UIRegistry'
