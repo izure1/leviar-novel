@@ -39,6 +39,9 @@ export const commonInitial = defineInitial(config, {
       color: 'rgba(80,60,180,0.92)',
       borderColor: 'rgba(200,180,255,0.8)',
     },
+    text: {
+      fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
+    },
     textHover: {
       color: '#fff0b3', // 노란빛 호버 텍스트 예시
       textShadowBlur: 4,

@@ -779,6 +779,7 @@
           Object.assign(data, mergedData);
           const entry = builder(data, ctx);
           _onUpdate = (d2) => entry.update?.(d2);
+          entry.update?.(data);
           return entry;
         };
         return module;
@@ -16862,6 +16863,9 @@ ${addLineNumbers(fragment)}`);
       buttonHover: {
         color: "rgba(80,60,180,0.92)",
         borderColor: "rgba(200,180,255,0.8)"
+      },
+      text: {
+        fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif"
       },
       textHover: {
         color: "#fff0b3",
