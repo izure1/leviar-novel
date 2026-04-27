@@ -176,6 +176,9 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
         const entry = builder(data, ctx)
         _onUpdate = (d) => entry.update?.(d)
 
+        // 초기 렌더링 정합성을 위해 즉시 update 1회 호출
+        entry.update?.(data)
+
         return entry
       }
       return module
