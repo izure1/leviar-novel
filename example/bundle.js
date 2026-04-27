@@ -1979,7 +1979,13 @@
       }
       const [min, max] = cfg.range;
       const next = baseOpacity * (min + Math.random() * (max - min));
-      ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear", step);
+      const d2 = ctx.renderer.dur(cfg.interval);
+      if (d2 === 0) {
+        ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear");
+        requestAnimationFrame(step);
+      } else {
+        ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear", step);
+      }
     };
     step();
   }
