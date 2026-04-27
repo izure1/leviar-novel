@@ -86,7 +86,7 @@ screenFadeModule.defineView((data, ctx) => {
       style: {
         gradientType: 'linear',
         gradient: '0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%',
-        width: w * 2, height: h * 2,
+        width: w, height: h,
         opacity: 0, zIndex: Z_INDEX.UI_BASE, pointerEvents: false,
       },
       transform: { position: { x: 0, y: 0, z: 10 } },

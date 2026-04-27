@@ -76,9 +76,12 @@ async function main() {
         "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ",
         "ㅘ", "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
       ],
+      {
+        minSilenceDurationMs: 30,
+      }
     ),
     effect: new PitchManager({
-      pitch: 1.15,
+      pitch: 1.0,
       speed: 3.0,
     })
   })
@@ -106,6 +109,7 @@ async function main() {
 
   const hooker = useHookallSync(novel)
   hooker.onBefore('dialogue:text', (state) => {
+    if (novel.isSkipping) return state
     const { speaker, text } = state
     if (speaker === '제나') {
       const speaker = engine.synthesize(text, false);

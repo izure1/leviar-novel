@@ -2229,8 +2229,8 @@
         style: {
           gradientType: "linear",
           gradient: "0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%",
-          width: w * 2,
-          height: h * 2,
+          width: w,
+          height: h,
           opacity: 0,
           zIndex: Z_INDEX.UI_BASE,
           pointerEvents: false
@@ -18238,10 +18238,13 @@ ${addLineNumbers(fragment)}`);
           "\u3161",
           "\u3162",
           "\u3163"
-        ]
+        ],
+        {
+          minSilenceDurationMs: 30
+        }
       ),
       effect: new j({
-        pitch: 1.15,
+        pitch: 1,
         speed: 3
       })
     });
@@ -18262,6 +18265,7 @@ ${addLineNumbers(fragment)}`);
     await novel.loadAssets(OBJECTS);
     const hooker = useHookallSync(novel);
     hooker.onBefore("dialogue:text", (state) => {
+      if (novel.isSkipping) return state;
       const { speaker, text } = state;
       if (speaker === "\uC81C\uB098") {
         const speaker2 = engine.synthesize(text, false);
