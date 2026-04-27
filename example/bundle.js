@@ -18297,14 +18297,20 @@ ${addLineNumbers(fragment)}`);
     await novel.loadAssets(OBJECTS);
     await novel.boot();
     const hooker = useHookallSync(novel);
+    let before = 0;
     hooker.onBefore("dialogue:text", (state) => {
       if (novel.isSkipping) return state;
       const { speaker, text } = state;
+      const now = performance.now();
+      before = now;
       if (speaker === "\uC81C\uB098") {
         const speaker2 = engine.synthesize(text, false);
         (async () => {
           for await (const output of speaker2.speak()) {
             await player.play(output.buffer);
+            if (now !== before) {
+              break;
+            }
           }
         })();
       }

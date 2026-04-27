@@ -109,14 +109,20 @@ async function main() {
   await novel.boot()
 
   const hooker = useHookallSync(novel)
+  let before = 0
   hooker.onBefore('dialogue:text', (state) => {
     if (novel.isSkipping) return state
     const { speaker, text } = state
+    const now = performance.now()
+    before = now
     if (speaker === '제나') {
       const speaker = engine.synthesize(text, false);
       (async () => {
         for await (const output of speaker.speak()) {
           await player.play(output.buffer as any)
+          if (now !== before) {
+            break
+          }
         }
       })()
     }
