@@ -15919,10 +15919,12 @@ ${addLineNumbers(fragment)}`);
       });
     }
     /** 씬 실행 시작 */
-    start() {
+    start(preserve = false) {
       this.cursor = 0;
       this.textSubIndex = 0;
-      this._runInitial();
+      if (!preserve) {
+        this._runInitial();
+      }
       this._executeNext();
     }
     /**
@@ -15970,7 +15972,7 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (name) => this.callbacks.loadScene(name),
+          loadScene: (target) => this.callbacks.loadScene(target),
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16117,7 +16119,7 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (name) => this.callbacks.loadScene(name),
+          loadScene: (target) => this.callbacks.loadScene(target),
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16253,7 +16255,7 @@ ${addLineNumbers(fragment)}`);
       this.callbacks = callbacks;
       this.definition = definition;
     }
-    start() {
+    start(_preserve = false) {
       const { background, objects } = this.definition.options;
       setBackground(
         { renderer: this.renderer },
@@ -16400,29 +16402,33 @@ ${addLineNumbers(fragment)}`);
     start(name) {
       this.loadScene(name);
     }
-    loadScene(name) {
-      const def = this._scenes.get(name);
+    loadScene(target) {
+      const sceneName = typeof target === "string" ? target : target.scene;
+      const preserve = typeof target === "object" && target.preserve === true;
+      const def = this._scenes.get(sceneName);
       if (!def) {
-        console.error(`[leviar-novel] \uC52C '${name}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
+        console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      const prevState = this._currentScene ? this._renderer.captureState() : null;
+      const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
       }
       this._cleanupChoiceUI();
       this._currentScene = null;
-      this._renderer.clear();
-      if (prevState) {
-        this._renderer.restoreState(prevState);
+      if (!preserve) {
+        this._renderer.clear();
+        if (prevState) {
+          this._renderer.restoreState(prevState);
+        }
+        this._uiRegistry.clear();
       }
-      this._uiRegistry.clear();
       const callbacks = this._buildCallbacks();
       const scene = def.kind === "dialogue" ? new DialogueScene(this._renderer, callbacks, def) : new ExploreScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
-      scene.start();
+      scene.start(preserve);
       this._syncUIState();
     }
     /** 씬 전환 시 choice HTML 컨테이너 정리 */
@@ -16559,8 +16565,8 @@ ${addLineNumbers(fragment)}`);
         setGlobalVar: (name, value) => {
           this.vars[name] = value;
         },
-        loadScene: (name) => {
-          this.loadScene(name);
+        loadScene: (target) => {
+          this.loadScene(target);
         },
         captureRenderer: () => this._renderer.captureState(),
         isSkipping: () => this._isSkipping,
@@ -16800,7 +16806,8 @@ ${addLineNumbers(fragment)}`);
       "park": { src: "bg_park", parallax: true }
     },
     audios: {
-      "am223": "./assets/bgm_am223.mp3"
+      "am223": "./assets/bgm_am223.mp3",
+      "daytime": "./assets/bgm_daytime.mp3"
     },
     assets: {
       // 배경
@@ -16822,7 +16829,16 @@ ${addLineNumbers(fragment)}`);
     fallback: [
       { type: "character", action: "show", defaults: { duration: 300 } },
       { type: "character", action: "remove", defaults: { duration: 1e3 } }
-    ]
+    ],
+    effects: {
+      sakura: {
+        clip: {
+          size: [
+            [1, 2]
+          ]
+        }
+      }
+    }
   });
 
   // example/scenes/common-initial.ts
@@ -16884,7 +16900,10 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     initial: commonInitial,
-    next: "scene-zena-game"
+    next: {
+      scene: "scene-zena-game",
+      preserve: true
+    }
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
@@ -17108,7 +17127,6 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC774\uAC83\uC774 \uB098\uC640 \uC81C\uB098\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
     },
-    { type: "mood", mood: "sunset", intensity: 1, duration: 3e3 },
     { type: "screen-wipe", dir: "out", preset: "left", duration: 3e3, disable: true }
   ]);
 
@@ -17120,9 +17138,12 @@ ${addLineNumbers(fragment)}`);
       _zenaRage: 0
     },
     initial: commonInitial,
-    next: "scene-zena-food"
+    next: {
+      scene: "scene-zena-food",
+      preserve: true
+    }
   }, [
-    { type: "screen-wipe", dir: "out", preset: "left", duration: 0 },
+    { type: "character", name: "zena", action: "remove", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
     { type: "mood", mood: "sunset", intensity: 0.7, duration: 3e3 },
@@ -17280,11 +17301,11 @@ ${addLineNumbers(fragment)}`);
   var scene_zena_food_default = defineScene({
     config: novel_config_default,
     initial: commonInitial,
-    next: "scene-zena-stream"
+    next: {
+      scene: "scene-zena-stream",
+      preserve: true
+    }
   }, [
-    { type: "background", name: "room", duration: 0 },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
-    { type: "mood", mood: "sunset", intensity: 0.7, duration: 0 },
     { type: "mood", mood: "sunset", action: "remove", duration: 3e3 },
     { type: "mood", mood: "night", action: "add", intensity: 0.7, duration: 3e3, disable: true },
     { type: "dialogue", text: "\uD574\uAC00 \uC9C4\uB2E4." },
@@ -17429,14 +17450,17 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-zena-outside"
   }, [
-    { type: "background", name: "room", duration: 0 },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
-    { type: "mood", mood: "night", intensity: 0.7, duration: 0 },
     {
       type: "dialogue",
-      text: "\uBC30\uB2EC \uC74C\uC2DD\uC744 \uAE30\uB2E4\uB9AC\uBA70 \uC720\uD29C\uBE0C\uB97C \uBCF4\uB358 \uC81C\uB098\uAC00 \uAC11\uC790\uAE30 \uB9C8\uC774\uD06C \uC120\uC744 \uAC74\uB4DC\uB838\uB2E4."
+      text: [
+        "\uC5B4\uB451\uD55C \uCE68\uC2E4 \uBB38\uD2C8 \uC0AC\uC774\uB85C \uBD88\uBE5B\uC774 \uC0C8\uC5B4 \uB098\uC624\uACE0 \uC788\uC5C8\uB2E4.",
+        "\uB098\uB294 \uC18C\uD30C\uC5D0 \uD3B8\uD558\uAC8C \uAE30\uB300\uC5B4 \uB204\uC6CC\uC788\uC5C8\uB2E4.",
+        "\uBC30\uB2EC \uC74C\uC2DD\uC744 \uAE30\uB2E4\uB9AC\uBA70 \uC720\uD29C\uBE0C\uB97C \uBCF4\uB358 \uC81C\uB098\uAC00 \uAC11\uC790\uAE30 \uB9C8\uC774\uD06C \uC120\uC744 \uAC74\uB4DC\uB838\uB2E4.",
+        "\uADF8\uB140\uC758 \uC190\uAC00\uB77D\uC774 \uC758\uB3C4\uCE58 \uC54A\uAC8C \uCE74\uBA54\uB77C \uC804\uC6D0 \uBC84\uD2BC\uC744 \uC2A4\uCE58\uACE0 \uC9C0\uB098\uAC14\uB2E4."
+      ]
     },
     { type: "camera-effect", preset: "shake", duration: 500 },
+    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -17451,21 +17475,15 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC774\uAC70 \uBC29\uC1A1 \uCF1C\uC9C4 \uAC70 \uC544\uB2C8\uC57C?!"
     },
-    { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
     {
       type: "dialogue",
       text: "\uBC29\uC1A1 \uD504\uB85C\uADF8\uB7A8 \uD654\uBA74\uC5D0 \uBE68\uAC04 \uBD88\uC774 \uB4E4\uC5B4\uC628 \uAC83\uC744 \uD655\uC778\uD558\uC790, \uADF8\uB140\uC758 \uB3D9\uACF5\uC774 \uC9C0\uC9C4\uC744 \uC77C\uC73C\uCF30\uB2E4."
-    },
-    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
-    {
-      type: "dialogue",
-      speaker: "zena",
-      text: "...\uC5B4? \uCF1C\uC84C\uB124."
     },
     {
       type: "dialogue",
       text: "\uB180\uB78D\uAC8C\uB3C4, \uADF8 \uB2F9\uD669\uD568\uC740 \uB2E8 1\uCD08 \uB9CC\uC5D0 \uD754\uC801\uB3C4 \uC5C6\uC774 \uC0AC\uB77C\uC84C\uB2E4."
     },
+    { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "zena",
@@ -17781,7 +17799,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC624\uB298 \uBC29\uC1A1\uC740 3\uBD84 \uB9CC\uC5D0 \uBC29\uC885\uD558\uACA0\uC2B5\uB2C8\uB2E4! \u3143\u3143!"
+      text: "\uC624\uB298 \uBC29\uC1A1\uC740 3\uBD84 \uB9CC\uC5D0 \uBC29\uC885\uD558\uACA0\uC2B5\uB2C8\uB2E4!!"
     },
     {
       type: "dialogue",
@@ -17803,12 +17821,32 @@ ${addLineNumbers(fragment)}`);
   var scene_zena_outside_default = defineScene({
     config: novel_config_default,
     initial: commonInitial,
-    next: "scene-zena-bug"
+    next: {
+      scene: "scene-zena-bug",
+      preserve: true
+    }
   }, [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
-    { type: "background", name: "park", duration: 0 },
+    { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    {
+      type: "audio",
+      action: "play",
+      name: "bgm",
+      src: "daytime",
+      duration: 1e3,
+      repeat: true,
+      volume: 0.1
+    },
+    {
+      type: "effect",
+      action: "add",
+      effect: "sakura",
+      src: "sakura",
+      rate: 25,
+      duration: 1e3
+    },
     {
       type: "dialogue",
       text: "\uB2E4\uC74C \uB0A0 \uC544\uCE68."
@@ -17936,9 +17974,6 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-zena-ending"
   }, [
-    { type: "background", name: "park", duration: 0 },
-    { type: "mood", mood: "day", intensity: 1, duration: 0 },
-    { type: "character", action: "show", name: "zena", image: "normal", position: "center", duration: 0 },
     {
       type: "dialogue",
       text: [

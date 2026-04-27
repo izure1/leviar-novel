@@ -10,9 +10,12 @@ export default defineScene({
     _zenaRage: 0,
   },
   initial: commonInitial,
-  next: 'scene-zena-food',
+  next: {
+    scene: 'scene-zena-food',
+    preserve: true,
+  },
 }, [
-  { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 0 },
+  { type: 'character', name: 'zena', action: 'remove', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
   { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 3000 },

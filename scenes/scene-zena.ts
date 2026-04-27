@@ -10,7 +10,10 @@ export default defineScene({
     _test: 0,
   },
   initial: commonInitial,
-  next: 'scene-zena-game',
+  next: {
+    scene: 'scene-zena-game',
+    preserve: true,
+  },
 }, [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
@@ -240,6 +243,5 @@ export default defineScene({
     type: 'dialogue',
     text: '이것이 나와 제나의 끔찍한 첫 만남이었다.'
   },
-  { type: 'mood', mood: 'sunset', intensity: 1, duration: 3000 },
   { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 3000, disable: true },
 ])

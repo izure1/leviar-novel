@@ -8,15 +8,17 @@ export default defineScene({
   initial: commonInitial,
   next: 'scene-zena-outside',
 }, [
-  { type: 'background', name: 'room', duration: 0 },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 0 },
-  { type: 'mood', mood: 'night', intensity: 0.7, duration: 0 },
-
   {
     type: 'dialogue',
-    text: '배달 음식을 기다리며 유튜브를 보던 제나가 갑자기 마이크 선을 건드렸다.'
+    text: [
+      '어둑한 침실 문틈 사이로 불빛이 새어 나오고 있었다.',
+      '나는 소파에 편하게 기대어 누워있었다.',
+      '배달 음식을 기다리며 유튜브를 보던 제나가 갑자기 마이크 선을 건드렸다.',
+      '그녀의 손가락이 의도치 않게 카메라 전원 버튼을 스치고 지나갔다.'
+    ]
   },
   { type: 'camera-effect', preset: 'shake', duration: 500 },
+  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -31,21 +33,15 @@ export default defineScene({
     speaker: 'zena',
     text: '이거 방송 켜진 거 아니야?!'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
     text: '방송 프로그램 화면에 빨간 불이 들어온 것을 확인하자, 그녀의 동공이 지진을 일으켰다.'
-  },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: '...어? 켜졌네.'
   },
   {
     type: 'dialogue',
     text: '놀랍게도, 그 당황함은 단 1초 만에 흔적도 없이 사라졌다.'
   },
+  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'zena',
@@ -364,7 +360,7 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '오늘 방송은 3분 만에 방종하겠습니다! ㅃㅃ!'
+    text: '오늘 방송은 3분 만에 방종하겠습니다!!'
   },
   {
     type: 'dialogue',
