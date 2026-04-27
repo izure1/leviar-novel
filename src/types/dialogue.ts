@@ -24,7 +24,7 @@ import type { LabelCmd } from '../modules/label'
 import type { BackgroundCmd } from '../modules/background'
 import type { MoodCmd } from '../modules/mood'
 import type { EffectCmd } from '../modules/effect'
-import type { OverlayTextCmd, OverlayImageCmd } from '../modules/overlay'
+import type { OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd } from '../modules/overlay'
 import type { CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd } from '../modules/character'
 import type { CameraZoomCmd, CameraPanCmd, CameraEffectCmd } from '../modules/camera'
 import type { ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd } from '../modules/screen'
@@ -35,7 +35,7 @@ import type { AudioCmd } from '../modules/audio'
 // 재수출
 export type {
   DialogueCmd, ChoiceCmd, ConditionCmd, VarCmd, LabelCmd, BackgroundCmd,
-  MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
+  MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
   UICmd, ControlCmd, AudioCmd
 }
@@ -65,6 +65,7 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<EffectCmd<TConfig>, 'effect', TVars, TLocalVars>
   | _WithType<OverlayTextCmd, 'overlay-text', TVars, TLocalVars>
   | _WithType<OverlayImageCmd<TConfig>, 'overlay-image', TVars, TLocalVars>
+  | _WithType<OverlayEffectCmd, 'overlay-effect', TVars, TLocalVars>
   | _WithType<CharacterCmd<TConfig>, 'character', TVars, TLocalVars>
   | _WithType<CharacterFocusCmd<TConfig>, 'character-focus', TVars, TLocalVars>
   | _WithType<CharacterHighlightCmd<TConfig>, 'character-highlight', TVars, TLocalVars>

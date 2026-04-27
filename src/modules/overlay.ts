@@ -1,5 +1,7 @@
 import type { Style } from 'leviar'
 import type { AssetKeysOf } from '../types/config'
+import type { CameraEffectPreset } from './camera'
+import { CAMERA_EFFECT_PRESETS } from './camera'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
 
@@ -333,6 +335,7 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
         obj?.fadeOut?.(300, 'easeIn')
       }
     },
+    getObj: (name: string) => _overlayObjs[name] as any | undefined,
     update: (d: OverlaySchema) => {
       const dur = d.lastDuration
       const newKeys = new Set(Object.keys(d.overlays))
@@ -455,3 +458,147 @@ export { overlayTextModule, overlayImageModule }
 export function addOverlay(ctx: any, text: string, preset: OverlayPreset = 'caption') {
   overlayTextModule.__handler?.({ action: 'show', name: preset, text, preset }, ctx)
 }
+
+// ─── overlay-effect 모듈 ─────────────────────────────────────
+
+/**
+ * 오버레이 오브젝트에 흔들림 등 연출 효과를 재생한다.
+ *
+ * @example
+ * ```ts
+ * { type: 'overlay-effect', name: 'logo', preset: 'shake', duration: 500, intensity: 5, repeat: 3 }
+ * { type: 'overlay-effect', name: 'logo', preset: 'reset' }
+ * ```
+ */
+export interface OverlayEffectCmd {
+  /** 효과를 적용할 오버레이의 name입니다. */
+  name: string
+  /** 연출 효과의 프리셋 이름입니다. */
+  preset: CameraEffectPreset
+  /** 효과의 전체 지속 시간(ms)입니다. */
+  duration?: number
+  /** 효과의 강도입니다. 프리셋의 기본값을 덮어씁니다. */
+  intensity?: number
+  /** 효과를 반복할 횟수입니다. (기본값: 1, 음수일 경우 무한반복) */
+  repeat?: number
+}
+
+interface OverlayViewEntry {
+  show: () => void
+  hide: () => void
+  getObj: (name: string) => (Record<string, any> & { __activeOverlayEffectStop?: (() => void) | null }) | undefined
+}
+
+export interface OverlayEffectSchema { _unused: undefined }
+
+const overlayEffectModule = define<OverlayEffectCmd, OverlayEffectSchema>({ _unused: undefined })
+
+overlayEffectModule.defineView((_data, _ctx) => ({
+  show: () => {},
+  hide: () => {},
+}))
+
+overlayEffectModule.defineCommand(function* (cmd, ctx) {
+  // overlay-text, overlay-image 양쪽 모두에서 찾기
+  const textEntry = ctx.ui.get('overlay-text') as OverlayViewEntry | undefined
+  const imageEntry = ctx.ui.get('overlay-image') as OverlayViewEntry | undefined
+  const overlayObj = textEntry?.getObj(cmd.name) ?? imageEntry?.getObj(cmd.name)
+
+  if (!overlayObj) return true
+
+  if (cmd.preset === 'reset') {
+    const stopFn = overlayObj.__activeOverlayEffectStop
+    if (stopFn) stopFn()
+    return true
+  }
+
+  const stopFn = overlayObj.__activeOverlayEffectStop
+  if (stopFn) stopFn()
+
+  const cfg = CAMERA_EFFECT_PRESETS[cmd.preset as Exclude<CameraEffectPreset, 'reset'>]
+  if (!cfg) return true
+
+  const finalIntensity = cmd.intensity ?? cfg.intensity
+  const finalDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration)
+  if (finalDuration <= 0) return true
+
+  let active = true
+  let frame = 0
+  const repeat = cmd.repeat ?? 1
+
+  const originX = overlayObj.transform?.position?.x ?? 0
+  const originY = overlayObj.transform?.position?.y ?? 0
+  const originZRotation = overlayObj.transform?.rotation?.z ?? 0
+
+  const stop = () => {
+    active = false
+    overlayObj.__activeOverlayEffectStop = null
+    if (overlayObj.transform?.position) {
+      overlayObj.transform.position.x = originX
+      overlayObj.transform.position.y = originY
+    }
+    if (overlayObj.transform?.rotation) {
+      overlayObj.transform.rotation.z = originZRotation
+    }
+  }
+  overlayObj.__activeOverlayEffectStop = stop
+
+  const loop = () => {
+    if (!active || (repeat >= 0 && frame++ >= repeat)) {
+      stop()
+      return
+    }
+
+    let elapsed = 0
+    const stepTime = 16
+    const tick = () => {
+      if (!active) return
+      elapsed += stepTime
+      if (elapsed > finalDuration) {
+        loop()
+        return
+      }
+      const progress = elapsed / finalDuration
+      let dx = 0, dy = 0, dz = 0
+
+      switch (cmd.preset) {
+        case 'shake':
+          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
+          dy = (Math.random() - 0.5) * finalIntensity * (1 - progress)
+          break
+        case 'shake-x':
+          dx = (Math.random() - 0.5) * finalIntensity * (1 - progress)
+          break
+        case 'bounce':
+          dy = Math.sin(progress * Math.PI) * finalIntensity
+          break
+        case 'wave':
+          dx = Math.sin(progress * Math.PI * 2) * finalIntensity
+          dy = Math.cos(progress * Math.PI * 2) * (finalIntensity / 2)
+          break
+        case 'nod':
+          dy = Math.sin(progress * Math.PI) * finalIntensity
+          break
+        case 'fall':
+          dy = Math.pow(progress, 2) * finalIntensity * 5
+          break
+      }
+
+      if (overlayObj.transform?.position) {
+        overlayObj.transform.position.x = originX + dx
+        overlayObj.transform.position.y = originY + dy
+      }
+      if (overlayObj.transform?.rotation) {
+        overlayObj.transform.rotation.z = originZRotation + dz
+      }
+
+      setTimeout(tick, stepTime)
+    }
+    tick()
+  }
+  loop()
+
+  return true
+})
+
+export { overlayEffectModule }

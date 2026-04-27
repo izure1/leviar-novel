@@ -52,6 +52,7 @@ export type {
   EffectCmd,
   OverlayTextCmd,
   OverlayImageCmd,
+  OverlayEffectCmd,
   CharacterCmd,
   CharacterFocusCmd,
   CharacterHighlightCmd,
@@ -91,7 +92,7 @@ export { default as backgroundModule } from './modules/background'
 export { default as characterModule, characterFocusModule, characterHighlightModule } from './modules/character'
 export { default as moodModule } from './modules/mood'
 export { default as effectModule } from './modules/effect'
-export { overlayTextModule, overlayImageModule } from './modules/overlay'
+export { overlayTextModule, overlayImageModule, overlayEffectModule } from './modules/overlay'
 export { screenFadeModule, screenFlashModule, screenWipeModule } from './modules/screen'
 export { cameraZoomModule, cameraPanModule, cameraEffectModule } from './modules/camera'
 export { default as conditionModule } from './modules/condition'
