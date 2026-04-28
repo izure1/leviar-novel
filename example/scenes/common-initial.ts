@@ -26,20 +26,27 @@ export const commonInitial = defineInitial(config, {
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
       color: '#f0f0f0',
       lineHeight: 1.65,
+      textShadowOffsetX: 1,
+      textShadowOffsetY: 1,
+      textShadowBlur: 0,
+      textShadowColor: 'rgb(0,0,0)',
     },
   },
   'choice': {
     button: {
-      color: 'rgba(20,20,50,0.90)',
-      borderColor: 'rgba(255,255,255,0.25)',
-      borderRadius: 10,
-      minWidth: 280,
+      color: undefined,
+      borderWidth: undefined,
+      borderColor: undefined,
+      gradientType: 'linear',
+      gradient: '90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%',
+      minWidth: 600,
+      maxWidth: 600,
     },
     buttonHover: {
-      color: 'rgba(80,60,180,0.92)',
-      borderColor: 'rgba(200,180,255,0.8)',
+      gradient: '90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%',
     },
     text: {
+      color: 'rgb(255,255,255)',
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
     },
     textHover: {

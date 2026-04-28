@@ -161,9 +161,9 @@ dialogueModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   // 스타일 병합
-  const bgCfg = { ...DEFAULT_BG, ...(data.bg ?? {}), ...(data.style ?? {}) } as Style
-  const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as Style
-  const txtCfg = { ...DEFAULT_TEXT, ...(data.text ?? {}) } as Style
+  const bgCfg = (data.style ?? data.bg ?? DEFAULT_BG) as Style
+  const spkCfg = (data.speaker ?? DEFAULT_SPEAKER) as Style
+  const txtCfg = (data.text ?? DEFAULT_TEXT) as Style
 
   // 레이아웃 병합
   const layoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(data.layout ?? {}) }
@@ -300,9 +300,9 @@ dialogueModule.defineView((data, ctx) => {
      */
     update: (d: DialogueSchema) => {
       // 스타일 갱신
-      const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}), ...(d.style ?? {}) } as Style
-      const newSpkCfg = { ...DEFAULT_SPEAKER, ...(d.speaker ?? {}) } as Style
-      const newTxtCfg = { ...DEFAULT_TEXT, ...(d.text ?? {}) } as Style
+      const newBgCfg = (d.style ?? d.bg ?? DEFAULT_BG) as Style
+      const newSpkCfg = (d.speaker ?? DEFAULT_SPEAKER) as Style
+      const newTxtCfg = (d.text ?? DEFAULT_TEXT) as Style
       const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(d.layout ?? {}) }
       const newTextW = w * (1 - newLayoutCfg.paddingX * 2)
       Object.assign(bgObj.style, newBgCfg)

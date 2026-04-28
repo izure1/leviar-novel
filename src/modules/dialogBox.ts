@@ -247,7 +247,7 @@ dialogBoxModule.defineView((data, ctx) => {
   // ─── overlayObj: camera 직접 자식 ─────────────────────────
   // display:'none' → cascade로 자손 전체 숨김 (v1.0.6+)
   // fadeIn/fadeOut 하나로 전체 제어
-  const overlayCfg = mergeStyle(DEFAULT_DIALOG.overlay, data.overlay)
+  const overlayCfg = data.overlay ?? DEFAULT_DIALOG.overlay
   const overlayObj = ctx.world.createRectangle({
     style: {
       ...overlayCfg,
@@ -267,7 +267,7 @@ dialogBoxModule.defineView((data, ctx) => {
   overlayObj.fadeOut(0).stop()
 
   // ─── panelObj: overlayObj 자식 ────────────────────────────
-  const panelCfgInit = mergeStyle(DEFAULT_DIALOG.panel, data.panel)
+  const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel
   // 초기 PANEL_W: _render 시 갱신되므로 임시값으로 초기화
   const INIT_PANEL_W = Math.max(
     (panelCfgInit.minWidth as number) ?? 0,
@@ -335,15 +335,15 @@ dialogBoxModule.defineView((data, ctx) => {
     _currentResolve = resolve
     _currentPersist = persist
 
-    const btnCfg = mergeStyle(DEFAULT_DIALOG.button, cfg.button)
-    const btnHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonHover, cfg.buttonHover)
-    const btnTxtCfg = mergeStyle(DEFAULT_DIALOG.buttonText, cfg.buttonText)
-    const btnTxtHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonTextHover, cfg.buttonTextHover)
-    const titleCfgR = mergeStyle(DEFAULT_DIALOG.titleStyle, cfg.titleStyle)
-    const contentCfgR = mergeStyle(DEFAULT_DIALOG.contentStyle, cfg.contentStyle)
+    const btnCfg = cfg.button ?? DEFAULT_DIALOG.button
+    const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG.buttonHover
+    const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG.buttonText
+    const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG.buttonTextHover
+    const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle
+    const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle
 
     // ─── 패널 너비: _render마다 cfg 기반으로 재계산 ─────────
-    const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, cfg.panel)
+    const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel
     const PANEL_W = Math.min(
       (panelCfg.maxWidth as number) ?? Infinity,
       Math.max((panelCfg.minWidth as number) ?? 480, 0)
@@ -463,8 +463,13 @@ dialogBoxModule.defineView((data, ctx) => {
           transform: { position: { x: 0, y: 0, z: 0 } },
         })
 
-        const normalBtnProps = { color: btnStyle.color, borderColor: btnStyle.borderColor }
-        const normalTxtProps = { color: (btnTxtCfg as Partial<Style>).color }
+        // hover에서 변경한 키만 원본값으로 복원
+        const normalBtnProps = Object.fromEntries(
+          Object.keys(btnHoverCfg).map(key => [key, (btnStyle as any)[key]])
+        )
+        const normalTxtProps = Object.fromEntries(
+          Object.keys(btnTxtHoverCfg).map(key => [key, (btnTxtCfg as any)[key]])
+        )
 
         btnObj.on('mouseover', () => {
           btnObj.animate({ style: btnHoverCfg as any }, 150)

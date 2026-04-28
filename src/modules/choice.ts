@@ -190,9 +190,9 @@ choiceModule.defineView((data, ctx) => {
       _clearButtons()
 
       const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button } as Partial<Style> & { minWidth?: number; maxWidth?: number }
-      const defaultHoverStyle = { ...DEFAULT_CHOICE.buttonHover, ...cfg.buttonHover } as Partial<Style>
+      const defaultHoverStyle = (cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover) as Partial<Style>
       const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text } as Partial<Style>
-      const defaultTextHoverStyle = { ...DEFAULT_CHOICE.textHover, ...cfg.textHover } as Partial<Style>
+      const defaultTextHoverStyle = (cfg.textHover ?? DEFAULT_CHOICE.textHover) as Partial<Style>
 
       // 레이아웃: 커맨드 지정 > schema layout > DEFAULT_LAYOUT
       const layoutCfg: Required<ChoiceLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}), ...(layoutOverride ?? {}) }
@@ -265,29 +265,16 @@ choiceModule.defineView((data, ctx) => {
           transform: { position: { x: 0, y: 0, z: 0 } }
         })
 
-        const normalStyleProps = {
-          color: btnStyle.color,
-          borderColor: btnStyle.borderColor,
-        }
+        const hoverBtnStyle = { ...defaultHoverStyle }
+        const hoverTxtStyle = { ...defaultTextHoverStyle }
 
-        const normalTextProps = {
-          color: textStyle.color,
-          textShadowBlur: textStyle.textShadowBlur,
-          textShadowColor: textStyle.textShadowColor,
-          textShadowOffsetX: textStyle.textShadowOffsetX,
-          textShadowOffsetY: textStyle.textShadowOffsetY,
-        }
-
-        const hoverBtnStyle = {
-          color: defaultHoverStyle.color,
-          borderColor: defaultHoverStyle.borderColor,
-          ...defaultHoverStyle
-        }
-
-        const hoverTxtStyle = {
-          color: defaultTextHoverStyle.color,
-          ...defaultTextHoverStyle
-        }
+        // hover에서 변경한 키만 원본값으로 복원
+        const normalStyleProps = Object.fromEntries(
+          Object.keys(hoverBtnStyle).map(key => [key, (btnStyle as any)[key]])
+        )
+        const normalTextProps = Object.fromEntries(
+          Object.keys(hoverTxtStyle).map(key => [key, (textStyle as any)[key]])
+        )
 
         btnObj.on('mouseover', () => {
           btnObj.animate({ style: hoverBtnStyle as any }, 150)
@@ -341,11 +328,7 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
       const vars = resolveVarResolvable(selected.var, ctx.scene.getVars())
       if (vars) {
         for (const [key, value] of Object.entries(vars)) {
-          if (key.startsWith('_')) {
-            ctx.scene.setLocalVar(key, value)
-          } else {
-            ctx.scene.setGlobalVar(key, value)
-          }
+          ctx.scene.setGlobalVar(key, value)
         }
       }
     }
