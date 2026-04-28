@@ -2980,8 +2980,14 @@
     };
     let _currentResolve = null;
     let _currentPersist = false;
-    overlayObj.on("click", () => {
+    let _currentPanelH = 0;
+    overlayObj.on("click", (e) => {
       if (!_currentPersist && _currentResolve) {
+        const canvasRect = ctx.renderer._world?._canvas?.getBoundingClientRect?.() || { left: 0, top: 0, width: w, height: h };
+        const mouseX = e.clientX - canvasRect.left - canvasRect.width / 2;
+        const mouseY = e.clientY - canvasRect.top - canvasRect.height / 2;
+        const inPanel = Math.abs(mouseX) <= PANEL_W / 2 && Math.abs(mouseY) <= _currentPanelH / 2;
+        if (inPanel) return;
         _currentResolve(-1);
       }
     });
@@ -3032,6 +3038,7 @@
       const TOTAL_BTN_H = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP;
       const PANEL_H = PADDING_Y + TITLE_H + GAP + CONTENT_H + CONTENT_BTN_GAP + TOTAL_BTN_H + PADDING_Y;
       panelObj.style.height = PANEL_H;
+      _currentPanelH = PANEL_H;
       _clearDynamic();
       const titleLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H / 2;
       const titleObj = ctx.world.createText({
@@ -3108,6 +3115,7 @@
       hide: (duration = 200) => {
         _hide(duration);
       },
+      isBlocking: () => _currentResolve !== null,
       update: (d2) => {
         if (d2._resolve && d2._buttons.length > 0) {
           _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
@@ -17093,7 +17101,8 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       if (this._currentScene.isWaitingInput) {
-        this._inputMode = "dialogue";
+        const hasBlocking = Array.from(this._uiRegistry.values()).some((e) => e.isBlocking?.());
+        this._inputMode = hasBlocking ? "none" : "dialogue";
         return;
       }
       this._inputMode = "none";
@@ -17404,7 +17413,7 @@ ${addLineNumbers(fragment)}`);
         }
       ],
       duration: 500,
-      persist: false
+      persist: true
     },
     {
       type: "dialogue",

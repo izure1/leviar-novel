@@ -290,13 +290,22 @@ dialogBoxModule.defineView((data, ctx) => {
     _dynamicObjs = []
   }
 
-  // ─── overlay 클릭 핸들러 (persist 제어) ──────────────────
+  // ─── overlay 클릭 핸들러 (persist 제어) ────────────────
   // _render마다 갱신되는 현재 resolve/persist 참조
   let _currentResolve: ((i: number) => void) | null = null
   let _currentPersist = false
+  let _currentPanelH = 0
 
-  overlayObj.on('click', () => {
+  overlayObj.on('click', (e: any) => {
     if (!_currentPersist && _currentResolve) {
+      // panel 영역 클릭이면 dismiss 차단
+      // canvas 중앙기준 마우스 좌표 vs panel 반폭관 비교
+      const canvasRect = (ctx.renderer as any)._world?._canvas?.getBoundingClientRect?.() ||
+        { left: 0, top: 0, width: w, height: h }
+      const mouseX = e.clientX - canvasRect.left - canvasRect.width / 2
+      const mouseY = e.clientY - canvasRect.top - canvasRect.height / 2
+      const inPanel = Math.abs(mouseX) <= PANEL_W / 2 && Math.abs(mouseY) <= _currentPanelH / 2
+      if (inPanel) return
       _currentResolve(-1)
     }
   })
@@ -375,6 +384,7 @@ dialogBoxModule.defineView((data, ctx) => {
     const PANEL_H = PADDING_Y + TITLE_H + GAP + CONTENT_H + CONTENT_BTN_GAP + TOTAL_BTN_H + PADDING_Y
 
     panelObj.style.height = PANEL_H
+    _currentPanelH = PANEL_H
 
     _clearDynamic()
 
@@ -468,6 +478,7 @@ dialogBoxModule.defineView((data, ctx) => {
   return {
     show: (duration = 200) => { overlayObj.fadeIn(duration, 'easeOut') },
     hide: (duration = 200) => { _hide(duration) },
+    isBlocking: () => _currentResolve !== null,
     update: (d: DialogBoxSchema) => {
       if (d._resolve && d._buttons.length > 0) {
         _render(d._title, d._content, d._buttons, d._resolve, d._duration, d._persist, d)

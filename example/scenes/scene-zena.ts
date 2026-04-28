@@ -44,7 +44,7 @@ export default defineScene({
       },
     ],
     duration: 500,
-    persist: false,
+    persist: true,
   },
   {
     type: 'dialogue',

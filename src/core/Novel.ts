@@ -436,7 +436,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     }
 
     if (this._currentScene.isWaitingInput) {
-      this._inputMode = 'dialogue'
+      // isBlocking UI가 하나라도 있으면 novel.next() 차단
+      const hasBlocking = Array.from(this._uiRegistry.values()).some(e => e.isBlocking?.())
+      this._inputMode = hasBlocking ? 'none' : 'dialogue'
       return
     }
 
