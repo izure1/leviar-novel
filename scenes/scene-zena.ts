@@ -15,11 +15,27 @@ export default defineScene({
     preserve: true,
   },
 }, [
+  {
+    type: 'dialogBox',
+    title: '음성 제어',
+    content: '히로인의 음성 합성 기능을 사용하시겠습니까?',
+    buttons: [
+      {
+        text: '예',
+        var: { useHeroineVoice: true }
+      },
+      {
+        text: '아니오',
+        var: { useHeroineVoice: false }
+      }
+    ]
+  },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
   { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 25 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
+
 
   {
     type: 'dialogue',
