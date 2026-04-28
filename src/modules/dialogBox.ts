@@ -253,6 +253,9 @@ dialogBoxModule.defineView((data, ctx) => {
   })
   ctx.world.camera?.addChild(overlayObj)
   ctx.renderer.track(overlayObj)
+  // __fadeOpacity 초기값=1이므로 첫 fadeIn이 1→1로 동작 안 함.
+  // fadeOut(0).stop()으로 즉시 __fadeOpacity=0, display=none 초기화
+  overlayObj.fadeOut(0).stop()
 
   // ─── panelObj: overlayObj 자식 ────────────────────────────
   const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, data.panel)
@@ -267,12 +270,15 @@ dialogBoxModule.defineView((data, ctx) => {
       width: PANEL_W,
       height: 10,
       zIndex: 601,
-      pointerEvents: false,
+      pointerEvents: true,
     },
     transform: { position: { x: 0, y: 0, z: 0 } },
   })
   overlayObj.addChild(panelObj)
   ctx.renderer.track(panelObj)
+
+  // panel 클릭 시 overlay로 이벤트가 전파되지 않도록 차단
+  panelObj.on('click', () => { /* stop propagation */ })
 
   // ─── 동적 자식 (매 _render마다 panelObj 자식으로 새로 생성) ─
   // - animate() 없이 생성 위치 = 최종 위치 → fadeIn 충돌 없음
@@ -501,6 +507,8 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
         }
       }
     }
+    // 버튼/오버레이 클릭 후 generator를 resume시켜 다음 커맨드로 진행
+    ctx.callbacks.advance()
   }
 
   setState({
@@ -512,7 +520,8 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     _persist: persist,
   })
 
-  yield 'handled'
+  // false: 입력 대기 상태로 전환. resolve() → advance() 호출 시 resume
+  yield false
 
   setState({ _resolve: null, _buttons: [], _title: '', _content: '' })
 

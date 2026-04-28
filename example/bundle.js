@@ -2953,6 +2953,7 @@
     });
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
+    overlayObj.fadeOut(0).stop();
     const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, data.panel);
     const PANEL_W = Math.min(
       panelCfg.maxWidth ?? Infinity,
@@ -2964,12 +2965,14 @@
         width: PANEL_W,
         height: 10,
         zIndex: 601,
-        pointerEvents: false
+        pointerEvents: true
       },
       transform: { position: { x: 0, y: 0, z: 0 } }
     });
     overlayObj.addChild(panelObj);
     ctx.renderer.track(panelObj);
+    panelObj.on("click", () => {
+    });
     let _dynamicObjs = [];
     const _clearDynamic = () => {
       _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
@@ -3137,6 +3140,7 @@
           }
         }
       }
+      ctx.callbacks.advance();
     };
     setState({
       _title: cmd.title,
@@ -3146,7 +3150,7 @@
       _duration: duration,
       _persist: persist
     });
-    yield "handled";
+    yield false;
     setState({ _resolve: null, _buttons: [], _title: "", _content: "" });
     return true;
   });
