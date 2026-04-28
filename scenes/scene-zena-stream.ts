@@ -239,11 +239,12 @@ export default defineScene({
     type: 'dialogue',
     text: '화가 머리끝까지 난 제나가 마침내 이성을 놓아버렸다.'
   },
-  { type: 'camera-effect', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
+  { type: 'camera-effect', preset: 'shake-y', intensity: 100, duration: 500, repeat: -1 },
+  { type: 'character-effect', name: 'zena', preset: 'reset' },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '야, 너 때문에 채팅창 창났잖아!'
+    text: '<style fontSize="30">야, 너 때문에 채팅창 창났잖아!</style>'
   },
   {
     type: 'dialogue',
