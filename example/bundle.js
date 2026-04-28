@@ -3115,7 +3115,6 @@
       hide: (duration = 200) => {
         _hide(duration);
       },
-      isBlocking: () => _currentResolve !== null,
       update: (d2) => {
         if (d2._resolve && d2._buttons.length > 0) {
           _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
@@ -3158,7 +3157,9 @@
       _duration: duration,
       _persist: persist
     });
-    yield false;
+    while (_resolved === false) {
+      yield false;
+    }
     setState({ _resolve: null, _buttons: [], _title: "", _content: "" });
     return true;
   });
@@ -16716,6 +16717,12 @@ ${addLineNumbers(fragment)}`);
         this.callbacks.syncUIState();
       }
     }
+    /** 현재 커서 위치의 step type을 반환 (예: 'dialogue', 'choice', 'dialogBox') */
+    getCurrentStepType() {
+      if (this._ended) return null;
+      const steps = this.definition.dialogues;
+      return steps[this.cursor]?.type ?? null;
+    }
     get isEnded() {
       return this._ended;
     }
@@ -17101,8 +17108,8 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       if (this._currentScene.isWaitingInput) {
-        const hasBlocking = Array.from(this._uiRegistry.values()).some((e) => e.isBlocking?.());
-        this._inputMode = hasBlocking ? "none" : "dialogue";
+        const stepType = this._currentScene.getCurrentStepType();
+        this._inputMode = stepType === "dialogBox" ? "none" : "dialogue";
         return;
       }
       this._inputMode = "none";
@@ -17402,18 +17409,6 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       text: "\uAD6C\uC11D \uC790\uB9AC\uC5D0\uC11C \uC720\uB3C5 \uC774\uC9C8\uC801\uC778 \uC0B4\uAE30\uAC00 \uB290\uAEF4\uC84C\uB2E4."
-    },
-    {
-      type: "dialogBox",
-      title: "\uC704\uD5D8!",
-      content: "\uC704\uD5D8\uD569\uB2C8\uB2E4 \uB2F9\uC7A5 \uB3C4\uB9DD\uCE58\uC2ED\uC1FC.\n\uC774\uAC74 \uBA85\uB839\uC774\uC624.",
-      buttons: [
-        {
-          text: "\uD655\uC778"
-        }
-      ],
-      duration: 500,
-      persist: true
     },
     {
       type: "dialogue",

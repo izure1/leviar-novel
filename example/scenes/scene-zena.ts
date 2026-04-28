@@ -35,18 +35,6 @@ export default defineScene({
     text: '구석 자리에서 유독 이질적인 살기가 느껴졌다.'
   },
   {
-    type: 'dialogBox',
-    title: '위험!',
-    content: '위험합니다 당장 도망치십쇼.\n이건 명령이오.',
-    buttons: [
-      {
-        text: '확인'
-      },
-    ],
-    duration: 500,
-    persist: true,
-  },
-  {
     type: 'dialogue',
     text: '그곳에는 마치 세상 모든 짐을 짊어진 듯한 표정의 소녀가 있었다.'
   },

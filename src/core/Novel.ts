@@ -436,9 +436,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     }
 
     if (this._currentScene.isWaitingInput) {
-      // isBlocking UI가 하나라도 있으면 novel.next() 차단
-      const hasBlocking = Array.from(this._uiRegistry.values()).some(e => e.isBlocking?.())
-      this._inputMode = hasBlocking ? 'none' : 'dialogue'
+      // dialogBox는 자체 버튼으로만 진행 가능 — novel.next() 차단
+      const stepType = this._currentScene.getCurrentStepType()
+      this._inputMode = stepType === 'dialogBox' ? 'none' : 'dialogue'
       return
     }
 

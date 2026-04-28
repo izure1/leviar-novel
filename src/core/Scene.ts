@@ -507,6 +507,13 @@ export class DialogueScene {
     }
   }
 
+  /** 현재 커서 위치의 step type을 반환 (예: 'dialogue', 'choice', 'dialogBox') */
+  getCurrentStepType(): string | null {
+    if (this._ended) return null
+    const steps = this.definition.dialogues as DialogueStep<any>[]
+    return (steps[this.cursor] as any)?.type ?? null
+  }
+
   get isEnded(): boolean { return this._ended }
   get isWaitingInput(): boolean { return this._waitingInput }
 }

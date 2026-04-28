@@ -79,7 +79,7 @@ export interface DialogBoxSchema {
   /** 내부 간격 레이아웃. `defineInitial`로 씬 전체에 적용 가능 */
   layout?: DialogBoxLayout
 
-  // ─── 런타임 상태 ──────────────────────────────────────────
+  // ─── 런타임 상태 ────────────────────────────────────────────
   _title: string
   _content: string
   _buttons: { text: string; var?: () => void }[]
@@ -478,7 +478,6 @@ dialogBoxModule.defineView((data, ctx) => {
   return {
     show: (duration = 200) => { overlayObj.fadeIn(duration, 'easeOut') },
     hide: (duration = 200) => { _hide(duration) },
-    isBlocking: () => _currentResolve !== null,
     update: (d: DialogBoxSchema) => {
       if (d._resolve && d._buttons.length > 0) {
         _render(d._title, d._content, d._buttons, d._resolve, d._duration, d._persist, d)
@@ -506,7 +505,6 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     if (_resolved) return
     _resolved = true
     entry.hide?.(duration)
-    // i === -1: overlay 클릭 dismiss (var 처리 없음)
     if (i >= 0) {
       const selected = cmd.buttons[i]
       if (selected?.var) {
@@ -518,10 +516,10 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
         }
       }
     }
-    // 버튼/오버레이 클릭 후 generator를 resume시켜 다음 커맨드로 진행
     ctx.callbacks.advance()
   }
 
+  // command 시작 즉시 blocking (애니메이션 중에도 novel.next 차단)
   setState({
     _title: cmd.title,
     _content: cmd.content,
@@ -531,8 +529,9 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     _persist: persist,
   })
 
-  // false: 입력 대기 상태로 전환. resolve() → advance() 호출 시 resume
-  yield false
+  while (_resolved === false) {
+    yield false
+  }
 
   setState({ _resolve: null, _buttons: [], _title: '', _content: '' })
 

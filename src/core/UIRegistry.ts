@@ -28,9 +28,4 @@ export interface UIRuntimeEntry {
    * 스타일 적용, 텍스트 재렌더 등 UI 갱신 로직을 구현하세요.
    */
   update?(data: any): void
-  /**
-   * true이면 novel.next() 입력을 차단합니다.
-   * dialogBox 등 전용 입력(버튼 클릭)을 기다리는 UI에서 구현합니다.
-   */
-  isBlocking?(): boolean
 }
