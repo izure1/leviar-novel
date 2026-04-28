@@ -999,6 +999,13 @@
   });
   var dialogue_default = dialogueModule;
 
+  // src/types/utils.ts
+  function resolveVarResolvable(val, vars) {
+    if (val === void 0 || val === null) return void 0;
+    if (typeof val === "function") return val(vars);
+    return val;
+  }
+
   // src/modules/choice.ts
   var DEFAULT_CHOICE = {
     bg: {
@@ -1189,8 +1196,15 @@
       const selected = cmd.choices[i];
       if (!selected) return;
       if (selected.var) {
-        for (const [key, value] of Object.entries(selected.var)) {
-          ctx.scene.setGlobalVar(key, value);
+        const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
+        if (vars) {
+          for (const [key, value] of Object.entries(vars)) {
+            if (key.startsWith("_")) {
+              ctx.scene.setLocalVar(key, value);
+            } else {
+              ctx.scene.setGlobalVar(key, value);
+            }
+          }
         }
       }
       entry.hide?.();
@@ -2901,7 +2915,7 @@
       height: void 0
     },
     titleStyle: {
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: "bold",
       color: "#ffffff",
       fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
@@ -2912,11 +2926,15 @@
       textShadowOffsetY: 0
     },
     contentStyle: {
-      fontSize: 14,
-      color: "rgba(255,255,255,0.88)",
+      fontSize: 16,
+      color: "rgba(255,255,255,0.66)",
       lineHeight: 1.5,
       fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
-      textAlign: "center"
+      textAlign: "center",
+      textShadowBlur: 0,
+      textShadowColor: "rgba(0,0,0,1)",
+      textShadowOffsetX: 2,
+      textShadowOffsetY: 2
     },
     button: {
       color: "rgba(255,255,255,0.15)",
@@ -2930,11 +2948,15 @@
       borderColor: "rgba(255,255,255,0.70)"
     },
     buttonText: {
-      fontSize: 15,
+      fontSize: 16,
       color: "rgba(255,255,255,0.95)",
       fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
       textAlign: "center",
-      fontWeight: "bold"
+      fontWeight: "bold",
+      textShadowBlur: 0,
+      textShadowColor: "rgba(0,0,0,1)",
+      textShadowOffsetX: 2,
+      textShadowOffsetY: 2
     },
     buttonTextHover: { color: "#ffffff" }
   };
@@ -3171,7 +3193,7 @@
     }
     ctx.ui.get("dialogue")?.hide?.();
     const duration = cmd.duration ?? 200;
-    const persist = cmd.persist ?? false;
+    const persist = cmd.buttons.length > 0 ? true : cmd.persist ?? false;
     let _resolved = false;
     const resolve = (i) => {
       if (_resolved) return;
@@ -3180,10 +3202,14 @@
       if (i >= 0) {
         const selected = cmd.buttons[i];
         if (selected?.var) {
-          const vars = selected.var();
+          const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
           if (vars) {
             for (const [key, value] of Object.entries(vars)) {
-              ctx.scene.setGlobalVar(key, value);
+              if (key.startsWith("_")) {
+                ctx.scene.setLocalVar(key, value);
+              } else {
+                ctx.scene.setGlobalVar(key, value);
+              }
             }
           }
         }
@@ -3193,7 +3219,7 @@
     setState({
       _title: cmd.title,
       _content: cmd.content,
-      _buttons: cmd.buttons.map((b) => ({ text: b.text, var: b.var })),
+      _buttons: cmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
       _persist: persist
@@ -17309,7 +17335,8 @@ ${addLineNumbers(fragment)}`);
     vars: {
       likeability: 0,
       metHeroine: false,
-      endingReached: false
+      endingReached: false,
+      useHeroineVoice: true
     },
     modules: {
       "test-cmd": testModule,
@@ -17433,6 +17460,21 @@ ${addLineNumbers(fragment)}`);
       preserve: true
     }
   }, [
+    {
+      type: "dialogBox",
+      title: "\uC74C\uC131 \uC81C\uC5B4",
+      content: "\uD788\uB85C\uC778\uC758 \uC74C\uC131 \uD569\uC131 \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+      buttons: [
+        {
+          text: "\uC608",
+          var: { useHeroineVoice: true }
+        },
+        {
+          text: "\uC544\uB2C8\uC624",
+          var: { useHeroineVoice: false }
+        }
+      ]
+    },
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -18869,6 +18911,7 @@ ${addLineNumbers(fragment)}`);
     let before = 0;
     hooker.onBefore("dialogue:text", (state) => {
       if (novel.isSkipping) return state;
+      if (!novel.vars.useHeroineVoice) return state;
       const { speaker, text } = state;
       const now = performance.now();
       before = now;

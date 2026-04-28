@@ -80,7 +80,7 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<UICmd<TConfig>, 'ui', TVars, TLocalVars>
   | _WithType<ControlCmd, 'control', TVars, TLocalVars>
   | _WithType<AudioCmd<TConfig>, 'audio', TVars, TLocalVars>
-  | _WithType<DialogBoxCmd<TConfig>, 'dialogBox', TVars, TLocalVars>
+  | _WithType<DialogBoxCmd<TConfig, TLocalVars>, 'dialogBox', TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 
 type _WithSkip<T> = T extends any ? T & {

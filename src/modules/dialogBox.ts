@@ -1,5 +1,6 @@
 import type { Style } from 'leviar'
-import type { VarsOf } from '../types/config'
+import type { VarResolvable } from '../types/utils'
+import { resolveVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
 
 // ─── DialogBoxSchema ──────────────────────────────────────────
@@ -82,7 +83,7 @@ export interface DialogBoxSchema {
   // ─── 런타임 상태 ────────────────────────────────────────────
   _title: string
   _content: string
-  _buttons: { text: string; var?: () => void }[]
+  _buttons: { text: string }[]
   _resolve: ((index: number) => void) | null
   _duration: number
   _persist: boolean
@@ -104,7 +105,7 @@ const DEFAULT_DIALOG: Required<Pick<
     height: undefined,
   },
   titleStyle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
@@ -115,11 +116,15 @@ const DEFAULT_DIALOG: Required<Pick<
     textShadowOffsetY: 0,
   },
   contentStyle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.88)',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.66)',
     lineHeight: 1.5,
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
     textAlign: 'center',
+    textShadowBlur: 0,
+    textShadowColor: 'rgba(0,0,0,1)',
+    textShadowOffsetX: 2,
+    textShadowOffsetY: 2,
   },
   button: {
     color: 'rgba(255,255,255,0.15)',
@@ -133,11 +138,15 @@ const DEFAULT_DIALOG: Required<Pick<
     borderColor: 'rgba(255,255,255,0.70)',
   },
   buttonText: {
-    fontSize: 15,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.95)',
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
     textAlign: 'center',
     fontWeight: 'bold',
+    textShadowBlur: 0,
+    textShadowColor: 'rgba(0,0,0,1)',
+    textShadowOffsetX: 2,
+    textShadowOffsetY: 2,
   },
   buttonTextHover: { color: '#ffffff' },
 }
@@ -159,7 +168,7 @@ const DEFAULT_DIALOG: Required<Pick<
  * { type: 'dialogBox', title: '..', duration: 500, buttons: [...] }
  * ```
  */
-export interface DialogBoxCmd<TConfig = any> {
+export interface DialogBoxCmd<TConfig = any, TLocalVars = Record<never, never>> {
   /** 대화상자 제목 */
   title: string
   /** 대화상자 본문 내용 */
@@ -185,7 +194,7 @@ export interface DialogBoxCmd<TConfig = any> {
    */
   buttons: {
     text: string
-    var?: () => Partial<VarsOf<TConfig>>
+    var?: VarResolvable<TConfig, TLocalVars>
   }[]
 }
 
@@ -204,7 +213,7 @@ const DEFAULT_LAYOUT: Required<DialogBoxLayout> = {
   buttonPaddingY: 20,
 }
 
-const dialogBoxModule = define<DialogBoxCmd<any>, DialogBoxSchema>({
+const dialogBoxModule = define<DialogBoxCmd<any, any>, DialogBoxSchema>({
   overlay: undefined,
   panel: undefined,
   titleStyle: undefined,
@@ -233,7 +242,7 @@ dialogBoxModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   const mergeStyle = <T extends object>(def: T, override?: Partial<T>): T =>
-    ({ ...def, ...(override ?? {}) } as T)
+  ({ ...def, ...(override ?? {}) } as T)
 
   // ─── overlayObj: camera 직접 자식 ─────────────────────────
   // display:'none' → cascade로 자손 전체 숨김 (v1.0.6+)
@@ -303,7 +312,7 @@ dialogBoxModule.defineView((data, ctx) => {
       // panel 영역 클릭이면 dismiss 차단
       // canvas 중앙기준 마우스 좌표 vs panel 반폭관 비교
       const canvasRect = (ctx.renderer as any)._world?._canvas?.getBoundingClientRect?.() ||
-        { left: 0, top: 0, width: w, height: h }
+      { left: 0, top: 0, width: w, height: h }
       const mouseX = e.clientX - canvasRect.left - canvasRect.width / 2
       const mouseY = e.clientY - canvasRect.top - canvasRect.height / 2
       const inPanel = Math.abs(mouseX) <= _currentPanelW / 2 && Math.abs(mouseY) <= _currentPanelH / 2
@@ -317,7 +326,7 @@ dialogBoxModule.defineView((data, ctx) => {
   const _render = (
     title: string,
     content: string,
-    buttons: { text: string; var?: () => void }[],
+    buttons: { text: string }[],
     resolve: (i: number) => void,
     duration: number,
     persist: boolean,
@@ -365,9 +374,9 @@ dialogBoxModule.defineView((data, ctx) => {
       return btnCfg.width
         ? btnCfg.width
         : Math.min(
-            (btnCfg.maxWidth as number) ?? Infinity,
-            Math.max((btnCfg.minWidth as number) ?? 120, estimatedW + layoutCfg.buttonPaddingX)
-          )
+          (btnCfg.maxWidth as number) ?? Infinity,
+          Math.max((btnCfg.minWidth as number) ?? 120, estimatedW + layoutCfg.buttonPaddingX)
+        )
     })
 
     // ─── greedy 행 분배 ───────────────────────────────────────
@@ -508,7 +517,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
   ctx.ui.get('dialogue')?.hide?.()
 
   const duration = cmd.duration ?? 200
-  const persist = cmd.persist ?? false
+  const persist = cmd.buttons.length > 0 ? true : (cmd.persist ?? false)
 
   let _resolved = false
 
@@ -519,10 +528,14 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     if (i >= 0) {
       const selected = cmd.buttons[i]
       if (selected?.var) {
-        const vars = selected.var()
+        const vars = resolveVarResolvable(selected.var, ctx.scene.getVars())
         if (vars) {
           for (const [key, value] of Object.entries(vars)) {
-            ctx.scene.setGlobalVar(key, value)
+            if (key.startsWith('_')) {
+              ctx.scene.setLocalVar(key, value)
+            } else {
+              ctx.scene.setGlobalVar(key, value)
+            }
           }
         }
       }
@@ -534,7 +547,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
   setState({
     _title: cmd.title,
     _content: cmd.content,
-    _buttons: cmd.buttons.map(b => ({ text: b.text, var: b.var as (() => void) | undefined })),
+    _buttons: cmd.buttons.map(b => ({ text: b.text })),
     _resolve: resolve,
     _duration: duration,
     _persist: persist,

@@ -1,5 +1,7 @@
 import type { Resolvable } from '../define/defineCmd'
 import type { SceneNextTarget, VarsOf } from '../types/config'
+import type { VarResolvable } from '../types/utils'
+import { resolveVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
 import type { Style } from 'leviar'
 
@@ -116,7 +118,7 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
     /** 해당 선택지를 골랐을 때 이동할 현재 씬 내의 라벨(Label) 이름입니다. */
     goto?: Resolvable<string, VarsOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
-    var?: Resolvable<Partial<Record<keyof VarsOf<TConfig>, any>>, VarsOf<TConfig>, TLocalVars>
+    var?: VarResolvable<TConfig, TLocalVars>
   }[]
   /**
    * 내부 간격 레이아웃. 미지정 시 schema의 layout 또는 기본값 사용.
@@ -336,8 +338,15 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
 
     // var 설정
     if (selected.var) {
-      for (const [key, value] of Object.entries(selected.var as Record<string, any>)) {
-        ctx.scene.setGlobalVar(key, value)
+      const vars = resolveVarResolvable(selected.var, ctx.scene.getVars())
+      if (vars) {
+        for (const [key, value] of Object.entries(vars)) {
+          if (key.startsWith('_')) {
+            ctx.scene.setLocalVar(key, value)
+          } else {
+            ctx.scene.setGlobalVar(key, value)
+          }
+        }
       }
     }
 

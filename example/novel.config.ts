@@ -39,6 +39,7 @@ export default defineNovelConfig({
     likeability: 0,
     metHeroine: false,
     endingReached: false,
+    useHeroineVoice: true,
   },
   modules: {
     'test-cmd': testModule,

@@ -112,6 +112,7 @@ async function main() {
   let before = 0
   hooker.onBefore('dialogue:text', (state) => {
     if (novel.isSkipping) return state
+    if (!novel.vars.useHeroineVoice) return state
     const { speaker, text } = state
     const now = performance.now()
     before = now
