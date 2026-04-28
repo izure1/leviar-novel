@@ -814,6 +814,11 @@
     textShadowOffsetX: 1,
     textShadowOffsetY: 1
   };
+  var DEFAULT_LAYOUT = {
+    paddingX: 0.05,
+    paddingTop: 24,
+    speakerTextGap: 8
+  };
   function resolveSpeaker(speakerKey, charDefs) {
     if (!speakerKey) return void 0;
     return charDefs?.[speakerKey]?.name ?? speakerKey;
@@ -823,6 +828,7 @@
     bg: void 0,
     speaker: void 0,
     text: void 0,
+    layout: void 0,
     _subIndex: 0,
     _lines: [],
     _speakerKey: void 0,
@@ -836,8 +842,10 @@
     const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {}, ...data.style ?? {} };
     const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
     const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
+    const layoutCfg = { ...DEFAULT_LAYOUT, ...data.layout ?? {} };
     const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
     const BOX_CY = h - BOX_H / 2;
+    const TEXT_W = w * (1 - layoutCfg.paddingX * 2);
     const bgObj = ctx.world.createRectangle({
       style: {
         ...bgCfg,
@@ -852,12 +860,12 @@
     });
     ctx.world.camera?.addChild(bgObj);
     ctx.renderer.track(bgObj);
-    const spkY = h - BOX_H + 24;
+    const spkY = h - BOX_H + layoutCfg.paddingTop;
     const speakerObj = ctx.world.createText({
       attribute: { text: "" },
       style: {
         ...spkCfg,
-        width: w * 0.9,
+        width: spkCfg.width ?? TEXT_W,
         zIndex: spkCfg.zIndex ?? 301,
         opacity: 1,
         display: "none",
@@ -872,13 +880,13 @@
       attribute: { text: "" },
       style: {
         ...txtCfg,
-        width: txtCfg.width ?? w * 0.9,
+        width: txtCfg.width ?? TEXT_W,
         zIndex: txtCfg.zIndex ?? 301,
         opacity: 1,
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(w / 2, spkY + spkH + 8) }
+      transform: { position: toLocal(w / 2, spkY + spkH + layoutCfg.speakerTextGap) }
     });
     ctx.world.camera?.addChild(textObj);
     ctx.renderer.track(textObj);
@@ -950,9 +958,11 @@
         const newBgCfg = { ...DEFAULT_BG, ...d2.bg ?? {}, ...d2.style ?? {} };
         const newSpkCfg = { ...DEFAULT_SPEAKER, ...d2.speaker ?? {} };
         const newTxtCfg = { ...DEFAULT_TEXT, ...d2.text ?? {} };
+        const newLayoutCfg = { ...DEFAULT_LAYOUT, ...d2.layout ?? {} };
+        const newTextW = w * (1 - newLayoutCfg.paddingX * 2);
         Object.assign(bgObj.style, newBgCfg);
-        Object.assign(speakerObj.style, newSpkCfg);
-        Object.assign(textObj.style, newTxtCfg);
+        Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW });
+        Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW });
         if (d2._lines && d2._lines !== _prevLines && d2._lines.length > 0) {
           _prevLines = d2._lines;
           const txt = d2._lines[d2._subIndex ?? 0];
@@ -975,7 +985,8 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines]
+        _lines: [...lines],
+        ...cmd.layout !== void 0 ? { layout: cmd.layout } : {}
       });
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
@@ -1014,12 +1025,20 @@
       // 기본 호버 텍스트 색상 (약간 노란빛)
     }
   };
+  var DEFAULT_LAYOUT2 = {
+    gap: 12,
+    paddingX: 64,
+    paddingY: 24,
+    minWidth: 0,
+    maxWidth: Infinity
+  };
   var choiceModule = define2({
     bg: void 0,
     button: void 0,
     buttonHover: void 0,
     text: void 0,
-    textHover: void 0
+    textHover: void 0,
+    layout: void 0
   });
   choiceModule.defineView((data, ctx) => {
     const cfg = { ...DEFAULT_CHOICE, ...data };
@@ -1056,25 +1075,37 @@
         bgObj.fadeOut(200, "easeIn");
         _clearButtons();
       },
-      onChoices: (choices, onSelect) => {
+      onChoices: (choices, onSelect, layoutOverride) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
         const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button };
         const defaultHoverStyle = { ...DEFAULT_CHOICE.buttonHover, ...cfg.buttonHover };
         const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text };
         const defaultTextHoverStyle = { ...DEFAULT_CHOICE.textHover, ...cfg.textHover };
+        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {}, ...layoutOverride ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
-        const mWidth = defaultBtnStyle.minWidth ?? 260;
-        const gap = 12;
-        const paddingY = 12;
-        const btnH = fSize * 1.5 + paddingY * 2;
-        const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap;
-        const startY = h / 2 - totalHeight / 2 + btnH / 2;
-        choices.forEach((choice, i) => {
-          const cy = startY + i * (btnH + gap);
+        const lineH = defaultTextStyle.lineHeight ?? 1.5;
+        const gap = layoutCfg.gap;
+        const paddingY = layoutCfg.paddingY / 2;
+        const resolvedMinW = layoutCfg.minWidth > 0 ? layoutCfg.minWidth : defaultBtnStyle.minWidth ?? 260;
+        const resolvedMaxW = isFinite(layoutCfg.maxWidth) ? layoutCfg.maxWidth : defaultBtnStyle.maxWidth ?? Infinity;
+        const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
-          const btnW = Math.max(mWidth, estimatedTextW + 64);
+          const rawW = estimatedTextW + layoutCfg.paddingX;
+          const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW));
+          const textAvailW = btnW - layoutCfg.paddingX;
+          const lineCount = textAvailW > 0 ? Math.ceil(estimatedTextW / textAvailW) : 1;
+          const btnH = fSize * lineH * lineCount + paddingY * 2;
+          return { w: btnW, h: btnH, lines: lineCount };
+        });
+        const totalHeight = dims.reduce((acc, d2, i) => acc + d2.h + (i > 0 ? gap : 0), 0);
+        let startY = h / 2 - totalHeight / 2 + dims[0].h / 2;
+        choices.forEach((choice, i) => {
+          if (i > 0) startY += dims[i - 1].h / 2 + gap + dims[i].h / 2;
+          const cy = startY;
+          const textStr = String(choice.text);
+          const { w: btnW, h: btnH } = dims[i];
           const btnStyle = {
             ...defaultBtnStyle,
             width: btnW,
@@ -1089,6 +1120,8 @@
           });
           const textStyle = {
             ...defaultTextStyle,
+            // 너비 제한 시 텍스트가 btnW 내에서 래핑되도록 width 지정
+            width: btnW - layoutCfg.paddingX,
             textAlign: defaultTextStyle.textAlign ?? "center",
             zIndex: defaultTextStyle.zIndex ?? 502,
             pointerEvents: false
@@ -1168,7 +1201,7 @@
       } else {
         ctx.scene.end();
       }
-    });
+    }, cmd.layout);
     return "handled";
   });
   var choice_default = choiceModule;
@@ -2864,7 +2897,7 @@
       borderColor: "rgba(255,255,255,0.35)",
       borderWidth: 1,
       borderRadius: "4%",
-      width: 480,
+      minWidth: 480,
       height: void 0
     },
     titleStyle: {
@@ -2905,7 +2938,7 @@
     },
     buttonTextHover: { color: "#ffffff" }
   };
-  var DEFAULT_LAYOUT = {
+  var DEFAULT_LAYOUT3 = {
     paddingX: 28,
     paddingY: 28,
     titleContentGap: 12,
@@ -2954,15 +2987,15 @@
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
-    const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, data.panel);
-    const PANEL_W = Math.min(
-      panelCfg.maxWidth ?? Infinity,
-      Math.max(panelCfg.minWidth ?? 0, panelCfg.width ?? 480)
-    );
+    const panelCfgInit = mergeStyle(DEFAULT_DIALOG.panel, data.panel);
+    const INIT_PANEL_W = Math.max(
+      panelCfgInit.minWidth ?? 0,
+      0
+    ) || 480;
     const panelObj = ctx.world.createRectangle({
       style: {
-        ...panelCfg,
-        width: PANEL_W,
+        ...panelCfgInit,
+        width: INIT_PANEL_W,
         height: 10,
         zIndex: 601,
         pointerEvents: true
@@ -2980,13 +3013,14 @@
     };
     let _currentResolve = null;
     let _currentPersist = false;
+    let _currentPanelW = INIT_PANEL_W;
     let _currentPanelH = 0;
     overlayObj.on("click", (e) => {
       if (!_currentPersist && _currentResolve) {
         const canvasRect = ctx.renderer._world?._canvas?.getBoundingClientRect?.() || { left: 0, top: 0, width: w, height: h };
         const mouseX = e.clientX - canvasRect.left - canvasRect.width / 2;
         const mouseY = e.clientY - canvasRect.top - canvasRect.height / 2;
-        const inPanel = Math.abs(mouseX) <= PANEL_W / 2 && Math.abs(mouseY) <= _currentPanelH / 2;
+        const inPanel = Math.abs(mouseX) <= _currentPanelW / 2 && Math.abs(mouseY) <= _currentPanelH / 2;
         if (inPanel) return;
         _currentResolve(-1);
       }
@@ -3000,10 +3034,17 @@
       const btnTxtHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonTextHover, cfg.buttonTextHover);
       const titleCfgR = mergeStyle(DEFAULT_DIALOG.titleStyle, cfg.titleStyle);
       const contentCfgR = mergeStyle(DEFAULT_DIALOG.contentStyle, cfg.contentStyle);
+      const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, cfg.panel);
+      const PANEL_W = Math.min(
+        panelCfg.maxWidth ?? Infinity,
+        Math.max(panelCfg.minWidth ?? 480, 0)
+      );
+      panelObj.style.width = PANEL_W;
+      _currentPanelW = PANEL_W;
       const titleFontSize = titleCfgR.fontSize ?? 22;
       const contentFontSize = contentCfgR.fontSize ?? 18;
       const btnFontSize = btnTxtCfg.fontSize ?? 16;
-      const layoutCfg = { ...DEFAULT_LAYOUT, ...cfg.layout ?? {} };
+      const layoutCfg = { ...DEFAULT_LAYOUT3, ...cfg.layout ?? {} };
       const PADDING_X = layoutCfg.paddingX;
       const PADDING_Y = layoutCfg.paddingY;
       const BTN_H_GAP = layoutCfg.buttonColumnGap;

@@ -5,18 +5,53 @@ import type { Style } from 'leviar'
 
 // ─── 선택지 UI 스타일 + 런타임 상태 스키마 ────────────────────
 
+/**
+ * 선택지 UI 내부 간격 레이아웃 설정.
+ * `defineInitial` 또는 커맨드의 `layout` 필드로 씬/커맨드별 지정 가능.
+ */
+export interface ChoiceLayout {
+  /**
+   * 선택지 버튼 간 세로 간격(px).
+   * @default 12
+   */
+  gap?: number
+  /**
+   * 버튼 내부 좌우(X) 패딩 합산(px). 주어진 텍스트너비 + paddingX 로 버튼 너비 추정.
+   * `button.width` 를 직접 지정하면 무시.
+   * @default 64
+   */
+  paddingX?: number
+  /**
+   * 버튼 내부 상하(Y) 패딩 합산(px). 버튼 높이 = fontSize * lineHeight * lines + paddingY.
+   * @default 24
+   */
+  paddingY?: number
+  /**
+   * 버튼 최소 너비(px). 텍스트가 짧아도 이 값 이상 유지.
+   * `button.minWidth` 보다 우선합니다.
+   */
+  minWidth?: number
+  /**
+   * 버튼 최대 너비(px). 지정 시 텍스트가 길어도 이 너비로 고정되며,
+   * 텍스트가 여러 줄로 자동 래핑됩니다.
+   */
+  maxWidth?: number
+}
+
 /** choiceModule이 공유하는 데이터 스키마 */
 export interface ChoiceSchema {
   /** 선택지 전체 배경(컨테이너) 스타일 */
   bg?: Partial<Style>
   /** 선택지 버튼(배경) 스타일 */
-  button?: Partial<Style> & { minWidth?: number }
+  button?: Partial<Style> & { minWidth?: number; maxWidth?: number }
   /** 선택지 버튼 호버 스타일 */
   buttonHover?: Partial<Style>
   /** 선택지 텍스트 스타일 */
   text?: Partial<Style>
   /** 선택지 텍스트 호버 스타일 */
   textHover?: Partial<Style>
+  /** 내부 간격 레이아웃. `defineInitial`로 씬 전체에 적용 가능 */
+  layout?: ChoiceLayout
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -44,6 +79,14 @@ const DEFAULT_CHOICE: ChoiceSchema = {
   textHover: {
     color: '#ffffaa', // 기본 호버 텍스트 색상 (약간 노란빛)
   },
+}
+
+const DEFAULT_LAYOUT: Required<ChoiceLayout> = {
+  gap: 12,
+  paddingX: 64,
+  paddingY: 24,
+  minWidth: 0,
+  maxWidth: Infinity,
 }
 
 // ─── ChoiceCmd 타입 ──────────────────────────────────────────
@@ -75,6 +118,11 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
     var?: Resolvable<Partial<Record<keyof VarsOf<TConfig>, any>>, VarsOf<TConfig>, TLocalVars>
   }[]
+  /**
+   * 내부 간격 레이아웃. 미지정 시 schema의 layout 또는 기본값 사용.
+   * 커맨드 단위로 일시 재정의할 때 유용합니다.
+   */
+  layout?: ChoiceLayout
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -88,6 +136,7 @@ const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema>({
   buttonHover: undefined,
   text: undefined,
   textHover: undefined,
+  layout: undefined,
 })
 
 choiceModule.defineView((data, ctx) => {
@@ -134,28 +183,56 @@ choiceModule.defineView((data, ctx) => {
       bgObj.fadeOut(200, 'easeIn')
       _clearButtons()
     },
-    onChoices: (choices: any[], onSelect: (i: number) => void) => {
+    onChoices: (choices: any[], onSelect: (i: number) => void, layoutOverride?: ChoiceLayout) => {
       bgObj.fadeIn(200, 'easeOut')
       _clearButtons()
 
-      const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button } as Partial<Style> & { minWidth?: number }
+      const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button } as Partial<Style> & { minWidth?: number; maxWidth?: number }
       const defaultHoverStyle = { ...DEFAULT_CHOICE.buttonHover, ...cfg.buttonHover } as Partial<Style>
       const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text } as Partial<Style>
       const defaultTextHoverStyle = { ...DEFAULT_CHOICE.textHover, ...cfg.textHover } as Partial<Style>
 
-      const fSize = defaultTextStyle.fontSize ?? 18
-      const mWidth = defaultBtnStyle.minWidth ?? 260
-      const gap = 12
-      const paddingY = 12
-      const btnH = fSize * 1.5 + paddingY * 2
-      const totalHeight = choices.length * btnH + Math.max(0, choices.length - 1) * gap
-      const startY = h / 2 - totalHeight / 2 + btnH / 2
+      // 레이아웃: 커맨드 지정 > schema layout > DEFAULT_LAYOUT
+      const layoutCfg: Required<ChoiceLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}), ...(layoutOverride ?? {}) }
 
-      choices.forEach((choice: any, i: number) => {
-        const cy = startY + i * (btnH + gap)
+      const fSize = defaultTextStyle.fontSize ?? 18
+      const lineH = (defaultTextStyle.lineHeight as number | undefined) ?? 1.5
+      const gap = layoutCfg.gap
+      const paddingY = layoutCfg.paddingY / 2   // 단방향(상 or 하) 패딩
+
+      // ─── 버튼별 너비·높이 사전 계산 ─────────────────────────────
+      // minWidth/maxWidth: layout > button 스타일 순으로 적용
+      const resolvedMinW = layoutCfg.minWidth > 0
+        ? layoutCfg.minWidth
+        : (defaultBtnStyle.minWidth ?? 260)
+      const resolvedMaxW = isFinite(layoutCfg.maxWidth)
+        ? layoutCfg.maxWidth
+        : (defaultBtnStyle.maxWidth ?? Infinity)
+
+      type BtnDim = { w: number; h: number; lines: number }
+      const dims: BtnDim[] = choices.map((choice: any) => {
         const textStr = String(choice.text)
         const estimatedTextW = textStr.length * fSize * 0.8
-        const btnW = Math.max(mWidth, estimatedTextW + 64)
+        // 너비: minWidth 이상, maxWidth 이하
+        const rawW = estimatedTextW + layoutCfg.paddingX
+        const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW))
+        // 텍스트 가용 너비 = btnW - paddingX
+        const textAvailW = btnW - layoutCfg.paddingX
+        const lineCount = textAvailW > 0
+          ? Math.ceil(estimatedTextW / textAvailW)
+          : 1
+        const btnH = fSize * lineH * lineCount + paddingY * 2
+        return { w: btnW, h: btnH, lines: lineCount }
+      })
+
+      const totalHeight = dims.reduce((acc, d, i) => acc + d.h + (i > 0 ? gap : 0), 0)
+      let startY = h / 2 - totalHeight / 2 + dims[0].h / 2
+
+      choices.forEach((choice: any, i: number) => {
+        if (i > 0) startY += dims[i - 1].h / 2 + gap + dims[i].h / 2
+        const cy = startY
+        const textStr = String(choice.text)
+        const { w: btnW, h: btnH } = dims[i]
 
         const btnStyle: Partial<Style> = {
           ...defaultBtnStyle,
@@ -173,6 +250,8 @@ choiceModule.defineView((data, ctx) => {
 
         const textStyle: Partial<Style> = {
           ...defaultTextStyle,
+          // 너비 제한 시 텍스트가 btnW 내에서 래핑되도록 width 지정
+          width: btnW - layoutCfg.paddingX,
           textAlign: defaultTextStyle.textAlign ?? 'center',
           zIndex: defaultTextStyle.zIndex ?? 502,
           pointerEvents: false,
@@ -273,7 +352,7 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     } else {
       ctx.scene.end()
     }
-  })
+  }, cmd.layout)
 
   return 'handled'
 })

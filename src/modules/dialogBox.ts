@@ -63,7 +63,7 @@ export interface DialogBoxSchema {
   /** 전체 화면 오버레이(반투명 배경) 스타일 */
   overlay?: Partial<Style>
   /** 대화상자 패널 스타일 */
-  panel?: Partial<Style> & { width?: number; minWidth?: number; maxWidth?: number; height?: number }
+  panel?: Partial<Style> & { minWidth?: number; maxWidth?: number; height?: number }
   /** 제목 텍스트 스타일 */
   titleStyle?: Partial<Style>
   /** 본문 텍스트 스타일 */
@@ -100,7 +100,7 @@ const DEFAULT_DIALOG: Required<Pick<
     borderColor: 'rgba(255,255,255,0.35)',
     borderWidth: 1,
     borderRadius: '4%',
-    width: 480,
+    minWidth: 480,
     height: undefined,
   },
   titleStyle: {
@@ -258,16 +258,17 @@ dialogBoxModule.defineView((data, ctx) => {
   overlayObj.fadeOut(0).stop()
 
   // ─── panelObj: overlayObj 자식 ────────────────────────────
-  const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, data.panel)
-  const PANEL_W = Math.min(
-    panelCfg.maxWidth ?? Infinity,
-    Math.max(panelCfg.minWidth ?? 0, panelCfg.width ?? 480)
-  )
+  const panelCfgInit = mergeStyle(DEFAULT_DIALOG.panel, data.panel)
+  // 초기 PANEL_W: _render 시 갱신되므로 임시값으로 초기화
+  const INIT_PANEL_W = Math.max(
+    (panelCfgInit.minWidth as number) ?? 0,
+    0
+  ) || 480
 
   const panelObj = ctx.world.createRectangle({
     style: {
-      ...panelCfg,
-      width: PANEL_W,
+      ...panelCfgInit,
+      width: INIT_PANEL_W,
       height: 10,
       zIndex: 601,
       pointerEvents: true,
@@ -294,6 +295,7 @@ dialogBoxModule.defineView((data, ctx) => {
   // _render마다 갱신되는 현재 resolve/persist 참조
   let _currentResolve: ((i: number) => void) | null = null
   let _currentPersist = false
+  let _currentPanelW = INIT_PANEL_W
   let _currentPanelH = 0
 
   overlayObj.on('click', (e: any) => {
@@ -304,7 +306,7 @@ dialogBoxModule.defineView((data, ctx) => {
         { left: 0, top: 0, width: w, height: h }
       const mouseX = e.clientX - canvasRect.left - canvasRect.width / 2
       const mouseY = e.clientY - canvasRect.top - canvasRect.height / 2
-      const inPanel = Math.abs(mouseX) <= PANEL_W / 2 && Math.abs(mouseY) <= _currentPanelH / 2
+      const inPanel = Math.abs(mouseX) <= _currentPanelW / 2 && Math.abs(mouseY) <= _currentPanelH / 2
       if (inPanel) return
       _currentResolve(-1)
     }
@@ -330,6 +332,15 @@ dialogBoxModule.defineView((data, ctx) => {
     const btnTxtHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonTextHover, cfg.buttonTextHover)
     const titleCfgR = mergeStyle(DEFAULT_DIALOG.titleStyle, cfg.titleStyle)
     const contentCfgR = mergeStyle(DEFAULT_DIALOG.contentStyle, cfg.contentStyle)
+
+    // ─── 패널 너비: _render마다 cfg 기반으로 재계산 ─────────
+    const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, cfg.panel)
+    const PANEL_W = Math.min(
+      (panelCfg.maxWidth as number) ?? Infinity,
+      Math.max((panelCfg.minWidth as number) ?? 480, 0)
+    )
+    panelObj.style.width = PANEL_W
+    _currentPanelW = PANEL_W
 
     const titleFontSize = (titleCfgR.fontSize as number) ?? 22
     const contentFontSize = (contentCfgR.fontSize as number) ?? 18

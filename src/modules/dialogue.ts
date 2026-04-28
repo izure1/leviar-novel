@@ -14,6 +14,29 @@ export interface DialogueHook {
   }
 }
 
+/**
+ * 대화창 내부 간격 레이아웃 설정.
+ * `defineInitial` 또는 커맨드의 `layout` 필드로 씬/커맨드별 지정 가능.
+ */
+export interface DialogueLayout {
+  /**
+   * 화자명·대사 텍스트의 좌우 여백 비율(0–1).
+   * 텍스트 오브젝트 너비 = canvasWidth * (1 - paddingX * 2).
+   * @default 0.05
+   */
+  paddingX?: number
+  /**
+   * 대화창 상단(패널 안쪽 위)에서 화자명 상단까지의 거리(px).
+   * @default 24
+   */
+  paddingTop?: number
+  /**
+   * 화자명과 대사 텍스트 사이 간격(px).
+   * @default 8
+   */
+  speakerTextGap?: number
+}
+
 /** dialogueModule이 공유하는 데이터 스키마 */
 export interface DialogueSchema {
   /** 대화창 전체 패널 스타일 (권장) */
@@ -24,6 +47,8 @@ export interface DialogueSchema {
   speaker?: Partial<Style>
   /** 대사 텍스트 스타일 */
   text?: Partial<Style>
+  /** 내부 간격 레이아웃. `defineInitial`로 씬 전체에 적용 가능 */
+  layout?: DialogueLayout
   // ─── 런타임 상태 ───────────────────────────────────────────
   /** @internal 현재 텍스트 서브 인덱스 */
   _subIndex: number
@@ -52,6 +77,12 @@ const DEFAULT_TEXT: Partial<Style> = {
   fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
   textAlign: 'left',
   textShadowBlur: 1, textShadowColor: '#000000', textShadowOffsetX: 1, textShadowOffsetY: 1,
+}
+
+const DEFAULT_LAYOUT: Required<DialogueLayout> = {
+  paddingX: 0.05,
+  paddingTop: 24,
+  speakerTextGap: 8,
 }
 
 // ─── 화자 이름 해석 헬퍼 ────────────────────────────────────
@@ -86,6 +117,11 @@ export interface DialogueCmd<TConfig = any> {
    * 미지정 시 시스템 설정 속도 또는 기본값(예: 30ms)이 사용됩니다.
    */
   speed?: number
+  /**
+   * 내부 간격 레이아웃. 미지정 시 schema의 layout 또는 기본값 사용.
+   * 커맨드 단위로 일시 재정의할 때 유용합니다.
+   */
+  layout?: DialogueLayout
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -107,6 +143,7 @@ const dialogueModule = define<DialogueCmd<any>, DialogueSchema>({
   bg: undefined,
   speaker: undefined,
   text: undefined,
+  layout: undefined,
   _subIndex: 0,
   _lines: [],
   _speakerKey: undefined,
@@ -128,8 +165,12 @@ dialogueModule.defineView((data, ctx) => {
   const spkCfg = { ...DEFAULT_SPEAKER, ...(data.speaker ?? {}) } as Style
   const txtCfg = { ...DEFAULT_TEXT, ...(data.text ?? {}) } as Style
 
+  // 레이아웃 병합
+  const layoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(data.layout ?? {}) }
+
   const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
   const BOX_CY = h - BOX_H / 2
+  const TEXT_W = w * (1 - layoutCfg.paddingX * 2)
 
   // 대화창 배경
   const bgObj = ctx.world.createRectangle({
@@ -148,12 +189,12 @@ dialogueModule.defineView((data, ctx) => {
   ctx.renderer.track(bgObj)
 
   // 화자 이름창
-  const spkY = h - BOX_H + 24
+  const spkY = h - BOX_H + layoutCfg.paddingTop
   const speakerObj = ctx.world.createText({
     attribute: { text: '' },
     style: {
       ...spkCfg,
-      width: w * 0.90,
+      width: spkCfg.width ?? TEXT_W,
       zIndex: spkCfg.zIndex ?? 301,
       opacity: 1,
       display: 'none',
@@ -170,13 +211,13 @@ dialogueModule.defineView((data, ctx) => {
     attribute: { text: '' },
     style: {
       ...txtCfg,
-      width: txtCfg.width ?? w * 0.90,
+      width: txtCfg.width ?? TEXT_W,
       zIndex: txtCfg.zIndex ?? 301,
       opacity: 1,
       display: 'none',
       pointerEvents: false,
     },
-    transform: { position: toLocal(w / 2, spkY + spkH + 8) },
+    transform: { position: toLocal(w / 2, spkY + spkH + layoutCfg.speakerTextGap) },
   })
   ctx.world.camera?.addChild(textObj)
   ctx.renderer.track(textObj)
@@ -262,9 +303,11 @@ dialogueModule.defineView((data, ctx) => {
       const newBgCfg = { ...DEFAULT_BG, ...(d.bg ?? {}), ...(d.style ?? {}) } as Style
       const newSpkCfg = { ...DEFAULT_SPEAKER, ...(d.speaker ?? {}) } as Style
       const newTxtCfg = { ...DEFAULT_TEXT, ...(d.text ?? {}) } as Style
+      const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(d.layout ?? {}) }
+      const newTextW = w * (1 - newLayoutCfg.paddingX * 2)
       Object.assign(bgObj.style, newBgCfg)
-      Object.assign(speakerObj.style, newSpkCfg)
-      Object.assign(textObj.style, newTxtCfg)
+      Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW })
+      Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW })
 
       // 텍스트 갱신: _lines 참조가 바뀐 경우에만 렌더 (중복 방지)
       if (d._lines && d._lines !== _prevLines && d._lines.length > 0) {
@@ -292,7 +335,8 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
       _speed: cmd.speed,
       _speakerKey: cmd.speaker as string | undefined,
       _subIndex: index,
-      _lines: [...lines]
+      _lines: [...lines],
+      ...(cmd.layout !== undefined ? { layout: cmd.layout } : {}),
     })
 
     ctx.scene.setTextSubIndex(index + 1)
