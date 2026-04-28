@@ -839,9 +839,9 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const bgCfg = { ...DEFAULT_BG, ...data.bg ?? {}, ...data.style ?? {} };
-    const spkCfg = { ...DEFAULT_SPEAKER, ...data.speaker ?? {} };
-    const txtCfg = { ...DEFAULT_TEXT, ...data.text ?? {} };
+    const bgCfg = data.style ?? data.bg ?? DEFAULT_BG;
+    const spkCfg = data.speaker ?? DEFAULT_SPEAKER;
+    const txtCfg = data.text ?? DEFAULT_TEXT;
     const layoutCfg = { ...DEFAULT_LAYOUT, ...data.layout ?? {} };
     const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
     const BOX_CY = h - BOX_H / 2;
@@ -955,9 +955,9 @@
        * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */
       update: (d2) => {
-        const newBgCfg = { ...DEFAULT_BG, ...d2.bg ?? {}, ...d2.style ?? {} };
-        const newSpkCfg = { ...DEFAULT_SPEAKER, ...d2.speaker ?? {} };
-        const newTxtCfg = { ...DEFAULT_TEXT, ...d2.text ?? {} };
+        const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_BG;
+        const newSpkCfg = d2.speaker ?? DEFAULT_SPEAKER;
+        const newTxtCfg = d2.text ?? DEFAULT_TEXT;
         const newLayoutCfg = { ...DEFAULT_LAYOUT, ...d2.layout ?? {} };
         const newTextW = w * (1 - newLayoutCfg.paddingX * 2);
         Object.assign(bgObj.style, newBgCfg);
@@ -1086,9 +1086,9 @@
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
         const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button };
-        const defaultHoverStyle = { ...DEFAULT_CHOICE.buttonHover, ...cfg.buttonHover };
+        const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
         const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text };
-        const defaultTextHoverStyle = { ...DEFAULT_CHOICE.textHover, ...cfg.textHover };
+        const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
         const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {}, ...layoutOverride ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
@@ -1138,26 +1138,14 @@
             style: textStyle,
             transform: { position: { x: 0, y: 0, z: 0 } }
           });
-          const normalStyleProps = {
-            color: btnStyle.color,
-            borderColor: btnStyle.borderColor
-          };
-          const normalTextProps = {
-            color: textStyle.color,
-            textShadowBlur: textStyle.textShadowBlur,
-            textShadowColor: textStyle.textShadowColor,
-            textShadowOffsetX: textStyle.textShadowOffsetX,
-            textShadowOffsetY: textStyle.textShadowOffsetY
-          };
-          const hoverBtnStyle = {
-            color: defaultHoverStyle.color,
-            borderColor: defaultHoverStyle.borderColor,
-            ...defaultHoverStyle
-          };
-          const hoverTxtStyle = {
-            color: defaultTextHoverStyle.color,
-            ...defaultTextHoverStyle
-          };
+          const hoverBtnStyle = { ...defaultHoverStyle };
+          const hoverTxtStyle = { ...defaultTextHoverStyle };
+          const normalStyleProps = Object.fromEntries(
+            Object.keys(hoverBtnStyle).map((key) => [key, btnStyle[key]])
+          );
+          const normalTextProps = Object.fromEntries(
+            Object.keys(hoverTxtStyle).map((key) => [key, textStyle[key]])
+          );
           btnObj.on("mouseover", () => {
             btnObj.animate({ style: hoverBtnStyle }, 150);
             txtObj.animate({ style: hoverTxtStyle }, 150);
@@ -1199,11 +1187,7 @@
         const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
         if (vars) {
           for (const [key, value] of Object.entries(vars)) {
-            if (key.startsWith("_")) {
-              ctx.scene.setLocalVar(key, value);
-            } else {
-              ctx.scene.setGlobalVar(key, value);
-            }
+            ctx.scene.setGlobalVar(key, value);
           }
         }
       }
@@ -2993,7 +2977,7 @@
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
     const mergeStyle = (def, override) => ({ ...def, ...override ?? {} });
-    const overlayCfg = mergeStyle(DEFAULT_DIALOG.overlay, data.overlay);
+    const overlayCfg = data.overlay ?? DEFAULT_DIALOG.overlay;
     const overlayObj = ctx.world.createRectangle({
       style: {
         ...overlayCfg,
@@ -3009,7 +2993,7 @@
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
-    const panelCfgInit = mergeStyle(DEFAULT_DIALOG.panel, data.panel);
+    const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel;
     const INIT_PANEL_W = Math.max(
       panelCfgInit.minWidth ?? 0,
       0
@@ -3050,13 +3034,13 @@
     const _render = (title, content, buttons, resolve, duration, persist, cfg) => {
       _currentResolve = resolve;
       _currentPersist = persist;
-      const btnCfg = mergeStyle(DEFAULT_DIALOG.button, cfg.button);
-      const btnHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonHover, cfg.buttonHover);
-      const btnTxtCfg = mergeStyle(DEFAULT_DIALOG.buttonText, cfg.buttonText);
-      const btnTxtHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonTextHover, cfg.buttonTextHover);
-      const titleCfgR = mergeStyle(DEFAULT_DIALOG.titleStyle, cfg.titleStyle);
-      const contentCfgR = mergeStyle(DEFAULT_DIALOG.contentStyle, cfg.contentStyle);
-      const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, cfg.panel);
+      const btnCfg = cfg.button ?? DEFAULT_DIALOG.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG.buttonTextHover;
+      const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle;
+      const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle;
+      const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel;
       const PANEL_W = Math.min(
         panelCfg.maxWidth ?? Infinity,
         Math.max(panelCfg.minWidth ?? 480, 0)
@@ -3145,8 +3129,12 @@
             style: { ...btnTxtCfg, zIndex: 604, pointerEvents: false },
             transform: { position: { x: 0, y: 0, z: 0 } }
           });
-          const normalBtnProps = { color: btnStyle.color, borderColor: btnStyle.borderColor };
-          const normalTxtProps = { color: btnTxtCfg.color };
+          const normalBtnProps = Object.fromEntries(
+            Object.keys(btnHoverCfg).map((key) => [key, btnStyle[key]])
+          );
+          const normalTxtProps = Object.fromEntries(
+            Object.keys(btnTxtHoverCfg).map((key) => [key, btnTxtCfg[key]])
+          );
           btnObj.on("mouseover", () => {
             btnObj.animate({ style: btnHoverCfg }, 150);
             txtObj.animate({ style: btnTxtHoverCfg }, 150);
@@ -17421,21 +17409,28 @@ ${addLineNumbers(fragment)}`);
         fontSize: 18,
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
         color: "#f0f0f0",
-        lineHeight: 1.65
+        lineHeight: 1.65,
+        textShadowOffsetX: 1,
+        textShadowOffsetY: 1,
+        textShadowBlur: 0,
+        textShadowColor: "rgb(0,0,0)"
       }
     },
     "choice": {
       button: {
-        color: "rgba(20,20,50,0.90)",
-        borderColor: "rgba(255,255,255,0.25)",
-        borderRadius: 10,
-        minWidth: 280
+        color: void 0,
+        borderWidth: void 0,
+        borderColor: void 0,
+        gradientType: "linear",
+        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%",
+        minWidth: 600,
+        maxWidth: 600
       },
       buttonHover: {
-        color: "rgba(80,60,180,0.92)",
-        borderColor: "rgba(200,180,255,0.8)"
+        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%"
       },
       text: {
+        color: "rgb(255,255,255)",
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif"
       },
       textHover: {
