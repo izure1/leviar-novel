@@ -39,8 +39,10 @@ export const commonInitial = defineInitial(config, {
       borderColor: undefined,
       gradientType: 'linear',
       gradient: '90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%',
-      minWidth: 600,
-      maxWidth: 600,
+    },
+    layout: {
+      buttonMinWidth: 600,
+      buttonMaxWidth: 600,
     },
     buttonHover: {
       gradient: '90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%',

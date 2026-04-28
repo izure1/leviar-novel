@@ -1015,8 +1015,7 @@
       color: "rgba(30,30,60,0.85)",
       borderColor: "rgba(255,255,255,0.3)",
       borderWidth: 1.5,
-      borderRadius: 8,
-      minWidth: 260
+      borderRadius: 8
     },
     buttonHover: {
       color: "rgba(80,80,180,0.9)",
@@ -1036,8 +1035,8 @@
     gap: 12,
     paddingX: 64,
     paddingY: 24,
-    minWidth: 0,
-    maxWidth: Infinity
+    buttonMinWidth: 260,
+    buttonMaxWidth: Infinity
   };
   var choiceModule = define2({
     bg: void 0,
@@ -1048,12 +1047,12 @@
     layout: void 0
   });
   choiceModule.defineView((data, ctx) => {
-    const cfg = { ...DEFAULT_CHOICE, ...data };
+    const cfg = { ...data };
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const defaultBgStyle = { ...DEFAULT_CHOICE.bg, ...cfg.bg };
+    const defaultBgStyle = cfg.bg ?? DEFAULT_CHOICE.bg;
     const bgObj = ctx.world.createRectangle({
       style: {
         ...defaultBgStyle,
@@ -1085,17 +1084,17 @@
       onChoices: (choices, onSelect, layoutOverride) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
-        const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button };
+        const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
         const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
-        const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text };
+        const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE.text;
         const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
         const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {}, ...layoutOverride ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
         const paddingY = layoutCfg.paddingY / 2;
-        const resolvedMinW = layoutCfg.minWidth > 0 ? layoutCfg.minWidth : defaultBtnStyle.minWidth ?? 260;
-        const resolvedMaxW = isFinite(layoutCfg.maxWidth) ? layoutCfg.maxWidth : defaultBtnStyle.maxWidth ?? Infinity;
+        const resolvedMinW = layoutCfg.buttonMinWidth;
+        const resolvedMaxW = layoutCfg.buttonMaxWidth;
         const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
@@ -1165,7 +1164,7 @@
         });
       },
       update: (d2) => {
-        Object.assign(cfg, DEFAULT_CHOICE, d2);
+        Object.assign(cfg, d2);
       }
     };
   });
@@ -17422,9 +17421,11 @@ ${addLineNumbers(fragment)}`);
         borderWidth: void 0,
         borderColor: void 0,
         gradientType: "linear",
-        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%",
-        minWidth: 600,
-        maxWidth: 600
+        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%"
+      },
+      layout: {
+        buttonMinWidth: 600,
+        buttonMaxWidth: 600
       },
       buttonHover: {
         gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%"

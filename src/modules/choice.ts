@@ -30,14 +30,14 @@ export interface ChoiceLayout {
   paddingY?: number
   /**
    * 버튼 최소 너비(px). 텍스트가 짧아도 이 값 이상 유지.
-   * `button.minWidth` 보다 우선합니다.
+   * @default 260
    */
-  minWidth?: number
+  buttonMinWidth?: number
   /**
    * 버튼 최대 너비(px). 지정 시 텍스트가 길어도 이 너비로 고정되며,
    * 텍스트가 여러 줄로 자동 래핑됩니다.
    */
-  maxWidth?: number
+  buttonMaxWidth?: number
 }
 
 /** choiceModule이 공유하는 데이터 스키마 */
@@ -45,7 +45,7 @@ export interface ChoiceSchema {
   /** 선택지 전체 배경(컨테이너) 스타일 */
   bg?: Partial<Style>
   /** 선택지 버튼(배경) 스타일 */
-  button?: Partial<Style> & { minWidth?: number; maxWidth?: number }
+  button?: Partial<Style>
   /** 선택지 버튼 호버 스타일 */
   buttonHover?: Partial<Style>
   /** 선택지 텍스트 스타일 */
@@ -67,7 +67,6 @@ const DEFAULT_CHOICE: ChoiceSchema = {
     borderColor: 'rgba(255,255,255,0.3)',
     borderWidth: 1.5,
     borderRadius: 8,
-    minWidth: 260,
   },
   buttonHover: {
     color: 'rgba(80,80,180,0.9)',
@@ -87,8 +86,8 @@ const DEFAULT_LAYOUT: Required<ChoiceLayout> = {
   gap: 12,
   paddingX: 64,
   paddingY: 24,
-  minWidth: 0,
-  maxWidth: Infinity,
+  buttonMinWidth: 260,
+  buttonMaxWidth: Infinity,
 }
 
 // ─── ChoiceCmd 타입 ──────────────────────────────────────────
@@ -142,7 +141,7 @@ const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema>({
 })
 
 choiceModule.defineView((data, ctx) => {
-  const cfg = { ...DEFAULT_CHOICE, ...data }
+  const cfg = { ...data }
 
   const cam = ctx.world.camera
   const w = ctx.renderer.width
@@ -154,7 +153,7 @@ choiceModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   // 전체 화면을 덮는 반투명 배경 패널 (이벤트 차단 용도 겸용)
-  const defaultBgStyle = { ...DEFAULT_CHOICE.bg, ...cfg.bg } as Partial<Style>
+  const defaultBgStyle = (cfg.bg ?? DEFAULT_CHOICE.bg) as Partial<Style>
 
   const bgObj = ctx.world.createRectangle({
     style: {
@@ -189,9 +188,9 @@ choiceModule.defineView((data, ctx) => {
       bgObj.fadeIn(200, 'easeOut')
       _clearButtons()
 
-      const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button } as Partial<Style> & { minWidth?: number; maxWidth?: number }
+      const defaultBtnStyle = (cfg.button ?? DEFAULT_CHOICE.button) as Partial<Style>
       const defaultHoverStyle = (cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover) as Partial<Style>
-      const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text } as Partial<Style>
+      const defaultTextStyle = (cfg.text ?? DEFAULT_CHOICE.text) as Partial<Style>
       const defaultTextHoverStyle = (cfg.textHover ?? DEFAULT_CHOICE.textHover) as Partial<Style>
 
       // 레이아웃: 커맨드 지정 > schema layout > DEFAULT_LAYOUT
@@ -203,13 +202,8 @@ choiceModule.defineView((data, ctx) => {
       const paddingY = layoutCfg.paddingY / 2   // 단방향(상 or 하) 패딩
 
       // ─── 버튼별 너비·높이 사전 계산 ─────────────────────────────
-      // minWidth/maxWidth: layout > button 스타일 순으로 적용
-      const resolvedMinW = layoutCfg.minWidth > 0
-        ? layoutCfg.minWidth
-        : (defaultBtnStyle.minWidth ?? 260)
-      const resolvedMaxW = isFinite(layoutCfg.maxWidth)
-        ? layoutCfg.maxWidth
-        : (defaultBtnStyle.maxWidth ?? Infinity)
+      const resolvedMinW = layoutCfg.buttonMinWidth
+      const resolvedMaxW = layoutCfg.buttonMaxWidth
 
       type BtnDim = { w: number; h: number; lines: number }
       const dims: BtnDim[] = choices.map((choice: any) => {
@@ -296,7 +290,7 @@ choiceModule.defineView((data, ctx) => {
       })
     },
     update: (d: ChoiceSchema) => {
-      Object.assign(cfg, DEFAULT_CHOICE, d)
+      Object.assign(cfg, d)
     },
   }
 })
