@@ -81,8 +81,8 @@ export interface AudioTrack {
 }
 
 export interface AudioSchema {
-  /** name → AudioTrack 맵 */
-  tracks: Record<string, AudioTrack>
+  /** @internal name → AudioTrack 맵 */
+  _tracks: Record<string, AudioTrack>
 }
 
 // ─── 볼륨 페이드 헬퍼 ────────────────────────────────────────
@@ -134,7 +134,7 @@ const pool = new Map<string, HTMLAudioElement>()
  * - pause: duration에 걸쳐 페이드아웃 후 일시정지합니다.
  * - stop: duration에 걸쳐 페이드아웃 후 정지 및 제거합니다.
  */
-const audioModule = define<AudioCmd<any>, AudioSchema>({ tracks: {} })
+const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
 
 audioModule.defineView((_data, _ctx) => ({
   show: () => {},
@@ -163,7 +163,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     const duration = playCmd.duration ?? 0
 
     const existing = pool.get(playCmd.name)
-    const existingSrc = existing ? state.tracks[playCmd.name]?.src : undefined
+    const existingSrc = existing ? state._tracks[playCmd.name]?.src : undefined
 
     // ── 같은 name + 같은 src: 기존 재생 유지, 설정값만 업데이트 ──
     if (existing && existingSrc === (playCmd.src as string)) {
@@ -180,7 +180,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       // volume은 duration에 걸쳐 부드럽게 변경
       fadeVolume(existing, targetVolume, duration)
 
-      const newTracks = { ...state.tracks }
+      const newTracks = { ...state._tracks }
       newTracks[playCmd.name] = {
         ...newTracks[playCmd.name],
         volume: targetVolume,
@@ -188,7 +188,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
         repeat,
         paused: false,
       }
-      setState({ tracks: newTracks })
+      setState({ _tracks: newTracks })
 
       return true
     }
@@ -231,7 +231,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     }
 
     // 상태 저장
-    const newPlayTracks = { ...state.tracks }
+    const newPlayTracks = { ...state._tracks }
     newPlayTracks[playCmd.name] = {
       src: playCmd.src as string,
       volume: targetVolume,
@@ -241,7 +241,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       end: endSec,
       paused: false,
     }
-    setState({ tracks: newPlayTracks })
+    setState({ _tracks: newPlayTracks })
 
     return true
   }
@@ -258,7 +258,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       fadeVolume(audio, 0, duration).then(() => {
         audio.pause()
         // 볼륨 복원 (다음 resume을 위해)
-        const track = state.tracks[pauseCmd.name]
+        const track = state._tracks[pauseCmd.name]
         if (track) audio.volume = track.volume
         ctx.callbacks.advance()
       })
@@ -266,15 +266,15 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       yield false
     } else {
       audio.pause()
-      const track = state.tracks[pauseCmd.name]
+      const track = state._tracks[pauseCmd.name]
       if (track) audio.volume = track.volume
     }
 
-    const newPauseTracks = { ...state.tracks }
+    const newPauseTracks = { ...state._tracks }
     if (newPauseTracks[pauseCmd.name]) {
       newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true }
     }
-    setState({ tracks: newPauseTracks })
+    setState({ _tracks: newPauseTracks })
 
     return true
   }
@@ -304,9 +304,9 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       pool.delete(stopCmd.name)
     }
 
-    const newStopTracks = { ...state.tracks }
+    const newStopTracks = { ...state._tracks }
     delete newStopTracks[stopCmd.name]
-    setState({ tracks: newStopTracks })
+    setState({ _tracks: newStopTracks })
 
     return true
   }

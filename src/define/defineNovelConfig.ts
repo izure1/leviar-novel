@@ -16,6 +16,7 @@ import labelModule from '../modules/label'
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
+import dialogBoxModule from '../modules/dialogBox'
 
 // ─── 내장 모듈 맵 ────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export const BUILTIN_MODULES = {
   'ui': uiModule,
   'control': controlModule,
   'audio': audioModule,
+  'dialogBox': dialogBoxModule,
 } as const
 
 /** 내장 모듈 타입 */

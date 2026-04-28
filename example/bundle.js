@@ -823,10 +823,10 @@
     bg: void 0,
     speaker: void 0,
     text: void 0,
-    subIndex: 0,
-    lines: [],
-    speakerKey: void 0,
-    speed: void 0
+    _subIndex: 0,
+    _lines: [],
+    _speakerKey: void 0,
+    _speed: void 0
   });
   dialogueModule.defineView((data, ctx) => {
     const cam = ctx.world.camera;
@@ -917,10 +917,10 @@
         }
       }
     };
-    if (data.lines?.length) {
-      _prevLines = data.lines;
-      const txt = data.lines[data.subIndex ?? 0];
-      const spkName = resolveSpeaker(data.speakerKey, charDefs);
+    if (data._lines?.length) {
+      _prevLines = data._lines;
+      const txt = data._lines[data._subIndex ?? 0];
+      const spkName = resolveSpeaker(data._speakerKey, charDefs);
       _renderText(spkName, txt, void 0, true);
     }
     return {
@@ -953,13 +953,13 @@
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, newSpkCfg);
         Object.assign(textObj.style, newTxtCfg);
-        if (d2.lines && d2.lines !== _prevLines && d2.lines.length > 0) {
-          _prevLines = d2.lines;
-          const txt = d2.lines[d2.subIndex ?? 0];
-          const spkName = resolveSpeaker(d2.speakerKey, charDefs);
+        if (d2._lines && d2._lines !== _prevLines && d2._lines.length > 0) {
+          _prevLines = d2._lines;
+          const txt = d2._lines[d2._subIndex ?? 0];
+          const spkName = resolveSpeaker(d2._speakerKey, charDefs);
           const hooker = useHookallSync(ctx.novel);
           hooker.trigger("dialogue:text", { speaker: spkName, text: txt }, (state) => {
-            _renderText(state.speaker, state.text, d2.speed);
+            _renderText(state.speaker, state.text, d2._speed);
             return state;
           });
         }
@@ -972,10 +972,10 @@
     const ui = ctx.ui.get("dialogue");
     for (let index = 0; index < lines.length; index++) {
       setState({
-        speed: cmd.speed,
-        speakerKey: cmd.speaker,
-        subIndex: index,
-        lines: [...lines]
+        _speed: cmd.speed,
+        _speakerKey: cmd.speaker,
+        _subIndex: index,
+        _lines: [...lines]
       });
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
@@ -1190,11 +1190,11 @@
 
   // src/modules/background.ts
   var backgroundModule = define2({
-    key: void 0,
-    fit: "cover",
-    duration: 1e3,
-    parallax: true,
-    isVideo: false
+    _key: void 0,
+    _fit: "cover",
+    _lastDuration: 1e3,
+    _parallax: true,
+    _isVideo: false
   });
   backgroundModule.defineView((data, ctx) => {
     let _bgObj = null;
@@ -1261,9 +1261,9 @@
       ctx.renderer.track(obj);
       return obj;
     };
-    if (data.key) {
-      _bgObj = _createBg(data.key, data.fit, data.parallax, data.isVideo);
-      _bgParallax = data.parallax;
+    if (data._key) {
+      _bgObj = _createBg(data._key, data._fit, data._parallax, data._isVideo);
+      _bgParallax = data._parallax;
     }
     return {
       show: (dur = 250) => {
@@ -1273,14 +1273,14 @@
         _bgObj?.fadeOut?.(dur, "easeIn");
       },
       update: (d2) => {
-        if (!d2.key) return;
+        if (!d2._key) return;
         const bgDefs = ctx.renderer.config.backgrounds;
-        const def = bgDefs[d2.key];
+        const def = bgDefs[d2._key];
         if (!def) return;
-        const src = def.src ?? d2.key;
+        const src = def.src ?? d2._key;
         const useParallax = def.parallax ?? true;
-        const dur = ctx.renderer.dur(d2.duration);
-        ctx.renderer.state.set("backgroundKey", d2.key);
+        const dur = ctx.renderer.dur(d2._lastDuration);
+        ctx.renderer.state.set("backgroundKey", d2._key);
         if (_bgObj) {
           const sameParallax = _bgParallax === useParallax;
           if (sameParallax) {
@@ -1297,7 +1297,7 @@
           _bgObj = null;
         }
         _bgParallax = useParallax;
-        _bgObj = _createBg(d2.key, d2.fit, useParallax, d2.isVideo, dur > 0 ? 0 : 1);
+        _bgObj = _createBg(d2._key, d2._fit, useParallax, d2._isVideo, dur > 0 ? 0 : 1);
         if (dur > 0 && _bgObj) {
           ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
         }
@@ -1310,11 +1310,11 @@
     if (!def) return true;
     const fit = cmd.fit === "inherit" || !cmd.fit ? "cover" : cmd.fit;
     setState({
-      key: cmd.name,
-      fit,
-      duration: cmd.duration ?? 1e3,
-      parallax: def.parallax ?? true,
-      isVideo: cmd.isVideo ?? false
+      _key: cmd.name,
+      _fit: fit,
+      _lastDuration: cmd.duration ?? 1e3,
+      _parallax: def.parallax ?? true,
+      _isVideo: cmd.isVideo ?? false
     });
     return true;
   });
@@ -1481,7 +1481,7 @@
     return 0.5;
   }
   var characterModule = define2({
-    characters: {}
+    _characters: {}
   });
   characterModule.defineView((data, ctx) => {
     const _charObjs = {};
@@ -1541,7 +1541,7 @@
         }
       }
     };
-    for (const [name, info] of Object.entries(data.characters)) {
+    for (const [name, info] of Object.entries(data._characters)) {
       _showCharacter(name, info.position, info.imageKey, void 0, true);
     }
     return {
@@ -1555,21 +1555,21 @@
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
       update: (d2) => {
-        const dur = d2.lastDuration;
-        const newNames = new Set(Object.keys(d2.characters));
+        const dur = d2._lastDuration;
+        const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
           if (!newNames.has(name)) {
             _removeCharacter(name, dur);
           }
         }
-        for (const [name, info] of Object.entries(d2.characters)) {
+        for (const [name, info] of Object.entries(d2._characters)) {
           _showCharacter(name, info.position, info.imageKey, dur);
         }
       }
     };
   });
   characterModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const newChars = { ...state.characters };
+    const newChars = { ...state._characters };
     if (cmd.action === "show") {
       const showCmd = cmd;
       const charDefs = ctx.renderer.config.characters;
@@ -1579,7 +1579,7 @@
       const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
       const resolvedKey = showCmd.image ?? Object.keys(def.images)[0];
       newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
-      setState({ characters: newChars, lastDuration: cmd.duration });
+      setState({ _characters: newChars, _lastDuration: cmd.duration });
       if (showCmd.focus) {
         const focusType = typeof showCmd.focus === "string" ? showCmd.focus : void 0;
         const focusDuration = showCmd.duration ?? 800;
@@ -1608,7 +1608,7 @@
       }
     } else {
       delete newChars[cmd.name];
-      setState({ characters: newChars, lastDuration: cmd.duration });
+      setState({ _characters: newChars, _lastDuration: cmd.duration });
     }
     return true;
   });
@@ -1716,9 +1716,9 @@
     warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
   };
   var moodModule = define2({
-    activeMoods: {},
-    flickers: {},
-    lastDuration: 800
+    _activeMoods: {},
+    _flickers: {},
+    _lastDuration: 800
   });
   moodModule.defineView((data, ctx) => {
     const _moodObjs = {};
@@ -1782,10 +1782,10 @@
         }
       }
     };
-    for (const [mood, intensity] of Object.entries(data.activeMoods)) {
+    for (const [mood, intensity] of Object.entries(data._activeMoods)) {
       _addMoodObj(mood, intensity, 800, true);
-      if (data.flickers?.[mood]) {
-        _setFlicker(ctx, _moodObjs[mood], mood, intensity, data.flickers[mood]);
+      if (data._flickers?.[mood]) {
+        _setFlicker(ctx, _moodObjs[mood], mood, intensity, data._flickers[mood]);
       }
     }
     return {
@@ -1799,16 +1799,16 @@
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
       update: (d2) => {
-        const dur = d2.lastDuration ?? 800;
-        const newMoods = new Set(Object.keys(d2.activeMoods));
+        const dur = d2._lastDuration ?? 800;
+        const newMoods = new Set(Object.keys(d2._activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
           if (!newMoods.has(mood)) {
             _removeMoodObj(mood, dur);
           }
         }
-        for (const [mood, intensity] of Object.entries(d2.activeMoods)) {
+        for (const [mood, intensity] of Object.entries(d2._activeMoods)) {
           _addMoodObj(mood, intensity, dur);
-          const preset = d2.flickers?.[mood];
+          const preset = d2._flickers?.[mood];
           const obj = _moodObjs[mood];
           if (preset && obj) {
             const currentState = ctx.renderer.state.get("_flickerState");
@@ -1821,8 +1821,8 @@
     };
   });
   moodModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const newMoods = { ...state.activeMoods };
-    const newFlickers = { ...state.flickers || {} };
+    const newMoods = { ...state._activeMoods };
+    const newFlickers = { ...state._flickers || {} };
     const targetDur = cmd.duration ?? 800;
     if (cmd.action === "remove") {
       delete newMoods[cmd.mood];
@@ -1844,9 +1844,9 @@
       }
     }
     setState({
-      lastDuration: targetDur,
-      activeMoods: newMoods,
-      flickers: newFlickers
+      _lastDuration: targetDur,
+      _activeMoods: newMoods,
+      _flickers: newFlickers
     });
     if (cmd.disable) {
       const dur = ctx.renderer.dur(targetDur);
@@ -1926,7 +1926,7 @@
     fireflies: 5
   };
   var effectModule = define2({
-    activeEffects: {}
+    _activeEffects: {}
   });
   effectModule.defineView((data, ctx) => {
     const _effectObjs = {};
@@ -1983,7 +1983,7 @@
         }
       }
     };
-    for (const [type, info] of Object.entries(data.activeEffects)) {
+    for (const [type, info] of Object.entries(data._activeEffects)) {
       _addEffect(type, info.rate, info.srcKey, true);
     }
     return {
@@ -1995,11 +1995,11 @@
         }
       },
       update: (d2) => {
-        const newTypes = new Set(Object.keys(d2.activeEffects));
+        const newTypes = new Set(Object.keys(d2._activeEffects));
         for (const type of Object.keys(_effectObjs)) {
           if (!newTypes.has(type)) _removeEffect(type, 600);
         }
-        for (const [type, info] of Object.entries(d2.activeEffects)) {
+        for (const [type, info] of Object.entries(d2._activeEffects)) {
           if (!_effectObjs[type]) {
             _addEffect(type, info.rate, info.srcKey);
           }
@@ -2009,13 +2009,13 @@
   });
   effectModule.defineCommand(function* (rawCmd, ctx, state, setState) {
     const cmd = rawCmd;
-    const newEffects = { ...state.activeEffects };
+    const newEffects = { ...state._activeEffects };
     if (cmd.action === "add") {
       newEffects[cmd.effect] = { rate: cmd.rate, srcKey: cmd.src };
     } else {
       delete newEffects[cmd.effect];
     }
-    setState({ activeEffects: newEffects });
+    setState({ _activeEffects: newEffects });
     return true;
   });
   var effect_default = effectModule;
@@ -2168,7 +2168,7 @@
         _addImageOverlay(entry, immediate, duration);
       }
     };
-    for (const entry of Object.values(data.overlays)) {
+    for (const entry of Object.values(data._overlays)) {
       _addOverlay(entry, true);
     }
     return {
@@ -2181,12 +2181,12 @@
       },
       getObj: (name) => _overlayObjs[name],
       update: (d2) => {
-        const dur = d2.lastDuration;
-        const newKeys = new Set(Object.keys(d2.overlays));
+        const dur = d2._lastDuration;
+        const newKeys = new Set(Object.keys(d2._overlays));
         for (const key of Object.keys(_overlayObjs)) {
           if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600);
         }
-        for (const [key, entry] of Object.entries(d2.overlays)) {
+        for (const [key, entry] of Object.entries(d2._overlays)) {
           const prev = _overlayEntries[key];
           if (!_overlayObjs[key]) {
             _addOverlay(entry, false, dur);
@@ -2198,13 +2198,13 @@
     };
   }
   var overlayTextModule = define2({
-    overlays: {},
+    _overlays: {},
     textStyle: void 0,
     imageStyle: void 0
   });
   overlayTextModule.defineView(buildOverlayView);
   overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
-    const newOverlays = { ...state.overlays };
+    const newOverlays = { ...state._overlays };
     if (cmd.action === "show") {
       const preset = cmd.preset ?? "caption";
       newOverlays[cmd.name] = {
@@ -2216,17 +2216,17 @@
     } else {
       delete newOverlays[cmd.name];
     }
-    setState({ overlays: newOverlays, lastDuration: cmd.duration });
+    setState({ _overlays: newOverlays, _lastDuration: cmd.duration });
     return true;
   });
   var overlayImageModule = define2({
-    overlays: {},
+    _overlays: {},
     textStyle: void 0,
     imageStyle: void 0
   });
   overlayImageModule.defineView(buildOverlayView);
   overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
-    const newOverlays = { ...state.overlays };
+    const newOverlays = { ...state._overlays };
     if (cmd.action === "show") {
       newOverlays[cmd.name] = {
         kind: "image",
@@ -2243,7 +2243,7 @@
     } else {
       delete newOverlays[cmd.name];
     }
-    setState({ overlays: newOverlays, lastDuration: cmd.duration });
+    setState({ _overlays: newOverlays, _lastDuration: cmd.duration });
     return true;
   });
   var overlayEffectModule = define2({ _unused: void 0 });
@@ -2290,9 +2290,9 @@
     down: { x: 0, y: -1 }
   };
   var screenFadeModule = define2({
-    lastPreset: "black",
-    isCovered: false,
-    coveredColor: "rgba(0,0,0,1)"
+    _lastPreset: "black",
+    _isCovered: false,
+    _coveredColor: "rgba(0,0,0,1)"
   });
   screenFadeModule.defineView((data, ctx) => {
     let rect = ctx.renderer.state.get("_transitionObj");
@@ -2315,9 +2315,9 @@
       ctx.renderer.track(rect);
       ctx.renderer.state.set("_transitionObj", rect);
     }
-    if (data.isCovered) {
+    if (data._isCovered) {
       rect.style.gradientType = "linear";
-      rect.style.gradient = `0deg, ${data.coveredColor} 0%, ${data.coveredColor} 100%`;
+      rect.style.gradient = `0deg, ${data._coveredColor} 0%, ${data._coveredColor} 100%`;
       rect.style.opacity = 1;
       rect.transform.position.x = 0;
       rect.transform.position.y = 0;
@@ -2334,13 +2334,13 @@
     };
   });
   screenFadeModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state.lastPreset : cmd.preset;
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state._lastPreset : cmd.preset;
     const cfg = FADE_PRESETS[resolvedPreset];
     if (!cfg) return true;
     setState({
-      lastPreset: resolvedPreset,
-      isCovered: cmd.dir === "out",
-      coveredColor: cfg.color
+      _lastPreset: resolvedPreset,
+      _isCovered: cmd.dir === "out",
+      _coveredColor: cfg.color
     });
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
@@ -2363,7 +2363,7 @@
     yield false;
     return true;
   });
-  var screenFlashModule = define2({ lastPreset: "white" });
+  var screenFlashModule = define2({ _lastPreset: "white" });
   screenFlashModule.defineView((_data, ctx) => {
     let rect = ctx.renderer.state.get("_flashObj");
     if (!rect) {
@@ -2395,8 +2395,8 @@
     };
   });
   screenFlashModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state.lastPreset : cmd.preset;
-    setState({ lastPreset: resolvedPreset });
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state._lastPreset : cmd.preset;
+    setState({ _lastPreset: resolvedPreset });
     const cfg = FLASH_PRESETS[resolvedPreset];
     if (!cfg) return true;
     const rect = ctx.renderer.state.get("_flashObj");
@@ -2418,8 +2418,8 @@
     return true;
   });
   var screenWipeModule = define2({
-    lastPreset: "left",
-    lastFadePreset: "black"
+    _lastPreset: "left",
+    _lastFadePreset: "black"
   });
   screenWipeModule.defineView((_data, _ctx) => ({
     show: () => {
@@ -2428,13 +2428,13 @@
     }
   }));
   screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state.lastPreset : cmd.preset;
-    setState({ lastPreset: resolvedPreset });
+    const resolvedPreset = cmd.preset === "inherit" || !cmd.preset ? state._lastPreset : cmd.preset;
+    setState({ _lastPreset: resolvedPreset });
     const cfg = WIPE_PRESETS[resolvedPreset];
     if (!cfg) return true;
     const dur = ctx.renderer.dur(cmd.duration ?? 800);
     const fadeState = ctx.state.get("screen-fade");
-    const colorPreset = fadeState?.lastPreset ?? state.lastFadePreset;
+    const colorPreset = fadeState?._lastPreset ?? state._lastFadePreset;
     const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
@@ -2463,8 +2463,8 @@
     rect.style.gradient = startGradient;
     const onEnd = () => {
       if (fadeState) {
-        fadeState.isCovered = cmd.dir === "out";
-        fadeState.coveredColor = color;
+        fadeState._isCovered = cmd.dir === "out";
+        fadeState._coveredColor = color;
       }
     };
     const onAnimEnd = () => {
@@ -2558,32 +2558,32 @@
     };
     playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, "_activeCamEffectStop");
   }
-  var cameraZoomModule = define2({ lastPreset: "reset" });
+  var cameraZoomModule = define2({ _lastPreset: "reset" });
   cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolved = cmd.preset === "inherit" ? state.lastPreset : cmd.preset;
-    setState({ lastPreset: resolved });
+    const resolved = cmd.preset === "inherit" ? state._lastPreset : cmd.preset;
+    setState({ _lastPreset: resolved });
     zoomCamera(ctx, resolved, cmd.duration);
     return true;
   });
-  var cameraPanModule = define2({ lastPreset: "center" });
+  var cameraPanModule = define2({ _lastPreset: "center" });
   cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolved = cmd.position === "inherit" ? state.lastPreset : cmd.position;
-    setState({ lastPreset: resolved });
+    const resolved = cmd.position === "inherit" ? state._lastPreset : cmd.position;
+    setState({ _lastPreset: resolved });
     panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y);
     return true;
   });
-  var cameraEffectModule = define2({ lastPreset: "shake" });
+  var cameraEffectModule = define2({ _lastPreset: "shake" });
   cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
-    setState({ lastPreset: cmd.preset });
+    setState({ _lastPreset: cmd.preset });
     cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
     return true;
   });
@@ -2715,7 +2715,7 @@
     });
   }
   var pool = /* @__PURE__ */ new Map();
-  var audioModule = define2({ tracks: {} });
+  var audioModule = define2({ _tracks: {} });
   audioModule.defineView((_data, _ctx) => ({
     show: () => {
     },
@@ -2740,7 +2740,7 @@
       const endSec = playCmd.end ?? 0;
       const duration = playCmd.duration ?? 0;
       const existing = pool.get(playCmd.name);
-      const existingSrc = existing ? state.tracks[playCmd.name]?.src : void 0;
+      const existingSrc = existing ? state._tracks[playCmd.name]?.src : void 0;
       if (existing && existingSrc === playCmd.src) {
         existing.playbackRate = speed;
         existing.loop = repeat;
@@ -2750,7 +2750,7 @@
           });
         }
         fadeVolume(existing, targetVolume, duration);
-        const newTracks = { ...state.tracks };
+        const newTracks = { ...state._tracks };
         newTracks[playCmd.name] = {
           ...newTracks[playCmd.name],
           volume: targetVolume,
@@ -2758,7 +2758,7 @@
           repeat,
           paused: false
         };
-        setState({ tracks: newTracks });
+        setState({ _tracks: newTracks });
         return true;
       }
       if (existing) {
@@ -2789,7 +2789,7 @@
       if (duration > 0) {
         fadeVolume(audio, targetVolume, duration);
       }
-      const newPlayTracks = { ...state.tracks };
+      const newPlayTracks = { ...state._tracks };
       newPlayTracks[playCmd.name] = {
         src: playCmd.src,
         volume: targetVolume,
@@ -2799,7 +2799,7 @@
         end: endSec,
         paused: false
       };
-      setState({ tracks: newPlayTracks });
+      setState({ _tracks: newPlayTracks });
       return true;
     }
     if (cmd.action === "pause") {
@@ -2810,21 +2810,21 @@
       if (duration > 0) {
         fadeVolume(audio, 0, duration).then(() => {
           audio.pause();
-          const track = state.tracks[pauseCmd.name];
+          const track = state._tracks[pauseCmd.name];
           if (track) audio.volume = track.volume;
           ctx.callbacks.advance();
         });
         yield false;
       } else {
         audio.pause();
-        const track = state.tracks[pauseCmd.name];
+        const track = state._tracks[pauseCmd.name];
         if (track) audio.volume = track.volume;
       }
-      const newPauseTracks = { ...state.tracks };
+      const newPauseTracks = { ...state._tracks };
       if (newPauseTracks[pauseCmd.name]) {
         newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
       }
-      setState({ tracks: newPauseTracks });
+      setState({ _tracks: newPauseTracks });
       return true;
     }
     if (cmd.action === "stop") {
@@ -2847,14 +2847,310 @@
         audio.src = "";
         pool.delete(stopCmd.name);
       }
-      const newStopTracks = { ...state.tracks };
+      const newStopTracks = { ...state._tracks };
       delete newStopTracks[stopCmd.name];
-      setState({ tracks: newStopTracks });
+      setState({ _tracks: newStopTracks });
       return true;
     }
     return true;
   });
   var audio_default = audioModule;
+
+  // src/modules/dialogBox.ts
+  var DEFAULT_DIALOG = {
+    overlay: { color: "rgba(0,0,0,0.45)" },
+    panel: {
+      color: "rgba(255,255,255,0.12)",
+      borderColor: "rgba(255,255,255,0.35)",
+      borderWidth: 1,
+      borderRadius: "4%",
+      width: 480,
+      height: void 0
+    },
+    titleStyle: {
+      fontSize: 22,
+      fontWeight: "bold",
+      color: "#ffffff",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center",
+      textShadowBlur: 8,
+      textShadowColor: "rgba(150,200,255,0.6)",
+      textShadowOffsetX: 0,
+      textShadowOffsetY: 0
+    },
+    contentStyle: {
+      fontSize: 14,
+      color: "rgba(255,255,255,0.88)",
+      lineHeight: 1.5,
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center"
+    },
+    button: {
+      color: "rgba(255,255,255,0.15)",
+      borderColor: "rgba(255,255,255,0.30)",
+      borderWidth: 1,
+      borderRadius: "10%",
+      minWidth: 120
+    },
+    buttonHover: {
+      color: "rgba(255,255,255,0.28)",
+      borderColor: "rgba(255,255,255,0.70)"
+    },
+    buttonText: {
+      fontSize: 15,
+      color: "rgba(255,255,255,0.95)",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center",
+      fontWeight: "bold"
+    },
+    buttonTextHover: { color: "#ffffff" }
+  };
+  var DEFAULT_LAYOUT = {
+    paddingX: 28,
+    paddingY: 28,
+    titleContentGap: 12,
+    contentButtonGap: 30,
+    buttonRowGap: 10,
+    buttonColumnGap: 8,
+    buttonPaddingX: 48,
+    buttonPaddingY: 20
+  };
+  var dialogBoxModule = define2({
+    overlay: void 0,
+    panel: void 0,
+    titleStyle: void 0,
+    contentStyle: void 0,
+    button: void 0,
+    buttonHover: void 0,
+    buttonText: void 0,
+    buttonTextHover: void 0,
+    layout: void 0,
+    _title: "",
+    _content: "",
+    _buttons: [],
+    _resolve: null,
+    _duration: 200,
+    _persist: false
+  });
+  dialogBoxModule.defineView((data, ctx) => {
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const mergeStyle = (def, override) => ({ ...def, ...override ?? {} });
+    const overlayCfg = mergeStyle(DEFAULT_DIALOG.overlay, data.overlay);
+    const overlayObj = ctx.world.createRectangle({
+      style: {
+        ...overlayCfg,
+        width: w,
+        height: h,
+        zIndex: 600,
+        opacity: 1,
+        display: "none",
+        pointerEvents: true
+      },
+      transform: { position: toLocal(w / 2, h / 2) }
+    });
+    ctx.world.camera?.addChild(overlayObj);
+    ctx.renderer.track(overlayObj);
+    const panelCfg = mergeStyle(DEFAULT_DIALOG.panel, data.panel);
+    const PANEL_W = Math.min(
+      panelCfg.maxWidth ?? Infinity,
+      Math.max(panelCfg.minWidth ?? 0, panelCfg.width ?? 480)
+    );
+    const panelObj = ctx.world.createRectangle({
+      style: {
+        ...panelCfg,
+        width: PANEL_W,
+        height: 10,
+        zIndex: 601,
+        pointerEvents: false
+      },
+      transform: { position: { x: 0, y: 0, z: 0 } }
+    });
+    overlayObj.addChild(panelObj);
+    ctx.renderer.track(panelObj);
+    let _dynamicObjs = [];
+    const _clearDynamic = () => {
+      _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
+      _dynamicObjs = [];
+    };
+    let _currentResolve = null;
+    let _currentPersist = false;
+    overlayObj.on("click", () => {
+      if (!_currentPersist && _currentResolve) {
+        _currentResolve(-1);
+      }
+    });
+    const _render = (title, content, buttons, resolve, duration, persist, cfg) => {
+      _currentResolve = resolve;
+      _currentPersist = persist;
+      const btnCfg = mergeStyle(DEFAULT_DIALOG.button, cfg.button);
+      const btnHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonHover, cfg.buttonHover);
+      const btnTxtCfg = mergeStyle(DEFAULT_DIALOG.buttonText, cfg.buttonText);
+      const btnTxtHoverCfg = mergeStyle(DEFAULT_DIALOG.buttonTextHover, cfg.buttonTextHover);
+      const titleCfgR = mergeStyle(DEFAULT_DIALOG.titleStyle, cfg.titleStyle);
+      const contentCfgR = mergeStyle(DEFAULT_DIALOG.contentStyle, cfg.contentStyle);
+      const titleFontSize = titleCfgR.fontSize ?? 22;
+      const contentFontSize = contentCfgR.fontSize ?? 18;
+      const btnFontSize = btnTxtCfg.fontSize ?? 16;
+      const layoutCfg = { ...DEFAULT_LAYOUT, ...cfg.layout ?? {} };
+      const PADDING_X = layoutCfg.paddingX;
+      const PADDING_Y = layoutCfg.paddingY;
+      const BTN_H_GAP = layoutCfg.buttonColumnGap;
+      const GAP = title && content ? layoutCfg.titleContentGap : 0;
+      const CONTENT_BTN_GAP = layoutCfg.contentButtonGap;
+      const TITLE_H = title ? titleFontSize * 1.6 : 0;
+      const CONTENT_H = content ? contentFontSize * 2.4 : 0;
+      const BTN_H = btnFontSize * 1.2 + layoutCfg.buttonPaddingY;
+      const BTN_ROW_GAP = layoutCfg.buttonRowGap;
+      const AVAILABLE_W = PANEL_W - PADDING_X * 2;
+      const btnWidths = buttons.map((buttonDef) => {
+        const estimatedW = buttonDef.text.length * btnFontSize * 0.8;
+        return btnCfg.width ? btnCfg.width : Math.min(
+          btnCfg.maxWidth ?? Infinity,
+          Math.max(btnCfg.minWidth ?? 120, estimatedW + layoutCfg.buttonPaddingX)
+        );
+      });
+      const rows = [];
+      let currentRow = { indices: [], totalWidth: 0 };
+      buttons.forEach((_, i) => {
+        const bw = btnWidths[i];
+        const needed = currentRow.indices.length > 0 ? currentRow.totalWidth + BTN_H_GAP + bw : bw;
+        if (needed <= AVAILABLE_W || currentRow.indices.length === 0) {
+          currentRow.indices.push(i);
+          currentRow.totalWidth = needed;
+        } else {
+          rows.push(currentRow);
+          currentRow = { indices: [i], totalWidth: bw };
+        }
+      });
+      if (currentRow.indices.length > 0) rows.push(currentRow);
+      const TOTAL_BTN_H = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP;
+      const PANEL_H = PADDING_Y + TITLE_H + GAP + CONTENT_H + CONTENT_BTN_GAP + TOTAL_BTN_H + PADDING_Y;
+      panelObj.style.height = PANEL_H;
+      _clearDynamic();
+      const titleLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H / 2;
+      const titleObj = ctx.world.createText({
+        attribute: { text: title },
+        style: { ...titleCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
+        transform: { position: { x: 0, y: titleLocalY, z: 0 } }
+      });
+      panelObj.addChild(titleObj);
+      ctx.renderer.track(titleObj);
+      _dynamicObjs.push(titleObj);
+      const contentLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H / 2;
+      const contentObj = ctx.world.createText({
+        attribute: { text: content },
+        style: { ...contentCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
+        transform: { position: { x: 0, y: contentLocalY, z: 0 } }
+      });
+      panelObj.addChild(contentObj);
+      ctx.renderer.track(contentObj);
+      _dynamicObjs.push(contentObj);
+      const btnBaseLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H - CONTENT_BTN_GAP - BTN_H / 2;
+      rows.forEach((row, rowIdx) => {
+        const rowLocalY = btnBaseLocalY - rowIdx * (BTN_H + BTN_ROW_GAP);
+        let xOffset = -row.totalWidth / 2;
+        row.indices.forEach((i) => {
+          const bw = btnWidths[i];
+          const btnLocalX = xOffset + bw / 2;
+          xOffset += bw + BTN_H_GAP;
+          const btnStyle = {
+            ...btnCfg,
+            width: bw,
+            height: BTN_H,
+            zIndex: 603,
+            pointerEvents: true
+          };
+          const btnObj = ctx.world.createRectangle({
+            style: btnStyle,
+            transform: { position: { x: btnLocalX, y: rowLocalY, z: 0 } }
+          });
+          const txtObj = ctx.world.createText({
+            attribute: { text: buttons[i].text },
+            style: { ...btnTxtCfg, zIndex: 604, pointerEvents: false },
+            transform: { position: { x: 0, y: 0, z: 0 } }
+          });
+          const normalBtnProps = { color: btnStyle.color, borderColor: btnStyle.borderColor };
+          const normalTxtProps = { color: btnTxtCfg.color };
+          btnObj.on("mouseover", () => {
+            btnObj.animate({ style: btnHoverCfg }, 150);
+            txtObj.animate({ style: btnTxtHoverCfg }, 150);
+          });
+          btnObj.on("mouseout", () => {
+            btnObj.animate({ style: normalBtnProps }, 150);
+            txtObj.animate({ style: normalTxtProps }, 150);
+          });
+          btnObj.on("click", () => {
+            resolve(i);
+          });
+          btnObj.addChild(txtObj);
+          panelObj.addChild(btnObj);
+          ctx.renderer.track(btnObj);
+          ctx.renderer.track(txtObj);
+          _dynamicObjs.push(btnObj);
+        });
+      });
+      overlayObj.fadeIn(duration, "easeOut");
+    };
+    const _hide = (duration) => {
+      _currentResolve = null;
+      overlayObj.fadeOut(duration, "easeIn");
+    };
+    return {
+      show: (duration = 200) => {
+        overlayObj.fadeIn(duration, "easeOut");
+      },
+      hide: (duration = 200) => {
+        _hide(duration);
+      },
+      update: (d2) => {
+        if (d2._resolve && d2._buttons.length > 0) {
+          _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
+        }
+      }
+    };
+  });
+  dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
+    const entry = ctx.ui.get("dialogBox");
+    if (!entry) {
+      console.warn("[leviar-novel] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.");
+      return true;
+    }
+    ctx.ui.get("dialogue")?.hide?.();
+    const duration = cmd.duration ?? 200;
+    const persist = cmd.persist ?? false;
+    let _resolved = false;
+    const resolve = (i) => {
+      if (_resolved) return;
+      _resolved = true;
+      entry.hide?.(duration);
+      if (i >= 0) {
+        const selected = cmd.buttons[i];
+        if (selected?.var) {
+          const vars = selected.var();
+          if (vars) {
+            for (const [key, value] of Object.entries(vars)) {
+              ctx.scene.setGlobalVar(key, value);
+            }
+          }
+        }
+      }
+    };
+    setState({
+      _title: cmd.title,
+      _content: cmd.content,
+      _buttons: cmd.buttons.map((b) => ({ text: b.text, var: b.var })),
+      _resolve: resolve,
+      _duration: duration,
+      _persist: persist
+    });
+    yield "handled";
+    setState({ _resolve: null, _buttons: [], _title: "", _content: "" });
+    return true;
+  });
+  var dialogBox_default = dialogBoxModule;
 
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
@@ -2881,7 +3177,8 @@
     "label": label_default,
     "ui": ui_default,
     "control": control_default,
-    "audio": audio_default
+    "audio": audio_default,
+    "dialogBox": dialogBox_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -11599,6 +11896,10 @@ ${addLineNumbers(fragment)}`);
     localMatrix = new Mat4();
     /** 부모의 반영이 끝난 최종 월드 매트릭스 */
     __worldMatrix = new Mat4();
+    /** 계층 구조에 의해 누적 계산된 최종 투명도 */
+    __worldOpacity = 1;
+    /** 계층 구조에 의해 누적 계산된 최종 display 속성 */
+    __worldDisplay = "block";
     constructor(type, options, delegatedKeys) {
       super();
       const rawAttribute = {
@@ -11758,8 +12059,12 @@ ${addLineNumbers(fragment)}`);
       this.localMatrix.scale(_tmpVec3);
       if (this.parent) {
         this.__worldMatrix.multiply(this.parent.__worldMatrix, this.localMatrix);
+        this.__worldOpacity = this.parent.__worldOpacity * this.style.opacity * this.__fadeOpacity;
+        this.__worldDisplay = this.parent.__worldDisplay === "none" || this.style.display === "none" ? "none" : this.style.display;
       } else {
         this.__worldMatrix.copy(this.localMatrix);
+        this.__worldOpacity = this.style.opacity * this.__fadeOpacity;
+        this.__worldDisplay = this.style.display;
       }
       for (const child of this.children) {
         child.__updateMatrixWorld(force);
@@ -14132,7 +14437,7 @@ ${addLineNumbers(fragment)}`);
         const worldObjects = [];
         const uiObjects = [];
         for (const o of objects) {
-          if (o.attribute.type === "camera" || o.style.display === "none") {
+          if (o.attribute.type === "camera" || o.__worldDisplay === "none") {
             continue;
           }
           let isUI = false;
@@ -14503,7 +14808,7 @@ ${addLineNumbers(fragment)}`);
       this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
       const [r, g, b, a] = parseCSSColor(style.boxShadowColor);
       this.shadowProgram.uniforms["uColor"].value = [r, g, b, a];
-      this.shadowProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+      this.shadowProgram.uniforms["uOpacity"].value = obj.__worldOpacity;
       this.shadowProgram.uniforms["uSize"].value = [quadW, quadH];
       this.shadowProgram.uniforms["uBoxSize"].value = [w, h];
       this.shadowProgram.uniforms["uOffset"].value = [offsetX, offsetY];
@@ -14539,7 +14844,7 @@ ${addLineNumbers(fragment)}`);
       const prog = this.alphaShadowProgram;
       prog.uniforms["uTexture"].value = texture;
       prog.uniforms["uColor"].value = [r, g, b, a];
-      prog.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+      prog.uniforms["uOpacity"].value = obj.__worldOpacity;
       prog.uniforms["uQuadSize"].value = [quadW, quadH];
       prog.uniforms["uImageSize"].value = [drawW, drawH];
       prog.uniforms["uOffset"].value = [offsetX, offsetY];
@@ -14610,7 +14915,7 @@ ${addLineNumbers(fragment)}`);
     _drawRectangle(obj, x, y, w, h) {
       const { style } = obj;
       if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
-      const targetOpacity = style.opacity * obj.__fadeOpacity;
+      const targetOpacity = obj.__worldOpacity;
       const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0);
       this._drawShadow(obj, x, y, w, h, void 0, void 0, false, baseRadius);
       this._drawRectBorders(obj, x, y, w, h, targetOpacity);
@@ -14632,7 +14937,7 @@ ${addLineNumbers(fragment)}`);
       const drawEllipse = (ew, eh, color, isBorder = false, innerEW = 0, innerEH = 0) => {
         const [r, g, b, a] = parseCSSColor(color);
         this.ellipseProgram.uniforms["uColor"].value = [r, g, b, a];
-        this.ellipseProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+        this.ellipseProgram.uniforms["uOpacity"].value = obj.__worldOpacity;
         if (this.ellipseProgram.uniforms["uSize"]) this.ellipseProgram.uniforms["uSize"].value = [ew, eh];
         if (this.ellipseProgram.uniforms["uIsBorder"]) this.ellipseProgram.uniforms["uIsBorder"].value = isBorder ? 1 : 0;
         if (this.ellipseProgram.uniforms["uInnerSize"]) this.ellipseProgram.uniforms["uInnerSize"].value = [innerEW, innerEH];
@@ -14660,7 +14965,7 @@ ${addLineNumbers(fragment)}`);
       }
       if (style.gradient && w > 0 && h > 0) {
         const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? "linear", true);
-        if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj.__fadeOpacity);
+        if (tex) this._drawTextureMesh(tex, x, y, w, h, obj.__worldOpacity);
       }
     }
     // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -14740,7 +15045,7 @@ ${addLineNumbers(fragment)}`);
       };
       const displayScale = perspectiveScale / TEXT_RENDER_SCALE;
       this._drawShadow(obj, x, y, cw * displayScale, ch * displayScale);
-      this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj.__fadeOpacity, false);
+      this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, obj.__worldOpacity, false);
     }
     _renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, transitionProgress = 1) {
       const { canvas, ctx } = entry;
@@ -14958,16 +15263,16 @@ ${addLineNumbers(fragment)}`);
         const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0);
         const texture = this._getOrCreateAssetTexture(assetSrc, asset);
         this._drawAlphaShadow(obj, x, y, drawW, drawH, texture);
-        this._drawAlphaImageBorders(obj, x, y, drawW, drawH, texture, obj.style.opacity * obj.__fadeOpacity);
+        this._drawAlphaImageBorders(obj, x, y, drawW, drawH, texture, obj.__worldOpacity);
         this._drawTextureMesh(texture, x, y, drawW, drawH, drawOpacity, false, [0, 0], [1, 1], 0, baseRadius);
       };
       if (oldSrc) {
-        drawAssetInner(oldSrc, obj.style.opacity * obj.__fadeOpacity * (1 - progress));
+        drawAssetInner(oldSrc, obj.__worldOpacity * (1 - progress));
         if (src) {
-          drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity * progress);
+          drawAssetInner(src, obj.__worldOpacity * progress);
         }
       } else if (src) {
-        drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity);
+        drawAssetInner(src, obj.__worldOpacity);
       } else {
         this._drawPlaceholder(x, y, w || 60, h || 60);
       }
@@ -15025,7 +15330,7 @@ ${addLineNumbers(fragment)}`);
       };
       const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0);
       this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius);
-      this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity);
+      this._drawRectBorders(obj, x, y, drawW, drawH, obj.__worldOpacity);
       let tex = this.videoTextureCache.get(src);
       if (!tex) {
         tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
@@ -15033,7 +15338,7 @@ ${addLineNumbers(fragment)}`);
       }
       tex.image = asset;
       tex.needsUpdate = true;
-      this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius);
+      this._drawTextureMesh(tex, x, y, drawW, drawH, obj.__worldOpacity, false, [0, 0], [1, 1], 0, baseRadius);
     }
     // ─── Sprite ─────────────────────────────────────────────────────────────
     _drawSprite(sprite, x, y, w, h, perspectiveScale, assets, timestamp) {
@@ -15065,8 +15370,8 @@ ${addLineNumbers(fragment)}`);
         };
         const baseRadius2 = parseBorderRadius(sprite.style.borderRadius, drawW2, drawH2, 0);
         this._drawAlphaShadow(sprite, x, y, drawW2, drawH2, texture);
-        this._drawAlphaImageBorders(sprite, x, y, drawW2, drawH2, texture, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity);
-        this._drawTextureMesh(texture, x, y, drawW2, drawH2, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius2);
+        this._drawAlphaImageBorders(sprite, x, y, drawW2, drawH2, texture, sprite.__worldOpacity);
+        this._drawTextureMesh(texture, x, y, drawW2, drawH2, sprite.__worldOpacity, false, [0, 0], [1, 1], 0, baseRadius2);
         return;
       }
       const { frameWidth, frameHeight } = clip;
@@ -15095,14 +15400,14 @@ ${addLineNumbers(fragment)}`);
       };
       const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0);
       this._drawAlphaShadow(sprite, x, y, drawW, drawH, texture, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY]);
-      this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY]);
+      this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, sprite.__worldOpacity, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY]);
       this._drawTextureMesh(
         texture,
         x,
         y,
         drawW,
         drawH,
-        (sprite.style.opacity ?? 1) * sprite.__fadeOpacity,
+        sprite.__worldOpacity,
         false,
         [uvOffsetX, uvOffsetY],
         [uvScaleX, uvScaleY],
@@ -15174,7 +15479,7 @@ ${addLineNumbers(fragment)}`);
           iy,
           iw,
           ih,
-          (obj.style.opacity ?? 1) * obj.__fadeOpacity * opacity,
+          obj.__worldOpacity * opacity,
           false,
           [0, 0],
           [1, 1],
@@ -17084,6 +17389,18 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       text: "\uAD6C\uC11D \uC790\uB9AC\uC5D0\uC11C \uC720\uB3C5 \uC774\uC9C8\uC801\uC778 \uC0B4\uAE30\uAC00 \uB290\uAEF4\uC84C\uB2E4."
+    },
+    {
+      type: "dialogBox",
+      title: "\uC704\uD5D8!",
+      content: "\uC704\uD5D8\uD569\uB2C8\uB2E4 \uB2F9\uC7A5 \uB3C4\uB9DD\uCE58\uC2ED\uC1FC.\n\uC774\uAC74 \uBA85\uB839\uC774\uC624.",
+      buttons: [
+        {
+          text: "\uD655\uC778"
+        }
+      ],
+      duration: 500,
+      persist: false
     },
     {
       type: "dialogue",

@@ -132,15 +132,15 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
 
 // ─── camera-zoom 모듈 ────────────────────────────────────────
 
-export interface CameraZoomSchema { lastPreset: string }
+export interface CameraZoomSchema { _lastPreset: string }
 
-const cameraZoomModule = define<CameraZoomCmd, CameraZoomSchema>({ lastPreset: 'reset' })
+const cameraZoomModule = define<CameraZoomCmd, CameraZoomSchema>({ _lastPreset: 'reset' })
 
 cameraZoomModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
-  const resolved = cmd.preset === 'inherit' ? state.lastPreset : cmd.preset
-  setState({ lastPreset: resolved as string })
+  const resolved = cmd.preset === 'inherit' ? state._lastPreset : cmd.preset
+  setState({ _lastPreset: resolved as string })
   zoomCamera(ctx, resolved as ZoomPreset, cmd.duration)
   return true
 })
@@ -149,15 +149,15 @@ export { cameraZoomModule }
 
 // ─── camera-pan 모듈 ────────────────────────────────────────
 
-export interface CameraPanSchema { lastPreset: string }
+export interface CameraPanSchema { _lastPreset: string }
 
-const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ lastPreset: 'center' })
+const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ _lastPreset: 'center' })
 
 cameraPanModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
-  const resolved = cmd.position === 'inherit' ? state.lastPreset : cmd.position
-  setState({ lastPreset: resolved as string })
+  const resolved = cmd.position === 'inherit' ? state._lastPreset : cmd.position
+  setState({ _lastPreset: resolved as string })
   panCamera(ctx, resolved as PanPreset, cmd.duration, cmd.x, cmd.y)
   return true
 })
@@ -166,14 +166,14 @@ export { cameraPanModule }
 
 // ─── camera-effect 모듈 ─────────────────────────────────────
 
-export interface CameraEffectSchema { lastPreset: string }
+export interface CameraEffectSchema { _lastPreset: string }
 
-const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({ lastPreset: 'shake' })
+const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({ _lastPreset: 'shake' })
 
 cameraEffectModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
 cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
-  setState({ lastPreset: cmd.preset })
+  setState({ _lastPreset: cmd.preset })
   cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat)
   return true
 })

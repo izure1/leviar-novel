@@ -59,12 +59,12 @@ const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMo
 // ─── 스키마 ──────────────────────────────────────────────────
 
 export interface MoodSchema {
-  /** mood → intensity 맵 */
-  activeMoods: Record<string, number>
-  /** mood → flicker 맵 */
-  flickers: Record<string, FlickerPreset>
-  /** 최근 전환 애니메이션 지속 시간 (ms) */
-  lastDuration?: number
+  /** @internal mood → intensity 맵 */
+  _activeMoods: Record<string, number>
+  /** @internal mood → flicker 맵 */
+  _flickers: Record<string, FlickerPreset>
+  /** @internal 최근 전환 애니메이션 지속 시간 (ms) */
+  _lastDuration?: number
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -73,9 +73,9 @@ export interface MoodSchema {
  * 무드 모듈. `novel.config`의 `modules: { 'mood': moodModule }` 형태로 등록합니다.
  */
 const moodModule = define<MoodCmd, MoodSchema>({
-  activeMoods: {},
-  flickers: {},
-  lastDuration: 800,
+  _activeMoods: {},
+  _flickers: {},
+  _lastDuration: 800,
 })
 
 moodModule.defineView((data, ctx) => {
@@ -149,10 +149,10 @@ moodModule.defineView((data, ctx) => {
   }
 
   // 복원: 저장된 무드들 즉시 렌더
-  for (const [mood, intensity] of Object.entries(data.activeMoods)) {
+  for (const [mood, intensity] of Object.entries(data._activeMoods)) {
     _addMoodObj(mood as MoodType, intensity, 800, true)
-    if (data.flickers?.[mood]) {
-      _setFlicker(ctx, _moodObjs[mood], mood, intensity, data.flickers[mood])
+    if (data._flickers?.[mood]) {
+      _setFlicker(ctx, _moodObjs[mood], mood, intensity, data._flickers[mood])
     }
   }
 
@@ -166,8 +166,8 @@ moodModule.defineView((data, ctx) => {
     // flicker용 오브젝트 접근
     getObj: (mood: string) => _moodObjs[mood],
     update: (d: MoodSchema) => {
-      const dur = d.lastDuration ?? 800
-      const newMoods = new Set(Object.keys(d.activeMoods))
+      const dur = d._lastDuration ?? 800
+      const newMoods = new Set(Object.keys(d._activeMoods))
       // 제거된 무드
       for (const mood of Object.keys(_moodObjs)) {
         if (!newMoods.has(mood)) {
@@ -175,9 +175,9 @@ moodModule.defineView((data, ctx) => {
         }
       }
       // 추가/변경된 무드
-      for (const [mood, intensity] of Object.entries(d.activeMoods)) {
+      for (const [mood, intensity] of Object.entries(d._activeMoods)) {
         _addMoodObj(mood as MoodType, intensity, dur)
-        const preset = d.flickers?.[mood]
+        const preset = d._flickers?.[mood]
         const obj = _moodObjs[mood]
         if (preset && obj) {
           const currentState = ctx.renderer.state.get('_flickerState')
@@ -191,8 +191,8 @@ moodModule.defineView((data, ctx) => {
 })
 
 moodModule.defineCommand(function* (cmd, ctx, state, setState) {
-  const newMoods = { ...state.activeMoods }
-  const newFlickers = { ...(state.flickers || {}) }
+  const newMoods = { ...state._activeMoods }
+  const newFlickers = { ...(state._flickers || {}) }
 
   const targetDur = cmd.duration ?? 800
 
@@ -220,9 +220,9 @@ moodModule.defineCommand(function* (cmd, ctx, state, setState) {
   }
 
   setState({
-    lastDuration: targetDur,
-    activeMoods: newMoods,
-    flickers: newFlickers
+    _lastDuration: targetDur,
+    _activeMoods: newMoods,
+    _flickers: newFlickers
   })
 
   // duration은 애니메이션 시간만 제어합니다.

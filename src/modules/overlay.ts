@@ -137,10 +137,10 @@ const OVERLAY_PRESETS: Record<OverlayPreset, TextPresetDefaults> = {
 // ─── 스키마 ──────────────────────────────────────────────────
 
 export interface OverlaySchema {
-  /** name → 오버레이 항목 맵 */
-  overlays: Record<string, OverlayEntry>
-  /** 최근 전환 애니메이션 지속 시간 (ms) */
-  lastDuration?: number
+  /** @internal name → 오버레이 항목 맵 */
+  _overlays: Record<string, OverlayEntry>
+  /** @internal 최근 전환 애니메이션 지속 시간 (ms) */
+  _lastDuration?: number
 
   // ─── defineInitial로 커스텀 가능한 스타일 ────────────────
   /** 텍스트 오버레이 기본 스타일 오버라이드 */
@@ -342,7 +342,7 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
   }
 
   // 복원: 저장된 오버레이들 즉시 렌더
-  for (const entry of Object.values(data.overlays)) {
+  for (const entry of Object.values(data._overlays)) {
     _addOverlay(entry, true)
   }
 
@@ -355,13 +355,13 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
     },
     getObj: (name: string) => _overlayObjs[name] as any | undefined,
     update: (d: OverlaySchema) => {
-      const dur = d.lastDuration
-      const newKeys = new Set(Object.keys(d.overlays))
+      const dur = d._lastDuration
+      const newKeys = new Set(Object.keys(d._overlays))
       // 제거된 항목
       for (const key of Object.keys(_overlayObjs)) {
         if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600)
       }
-      for (const [key, entry] of Object.entries(d.overlays)) {
+      for (const [key, entry] of Object.entries(d._overlays)) {
         const prev = _overlayEntries[key]
         if (!_overlayObjs[key]) {
           // 신규 추가
@@ -393,7 +393,7 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
  * ```
  */
 const overlayTextModule = define<OverlayTextCmd, OverlaySchema>({
-  overlays: {},
+  _overlays: {},
   textStyle: undefined,
   imageStyle: undefined,
 })
@@ -401,7 +401,7 @@ const overlayTextModule = define<OverlayTextCmd, OverlaySchema>({
 overlayTextModule.defineView(buildOverlayView)
 
 overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
-  const newOverlays = { ...state.overlays }
+  const newOverlays = { ...state._overlays }
 
   if (cmd.action === 'show') {
     const preset: OverlayPreset = cmd.preset ?? 'caption'
@@ -416,7 +416,7 @@ overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
     delete newOverlays[cmd.name]
   }
 
-  setState({ overlays: newOverlays, lastDuration: cmd.duration })
+  setState({ _overlays: newOverlays, _lastDuration: cmd.duration })
   return true
 })
 
@@ -438,7 +438,7 @@ overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
  * ```
  */
 const overlayImageModule = define<OverlayImageCmd<any>, OverlaySchema>({
-  overlays: {},
+  _overlays: {},
   textStyle: undefined,
   imageStyle: undefined,
 })
@@ -446,7 +446,7 @@ const overlayImageModule = define<OverlayImageCmd<any>, OverlaySchema>({
 overlayImageModule.defineView(buildOverlayView)
 
 overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
-  const newOverlays = { ...state.overlays }
+  const newOverlays = { ...state._overlays }
 
   if (cmd.action === 'show') {
     newOverlays[cmd.name] = {
@@ -466,7 +466,7 @@ overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
     delete newOverlays[cmd.name]
   }
 
-  setState({ overlays: newOverlays, lastDuration: cmd.duration })
+  setState({ _overlays: newOverlays, _lastDuration: cmd.duration })
   return true
 })
 

@@ -25,14 +25,14 @@ export interface DialogueSchema {
   /** 대사 텍스트 스타일 */
   text?: Partial<Style>
   // ─── 런타임 상태 ───────────────────────────────────────────
-  /** 현재 텍스트 서브 인덱스 */
-  subIndex: number
-  /** 현재 대사 줄 목록 */
-  lines: string[]
-  /** 현재 화자 키 */
-  speakerKey: string | undefined
-  /** 현재 타이핑 속도(ms). dialogueCommand가 설정합니다 */
-  speed: number | undefined
+  /** @internal 현재 텍스트 서브 인덱스 */
+  _subIndex: number
+  /** @internal 현재 대사 줄 목록 */
+  _lines: string[]
+  /** @internal 현재 화자 키 */
+  _speakerKey: string | undefined
+  /** @internal 현재 타이핑 속도(ms) */
+  _speed: number | undefined
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -107,10 +107,10 @@ const dialogueModule = define<DialogueCmd<any>, DialogueSchema>({
   bg: undefined,
   speaker: undefined,
   text: undefined,
-  subIndex: 0,
-  lines: [],
-  speakerKey: undefined,
-  speed: undefined,
+  _subIndex: 0,
+  _lines: [],
+  _speakerKey: undefined,
+  _speed: undefined,
 })
 
 dialogueModule.defineView((data, ctx) => {
@@ -229,10 +229,10 @@ dialogueModule.defineView((data, ctx) => {
   }
 
   // 복원: 로드 시 저장된 대사 즉시 렌더링
-  if (data.lines?.length) {
-    _prevLines = data.lines
-    const txt = data.lines[data.subIndex ?? 0] as string
-    const spkName = resolveSpeaker(data.speakerKey, charDefs)
+  if (data._lines?.length) {
+    _prevLines = data._lines
+    const txt = data._lines[data._subIndex ?? 0] as string
+    const spkName = resolveSpeaker(data._speakerKey, charDefs)
     _renderText(spkName, txt, undefined, true)
   }
 
@@ -266,14 +266,14 @@ dialogueModule.defineView((data, ctx) => {
       Object.assign(speakerObj.style, newSpkCfg)
       Object.assign(textObj.style, newTxtCfg)
 
-      // 텍스트 갱신: lines 참조가 바뀐 경우에만 렌더 (중복 방지)
-      if (d.lines && d.lines !== _prevLines && d.lines.length > 0) {
-        _prevLines = d.lines
-        const txt = d.lines[d.subIndex ?? 0] as string
-        const spkName = resolveSpeaker(d.speakerKey, charDefs)
+      // 텍스트 갱신: _lines 참조가 바뀐 경우에만 렌더 (중복 방지)
+      if (d._lines && d._lines !== _prevLines && d._lines.length > 0) {
+        _prevLines = d._lines
+        const txt = d._lines[d._subIndex ?? 0] as string
+        const spkName = resolveSpeaker(d._speakerKey, charDefs)
         const hooker = useHookallSync<DialogueHook>(ctx.novel)
         hooker.trigger('dialogue:text', { speaker: spkName, text: txt }, (state) => {
-          _renderText(state.speaker, state.text, d.speed)
+          _renderText(state.speaker, state.text, d._speed)
           return state
         })
       }
@@ -289,10 +289,10 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   for (let index = 0; index < lines.length; index++) {
     setState({
-      speed: cmd.speed,
-      speakerKey: cmd.speaker as string | undefined,
-      subIndex: index,
-      lines: [...lines]
+      _speed: cmd.speed,
+      _speakerKey: cmd.speaker as string | undefined,
+      _subIndex: index,
+      _lines: [...lines]
     })
 
     ctx.scene.setTextSubIndex(index + 1)

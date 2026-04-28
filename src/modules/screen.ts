@@ -66,15 +66,15 @@ const WIPE_PRESETS: Record<Exclude<WipePreset, 'inherit'>, { x: number; y: numbe
 // ─── screen-fade 모듈 ────────────────────────────────────────
 
 export interface ScreenFadeSchema {
-  lastPreset: string
-  isCovered: boolean
-  coveredColor: string
+  _lastPreset: string
+  _isCovered: boolean
+  _coveredColor: string
 }
 
 const screenFadeModule = define<ScreenFadeCmd, ScreenFadeSchema>({
-  lastPreset: 'black',
-  isCovered: false,
-  coveredColor: 'rgba(0,0,0,1)'
+  _lastPreset: 'black',
+  _isCovered: false,
+  _coveredColor: 'rgba(0,0,0,1)'
 })
 
 screenFadeModule.defineView((data, ctx) => {
@@ -96,9 +96,9 @@ screenFadeModule.defineView((data, ctx) => {
     ctx.renderer.state.set('_transitionObj', rect)
   }
 
-  if (data.isCovered) {
+  if (data._isCovered) {
     rect.style.gradientType = 'linear'
-    rect.style.gradient = `0deg, ${data.coveredColor} 0%, ${data.coveredColor} 100%`
+    rect.style.gradient = `0deg, ${data._coveredColor} 0%, ${data._coveredColor} 100%`
     rect.style.opacity = 1
     rect.transform.position.x = 0
     rect.transform.position.y = 0
@@ -115,16 +115,16 @@ screenFadeModule.defineView((data, ctx) => {
 
 screenFadeModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
-    ? state.lastPreset
+    ? state._lastPreset
     : cmd.preset
 
   const cfg = FADE_PRESETS[resolvedPreset as Exclude<FadeColorPreset, 'inherit'>]
   if (!cfg) return true
 
   setState({
-    lastPreset: resolvedPreset,
-    isCovered: cmd.dir === 'out',
-    coveredColor: cfg.color
+    _lastPreset: resolvedPreset,
+    _isCovered: cmd.dir === 'out',
+    _coveredColor: cfg.color
   })
 
   const rect = ctx.renderer.state.get('_transitionObj')
@@ -163,10 +163,10 @@ export { screenFadeModule }
 // ─── screen-flash 모듈 ───────────────────────────────────────
 
 export interface ScreenFlashSchema {
-  lastPreset: string
+  _lastPreset: string
 }
 
-const screenFlashModule = define<ScreenFlashCmd, ScreenFlashSchema>({ lastPreset: 'white' })
+const screenFlashModule = define<ScreenFlashCmd, ScreenFlashSchema>({ _lastPreset: 'white' })
 
 screenFlashModule.defineView((_data, ctx) => {
   let rect = ctx.renderer.state.get('_flashObj')
@@ -196,9 +196,9 @@ screenFlashModule.defineView((_data, ctx) => {
 
 screenFlashModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
-    ? state.lastPreset
+    ? state._lastPreset
     : cmd.preset
-  setState({ lastPreset: resolvedPreset })
+  setState({ _lastPreset: resolvedPreset })
 
   const cfg = FLASH_PRESETS[resolvedPreset as Exclude<FlashPreset, 'inherit'>]
   if (!cfg) return true
@@ -231,13 +231,13 @@ export { screenFlashModule }
 // ─── screen-wipe 모듈 ────────────────────────────────────────
 
 export interface ScreenWipeSchema {
-  lastPreset: string
-  lastFadePreset: string
+  _lastPreset: string
+  _lastFadePreset: string
 }
 
 const screenWipeModule = define<ScreenWipeCmd, ScreenWipeSchema>({
-  lastPreset: 'left',
-  lastFadePreset: 'black'
+  _lastPreset: 'left',
+  _lastFadePreset: 'black'
 })
 
 screenWipeModule.defineView((_data, _ctx) => ({
@@ -247,9 +247,9 @@ screenWipeModule.defineView((_data, _ctx) => ({
 
 screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolvedPreset = (cmd.preset === 'inherit' || !cmd.preset)
-    ? state.lastPreset
+    ? state._lastPreset
     : cmd.preset
-  setState({ lastPreset: resolvedPreset })
+  setState({ _lastPreset: resolvedPreset })
 
   const cfg = WIPE_PRESETS[resolvedPreset as Exclude<WipePreset, 'inherit'>]
   if (!cfg) return true
@@ -258,7 +258,7 @@ screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   // 페이드 색상은 screen-fade 모듈의 state에서 가져옴 (renderer.state 공유)
   const fadeState = ctx.state.get('screen-fade') as ScreenFadeSchema | undefined
-  const colorPreset = fadeState?.lastPreset ?? state.lastFadePreset
+  const colorPreset = fadeState?._lastPreset ?? state._lastFadePreset
   const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.color ?? 'rgba(0,0,0,1)'
 
   // fadeState 업데이트는 애니메이션 종료 후(onEnd) 수행하여, 
@@ -299,8 +299,8 @@ screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   const onEnd = () => {
     if (fadeState) {
-      fadeState.isCovered = cmd.dir === 'out'
-      fadeState.coveredColor = color
+      fadeState._isCovered = cmd.dir === 'out'
+      fadeState._coveredColor = color
     }
   }
 

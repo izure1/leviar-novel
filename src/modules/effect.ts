@@ -55,8 +55,8 @@ const DEFAULT_EFFECT_RATES: Partial<Record<EffectType, number>> = {
 // ─── 스키마 ──────────────────────────────────────────────────
 
 export interface EffectSchema {
-  /** effect → { rate, srcKey } 맵 */
-  activeEffects: Record<string, { rate?: number; srcKey?: string }>
+  /** @internal effect → { rate, srcKey } 맵 */
+  _activeEffects: Record<string, { rate?: number; srcKey?: string }>
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -65,7 +65,7 @@ export interface EffectSchema {
  * 이펙트 모듈. `novel.config`의 `modules: { 'effect': effectModule }` 형태로 등록합니다.
  */
 const effectModule = define<EffectCmd<any>, EffectSchema>({
-  activeEffects: {},
+  _activeEffects: {},
 })
 
 effectModule.defineView((data, ctx) => {
@@ -133,7 +133,7 @@ effectModule.defineView((data, ctx) => {
   }
 
   // 복원: 저장된 이펙트들 즉시 렌더
-  for (const [type, info] of Object.entries(data.activeEffects)) {
+  for (const [type, info] of Object.entries(data._activeEffects)) {
     _addEffect(type as EffectType, info.rate, info.srcKey, true)
   }
 
@@ -145,11 +145,11 @@ effectModule.defineView((data, ctx) => {
       }
     },
     update: (d: EffectSchema) => {
-      const newTypes = new Set(Object.keys(d.activeEffects))
+      const newTypes = new Set(Object.keys(d._activeEffects))
       for (const type of Object.keys(_effectObjs)) {
         if (!newTypes.has(type)) _removeEffect(type as EffectType, 600)
       }
-      for (const [type, info] of Object.entries(d.activeEffects)) {
+      for (const [type, info] of Object.entries(d._activeEffects)) {
         if (!_effectObjs[type]) {
           _addEffect(type as EffectType, info.rate, info.srcKey)
         }
@@ -160,7 +160,7 @@ effectModule.defineView((data, ctx) => {
 
 effectModule.defineCommand(function* (rawCmd, ctx, state, setState) {
   const cmd = rawCmd as any
-  const newEffects = { ...state.activeEffects }
+  const newEffects = { ...state._activeEffects }
 
   if (cmd.action === 'add') {
     newEffects[cmd.effect] = { rate: cmd.rate, srcKey: cmd.src as string }
@@ -168,7 +168,7 @@ effectModule.defineCommand(function* (rawCmd, ctx, state, setState) {
     delete newEffects[cmd.effect]
   }
 
-  setState({ activeEffects: newEffects })
+  setState({ _activeEffects: newEffects })
   return true
 })
 

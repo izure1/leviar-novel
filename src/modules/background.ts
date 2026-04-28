@@ -26,16 +26,16 @@ export interface BackgroundCmd<TConfig = any> {
 // ─── 스키마 ──────────────────────────────────────────────────
 
 export interface BackgroundSchema {
-  /** 현재 배경 키 */
-  key: string | undefined
-  /** 현재 fit 모드 */
-  fit: string
-  /** 최근 전환 시간 */
-  duration: number
-  /** parallax 여부 */
-  parallax: boolean
-  /** 비디오 여부 */
-  isVideo: boolean
+  /** @internal 현재 배경 키 */
+  _key: string | undefined
+  /** @internal 현재 fit 모드 */
+  _fit: string
+  /** @internal 최근 전환 시간 (ms) */
+  _lastDuration: number
+  /** @internal parallax 여부 */
+  _parallax: boolean
+  /** @internal 비디오 여부 */
+  _isVideo: boolean
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -44,11 +44,11 @@ export interface BackgroundSchema {
  * 배경 모듈. `novel.config`의 `modules: { 'background': backgroundModule }` 형태로 등록합니다.
  */
 const backgroundModule = define<BackgroundCmd<any>, BackgroundSchema>({
-  key: undefined,
-  fit: 'cover',
-  duration: 1000,
-  parallax: true,
-  isVideo: false,
+  _key: undefined,
+  _fit: 'cover',
+  _lastDuration: 1000,
+  _parallax: true,
+  _isVideo: false,
 })
 
 backgroundModule.defineView((data, ctx) => {
@@ -126,25 +126,25 @@ backgroundModule.defineView((data, ctx) => {
   }
 
   // 복원: 저장된 배경이 있으면 즉시 렌더
-  if (data.key) {
-    _bgObj = _createBg(data.key, data.fit, data.parallax, data.isVideo)
-    _bgParallax = data.parallax
+  if (data._key) {
+    _bgObj = _createBg(data._key, data._fit, data._parallax, data._isVideo)
+    _bgParallax = data._parallax
   }
 
   return {
     show: (dur = 250) => { _bgObj?.fadeIn?.(dur, 'easeOut') },
     hide: (dur = 300) => { _bgObj?.fadeOut?.(dur, 'easeIn') },
     update: (d: BackgroundSchema) => {
-      if (!d.key) return
+      if (!d._key) return
       const bgDefs = ctx.renderer.config.backgrounds as BgDefs
-      const def = bgDefs[d.key]
+      const def = bgDefs[d._key]
       if (!def) return
 
-      const src = def.src ?? d.key
+      const src = def.src ?? d._key
       const useParallax = def.parallax ?? true
-      const dur = ctx.renderer.dur(d.duration)
+      const dur = ctx.renderer.dur(d._lastDuration)
 
-      ctx.renderer.state.set('backgroundKey', d.key)
+      ctx.renderer.state.set('backgroundKey', d._key)
 
       if (_bgObj) {
         const sameParallax = _bgParallax === useParallax
@@ -164,7 +164,7 @@ backgroundModule.defineView((data, ctx) => {
       }
 
       _bgParallax = useParallax
-      _bgObj = _createBg(d.key, d.fit, useParallax, d.isVideo, dur > 0 ? 0 : 1)
+      _bgObj = _createBg(d._key, d._fit, useParallax, d._isVideo, dur > 0 ? 0 : 1)
       if (dur > 0 && _bgObj) {
         ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, 'easeInOutQuad')
       }
@@ -180,11 +180,11 @@ backgroundModule.defineCommand(function* (cmd, ctx, state, setState) {
   const fit = cmd.fit === 'inherit' || !cmd.fit ? 'cover' : cmd.fit
   
   setState({
-    key: cmd.name as string,
-    fit,
-    duration: cmd.duration ?? 1000,
-    parallax: def.parallax ?? true,
-    isVideo: cmd.isVideo ?? false
+    _key: cmd.name as string,
+    _fit: fit,
+    _lastDuration: cmd.duration ?? 1000,
+    _parallax: def.parallax ?? true,
+    _isVideo: cmd.isVideo ?? false
   })
 
   return true
