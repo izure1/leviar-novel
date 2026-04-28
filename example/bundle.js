@@ -17842,11 +17842,12 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD654\uAC00 \uBA38\uB9AC\uB05D\uAE4C\uC9C0 \uB09C \uC81C\uB098\uAC00 \uB9C8\uCE68\uB0B4 \uC774\uC131\uC744 \uB193\uC544\uBC84\uB838\uB2E4."
     },
-    { type: "camera-effect", preset: "shake", intensity: 30, duration: 500, repeat: -1 },
+    { type: "camera-effect", preset: "shake-y", intensity: 100, duration: 500, repeat: -1 },
+    { type: "character-effect", name: "zena", preset: "reset" },
     {
       type: "dialogue",
       speaker: "zena",
-      text: "\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uCC44\uD305\uCC3D \uCC3D\uB0AC\uC796\uC544!"
+      text: '<style fontSize="30">\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uCC44\uD305\uCC3D \uCC3D\uB0AC\uC796\uC544!</style>'
     },
     {
       type: "dialogue",
@@ -18051,6 +18052,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."'
     },
+    { type: "character", name: "zena", action: "show", image: "angry" },
     {
       type: "dialogue",
       text: "\uB0B4 \uC9C0\uC801\uC5D0 \uC81C\uB098\uAC00 \uB367\uB2C8\uB97C \uB4DC\uB7EC\uB0B4\uBA70 \uC73C\uB974\uB801\uAC70\uB838\uB2E4."

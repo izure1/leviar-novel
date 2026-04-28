@@ -76,6 +76,7 @@ export default defineScene({
     type: 'dialogue',
     text: '"광합성 좀 해. 창백해서 뱀파이어인 줄 알겠다."'
   },
+  { type: 'character', name: 'zena', action: 'show', image: 'angry' },
   {
     type: 'dialogue',
     text: '내 지적에 제나가 덧니를 드러내며 으르렁거렸다.'
