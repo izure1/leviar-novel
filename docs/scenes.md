@@ -19,10 +19,11 @@
 
 ### 1. 지역 변수 (`variables`)
 
-**상세 설명 (Rationale):**
+**상세 설명:**
 지역 변수는 씬 로드 시 정의된 값으로 생성되며, 씬이 종료되면 메모리에서 완전히 소거됩니다. `_` 접두사를 사용하는 이유는 **전역 변수(Vars)와 명확히 구분**하여, 세이브 데이터에 영구 저장될 데이터와 현재 장면에서만 쓰일 임시 데이터를 개발자가 직관적으로 관리하게 하기 위함입니다.
 
 **사용 예시:**
+
 ```typescript
 export default defineScene({
   config,
@@ -39,7 +40,7 @@ export default defineScene({
 
 ### 2. 초기 상태 설정 (`initial`) — 모듈 상태 초기화 (Scheme State)
 
-**기술적 배경 (Rationale):**
+**기술적 배경:**
 `initial`은 모듈이 씬에서 활성화되는 **탄생 시점(Initialization)**에 외부에서 해당 모듈의 초기 성격이나 시각적 환경을 결정하는 데이터를 전달하는 역할을 합니다.
 
 각 모듈은 자신만의 기본값(Schema Default)을 가지고 있지만, `initial`을 통해 "이 씬에서만큼은 이러한 설정으로 시작해라"라고 명령을 내리는 것과 같습니다. 이는 마치 기계를 가동하기 전 미리 **초기 매개변수(Initial Parameters)를 세팅**하는 것과 동일한 원리입니다.
@@ -64,6 +65,7 @@ export default defineScene({
 따라서 **`initial`은 장면의 전반적인 분위기와 규칙을 결정**할 때 사용하고, **명령어는 그 안에서 일어나는 구체적인 사건**을 연출할 때 사용합니다.
 
 **사용 예시:**
+
 ```typescript
 export default defineScene({
   config,
@@ -86,6 +88,6 @@ export default defineScene({
 
 ### 3. 다음 씬 이동 (`next`)
 
-**상세 설명 (Rationale):**
+**상세 설명:**
 시나리오 흐름의 연속성을 위해 설정합니다. 마지막 명령어가 실행된 후 엔진이 `syncUIState`를 호출할 때 자동으로 `next` 경로를 찾아 이동함으로써, 불필요한 `goto` 커맨드의 반복을 줄이고 코드 구조를 깔끔하게 유지합니다.
 문자열을 직접 지정하여 해당 씬으로 이동할 수도 있고, `{ scene: string, preserve: boolean }` 형태의 객체를 전달하여 `preserve: true`로 설정할 경우 배경, 캐릭터, 파티클 등 기존 렌더러 오브젝트들을 지우지 않고 상태를 유지한 채 부드럽게 씬을 전환할 수 있습니다.

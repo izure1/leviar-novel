@@ -20,10 +20,11 @@
 
 ### 1. 전역 변수 (`vars`)
 
-**상세 설명 (Rationale):**
+**상세 설명:**
 게임 전반에서 사용되는 주인공 이름, 호감도, 진행도 등을 정의합니다. 여기에 정의된 변수들은 엔진의 세이브 시스템에 의해 자동으로 추적 및 저장되므로, 별도의 직렬화 로직 없이도 완벽한 이어하기를 보장합니다.
 
 **사용 예시:**
+
 ```typescript
 defineNovelConfig({
   vars: {
@@ -39,10 +40,11 @@ defineNovelConfig({
 
 ### 2. 에셋 관리 (`assets`)
 
-**상세 설명 (Rationale):**
+**상세 설명:**
 긴 파일 경로를 시나리오에서 직접 사용하는 대신 별칭(Alias)을 부여합니다. 파일의 실제 위치가 변경되어도 설정 파일 한 곳만 수정하면 되며, 엔진 초기화 시점에 리소스를 미리 로드하여 런타임 성능을 최적화합니다.
 
 **사용 예시:**
+
 ```typescript
 defineNovelConfig({
   assets: {
@@ -71,6 +73,7 @@ defineNovelConfig({
 | **`opacity`** | `number[][]` | 부드러운 페이드인/아웃 처리를 통한 시각적 완성도 |
 
 **사용 예시:**
+
 ```typescript
 defineNovelConfig({
   effects: {
@@ -89,7 +92,7 @@ defineNovelConfig({
 
 ### 4. 폴백 규칙 (`fallback`)
 
-**상세 설명 (Rationale):**
+**상세 설명:**
 모든 `character-show` 커맨드마다 `duration: 300`을 적는 반복 작업을 제거합니다. 특정 조건에 맞는 명령어에 대해 전역 기본값(Default)을 주입하여 시나리오 연출가가 핵심 연출에만 집중할 수 있게 합니다.
 
 | 속성명 | 필수 | 설명 |

@@ -15,13 +15,14 @@
 | **화면 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect`, `overlay-text`, `overlay-image`, `overlay-effect` | 화면 전환, 분위기 오버레이, 파티클 시스템, 오버레이 제어 |
 | **사운드** | `audio` | 배경음악(BGM) 및 효과음(SE) 재생, 일시정지, 정지 |
 | **로직/제어** | `choices`, `condition`, `var`, `label`, `control` | 선택지 분기, 조건부 실행, 변수 조작, 흐름 제어 |
-| **시스템** | `ui` | 특정 모듈 UI 표시 및 숨김 제어 |
+| **시스템** | `ui`, `dialogBox` | 특정 모듈 UI 표시/숨김 제어, 시스템 대화상자 출력 |
 
 ---
 
 ## 🎭 1. 기본 연출 (Core Rendering)
 
 ### `dialogue` (대사 출력)
+
 화면에 대사를 출력합니다. 나레이션 또는 캐릭터의 말을 처리하며, 한 글자씩 출력되는 타이핑 효과를 지원합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -31,6 +32,7 @@
 | **`speed`** | `number` | - | 타이핑 속도(ms). 미지정 시 기본값(30ms) 사용. |
 
 **사용 예시:**
+
 ```typescript
 { 
   type: 'dialogue', 
@@ -46,6 +48,7 @@
 ```
 
 ### `character` (캐릭터 조작)
+
 캐릭터를 화면에 등장시키거나, 이동시키거나, 퇴장시킵니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -58,6 +61,7 @@
 | **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 400ms. |
 
 **사용 예시:**
+
 ```typescript
 { 
   type: 'character', 
@@ -78,6 +82,7 @@
 ```
 
 ### `background` (배경 전환)
+
 현재 장면의 배경 이미지를 전환합니다. 부드러운 크로스페이드를 지원합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -88,6 +93,7 @@
 | **`isVideo`** | `boolean` | - | 대상 에셋을 비디오로 처리할지 여부. 기본값 `false`. |
 
 **사용 예시:**
+
 ```typescript
 { 
   type: 'background', 
@@ -102,6 +108,7 @@
 ## 📸 2. 카메라 제어 (Camera Control)
 
 ### `camera-zoom`
+
 카메라의 줌 비율을 조작하여 화면을 확대하거나 축소합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -110,6 +117,7 @@
 | **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
 
 ### `camera-pan`
+
 카메라의 위치를 이동시켜 특정 지점을 비춥니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -119,26 +127,30 @@
 | **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 1000ms. |
 
 ### `camera-effect`
+
 화면 흔들림 등 카메라 특수 효과를 재생합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
 | :--- | :--- | :---: | :--- |
-| **`preset`** | `EffectPreset` | O | `shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset` |
+| **`preset`** | `CameraEffectPreset` | O | `shake`, `shake-x`, `shake-y`, `bounce`, `wave`, `nod`, `fall`, `pulse`, `spin`, `spin-x`, `spin-y`, `spin-z`, `float`, `jolt`, `reset` |
+| **`duration`** | `number` | - | 효과의 전체 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
 | **`intensity`** | `number` | - | 효과의 강도. 프리셋 기본값을 덮어씁니다. |
 | **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. 음수 지정 시 무한 반복합니다. |
 
 ### `character-effect`
+
 화면 전체가 아닌 특정 캐릭터 객체에만 흔들림 등의 특수 효과를 재생합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
 | :--- | :--- | :---: | :--- |
 | **`name`** | `string` | O | 효과를 적용할 캐릭터의 에셋 키 |
-| **`preset`** | `EffectPreset` | O | `shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset` |
+| **`preset`** | `CameraEffectPreset` | O | `shake`, `shake-x`, `shake-y`, `bounce`, `wave`, `nod`, `fall`, `pulse`, `spin`, `spin-x`, `spin-y`, `spin-z`, `float`, `jolt`, `reset` |
+| **`duration`** | `number` | - | 효과의 전체 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
 | **`intensity`** | `number` | - | 효과의 강도. 프리셋 기본값을 덮어씁니다. |
-| **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
 | **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. 음수 지정 시 무한 반복합니다. |
 
 ### `character-focus`
+
 특정 캐릭터의 특정 부위(Face, Hand 등)를 자동으로 계산하여 카메라를 포커싱합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -152,6 +164,7 @@
 ## ✨ 3. 화면 효과 (Visual Effects)
 
 ### `screen-fade`
+
 화면 전체를 특정 색상으로 덮거나(Out), 덮인 상태에서 다시 나타나게(In) 합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -162,6 +175,7 @@
 | **`disable`** | `boolean` | - | 효과 진행 중 사용자 입력을 차단할지 여부. |
 
 ### `screen-wipe`
+
 그라데이션 와이프 효과를 사용하여 화면을 전환합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -171,6 +185,7 @@
 | **`duration`** | `number` | - | 애니메이션 지속 시간(ms). 기본값 800ms. |
 
 ### `mood` (분위기 오버레이)
+
 화면 전체에 색조 필터, 비네팅, 블렌드 모드 등을 적용하여 특정 분위기를 연출합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -181,6 +196,7 @@
 | **`flicker`** | `FlickerPreset` | - | 조명 깜빡임 효과 (`candle`, `flicker`, `strobe`) |
 
 ### `effect` (파티클 시스템)
+
 비, 눈, 벚꽃 등 화면 전체에 날리는 파티클 효과를 추가합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -191,6 +207,7 @@
 | **`rate`** | `number` | - | 파티클 생성 밀도. |
 
 ### `overlay-text` (텍스트 오버레이)
+
 화면의 특정 위치에 텍스트를 띄웁니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -202,6 +219,7 @@
 | **`duration`** | `number` | - | 전환 애니메이션 시간(ms) |
 
 ### `overlay-image` (이미지 오버레이)
+
 화면의 특정 위치에 이미지를 띄웁니다. `x`, `y` 좌표는 0~1 사이의 정규화된 값을 사용합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -217,21 +235,23 @@
 | **`duration`** | `number` | - | 전환 애니메이션 시간(ms) |
 
 ### `overlay-effect` (오버레이 특수 효과)
+
 오버레이 객체(텍스트 또는 이미지)에 흔들림 등의 카메라 효과를 적용합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
 | :--- | :--- | :---: | :--- |
 | **`name`** | `string` | O | 효과를 적용할 오버레이의 고유 이름 |
-| **`preset`** | `CameraEffectPreset` | O | 연출 효과 프리셋 (`shake`, `bounce`, `wave`, `nod`, `shake-x`, `fall`, `reset`) |
-| **`intensity`** | `number` | - | 효과의 강도 |
-| **`repeat`** | `number` | - | 효과 반복 횟수 (음수일 경우 무한 반복) |
-| **`duration`** | `number` | - | 효과의 전체 지속 시간(ms) |
+| **`preset`** | `CameraEffectPreset` | O | `shake`, `shake-x`, `shake-y`, `bounce`, `wave`, `nod`, `fall`, `pulse`, `spin`, `spin-x`, `spin-y`, `spin-z`, `float`, `jolt`, `reset` |
+| **`duration`** | `number` | - | 효과의 전체 지속 시간(ms). 미지정 시 프리셋 기본값 적용. |
+| **`intensity`** | `number` | - | 효과의 강도. 프리셋 기본값을 덮어씁니다. |
+| **`repeat`** | `number` | - | 효과 반복 횟수. 기본값 1. 음수 지정 시 무한 반복합니다. |
 
 ---
 
 ## 🎵 4. 사운드 (Audio)
 
 ### `audio` (오디오 재생/제어)
+
 설정에 등록된 배경음악(BGM) 또는 효과음(SE)을 재생하고 제어합니다. 같은 `name`으로 재생 시 자동으로 크로스페이드(부드러운 전환)를 지원합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -250,15 +270,18 @@
 ## ⚙️ 5. 로직 및 흐름 제어 (Logic & Flow)
 
 ### `choices` (선택지 분기)
+
 사용자에게 여러 선택지를 제시하고, 선택 결과에 따라 변수를 변경하거나 장면을 전환합니다.
 
 **개별 선택지(`choices` 배열 요소) 속성:**
+
 *   **`text`**: 버튼에 표시될 텍스트 (Resolvable 지원)
 *   **`next`**: 선택 시 이동할 **다른 씬**의 이름
 *   **`goto`**: 선택 시 현재 씬 내의 **라벨**로 점프
 *   **`var`**: 선택 시 즉시 변경할 **전역 변수 맵** (예: `{ courage: 10 }`)
 
 **사용 예시:**
+
 ```typescript
 {
   type: 'choices',
@@ -277,6 +300,7 @@
 ```
 
 ### `condition` (조건부 분기)
+
 현재 변수 상태에 따라 시나리오의 흐름을 자동으로 분기합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -287,6 +311,7 @@
 | **`else`** | `string` | - | 거짓일 때 이동할 라벨 또는 씬 이름 (자동 판단) |
 
 **사용 예시:**
+
 ```typescript
 {
   type: 'condition',
@@ -297,6 +322,7 @@
 ```
 
 ### `var` (변수 조작)
+
 전역 변수(Global) 또는 현재 씬의 지역 변수(Local, `_`로 시작) 값을 변경합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -305,6 +331,7 @@
 | **`value`** | `any` | O | 설정할 값 (현재 값을 바탕으로 계산하는 함수 가능) |
 
 ### `label` (마커)
+
 `goto` 명령어나 `choices`에서 점프할 수 있는 위치를 표시합니다.
 
 ---
@@ -312,6 +339,7 @@
 ## 🛠️ 6. 시스템 및 기타 (System & Misc)
 
 ### `ui` (UI 모듈 제어)
+
 등록된 UI 모듈(대화창, 선택지 등)을 명시적으로 숨기거나 보이게 합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -320,7 +348,36 @@
 | **`action`** | `'show' \| 'hide'` | O | 보이기(`show`) 또는 숨기기(`hide`) |
 | **`duration`** | `number` | - | 페이드 시간(ms). |
 
+### `dialogBox` (시스템 대화상자)
+
+커스텀 알림(alert) 또는 확인(confirm) 대화상자를 화면에 띄웁니다. 사용자가 버튼을 클릭할 때까지 시나리오 진행이 차단됩니다.
+
+| 속성명 | 타입 | 필수 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`title`** | `string` | O | 대화상자 제목 |
+| **`content`** | `string` | O | 본문 내용 |
+| **`buttons`** | `Array` | O | 버튼 객체 배열. `[{ text: '확인', var: () => { ... } }]` 형태 |
+| **`duration`** | `number` | - | 등장/퇴장 페이드 시간(ms). 기본값 200. |
+| **`persist`** | `boolean` | - | `true`일 경우 바깥 영역(오버레이) 클릭으로 닫히지 않음. 기본값 `false`. |
+| **`layout`** | `object` | - | 대화상자 내부 간격 및 패딩 설정 (`DialogBoxLayout`) |
+
+**사용 예시:**
+
+```typescript
+{
+  type: 'dialogBox',
+  title: '시스템 알림',
+  content: '게임을 저장하시겠습니까?',
+  buttons: [
+    { text: '네', var: () => ({ isSaved: true }) },
+    { text: '아니오' }
+  ],
+  persist: true
+}
+```
+
 ### `control` (입력 제어)
+
 일정 시간 동안 사용자의 클릭 입력을 차단합니다. 긴 연출 도중 클릭으로 인한 스킵을 방지할 때 사용합니다.
 
 | 속성명 | 타입 | 필수 | 설명 |
@@ -335,9 +392,11 @@
 레비아 엔진의 강력함은 모든 명령어의 속성에 **함수(Resolvable)**를 사용할 수 있다는 점에 있습니다.
 
 ### Resolvable의 원리
+
 명령어가 실행될 때, 엔진은 속성값이 함수인지 확인합니다. 함수라면 현재의 모든 변수(`vars`)를 인자로 전달하여 실행하고, 그 결과값을 실제 속성값으로 사용합니다.
 
 **예시: 변수에 따라 달라지는 대사 및 속도**
+
 ```typescript
 {
   type: 'dialogue',
@@ -350,6 +409,7 @@
 ```
 
 ### 텍스트 보간 (Text Interpolation)
+
 대사(`text`)나 선택지 텍스트 등에서는 `${varName}` 문법을 사용하여 변수를 직접 삽입할 수 있습니다.
 
 ```typescript
