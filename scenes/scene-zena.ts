@@ -10,12 +10,6 @@ export default defineScene({
     _test: 0,
   },
   initial: commonInitial,
-  hooks: defineHook(config, {
-    'dialogue:text': (state) => {
-      console.log(state)
-      return state
-    }
-  }),
   next: {
     scene: 'scene-zena-game',
     preserve: true,

@@ -803,39 +803,6 @@
     };
     return module;
   }
-  function defineHook(config, hookMap) {
-    const entries = Object.entries(hookMap);
-    return {
-      _register(novel) {
-        for (const [key, cb] of entries) {
-          if (!cb) continue;
-          if (key.startsWith("novel:")) {
-            novel.hooker.onBefore(key, cb);
-          } else {
-            const moduleKey = key.split(":")[0];
-            const module = config.modules?.[moduleKey];
-            if (module?.hooker) {
-              module.hooker.onBefore(key, cb);
-            }
-          }
-        }
-      },
-      _unregister(novel) {
-        for (const [key, cb] of entries) {
-          if (!cb) continue;
-          if (key.startsWith("novel:")) {
-            novel.hooker.offBefore(key, cb);
-          } else {
-            const moduleKey = key.split(":")[0];
-            const module = config.modules?.[moduleKey];
-            if (module?.hooker) {
-              module.hooker.offBefore(key, cb);
-            }
-          }
-        }
-      }
-    };
-  }
 
   // src/modules/dialogue.ts
   var DEFAULT_BG = {
@@ -943,7 +910,7 @@
     let _prevSubIndex = -1;
     const _renderText = (speaker, text, speed, immediate = false) => {
       const resolved = dialogueModule.hooker.trigger(
-        "dialogue:text",
+        "dialogue:text-render",
         { speaker, text },
         (value) => value
       );
@@ -1045,7 +1012,10 @@
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
     const ui = ctx.ui.get("dialogue");
+    const charDefs = ctx.renderer.config.characters;
     for (let index = 0; index < lines.length; index++) {
+      const speaker = resolveSpeaker(cmd.speaker, charDefs);
+      const text = lines[index];
       setState({
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
@@ -1053,6 +1023,7 @@
         _lines: [...lines],
         ...cmd.layout !== void 0 ? { layout: cmd.layout } : {}
       });
+      dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
       if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
@@ -1243,9 +1214,19 @@
       const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
       return { ...c, text: ctx.scene.interpolateText(textStr) };
     });
-    console.log("[leviar-novel] choiceHandler: opening choices", resolvedChoices);
-    entry?.onChoices?.(resolvedChoices, (i) => {
-      const selected = cmd.choices[i];
+    const showData = choiceModule.hooker.trigger(
+      "choice:show",
+      { choices: resolvedChoices, layout: cmd.layout },
+      (value) => value
+    );
+    console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
+    entry?.onChoices?.(showData.choices, (i) => {
+      const selectData = choiceModule.hooker.trigger(
+        "choice:select",
+        { index: i, selected: showData.choices[i] },
+        (value) => value
+      );
+      const selected = selectData.selected;
       if (!selected) return;
       if (selected.var) {
         const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
@@ -1257,13 +1238,15 @@
       }
       entry.hide?.();
       if (selected.next) {
-        ctx.scene.loadScene(selected.next);
+        const nextVal = typeof selected.next === "function" ? selected.next(ctx.scene.getVars()) : selected.next;
+        ctx.scene.loadScene(nextVal);
       } else if (selected.goto) {
-        ctx.scene.jumpToLabel(selected.goto);
+        const gotoVal = typeof selected.goto === "function" ? selected.goto(ctx.scene.getVars()) : selected.goto;
+        ctx.scene.jumpToLabel(gotoVal);
       } else {
         ctx.scene.end();
       }
-    }, cmd.layout);
+    }, showData.layout);
     return "handled";
   });
   var choice_default = choiceModule;
@@ -3292,24 +3275,29 @@
       return true;
     }
     ctx.ui.get("dialogue")?.hide?.();
-    const duration = cmd.duration ?? 200;
-    const persist = cmd.buttons.length > 0 ? true : cmd.persist ?? false;
+    const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value);
+    const duration = finalCmd.duration ?? 200;
+    const persist = finalCmd.buttons.length > 0 ? true : finalCmd.persist ?? false;
     let _resolved = false;
     const resolve = (i) => {
       if (_resolved) return;
       _resolved = true;
       entry.hide?.(duration);
-      if (i >= 0) {
-        const selected = cmd.buttons[i];
-        if (selected?.var) {
-          const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
-          if (vars) {
-            for (const [key, value] of Object.entries(vars)) {
-              if (key.startsWith("_")) {
-                ctx.scene.setLocalVar(key, value);
-              } else {
-                ctx.scene.setGlobalVar(key, value);
-              }
+      const selectedObj = i >= 0 ? finalCmd.buttons[i] : void 0;
+      const selectData = dialogBoxModule.hooker.trigger(
+        "dialogBox:select",
+        { index: i, selected: selectedObj },
+        (value) => value
+      );
+      const finalSelected = selectData.selected;
+      if (finalSelected?.var) {
+        const vars = resolveVarResolvable(finalSelected.var, ctx.scene.getVars());
+        if (vars) {
+          for (const [key, value] of Object.entries(vars)) {
+            if (key.startsWith("_")) {
+              ctx.scene.setLocalVar(key, value);
+            } else {
+              ctx.scene.setGlobalVar(key, value);
             }
           }
         }
@@ -3317,9 +3305,9 @@
       ctx.callbacks.advance();
     };
     setState({
-      _title: cmd.title,
-      _content: cmd.content,
-      _buttons: cmd.buttons.map((b) => ({ text: b.text })),
+      _title: finalCmd.title,
+      _content: finalCmd.content,
+      _buttons: finalCmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
       _persist: persist
@@ -17621,16 +17609,16 @@ ${addLineNumbers(fragment)}`);
       }
     },
     "choice": {
+      layout: {
+        buttonMinWidth: 600,
+        buttonMaxWidth: 600
+      },
       button: {
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
         gradientType: "linear",
         gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%"
-      },
-      layout: {
-        buttonMinWidth: 600,
-        buttonMaxWidth: 600
       },
       buttonHover: {
         gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%"
@@ -17656,12 +17644,6 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     initial: commonInitial,
-    hooks: defineHook(novel_config_default, {
-      "dialogue:text": (state) => {
-        console.log(state);
-        return state;
-      }
-    }),
     next: {
       scene: "scene-zena-game",
       preserve: true
@@ -19115,7 +19097,7 @@ ${addLineNumbers(fragment)}`);
     await novel.loadAssets(OBJECTS);
     await novel.boot();
     let before = 0;
-    novel.hooker.onBefore("dialogue:text", (state) => {
+    novel.hooker.onBefore("dialogue:text-run", (state) => {
       if (novel.isSkipping) return state;
       if (!novel.vars.useHeroineVoice) return state;
       const { speaker, text } = state;
