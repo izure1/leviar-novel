@@ -132,29 +132,15 @@ interface NovelAudioElement extends HTMLAudioElement {
 /** name → 현재 재생 중인 HTMLAudioElement */
 const pool = new Map<string, NovelAudioElement>()
 
-let isLoadHookRegistered = false
-
 /**
  * 오디오 모듈.
- * - play: `config.audios`에 등록된 키로 오디오를 재생합니다. 같은 name으로 재생 시 크로스페이드됩니다.
- * - pause: duration에 걸쳐 페이드아웃 후 일시정지합니다.
- * - stop: duration에 걸쳐 페이드아웃 후 정지 및 제거합니다.
+ * - play: `config.audios`에 등록된 키로 오디오 재생
+ * - pause: 일시정지
+ * - stop: 정지 및 제거
  */
 const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
 
 audioModule.defineView((data, ctx) => {
-  if (!isLoadHookRegistered) {
-    isLoadHookRegistered = true
-    ctx.novel.hooker.onBefore('novel:load', (saveData) => {
-      for (const audio of pool.values()) {
-        audio.pause()
-        audio.src = ''
-      }
-      pool.clear()
-      return saveData
-    })
-  }
-
   const audioMap = (ctx.renderer.config as any).audios as Record<string, string> | undefined
 
   // 1. 삭제된 트랙 정리
@@ -195,6 +181,16 @@ audioModule.defineView((data, ctx) => {
       
       if (!track.paused) {
         audio.play().catch(e => console.warn(`[audio] 재생 실패:`, e))
+      }
+    } else {
+      audio.volume = track.volume
+      audio.playbackRate = track.speed
+      audio.loop = track.repeat
+      
+      if (track.paused) {
+        audio.pause()
+      } else if (audio.paused) {
+        audio.play().catch(e => console.warn(`[audio] 재생 재개 실패:`, e))
       }
     }
   }
