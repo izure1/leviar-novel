@@ -803,39 +803,6 @@
     };
     return module;
   }
-  function defineHook(config, hookMap) {
-    const entries = Object.entries(hookMap);
-    return {
-      _register(novel) {
-        for (const [key, cb] of entries) {
-          if (!cb) continue;
-          if (key.startsWith("novel:")) {
-            novel.hooker.onBefore(key, cb);
-          } else {
-            const moduleKey = key.split(":")[0];
-            const module = config.modules?.[moduleKey];
-            if (module?.hooker) {
-              module.hooker.onBefore(key, cb);
-            }
-          }
-        }
-      },
-      _unregister(novel) {
-        for (const [key, cb] of entries) {
-          if (!cb) continue;
-          if (key.startsWith("novel:")) {
-            novel.hooker.offBefore(key, cb);
-          } else {
-            const moduleKey = key.split(":")[0];
-            const module = config.modules?.[moduleKey];
-            if (module?.hooker) {
-              module.hooker.offBefore(key, cb);
-            }
-          }
-        }
-      }
-    };
-  }
 
   // src/modules/dialogue.ts
   var DEFAULT_BG = {
@@ -17621,16 +17588,16 @@ ${addLineNumbers(fragment)}`);
       }
     },
     "choice": {
+      layout: {
+        buttonMinWidth: 600,
+        buttonMaxWidth: 600
+      },
       button: {
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
         gradientType: "linear",
         gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%"
-      },
-      layout: {
-        buttonMinWidth: 600,
-        buttonMaxWidth: 600
       },
       buttonHover: {
         gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%"
@@ -17656,12 +17623,6 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     initial: commonInitial,
-    hooks: defineHook(novel_config_default, {
-      "dialogue:text": (state) => {
-        console.log(state);
-        return state;
-      }
-    }),
     next: {
       scene: "scene-zena-game",
       preserve: true

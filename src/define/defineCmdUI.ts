@@ -294,6 +294,25 @@ export interface SceneHookDescriptor {
 
 // ─── defineHook ──────────────────────────────────────────────
 
+export type SceneHookMethods<TConfig, K extends keyof AllHooksOf<TConfig>> = {
+  onBefore?: (
+    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
+  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+  onAfter?: (
+    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
+  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+  onceBefore?: (
+    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
+  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+  onceAfter?: (
+    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
+  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+}
+
+export type SceneHookMap<TConfig> = {
+  [K in keyof AllHooksOf<TConfig>]?: SceneHookMethods<TConfig, K>
+}
+
 /**
  * 씬 스코프로 모듈/novel 훅을 구독하는 헬퍼입니다.
  * 반환값을 `defineScene`의 `hooks` 필드에 전달하면,
@@ -307,55 +326,65 @@ export interface SceneHookDescriptor {
  * defineScene({
  *   config,
  *   hooks: defineHook(config, {
- *     'dialogue:text': (value) => ({ ...value, text: value.text.toUpperCase() }),
- *     'novel:next':    (value) => value,
+ *     'dialogue:text': {
+ *       onBefore: (value) => ({ ...value, text: value.text.toUpperCase() }),
+ *     },
+ *     'novel:next': {
+ *       onAfter: (value) => value,
+ *     }
  *   }),
  * }, [ ... ])
  * ```
  *
  * @param config - `defineNovelConfig()`로 생성된 NovelConfig
- * @param hookMap - 구독할 훅 키와 콜백의 맵. 등록 방식: `onBefore`
+ * @param hookMap - 구독할 훅 키와 콜백의 맵.
  */
 export function defineHook<
   TConfig extends { modules?: Record<string, NovelModule<any, any, any>> }
 >(
   config: TConfig,
-  hookMap: {
-    [K in keyof AllHooksOf<TConfig>]?: (
-      value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
-    ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
-  }
+  hookMap: SceneHookMap<TConfig>
 ): SceneHookDescriptor {
-  // 등록/해제 시 동일 콜백 참조가 필요하므로 entries를 미리 추출
-  const entries = Object.entries(hookMap) as Array<[string, (value: any) => any]>
+  const methodKeys = ['onBefore', 'onAfter', 'onceBefore', 'onceAfter'] as const
+  type MethodKey = typeof methodKeys[number]
+
+  const registrations: Array<{ method: MethodKey, key: string, cb: any }> = []
+
+  for (const [key, methods] of Object.entries(hookMap)) {
+    if (!methods) continue
+    for (const method of methodKeys) {
+      const cb = (methods as any)[method]
+      if (cb) {
+        registrations.push({ method, key, cb })
+      }
+    }
+  }
 
   return {
     _register(novel: any) {
-      for (const [key, cb] of entries) {
-        if (!cb) continue
+      for (const { method, key, cb } of registrations) {
         if (key.startsWith('novel:')) {
-          // novel 레벨 훅
-          novel.hooker.onBefore(key, cb)
+          novel.hooker[method](key, cb)
         } else {
-          // 모듈 훅 — key 접두사('dialogue', 'choice' 등)로 모듈 탐색
           const moduleKey = key.split(':')[0]
           const module = (config as any).modules?.[moduleKey]
           if (module?.hooker) {
-            module.hooker.onBefore(key, cb)
+            module.hooker[method](key, cb)
           }
         }
       }
     },
     _unregister(novel: any) {
-      for (const [key, cb] of entries) {
-        if (!cb) continue
+      for (const { method, key, cb } of registrations) {
+        const offMethod = method.includes('After') ? 'offAfter' : 'offBefore'
+
         if (key.startsWith('novel:')) {
-          novel.hooker.offBefore(key, cb)
+          novel.hooker[offMethod](key, cb)
         } else {
           const moduleKey = key.split(':')[0]
           const module = (config as any).modules?.[moduleKey]
           if (module?.hooker) {
-            module.hooker.offBefore(key, cb)
+            module.hooker[offMethod](key, cb)
           }
         }
       }
