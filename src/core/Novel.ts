@@ -219,6 +219,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       return
     }
 
+    // 이전 씬의 훅 해제
+    if (this._currentSceneDef?.kind === 'dialogue') {
+      const prevHooks = (this._currentSceneDef as any).hooks
+      prevHooks?._unregister(this)
+    }
+
     const prevState: RendererState | null = (!preserve && this._currentScene)
       ? this._renderer.captureState()
       : null
@@ -248,6 +254,13 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._currentScene = scene
     this._currentSceneDef = def
     this._inputMode = 'none'
+
+    // 새 씬의 훅 등록
+    if (def.kind === 'dialogue') {
+      const newHooks = (def as any).hooks
+      newHooks?._register(this)
+    }
+
     scene.start(preserve)
     this._syncUIState()
   }
@@ -370,6 +383,12 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       return
     }
 
+    // 이전 씬 훅 해제
+    if (this._currentSceneDef?.kind === 'dialogue') {
+      const prevHooks = (this._currentSceneDef as any).hooks
+      prevHooks?._unregister(this)
+    }
+
     if (this._currentScene instanceof ExploreScene) {
       this._currentScene.cleanup()
     }
@@ -405,6 +424,11 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this._currentScene = scene
     this._currentSceneDef = def
     this._inputMode = 'none'
+
+    // 새 씬 훅 등록
+    const newHooks = (def as any).hooks
+    newHooks?._register(this)
+
     this._syncUIState()
   }
 

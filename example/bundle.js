@@ -3301,14 +3301,16 @@
     config,
     variables = {},
     initial,
-    next
+    next,
+    hooks
   }, dialogues) {
     return {
       kind: "dialogue",
       dialogues,
       localVars: variables,
       nextScene: next,
-      initial
+      initial,
+      hooks
     };
   }
 
@@ -16994,6 +16996,10 @@ ${addLineNumbers(fragment)}`);
         console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
+      if (this._currentSceneDef?.kind === "dialogue") {
+        const prevHooks = this._currentSceneDef.hooks;
+        prevHooks?._unregister(this);
+      }
       const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
@@ -17012,6 +17018,10 @@ ${addLineNumbers(fragment)}`);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
+      if (def.kind === "dialogue") {
+        const newHooks = def.hooks;
+        newHooks?._register(this);
+      }
       scene.start(preserve);
       this._syncUIState();
     }
@@ -17113,6 +17123,10 @@ ${addLineNumbers(fragment)}`);
         console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
+      if (this._currentSceneDef?.kind === "dialogue") {
+        const prevHooks = this._currentSceneDef.hooks;
+        prevHooks?._unregister(this);
+      }
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
       }
@@ -17135,6 +17149,8 @@ ${addLineNumbers(fragment)}`);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
+      const newHooks = def.hooks;
+      newHooks?._register(this);
       this._syncUIState();
     }
     /**

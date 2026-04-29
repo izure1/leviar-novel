@@ -237,43 +237,128 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
   return module
 }
 
-// ─── defineHook 헬퍼 ─────────────────────────────────────────
+// ─── 타입 유틸리티 ───────────────────────────────────────────
 
 /**
- * 모듈의 훅 이벤트를 구독하는 헬퍼 함수입니다.
- * hookMap의 각 키/콜백 타입은 `THook`에서 자동으로 추론됩니다.
+ * 유니온 타입을 인터섹션 타입으로 변환합니다.
+ * @internal
+ */
+type UnionToIntersection<U> =
+  (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I : never
+
+/**
+ * `NovelConfig`의 `modules`에서 각 모듈의 `THook` 타입을 유니온으로 추출합니다.
+ * @internal
+ */
+type ModuleHooksUnion<TModules extends Record<string, NovelModule<any, any, any>>> = {
+  [K in keyof TModules]: TModules[K] extends NovelModule<any, any, infer THook> ? THook : DefaultHook
+}[keyof TModules]
+
+/**
+ * `NovelConfig`에서 사용 가능한 모든 훅 타입을 추출합니다.
+ * `NovelHook`과 각 모듈의 `THook`을 합친 인터섹션 타입입니다.
+ * @internal
+ */
+export type AllHooksOf<TConfig> =
+  TConfig extends { modules?: infer TMods }
+  ? [TMods] extends [Record<string, NovelModule<any, any, any>>]
+    ? NovelHookRef & UnionToIntersection<ModuleHooksUnion<TMods>>
+    : NovelHookRef
+  : NovelHookRef
+
+/**
+ * Novel 레벨 훅 참조 타입 (Novel.ts에서 NovelHook을 임포트하지 않기 위한 플레이스홀더).
+ * 실제 타입은 Novel.ts의 NovelHook과 동일한 구조여야 합니다.
+ * @internal
+ */
+export type NovelHookRef = {
+  'novel:save': (value: any) => any
+  'novel:load': (value: any) => any
+  'novel:next': (value: boolean) => boolean
+  'novel:scene': (value: string) => string
+}
+
+// ─── SceneHookDescriptor ─────────────────────────────────────
+
+/**
+ * `defineHook()`이 반환하는 씬 스코프 훅 디스크립터.
+ * 씬 시작 시 훅을 등록하고, 씬 종료 시 해제합니다.
+ * `defineScene`의 `hooks` 필드에 전달하십시오.
+ */
+export interface SceneHookDescriptor {
+  /** @internal 씬 시작 시 Novel 엔진이 호출합니다. */
+  readonly _register: (novel: any) => void
+  /** @internal 씬 종료/전환 시 Novel 엔진이 호출합니다. */
+  readonly _unregister: (novel: any) => void
+}
+
+// ─── defineHook ──────────────────────────────────────────────
+
+/**
+ * 씬 스코프로 모듈/novel 훅을 구독하는 헬퍼입니다.
+ * 반환값을 `defineScene`의 `hooks` 필드에 전달하면,
+ * 씬 시작 시 자동으로 훅이 등록되고, 씬 종료/전환 시 자동으로 해제됩니다.
+ *
+ * 훅 키와 콜백 타입은 `config.modules`에 등록된 각 모듈의 `THook`과
+ * `NovelHook`에서 자동으로 추론됩니다.
  *
  * @example
  * ```ts
- * defineHook(dialogueModule, {
- *   'dialogue:text': (value, { speaker, text }) => {
- *     console.log(speaker, text)
- *     return value
- *   }
- * })
+ * defineScene({
+ *   config,
+ *   hooks: defineHook(config, {
+ *     'dialogue:text': (value) => ({ ...value, text: value.text.toUpperCase() }),
+ *     'novel:next':    (value) => value,
+ *   }),
+ * }, [ ... ])
  * ```
  *
- * @param module - `define()`으로 생성된 NovelModule 인스턴스
- * @param hookMap - 구독할 훅 키와 콜백의 맵. `onBefore` 방식으로 등록됩니다.
+ * @param config - `defineNovelConfig()`로 생성된 NovelConfig
+ * @param hookMap - 구독할 훅 키와 콜백의 맵. 등록 방식: `onBefore`
  */
 export function defineHook<
-  THook extends ListenerSignature<THook>
+  TConfig extends { modules?: Record<string, NovelModule<any, any, any>> }
 >(
-  module: NovelModule<any, any, THook>,
+  config: TConfig,
   hookMap: {
-    [K in keyof THook]?: (
-      value: ReturnType<THook[K]>,
-      ...params: THook[K] extends (first: any, ...rest: infer R) => any ? R : never
-    ) => ReturnType<THook[K]>
+    [K in keyof AllHooksOf<TConfig>]?: (
+      value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
+    ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
   }
-): void {
-  // module.hooker는 이미 공유된 HookallSync 인스턴스 — 직접 onBefore 등록
-  const hooker = module.hooker
-  for (const key of Object.keys(hookMap) as (keyof THook & string)[]) {
-    const cb = hookMap[key]
-    if (cb) {
-      hooker.onBefore(key, cb as any)
-    }
+): SceneHookDescriptor {
+  // 등록/해제 시 동일 콜백 참조가 필요하므로 entries를 미리 추출
+  const entries = Object.entries(hookMap) as Array<[string, (value: any) => any]>
+
+  return {
+    _register(novel: any) {
+      for (const [key, cb] of entries) {
+        if (!cb) continue
+        if (key.startsWith('novel:')) {
+          // novel 레벨 훅
+          novel.hooker.onBefore(key, cb)
+        } else {
+          // 모듈 훅 — key 접두사('dialogue', 'choice' 등)로 모듈 탐색
+          const moduleKey = key.split(':')[0]
+          const module = (config as any).modules?.[moduleKey]
+          if (module?.hooker) {
+            module.hooker.onBefore(key, cb)
+          }
+        }
+      }
+    },
+    _unregister(novel: any) {
+      for (const [key, cb] of entries) {
+        if (!cb) continue
+        if (key.startsWith('novel:')) {
+          novel.hooker.offBefore(key, cb)
+        } else {
+          const moduleKey = key.split(':')[0]
+          const module = (config as any).modules?.[moduleKey]
+          if (module?.hooker) {
+            module.hooker.offBefore(key, cb)
+          }
+        }
+      }
+    },
   }
 }
-

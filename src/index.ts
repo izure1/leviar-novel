@@ -79,7 +79,7 @@ export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from 
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
 export { define, defineHook } from './define/defineCmdUI'
-export type { NovelModule, NovelModuleMeta, BootCallback, ListenerSignature, DefaultHook } from './define/defineCmdUI'
+export type { NovelModule, NovelModuleMeta, BootCallback, ListenerSignature, DefaultHook, SceneHookDescriptor, AllHooksOf } from './define/defineCmdUI'
 
 // ─── UI 시스템 ───────────────────────────────────────────────
 export type { UIRuntimeEntry } from './core/UIRegistry'

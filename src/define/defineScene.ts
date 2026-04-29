@@ -4,6 +4,7 @@
 
 import type { NovelConfig, CharDefs, BgDefs, SceneNextTarget } from '../types/config'
 import type { NovelModule } from '../define/defineCmdUI'
+import type { SceneHookDescriptor } from '../define/defineCmdUI'
 import type { DialogueStep } from '../types/dialogue'
 
 // ─── UI initial 타입 헬퍼 ────────────────────────────────────
@@ -63,6 +64,11 @@ export interface SceneDefinition<
    * `novel.config`의 `modules` 키를 기반으로 타입이 추론됩니다.
    */
   readonly initial?: Record<string, unknown>
+  /**
+   * 씬 스코프 훅 디스크립터.
+   * `defineHook()`의 반환값을 전달하면 씬 시작 시 자동 등록, 씬 종료 시 자동 해제됩니다.
+   */
+  readonly hooks?: SceneHookDescriptor
 }
 
 /**
@@ -111,6 +117,7 @@ export function defineScene<
     variables = {} as any,
     initial,
     next,
+    hooks,
   }: {
     config: TConfig
     variables?: keyof TLocalVars extends `_${string}` ? TLocalVars : never
@@ -122,6 +129,11 @@ export function defineScene<
     )
     /** 씬 종료 시 자동으로 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. */
     next?: SceneNextTarget<TConfig>
+    /**
+     * 씬 스코프 훅 디스크립터. `defineHook(config, { ... })`의 반환값.
+     * 씬 시작 시 자동으로 훅이 등록되고, 씬 종료/전환 시 자동으로 해제됩니다.
+     */
+    hooks?: SceneHookDescriptor
   },
   dialogues: DialogueStep<TConfig, TLocalVars>[]
 ): SceneDefinition<
@@ -138,5 +150,6 @@ export function defineScene<
     localVars: variables,
     nextScene: next as string | { scene: string; preserve: boolean } | undefined,
     initial: initial as Record<string, unknown> | undefined,
+    hooks,
   }
 }
