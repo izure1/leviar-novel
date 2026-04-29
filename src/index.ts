@@ -106,6 +106,6 @@ export { default as dialogBoxModule } from './modules/dialogBox'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'
-export type { SaveData, NovelHook } from './core/Novel'
+export type { SaveData, NovelHook, AllModuleHooksOf } from './core/Novel'
 export { Renderer } from './core/Renderer'
 export type { RendererOption, RendererState, CameraState } from './core/Renderer'

@@ -13,7 +13,7 @@ import type { ExploreSceneDefinition } from '../define/defineExploreScene'
 import type { NovelConfig, NovelOption } from '../types/config'
 import type { UIRuntimeEntry } from './UIRegistry'
 import type { SceneContext } from './SceneContext'
-import type { NovelModule } from '../define/defineCmdUI'
+import type { NovelModule, DefaultHook } from '../define/defineCmdUI'
 import type { IHookallSync } from 'hookall'
 import { useHookallSync } from 'hookall'
 
@@ -76,10 +76,31 @@ export interface NovelHook {
 }
 
 // =============================================================
+// AllModuleHooksOf — config.modules 훅 유니온 추출
+// =============================================================
+
+/** @internal 유니온 타입을 인터섹션으로 변환 */
+type UnionToIntersectionLocal<U> =
+  (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I : never
+
+/**
+ * `NovelConfig`의 `modules`에서 각 모듈의 `THook` 타입을 합친 인터섹션 타입.
+ * `novel.hooker`의 타입 매개변수로 사용됩니다.
+ */
+export type AllModuleHooksOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
+  ? UnionToIntersectionLocal<{
+      [K in keyof TMods]: TMods[K] extends NovelModule<any, any, infer THook> ? THook : DefaultHook
+    }[keyof TMods]>
+  : DefaultHook
+
+
+
+// =============================================================
 // Novel 클래스
 // =============================================================
 
-export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>> {
+export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any>> {
   /** 전역 변수. 씬 전환에도 유지됩니다 */
   readonly vars: TConfig['vars']
 
@@ -101,9 +122,22 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
   private readonly _uiRegistry: Map<string, UIRuntimeEntry> = new Map()
 
-  /** Novel 레벨 훅 시스템. `useHookallSync(this.hooker)` 또는 직접 `.hooker`로 접근합니다. */
-  private readonly _hookerTarget = {}
-  readonly hooker: IHookallSync<NovelHook> = useHookallSync<NovelHook>(this._hookerTarget)
+  /** Novel 전용 훅 시스템 (novel:* 이벤트 전용) */
+  private readonly _novelHooker: IHookallSync<NovelHook> = useHookallSync<NovelHook>({})
+
+  /**
+   * 통합 훅 프록시. `novel:*` 키 는 내부 Novel 훅으로, 구모듈 훅은 해당 모듈의 `hooker`로 라우팅합니다.
+   * 
+   * @example
+   * ```ts
+   * // novel 레벨 훅
+   * novel.hooker.onBefore('novel:next', (v) => v)
+   * // 모듈 훅 (dialogue모듈의 DialogueHook)
+   * novel.hooker.onBefore('dialogue:text', (v) => v)
+   * ```
+   */
+  // @ts-ignore — AllModuleHooksOf<TConfig>는 조건부 타입이라 ListenerSignature<M> 제약을 TS가 검증 불가. 런타임 정상.
+  readonly hooker!: IHookallSync<NovelHook & AllModuleHooksOf<TConfig>>
 
   private _currentScene: ActiveScene | null = null
   private _currentSceneDef: AnySceneDef | null = null
@@ -136,6 +170,9 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     // config.modules 수집 및 key 주입
     this._collectModules(config.modules)
 
+    // 훅 프록시 초기화 (_modules 수집 후에 호출)
+    ;(this as any).hooker = this._createHookerProxy()
+
     this._world.start()
 
     for (const [name, scene] of Object.entries(option.scenes) as [string, AnySceneDef][]) {
@@ -155,6 +192,31 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
         this._modules.set(key, module)
       }
     }
+  }
+
+  /**
+   * novel:* 키는 _novelHooker로, 나머지 키는 접두사로 찾은 모듈의 hooker로
+   * 자동 라우팅하는 IHookallSync 프록시를 생성합니다.
+   */
+  private _createHookerProxy(): IHookallSync<any> {
+    const getHooker = (command: string): IHookallSync<any> => {
+      if (command.startsWith('novel:')) return this._novelHooker
+      const moduleKey = command.split(':')[0]
+      const mod = this._modules.get(moduleKey)
+      return (mod as any)?.hooker ?? this._novelHooker
+    }
+
+    const proxy: IHookallSync<any> = {
+      onBefore:   (cmd, cb) => { getHooker(cmd).onBefore(cmd, cb);   return proxy },
+      onAfter:    (cmd, cb) => { getHooker(cmd).onAfter(cmd, cb);    return proxy },
+      onceBefore: (cmd, cb) => { getHooker(cmd).onceBefore(cmd, cb); return proxy },
+      onceAfter:  (cmd, cb) => { getHooker(cmd).onceAfter(cmd, cb);  return proxy },
+      offBefore:  (cmd, cb) => { getHooker(cmd).offBefore(cmd, cb);  return proxy },
+      offAfter:   (cmd, cb) => { getHooker(cmd).offAfter(cmd, cb);   return proxy },
+      trigger: (cmd, initialValue, callback, ...params) =>
+        getHooker(cmd).trigger(cmd, initialValue, callback, ...params),
+    }
+    return proxy
   }
 
   // ─── 에셋 로딩 ───────────────────────────────────────────────
@@ -206,7 +268,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const rawSceneName = typeof target === 'string' ? target : target.scene
     const preserve = typeof target === 'object' && target.preserve === true
 
-    const sceneName = useHookallSync<NovelHook>(this._hookerTarget).trigger(
+    const sceneName = this._novelHooker.trigger(
       'novel:scene',
       rawSceneName,
       (name) => name
@@ -360,7 +422,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       states: Object.fromEntries(this._stateStore),
     }
 
-    return useHookallSync<NovelHook>(this._hookerTarget).trigger(
+    return this._novelHooker.trigger(
       'novel:save',
       rawData,
       (data) => data
@@ -371,7 +433,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    * SaveData로부터 진행 상태를 복원합니다.
    */
   loadSave(data: SaveData): void {
-    const resolvedData = useHookallSync<NovelHook>(this._hookerTarget).trigger(
+    const resolvedData = this._novelHooker.trigger(
       'novel:load',
       data,
       (d) => d
@@ -478,7 +540,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    * 대화를 한 단계 진행합니다.
    */
   next(): void {
-    const canAdvance = useHookallSync<NovelHook>(this._hookerTarget).trigger(
+    const canAdvance = this._novelHooker.trigger(
       'novel:next',
       true,
       (value) => value

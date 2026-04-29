@@ -6,7 +6,6 @@ import {
   PitchManager,
   KoreanAnalyzer,
 } from 'animalese-tts'
-import { useHookallSync } from 'hookall'
 import { Novel } from '../src'
 import config from './novel.config'
 
@@ -108,9 +107,8 @@ async function main() {
   // ── 모든 모듈의 onBoot를 실행
   await novel.boot()
 
-  const hooker = useHookallSync(novel)
   let before = 0
-  hooker.onBefore('dialogue:text', (state) => {
+  novel.hooker.onBefore('dialogue:text', (state) => {
     if (novel.isSkipping) return state
     if (!novel.vars.useHeroineVoice) return state
     const { speaker, text } = state

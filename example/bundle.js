@@ -803,6 +803,39 @@
     };
     return module;
   }
+  function defineHook(config, hookMap) {
+    const entries = Object.entries(hookMap);
+    return {
+      _register(novel) {
+        for (const [key, cb] of entries) {
+          if (!cb) continue;
+          if (key.startsWith("novel:")) {
+            novel.hooker.onBefore(key, cb);
+          } else {
+            const moduleKey = key.split(":")[0];
+            const module = config.modules?.[moduleKey];
+            if (module?.hooker) {
+              module.hooker.onBefore(key, cb);
+            }
+          }
+        }
+      },
+      _unregister(novel) {
+        for (const [key, cb] of entries) {
+          if (!cb) continue;
+          if (key.startsWith("novel:")) {
+            novel.hooker.offBefore(key, cb);
+          } else {
+            const moduleKey = key.split(":")[0];
+            const module = config.modules?.[moduleKey];
+            if (module?.hooker) {
+              module.hooker.offBefore(key, cb);
+            }
+          }
+        }
+      }
+    };
+  }
 
   // src/modules/dialogue.ts
   var DEFAULT_BG = {
@@ -16904,9 +16937,21 @@ ${addLineNumbers(fragment)}`);
     _modules = /* @__PURE__ */ new Map();
     /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
     _uiRegistry = /* @__PURE__ */ new Map();
-    /** Novel 레벨 훅 시스템. `useHookallSync(this.hooker)` 또는 직접 `.hooker`로 접근합니다. */
-    _hookerTarget = {};
-    hooker = useHookallSync(this._hookerTarget);
+    /** Novel 전용 훅 시스템 (novel:* 이벤트 전용) */
+    _novelHooker = useHookallSync({});
+    /**
+     * 통합 훅 프록시. `novel:*` 키 는 내부 Novel 훅으로, 구모듈 훅은 해당 모듈의 `hooker`로 라우팅합니다.
+     * 
+     * @example
+     * ```ts
+     * // novel 레벨 훅
+     * novel.hooker.onBefore('novel:next', (v) => v)
+     * // 모듈 훅 (dialogue모듈의 DialogueHook)
+     * novel.hooker.onBefore('dialogue:text', (v) => v)
+     * ```
+     */
+    // @ts-ignore — AllModuleHooksOf<TConfig>는 조건부 타입이라 ListenerSignature<M> 제약을 TS가 검증 불가. 런타임 정상.
+    hooker;
     _currentScene = null;
     _currentSceneDef = null;
     _inputMode = "none";
@@ -16928,6 +16973,7 @@ ${addLineNumbers(fragment)}`);
       });
       this.vars = { ...config.vars };
       this._collectModules(config.modules);
+      this.hooker = this._createHookerProxy();
       this._world.start();
       for (const [name, scene] of Object.entries(option.scenes)) {
         scene.name = name;
@@ -16945,6 +16991,46 @@ ${addLineNumbers(fragment)}`);
           this._modules.set(key, module);
         }
       }
+    }
+    /**
+     * novel:* 키는 _novelHooker로, 나머지 키는 접두사로 찾은 모듈의 hooker로
+     * 자동 라우팅하는 IHookallSync 프록시를 생성합니다.
+     */
+    _createHookerProxy() {
+      const getHooker = (command) => {
+        if (command.startsWith("novel:")) return this._novelHooker;
+        const moduleKey = command.split(":")[0];
+        const mod = this._modules.get(moduleKey);
+        return mod?.hooker ?? this._novelHooker;
+      };
+      const proxy = {
+        onBefore: (cmd, cb) => {
+          getHooker(cmd).onBefore(cmd, cb);
+          return proxy;
+        },
+        onAfter: (cmd, cb) => {
+          getHooker(cmd).onAfter(cmd, cb);
+          return proxy;
+        },
+        onceBefore: (cmd, cb) => {
+          getHooker(cmd).onceBefore(cmd, cb);
+          return proxy;
+        },
+        onceAfter: (cmd, cb) => {
+          getHooker(cmd).onceAfter(cmd, cb);
+          return proxy;
+        },
+        offBefore: (cmd, cb) => {
+          getHooker(cmd).offBefore(cmd, cb);
+          return proxy;
+        },
+        offAfter: (cmd, cb) => {
+          getHooker(cmd).offAfter(cmd, cb);
+          return proxy;
+        },
+        trigger: (cmd, initialValue, callback, ...params) => getHooker(cmd).trigger(cmd, initialValue, callback, ...params)
+      };
+      return proxy;
     }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
     async load() {
@@ -16986,7 +17072,7 @@ ${addLineNumbers(fragment)}`);
     loadScene(target) {
       const rawSceneName = typeof target === "string" ? target : target.scene;
       const preserve = typeof target === "object" && target.preserve === true;
-      const sceneName = useHookallSync(this._hookerTarget).trigger(
+      const sceneName = this._novelHooker.trigger(
         "novel:scene",
         rawSceneName,
         (name) => name
@@ -17103,7 +17189,7 @@ ${addLineNumbers(fragment)}`);
         rendererState: this._renderer.captureState(),
         states: Object.fromEntries(this._stateStore)
       };
-      return useHookallSync(this._hookerTarget).trigger(
+      return this._novelHooker.trigger(
         "novel:save",
         rawData,
         (data) => data
@@ -17113,7 +17199,7 @@ ${addLineNumbers(fragment)}`);
      * SaveData로부터 진행 상태를 복원합니다.
      */
     loadSave(data) {
-      const resolvedData = useHookallSync(this._hookerTarget).trigger(
+      const resolvedData = this._novelHooker.trigger(
         "novel:load",
         data,
         (d2) => d2
@@ -17202,7 +17288,7 @@ ${addLineNumbers(fragment)}`);
      * 대화를 한 단계 진행합니다.
      */
     next() {
-      const canAdvance = useHookallSync(this._hookerTarget).trigger(
+      const canAdvance = this._novelHooker.trigger(
         "novel:next",
         true,
         (value) => value
@@ -17526,6 +17612,12 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     initial: commonInitial,
+    hooks: defineHook(novel_config_default, {
+      "dialogue:text": (state) => {
+        console.log(state);
+        return state;
+      }
+    }),
     next: {
       scene: "scene-zena-game",
       preserve: true
@@ -18978,9 +19070,8 @@ ${addLineNumbers(fragment)}`);
     await novel.load();
     await novel.loadAssets(OBJECTS);
     await novel.boot();
-    const hooker = useHookallSync(novel);
     let before = 0;
-    hooker.onBefore("dialogue:text", (state) => {
+    novel.hooker.onBefore("dialogue:text", (state) => {
       if (novel.isSkipping) return state;
       if (!novel.vars.useHeroineVoice) return state;
       const { speaker, text } = state;
