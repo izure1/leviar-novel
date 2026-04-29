@@ -52,7 +52,7 @@ novel.hooker.onBefore('dialogue:text', (value) => {
 
 ### 2. 씬 스코프 훅 (Scene-Scoped Hooks)
 
-`defineHook`을 사용하여 특정 씬에서만 유효한 훅을 등록할 수 있습니다. 이 훅들은 **씬이 시작될 때 등록되고, 씬이 종료되거나 다른 씬으로 전환될 때 자동으로 해제**되어 메모리 누수와 의도치 않은 부작용을 방지합니다.
+`defineHook`을 사용하여 특정 씬에서만 유효한 훅을 등록할 수 있습니다. 자세한 정의 방법은 [🎬 Scenes 가이드](./scenes.md)를 참조하십시오. 이 훅들은 **씬이 시작될 때 등록되고, 씬이 종료되거나 다른 씬으로 전환될 때 자동으로 해제**되어 메모리 누수와 의도치 않은 부작용을 방지합니다.
 
 `defineHook`은 훅 이벤트를 키로 사용하고, 그 내부에 `hookall` 라이프사이클 메서드(`onBefore`, `onAfter`, `onceBefore`, `onceAfter`)를 지정하여 동작합니다.
 

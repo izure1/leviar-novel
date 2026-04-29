@@ -43,6 +43,7 @@
 | **[🎬 Scenes](./docs/scenes.md)** | 씬 구성, 지역 변수 및 초기 상태 주입 방법 |
 | **[🧩 Custom Modules](./docs/modules.md)** | 신규 기능 및 UI 확장을 위한 모듈 제작 방법 |
 | **[📜 Command Reference](./docs/commands.md)** | 모든 내장 시나리오 명령어의 속성 레퍼런스 |
+| **[⚓ Hooks](./docs/hooks.md)** | 엔진 및 모듈의 라이프사이클 이벤트를 제어하는 Hook 시스템 가이드 |
 
 ---
 

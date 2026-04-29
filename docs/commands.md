@@ -410,11 +410,11 @@
 
 ### 텍스트 보간 (Text Interpolation)
 
-대사(`text`)나 선택지 텍스트 등에서는 `${varName}` 문법을 사용하여 변수를 직접 삽입할 수 있습니다.
+대사(`text`)나 선택지 텍스트 등에서는 `{{ varName }}` 문법을 사용하여 변수를 직접 삽입할 수 있습니다.
 
 ```typescript
 {
   type: 'dialogue',
-  text: '현재 당신의 점수는 ${score}점입니다.'
+  text: '현재 당신의 점수는 {{ score }}점입니다.'
 }
 ```
