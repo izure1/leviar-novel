@@ -59,7 +59,7 @@ import config from './novel.config'
 export default defineScene({
   config,
   hooks: defineHook(config, {
-    'dialogue:text': {
+    'dialogue:text-render': {
       // 이 씬에서만 모든 대화를 대문자로 변경 (출력 직전 가로채기)
       onBefore: (value) => {
         return { ...value, text: value.text.toUpperCase() }
@@ -68,8 +68,7 @@ export default defineScene({
     'novel:save': {
       // 이 씬에서는 세이브 금지
       onBefore: (data) => {
-        console.warn('이 씬에서는 저장할 수 없습니다.')
-        return data
+        throw '이 씬에서는 저장할 수 없습니다.'
       }
     },
     'novel:next': {

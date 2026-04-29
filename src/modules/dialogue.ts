@@ -5,7 +5,13 @@ import { define } from '../define/defineCmdUI'
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
 
 export interface DialogueHook {
-  'dialogue:text': (
+  'dialogue:text-render': (
+    s: { speaker: string | undefined, text: string }
+  ) => {
+    speaker: string | undefined
+    text: string
+  },
+  'dialogue:text-run': (
     s: { speaker: string | undefined, text: string }
   ) => {
     speaker: string | undefined
@@ -239,7 +245,7 @@ dialogueModule.defineView((data, ctx) => {
   ) => {
     // 'dialogue:text' 훅 방출 — 외부에서 speaker/text 변환 가능
     const resolved = dialogueModule.hooker.trigger(
-      'dialogue:text',
+      'dialogue:text-render',
       { speaker, text },
       (value) => value
     )
@@ -359,8 +365,11 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
 
   const ui = ctx.ui.get('dialogue') as any
+  const charDefs = ctx.renderer.config.characters
 
   for (let index = 0; index < lines.length; index++) {
+    const speaker = resolveSpeaker(cmd.speaker as string | undefined, charDefs)
+    const text = lines[index] as string
     setState({
       _speed: cmd.speed,
       _speakerKey: cmd.speaker as string | undefined,
@@ -368,6 +377,9 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
       _lines: [...lines],
       ...(cmd.layout !== undefined ? { layout: cmd.layout } : {}),
     })
+
+    // 'dialogue:text-run' 훅 방출
+    dialogueModule.hooker.trigger('dialogue:text-run', { speaker, text }, (value) => value)
 
     ctx.scene.setTextSubIndex(index + 1)
 

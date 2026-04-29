@@ -910,7 +910,7 @@
     let _prevSubIndex = -1;
     const _renderText = (speaker, text, speed, immediate = false) => {
       const resolved = dialogueModule.hooker.trigger(
-        "dialogue:text",
+        "dialogue:text-render",
         { speaker, text },
         (value) => value
       );
@@ -1012,7 +1012,10 @@
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
     const ui = ctx.ui.get("dialogue");
+    const charDefs = ctx.renderer.config.characters;
     for (let index = 0; index < lines.length; index++) {
+      const speaker = resolveSpeaker(cmd.speaker, charDefs);
+      const text = lines[index];
       setState({
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
@@ -1020,6 +1023,7 @@
         _lines: [...lines],
         ...cmd.layout !== void 0 ? { layout: cmd.layout } : {}
       });
+      dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
       if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
@@ -19076,7 +19080,7 @@ ${addLineNumbers(fragment)}`);
     await novel.loadAssets(OBJECTS);
     await novel.boot();
     let before = 0;
-    novel.hooker.onBefore("dialogue:text", (state) => {
+    novel.hooker.onBefore("dialogue:text-run", (state) => {
       if (novel.isSkipping) return state;
       if (!novel.vars.useHeroineVoice) return state;
       const { speaker, text } = state;
