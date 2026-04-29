@@ -170,8 +170,19 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
        * `__viewBuilder`: Novel 엔진이 씬 시작 / 세이브 로드 시 직접 호출.
        */
       _viewBuilderFn = (mergedData: TSchema, ctx: SceneContext): UIRuntimeEntry => {
+        // 기존 상태(data)를 스키마 기본값으로 초기화하여 이전 씬/세이브의 잔여 상태를 제거합니다.
+        for (const key of Object.keys(data)) {
+          delete (data as any)[key]
+        }
+        Object.assign(data, schema ?? {})
+
         // 저장된 state 또는 initial 데이터를 병합
         Object.assign(data, mergedData)
+
+        // 초기화된 data를 stateStore에 동기화하여 세이브 데이터에 포함되도록 보장합니다.
+        if (_moduleKey) {
+          ctx.state.set(_moduleKey, { ...data })
+        }
 
         const entry = builder(data, ctx)
         _onUpdate = (d) => entry.update?.(d)

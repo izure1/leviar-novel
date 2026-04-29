@@ -4,7 +4,6 @@ import { defineInitial } from '../../src'
 export const commonInitial = defineInitial(config, {
   'dialogue': {
     bg: {
-      color: '#00000000',
       gradientType: 'linear',
       gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%',
       height: 168,

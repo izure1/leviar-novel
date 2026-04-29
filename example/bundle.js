@@ -776,7 +776,14 @@
       },
       defineView(builder) {
         _viewBuilderFn = (mergedData, ctx) => {
+          for (const key of Object.keys(data)) {
+            delete data[key];
+          }
+          Object.assign(data, schema ?? {});
           Object.assign(data, mergedData);
+          if (_moduleKey) {
+            ctx.state.set(_moduleKey, { ...data });
+          }
           const entry = builder(data, ctx);
           _onUpdate = (d2) => entry.update?.(d2);
           entry.update?.(data);
@@ -895,6 +902,7 @@
     let _fullText = "";
     let _activeTx = null;
     let _prevLines = null;
+    let _prevSubIndex = -1;
     const _renderText = (speaker, text, speed, immediate = false) => {
       bgObj.fadeIn(200, "easeOut");
       speakerObj.attribute.text = speaker ?? "";
@@ -911,7 +919,7 @@
         _isTyping = true;
         _fullText = text;
         if (_activeTx) {
-          _activeTx.stop?.();
+          _activeTx.stop();
           _activeTx = null;
         }
         const anim = textObj.transition(text, spd);
@@ -927,6 +935,7 @@
     };
     if (data._lines?.length) {
       _prevLines = data._lines;
+      _prevSubIndex = data._subIndex ?? 0;
       const txt = data._lines[data._subIndex ?? 0];
       const spkName = resolveSpeaker(data._speakerKey, charDefs);
       _renderText(spkName, txt, void 0, true);
@@ -963,15 +972,26 @@
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW });
         Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW });
-        if (d2._lines && d2._lines !== _prevLines && d2._lines.length > 0) {
+        const newBoxH = typeof newBgCfg.height === "number" ? newBgCfg.height : h * 0.28;
+        const newBoxCY = h - newBoxH / 2;
+        const newSpkY = h - newBoxH + newLayoutCfg.paddingTop;
+        const newSpkH = (newSpkCfg.fontSize ?? 18) * 1.5;
+        bgObj.style.height = newBoxH;
+        const bgPos = toLocal(w / 2, newBoxCY);
+        bgObj.transform.position.x = bgPos.x;
+        bgObj.transform.position.y = bgPos.y;
+        const spkPos = toLocal(w / 2, newSpkY);
+        speakerObj.transform.position.x = spkPos.x;
+        speakerObj.transform.position.y = spkPos.y;
+        const txtPos = toLocal(w / 2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
+        textObj.transform.position.x = txtPos.x;
+        textObj.transform.position.y = txtPos.y;
+        if (d2._lines && d2._lines.length > 0 && (d2._lines !== _prevLines || d2._subIndex !== _prevSubIndex)) {
           _prevLines = d2._lines;
+          _prevSubIndex = d2._subIndex ?? 0;
           const txt = d2._lines[d2._subIndex ?? 0];
           const spkName = resolveSpeaker(d2._speakerKey, charDefs);
-          const hooker = useHookallSync(ctx.novel);
-          hooker.trigger("dialogue:text", { speaker: spkName, text: txt }, (state) => {
-            _renderText(state.speaker, state.text, d2._speed);
-            return state;
-          });
+          _renderText(spkName, txt, d2._speed);
         }
       }
     };
@@ -17387,7 +17407,6 @@ ${addLineNumbers(fragment)}`);
   var commonInitial = defineInitial(novel_config_default, {
     "dialogue": {
       bg: {
-        color: "#00000000",
         gradientType: "linear",
         gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%",
         height: 168

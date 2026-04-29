@@ -228,8 +228,9 @@ dialogueModule.defineView((data, ctx) => {
   let _isTyping = false
   let _fullText = ''
   let _activeTx: any = null
-  // 반응형 중복 렌더 방지: 이전 lines 참조를 추적
+  // 반응형 중복 렌더 방지: 이전 lines 참조 및 서브 인덱스를 추적
   let _prevLines: string[] | null = null
+  let _prevSubIndex: number = -1
 
   const _renderText = (
     speaker: string | undefined,
@@ -256,7 +257,10 @@ dialogueModule.defineView((data, ctx) => {
       const spd = speed ?? 30
       _isTyping = true
       _fullText = text
-      if (_activeTx) { _activeTx.stop?.(); _activeTx = null }
+      if (_activeTx) {
+        _activeTx.stop();
+        _activeTx = null
+      }
       const anim = textObj.transition(text, spd)
       _activeTx = anim
       textObj.fadeIn(200, 'easeOut')
@@ -272,6 +276,7 @@ dialogueModule.defineView((data, ctx) => {
   // 복원: 로드 시 저장된 대사 즉시 렌더링
   if (data._lines?.length) {
     _prevLines = data._lines
+    _prevSubIndex = data._subIndex ?? 0
     const txt = data._lines[data._subIndex ?? 0] as string
     const spkName = resolveSpeaker(data._speakerKey, charDefs)
     _renderText(spkName, txt, undefined, true)
@@ -305,20 +310,37 @@ dialogueModule.defineView((data, ctx) => {
       const newTxtCfg = (d.text ?? DEFAULT_TEXT) as Style
       const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(d.layout ?? {}) }
       const newTextW = w * (1 - newLayoutCfg.paddingX * 2)
+
       Object.assign(bgObj.style, newBgCfg)
       Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW })
       Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW })
 
-      // 텍스트 갱신: _lines 참조가 바뀐 경우에만 렌더 (중복 방지)
-      if (d._lines && d._lines !== _prevLines && d._lines.length > 0) {
+      // 동적 레이아웃 위치 갱신
+      const newBoxH = typeof newBgCfg.height === 'number' ? newBgCfg.height : h * 0.28
+      const newBoxCY = h - newBoxH / 2
+      const newSpkY = h - newBoxH + newLayoutCfg.paddingTop
+      const newSpkH = (newSpkCfg.fontSize ?? 18) * 1.5
+
+      bgObj.style.height = newBoxH
+      const bgPos = toLocal(w / 2, newBoxCY)
+      bgObj.transform.position.x = bgPos.x
+      bgObj.transform.position.y = bgPos.y
+
+      const spkPos = toLocal(w / 2, newSpkY)
+      speakerObj.transform.position.x = spkPos.x
+      speakerObj.transform.position.y = spkPos.y
+
+      const txtPos = toLocal(w / 2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap)
+      textObj.transform.position.x = txtPos.x
+      textObj.transform.position.y = txtPos.y
+
+      // 텍스트 갱신: _lines 참조 또는 _subIndex가 바뀐 경우에만 렌더 (중복 방지)
+      if (d._lines && d._lines.length > 0 && (d._lines !== _prevLines || d._subIndex !== _prevSubIndex)) {
         _prevLines = d._lines
+        _prevSubIndex = d._subIndex ?? 0
         const txt = d._lines[d._subIndex ?? 0] as string
         const spkName = resolveSpeaker(d._speakerKey, charDefs)
-        const hooker = useHookallSync<DialogueHook>(ctx.novel)
-        hooker.trigger('dialogue:text', { speaker: spkName, text: txt }, (state) => {
-          _renderText(state.speaker, state.text, d._speed)
-          return state
-        })
+        _renderText(spkName, txt, d._speed)
       }
     },
   }
