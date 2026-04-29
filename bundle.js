@@ -2810,20 +2810,8 @@
     });
   }
   var pool = /* @__PURE__ */ new Map();
-  var isLoadHookRegistered = false;
   var audioModule = define2({ _tracks: {} });
   audioModule.defineView((data, ctx) => {
-    if (!isLoadHookRegistered) {
-      isLoadHookRegistered = true;
-      ctx.novel.hooker.onBefore("novel:load", (saveData) => {
-        for (const audio of pool.values()) {
-          audio.pause();
-          audio.src = "";
-        }
-        pool.clear();
-        return saveData;
-      });
-    }
     const audioMap = ctx.renderer.config.audios;
     for (const [name, audio] of pool.entries()) {
       if (!data._tracks[name]) {
@@ -2857,6 +2845,15 @@
         audio.currentTime = track.start;
         if (!track.paused) {
           audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328:`, e));
+        }
+      } else {
+        audio.volume = track.volume;
+        audio.playbackRate = track.speed;
+        audio.loop = track.repeat;
+        if (track.paused) {
+          audio.pause();
+        } else if (audio.paused) {
+          audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328:`, e));
         }
       }
     }
