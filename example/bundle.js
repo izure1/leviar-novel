@@ -2810,15 +2810,65 @@
     });
   }
   var pool = /* @__PURE__ */ new Map();
+  var isLoadHookRegistered = false;
   var audioModule = define2({ _tracks: {} });
-  audioModule.defineView((_data, _ctx) => ({
-    show: () => {
-    },
-    hide: () => {
-    },
-    update: () => {
+  audioModule.defineView((data, ctx) => {
+    if (!isLoadHookRegistered) {
+      isLoadHookRegistered = true;
+      ctx.novel.hooker.onBefore("novel:load", (saveData) => {
+        for (const audio of pool.values()) {
+          audio.pause();
+          audio.src = "";
+        }
+        pool.clear();
+        return saveData;
+      });
     }
-  }));
+    const audioMap = ctx.renderer.config.audios;
+    for (const [name, audio] of pool.entries()) {
+      if (!data._tracks[name]) {
+        audio.pause();
+        audio.src = "";
+        pool.delete(name);
+      }
+    }
+    for (const [name, track] of Object.entries(data._tracks)) {
+      const url = audioMap?.[track.src];
+      if (!url) continue;
+      let audio = pool.get(name);
+      if (!audio) {
+        audio = new Audio(url);
+        audio.__srcKey = track.src;
+        audio.volume = track.volume;
+        audio.playbackRate = track.speed;
+        audio.loop = track.repeat;
+        audio.currentTime = track.start;
+        pool.set(name, audio);
+        if (!track.paused) {
+          audio.play().catch((e) => console.warn(`[audio] \uBCF5\uC6D0 \uC7AC\uC0DD \uC2E4\uD328:`, e));
+        }
+      } else if (audio.__srcKey !== track.src) {
+        audio.pause();
+        audio.src = url;
+        audio.__srcKey = track.src;
+        audio.volume = track.volume;
+        audio.playbackRate = track.speed;
+        audio.loop = track.repeat;
+        audio.currentTime = track.start;
+        if (!track.paused) {
+          audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328:`, e));
+        }
+      }
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+      },
+      update: () => {
+      }
+    };
+  });
   audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     const audioMap = ctx.renderer.config.audios;
     if (cmd.action === "play") {
@@ -2864,14 +2914,11 @@
         });
       }
       const audio = new Audio(url);
+      audio.__srcKey = playCmd.src;
       audio.volume = duration > 0 ? 0 : targetVolume;
       audio.playbackRate = speed;
       audio.loop = repeat;
       audio.currentTime = startSec;
-      ctx.novel.hooker.onceBefore("novel:load", (saveData) => {
-        audio.pause();
-        return saveData;
-      });
       if (endSec > 0) {
         audio.addEventListener("timeupdate", () => {
           if (audio.currentTime >= endSec) {

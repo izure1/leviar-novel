@@ -125,8 +125,14 @@ function fadeVolume(
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
+interface NovelAudioElement extends HTMLAudioElement {
+  __srcKey?: string
+}
+
 /** name → 현재 재생 중인 HTMLAudioElement */
-const pool = new Map<string, HTMLAudioElement>()
+const pool = new Map<string, NovelAudioElement>()
+
+let isLoadHookRegistered = false
 
 /**
  * 오디오 모듈.
@@ -136,11 +142,69 @@ const pool = new Map<string, HTMLAudioElement>()
  */
 const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
 
-audioModule.defineView((_data, _ctx) => ({
-  show: () => { },
-  hide: () => { },
-  update: () => { },
-}))
+audioModule.defineView((data, ctx) => {
+  if (!isLoadHookRegistered) {
+    isLoadHookRegistered = true
+    ctx.novel.hooker.onBefore('novel:load', (saveData) => {
+      for (const audio of pool.values()) {
+        audio.pause()
+        audio.src = ''
+      }
+      pool.clear()
+      return saveData
+    })
+  }
+
+  const audioMap = (ctx.renderer.config as any).audios as Record<string, string> | undefined
+
+  // 1. 삭제된 트랙 정리
+  for (const [name, audio] of pool.entries()) {
+    if (!data._tracks[name]) {
+      audio.pause()
+      audio.src = ''
+      pool.delete(name)
+    }
+  }
+
+  // 2. 세이브 데이터로 트랙 복원 및 동기화
+  for (const [name, track] of Object.entries(data._tracks)) {
+    const url = audioMap?.[track.src]
+    if (!url) continue
+
+    let audio = pool.get(name)
+    if (!audio) {
+      audio = new Audio(url) as NovelAudioElement
+      audio.__srcKey = track.src
+      audio.volume = track.volume
+      audio.playbackRate = track.speed
+      audio.loop = track.repeat
+      audio.currentTime = track.start
+      pool.set(name, audio)
+
+      if (!track.paused) {
+        audio.play().catch(e => console.warn(`[audio] 복원 재생 실패:`, e))
+      }
+    } else if (audio.__srcKey !== track.src) {
+      audio.pause()
+      audio.src = url
+      audio.__srcKey = track.src
+      audio.volume = track.volume
+      audio.playbackRate = track.speed
+      audio.loop = track.repeat
+      audio.currentTime = track.start
+      
+      if (!track.paused) {
+        audio.play().catch(e => console.warn(`[audio] 재생 실패:`, e))
+      }
+    }
+  }
+
+  return {
+    show: () => { },
+    hide: () => { },
+    update: () => { },
+  }
+})
 
 audioModule.defineCommand(function* (cmd, ctx, state, setState) {
   // config.audios는 ctx.renderer.config에서 런타임에 조회
@@ -203,16 +267,12 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     }
 
     // 새 오디오 생성 (start/end는 새 재생에만 적용)
-    const audio = new Audio(url)
+    const audio = new Audio(url) as NovelAudioElement
+    audio.__srcKey = playCmd.src as string
     audio.volume = duration > 0 ? 0 : targetVolume
     audio.playbackRate = speed
     audio.loop = repeat
     audio.currentTime = startSec
-
-    ctx.novel.hooker.onceBefore('novel:load', (saveData) => {
-      audio.pause()
-      return saveData
-    })
 
     // end 시간 제한 처리
     if (endSec > 0) {
