@@ -1214,9 +1214,19 @@
       const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
       return { ...c, text: ctx.scene.interpolateText(textStr) };
     });
-    console.log("[leviar-novel] choiceHandler: opening choices", resolvedChoices);
-    entry?.onChoices?.(resolvedChoices, (i) => {
-      const selected = cmd.choices[i];
+    const showData = choiceModule.hooker.trigger(
+      "choice:show",
+      { choices: resolvedChoices, layout: cmd.layout },
+      (value) => value
+    );
+    console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
+    entry?.onChoices?.(showData.choices, (i) => {
+      const selectData = choiceModule.hooker.trigger(
+        "choice:select",
+        { index: i, selected: showData.choices[i] },
+        (value) => value
+      );
+      const selected = selectData.selected;
       if (!selected) return;
       if (selected.var) {
         const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
@@ -1228,13 +1238,15 @@
       }
       entry.hide?.();
       if (selected.next) {
-        ctx.scene.loadScene(selected.next);
+        const nextVal = typeof selected.next === "function" ? selected.next(ctx.scene.getVars()) : selected.next;
+        ctx.scene.loadScene(nextVal);
       } else if (selected.goto) {
-        ctx.scene.jumpToLabel(selected.goto);
+        const gotoVal = typeof selected.goto === "function" ? selected.goto(ctx.scene.getVars()) : selected.goto;
+        ctx.scene.jumpToLabel(gotoVal);
       } else {
         ctx.scene.end();
       }
-    }, cmd.layout);
+    }, showData.layout);
     return "handled";
   });
   var choice_default = choiceModule;
@@ -3263,24 +3275,29 @@
       return true;
     }
     ctx.ui.get("dialogue")?.hide?.();
-    const duration = cmd.duration ?? 200;
-    const persist = cmd.buttons.length > 0 ? true : cmd.persist ?? false;
+    const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value);
+    const duration = finalCmd.duration ?? 200;
+    const persist = finalCmd.buttons.length > 0 ? true : finalCmd.persist ?? false;
     let _resolved = false;
     const resolve = (i) => {
       if (_resolved) return;
       _resolved = true;
       entry.hide?.(duration);
-      if (i >= 0) {
-        const selected = cmd.buttons[i];
-        if (selected?.var) {
-          const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
-          if (vars) {
-            for (const [key, value] of Object.entries(vars)) {
-              if (key.startsWith("_")) {
-                ctx.scene.setLocalVar(key, value);
-              } else {
-                ctx.scene.setGlobalVar(key, value);
-              }
+      const selectedObj = i >= 0 ? finalCmd.buttons[i] : void 0;
+      const selectData = dialogBoxModule.hooker.trigger(
+        "dialogBox:select",
+        { index: i, selected: selectedObj },
+        (value) => value
+      );
+      const finalSelected = selectData.selected;
+      if (finalSelected?.var) {
+        const vars = resolveVarResolvable(finalSelected.var, ctx.scene.getVars());
+        if (vars) {
+          for (const [key, value] of Object.entries(vars)) {
+            if (key.startsWith("_")) {
+              ctx.scene.setLocalVar(key, value);
+            } else {
+              ctx.scene.setGlobalVar(key, value);
             }
           }
         }
@@ -3288,9 +3305,9 @@
       ctx.callbacks.advance();
     };
     setState({
-      _title: cmd.title,
-      _content: cmd.content,
-      _buttons: cmd.buttons.map((b) => ({ text: b.text })),
+      _title: finalCmd.title,
+      _content: finalCmd.content,
+      _buttons: finalCmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
       _persist: persist

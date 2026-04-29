@@ -198,6 +198,15 @@ export interface DialogBoxCmd<TConfig = any, TLocalVars = Record<never, never>> 
   }[]
 }
 
+// ─── DialogBoxHook 타입 ────────────────────────────────────────
+
+export type ResolvedDialogBoxButton = DialogBoxCmd<any, any>['buttons'][number]
+
+export interface DialogBoxHook {
+  'dialogBox:show': (value: DialogBoxCmd<any, any>) => DialogBoxCmd<any, any>
+  'dialogBox:select': (value: { index: number, selected?: ResolvedDialogBoxButton }) => { index: number, selected?: ResolvedDialogBoxButton }
+}
+
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
 // ─── 레이아웃 기본값 ─────────────────────────────────────────
@@ -213,7 +222,7 @@ const DEFAULT_LAYOUT: Required<DialogBoxLayout> = {
   buttonPaddingY: 20,
 }
 
-const dialogBoxModule = define<DialogBoxCmd<any, any>, DialogBoxSchema>({
+const dialogBoxModule = define<DialogBoxCmd<any, any>, DialogBoxSchema, DialogBoxHook>({
   overlay: undefined,
   panel: undefined,
   titleStyle: undefined,
@@ -521,8 +530,11 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
 
   ctx.ui.get('dialogue')?.hide?.()
 
-  const duration = cmd.duration ?? 200
-  const persist = cmd.buttons.length > 0 ? true : (cmd.persist ?? false)
+  // 'dialogBox:show' 훅 방출
+  const finalCmd = dialogBoxModule.hooker.trigger('dialogBox:show', cmd, (value) => value)
+
+  const duration = finalCmd.duration ?? 200
+  const persist = finalCmd.buttons.length > 0 ? true : (finalCmd.persist ?? false)
 
   let _resolved = false
 
@@ -530,17 +542,26 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     if (_resolved) return
     _resolved = true
     entry.hide?.(duration)
-    if (i >= 0) {
-      const selected = cmd.buttons[i]
-      if (selected?.var) {
-        const vars = resolveVarResolvable(selected.var, ctx.scene.getVars())
-        if (vars) {
-          for (const [key, value] of Object.entries(vars)) {
-            if (key.startsWith('_')) {
-              ctx.scene.setLocalVar(key, value)
-            } else {
-              ctx.scene.setGlobalVar(key, value)
-            }
+
+    const selectedObj = i >= 0 ? finalCmd.buttons[i] : undefined
+    
+    // 'dialogBox:select' 훅 방출
+    const selectData = dialogBoxModule.hooker.trigger(
+      'dialogBox:select',
+      { index: i, selected: selectedObj },
+      (value) => value
+    )
+    
+    const finalSelected = selectData.selected
+
+    if (finalSelected?.var) {
+      const vars = resolveVarResolvable(finalSelected.var, ctx.scene.getVars())
+      if (vars) {
+        for (const [key, value] of Object.entries(vars)) {
+          if (key.startsWith('_')) {
+            ctx.scene.setLocalVar(key, value)
+          } else {
+            ctx.scene.setGlobalVar(key, value)
           }
         }
       }
@@ -550,9 +571,9 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
 
   // command 시작 즉시 blocking (애니메이션 중에도 novel.next 차단)
   setState({
-    _title: cmd.title,
-    _content: cmd.content,
-    _buttons: cmd.buttons.map(b => ({ text: b.text })),
+    _title: finalCmd.title,
+    _content: finalCmd.content,
+    _buttons: finalCmd.buttons.map(b => ({ text: b.text })),
     _resolve: resolve,
     _duration: duration,
     _persist: persist,

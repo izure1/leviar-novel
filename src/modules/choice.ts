@@ -126,12 +126,21 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
   layout?: ChoiceLayout
 }
 
+// ─── ChoiceHook 타입 ───────────────────────────────────────────
+
+export type ResolvedChoiceItem = Omit<ChoiceCmd<any, any>['choices'][number], 'text'> & { text: string }
+
+export interface ChoiceHook {
+  'choice:show': (value: { choices: ResolvedChoiceItem[], layout?: ChoiceLayout }) => { choices: ResolvedChoiceItem[], layout?: ChoiceLayout }
+  'choice:select': (value: { index: number, selected: ResolvedChoiceItem }) => { index: number, selected: ResolvedChoiceItem }
+}
+
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
 /**
  * 선택지 모듈. `novel.config`의 `modules: { 'choices': choiceModule }` 형태로 등록합니다.
  */
-const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema>({
+const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema, ChoiceHook>({
   bg: undefined,
   button: undefined,
   buttonHover: undefined,
@@ -206,7 +215,7 @@ choiceModule.defineView((data, ctx) => {
       const resolvedMaxW = layoutCfg.buttonMaxWidth
 
       type BtnDim = { w: number; h: number; lines: number }
-      const dims: BtnDim[] = choices.map((choice: any) => {
+      const dims: BtnDim[] = choices.map((choice: ResolvedChoiceItem) => {
         const textStr = String(choice.text)
         const estimatedTextW = textStr.length * fSize * 0.8
         // 너비: minWidth 이상, maxWidth 이하
@@ -224,7 +233,7 @@ choiceModule.defineView((data, ctx) => {
       const totalHeight = dims.reduce((acc, d, i) => acc + d.h + (i > 0 ? gap : 0), 0)
       let startY = h / 2 - totalHeight / 2 + dims[0].h / 2
 
-      choices.forEach((choice: any, i: number) => {
+      choices.forEach((choice: ResolvedChoiceItem, i: number) => {
         if (i > 0) startY += dims[i - 1].h / 2 + gap + dims[i].h / 2
         const cy = startY
         const textStr = String(choice.text)
@@ -306,15 +315,29 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
   ctx.ui.get('dialogue')?.hide?.()
 
   // 텍스트(resolvable) 평가
-  const resolvedChoices = cmd.choices.map((c: any) => {
+  const resolvedChoices: ResolvedChoiceItem[] = cmd.choices.map((c) => {
     const textStr = typeof c.text === 'function' ? c.text(ctx.scene.getVars()) : c.text
     return { ...c, text: ctx.scene.interpolateText(textStr) }
   })
 
-  console.log('[leviar-novel] choiceHandler: opening choices', resolvedChoices)
+  // 'choice:show' 훅 방출
+  const showData = choiceModule.hooker.trigger(
+    'choice:show',
+    { choices: resolvedChoices, layout: cmd.layout },
+    (value) => value
+  )
 
-  entry?.onChoices?.(resolvedChoices, (i: number) => {
-    const selected = (cmd.choices as any[])[i]
+  console.log('[leviar-novel] choiceHandler: opening choices', showData.choices)
+
+  entry?.onChoices?.(showData.choices, (i: number) => {
+    // 'choice:select' 훅 방출
+    const selectData = choiceModule.hooker.trigger(
+      'choice:select',
+      { index: i, selected: showData.choices[i] },
+      (value) => value
+    )
+
+    const selected = selectData.selected
     if (!selected) return
 
     // var 설정
@@ -332,13 +355,15 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
 
     // 분기
     if (selected.next) {
-      ctx.scene.loadScene(selected.next)
+      const nextVal = typeof selected.next === 'function' ? selected.next(ctx.scene.getVars()) : selected.next
+      ctx.scene.loadScene(nextVal)
     } else if (selected.goto) {
-      ctx.scene.jumpToLabel(selected.goto)
+      const gotoVal = typeof selected.goto === 'function' ? selected.goto(ctx.scene.getVars()) : selected.goto
+      ctx.scene.jumpToLabel(gotoVal)
     } else {
       ctx.scene.end()
     }
-  }, cmd.layout)
+  }, showData.layout)
 
   return 'handled'
 })
