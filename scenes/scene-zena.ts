@@ -1,6 +1,6 @@
 // example/scenes/scene-zena.ts
 import config from '../novel.config'
-import { defineScene } from '../../src'
+import { defineScene, defineHook } from '../../src'
 import { commonInitial } from './common-initial'
 
 export default defineScene({
@@ -10,6 +10,12 @@ export default defineScene({
     _test: 0,
   },
   initial: commonInitial,
+  hooks: defineHook(config, {
+    'dialogue:text': (state) => {
+      console.log(state)
+      return state
+    }
+  }),
   next: {
     scene: 'scene-zena-game',
     preserve: true,

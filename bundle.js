@@ -731,6 +731,8 @@
   function define2(schema) {
     let _onUpdate = null;
     let _moduleKey = null;
+    const _hookerTarget = {};
+    const _hooker = useHookallSync(_hookerTarget);
     const data = { ...schema ?? {} };
     const setState = (partial) => {
       const updates = typeof partial === "function" ? partial(data) : partial;
@@ -751,6 +753,9 @@
       },
       get __bootFn() {
         return _bootFn;
+      },
+      get hooker() {
+        return _hooker;
       },
       __setKey(key) {
         _moduleKey = key;
@@ -776,7 +781,14 @@
       },
       defineView(builder) {
         _viewBuilderFn = (mergedData, ctx) => {
+          for (const key of Object.keys(data)) {
+            delete data[key];
+          }
+          Object.assign(data, schema ?? {});
           Object.assign(data, mergedData);
+          if (_moduleKey) {
+            ctx.state.set(_moduleKey, { ...data });
+          }
           const entry = builder(data, ctx);
           _onUpdate = (d2) => entry.update?.(d2);
           entry.update?.(data);
@@ -790,6 +802,39 @@
       }
     };
     return module;
+  }
+  function defineHook(config, hookMap) {
+    const entries = Object.entries(hookMap);
+    return {
+      _register(novel) {
+        for (const [key, cb] of entries) {
+          if (!cb) continue;
+          if (key.startsWith("novel:")) {
+            novel.hooker.onBefore(key, cb);
+          } else {
+            const moduleKey = key.split(":")[0];
+            const module = config.modules?.[moduleKey];
+            if (module?.hooker) {
+              module.hooker.onBefore(key, cb);
+            }
+          }
+        }
+      },
+      _unregister(novel) {
+        for (const [key, cb] of entries) {
+          if (!cb) continue;
+          if (key.startsWith("novel:")) {
+            novel.hooker.offBefore(key, cb);
+          } else {
+            const moduleKey = key.split(":")[0];
+            const module = config.modules?.[moduleKey];
+            if (module?.hooker) {
+              module.hooker.offBefore(key, cb);
+            }
+          }
+        }
+      }
+    };
   }
 
   // src/modules/dialogue.ts
@@ -895,26 +940,34 @@
     let _fullText = "";
     let _activeTx = null;
     let _prevLines = null;
+    let _prevSubIndex = -1;
     const _renderText = (speaker, text, speed, immediate = false) => {
+      const resolved = dialogueModule.hooker.trigger(
+        "dialogue:text",
+        { speaker, text },
+        (value) => value
+      );
+      const resolvedSpeaker = resolved.speaker;
+      const resolvedText = resolved.text;
       bgObj.fadeIn(200, "easeOut");
-      speakerObj.attribute.text = speaker ?? "";
+      speakerObj.attribute.text = resolvedSpeaker ?? "";
       speakerObj.fadeIn(200, "easeOut");
       if (immediate || speed === 0) {
         _isTyping = false;
-        _fullText = text;
+        _fullText = resolvedText;
         _activeTx?.stop?.();
         _activeTx = null;
-        textObj.attribute.text = text;
+        textObj.attribute.text = resolvedText;
         textObj.fadeIn(200, "easeOut");
       } else {
         const spd = speed ?? 30;
         _isTyping = true;
-        _fullText = text;
+        _fullText = resolvedText;
         if (_activeTx) {
-          _activeTx.stop?.();
+          _activeTx.stop();
           _activeTx = null;
         }
-        const anim = textObj.transition(text, spd);
+        const anim = textObj.transition(resolvedText, spd);
         _activeTx = anim;
         textObj.fadeIn(200, "easeOut");
         if (anim && typeof anim.on === "function") {
@@ -927,6 +980,7 @@
     };
     if (data._lines?.length) {
       _prevLines = data._lines;
+      _prevSubIndex = data._subIndex ?? 0;
       const txt = data._lines[data._subIndex ?? 0];
       const spkName = resolveSpeaker(data._speakerKey, charDefs);
       _renderText(spkName, txt, void 0, true);
@@ -963,15 +1017,26 @@
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW });
         Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW });
-        if (d2._lines && d2._lines !== _prevLines && d2._lines.length > 0) {
+        const newBoxH = typeof newBgCfg.height === "number" ? newBgCfg.height : h * 0.28;
+        const newBoxCY = h - newBoxH / 2;
+        const newSpkY = h - newBoxH + newLayoutCfg.paddingTop;
+        const newSpkH = (newSpkCfg.fontSize ?? 18) * 1.5;
+        bgObj.style.height = newBoxH;
+        const bgPos = toLocal(w / 2, newBoxCY);
+        bgObj.transform.position.x = bgPos.x;
+        bgObj.transform.position.y = bgPos.y;
+        const spkPos = toLocal(w / 2, newSpkY);
+        speakerObj.transform.position.x = spkPos.x;
+        speakerObj.transform.position.y = spkPos.y;
+        const txtPos = toLocal(w / 2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
+        textObj.transform.position.x = txtPos.x;
+        textObj.transform.position.y = txtPos.y;
+        if (d2._lines && d2._lines.length > 0 && (d2._lines !== _prevLines || d2._subIndex !== _prevSubIndex)) {
           _prevLines = d2._lines;
+          _prevSubIndex = d2._subIndex ?? 0;
           const txt = d2._lines[d2._subIndex ?? 0];
           const spkName = resolveSpeaker(d2._speakerKey, charDefs);
-          const hooker = useHookallSync(ctx.novel);
-          hooker.trigger("dialogue:text", { speaker: spkName, text: txt }, (state) => {
-            _renderText(state.speaker, state.text, d2._speed);
-            return state;
-          });
+          _renderText(spkName, txt, d2._speed);
         }
       }
     };
@@ -1015,8 +1080,7 @@
       color: "rgba(30,30,60,0.85)",
       borderColor: "rgba(255,255,255,0.3)",
       borderWidth: 1.5,
-      borderRadius: 8,
-      minWidth: 260
+      borderRadius: 8
     },
     buttonHover: {
       color: "rgba(80,80,180,0.9)",
@@ -1036,8 +1100,8 @@
     gap: 12,
     paddingX: 64,
     paddingY: 24,
-    minWidth: 0,
-    maxWidth: Infinity
+    buttonMinWidth: 260,
+    buttonMaxWidth: Infinity
   };
   var choiceModule = define2({
     bg: void 0,
@@ -1048,12 +1112,12 @@
     layout: void 0
   });
   choiceModule.defineView((data, ctx) => {
-    const cfg = { ...DEFAULT_CHOICE, ...data };
+    const cfg = { ...data };
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const defaultBgStyle = { ...DEFAULT_CHOICE.bg, ...cfg.bg };
+    const defaultBgStyle = cfg.bg ?? DEFAULT_CHOICE.bg;
     const bgObj = ctx.world.createRectangle({
       style: {
         ...defaultBgStyle,
@@ -1085,17 +1149,17 @@
       onChoices: (choices, onSelect, layoutOverride) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
-        const defaultBtnStyle = { ...DEFAULT_CHOICE.button, ...cfg.button };
+        const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
         const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
-        const defaultTextStyle = { ...DEFAULT_CHOICE.text, ...cfg.text };
+        const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE.text;
         const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
         const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {}, ...layoutOverride ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
         const paddingY = layoutCfg.paddingY / 2;
-        const resolvedMinW = layoutCfg.minWidth > 0 ? layoutCfg.minWidth : defaultBtnStyle.minWidth ?? 260;
-        const resolvedMaxW = isFinite(layoutCfg.maxWidth) ? layoutCfg.maxWidth : defaultBtnStyle.maxWidth ?? Infinity;
+        const resolvedMinW = layoutCfg.buttonMinWidth;
+        const resolvedMaxW = layoutCfg.buttonMaxWidth;
         const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
@@ -1165,7 +1229,7 @@
         });
       },
       update: (d2) => {
-        Object.assign(cfg, DEFAULT_CHOICE, d2);
+        Object.assign(cfg, d2);
       }
     };
   });
@@ -2746,15 +2810,65 @@
     });
   }
   var pool = /* @__PURE__ */ new Map();
+  var isLoadHookRegistered = false;
   var audioModule = define2({ _tracks: {} });
-  audioModule.defineView((_data, _ctx) => ({
-    show: () => {
-    },
-    hide: () => {
-    },
-    update: () => {
+  audioModule.defineView((data, ctx) => {
+    if (!isLoadHookRegistered) {
+      isLoadHookRegistered = true;
+      ctx.novel.hooker.onBefore("novel:load", (saveData) => {
+        for (const audio of pool.values()) {
+          audio.pause();
+          audio.src = "";
+        }
+        pool.clear();
+        return saveData;
+      });
     }
-  }));
+    const audioMap = ctx.renderer.config.audios;
+    for (const [name, audio] of pool.entries()) {
+      if (!data._tracks[name]) {
+        audio.pause();
+        audio.src = "";
+        pool.delete(name);
+      }
+    }
+    for (const [name, track] of Object.entries(data._tracks)) {
+      const url = audioMap?.[track.src];
+      if (!url) continue;
+      let audio = pool.get(name);
+      if (!audio) {
+        audio = new Audio(url);
+        audio.__srcKey = track.src;
+        audio.volume = track.volume;
+        audio.playbackRate = track.speed;
+        audio.loop = track.repeat;
+        audio.currentTime = track.start;
+        pool.set(name, audio);
+        if (!track.paused) {
+          audio.play().catch((e) => console.warn(`[audio] \uBCF5\uC6D0 \uC7AC\uC0DD \uC2E4\uD328:`, e));
+        }
+      } else if (audio.__srcKey !== track.src) {
+        audio.pause();
+        audio.src = url;
+        audio.__srcKey = track.src;
+        audio.volume = track.volume;
+        audio.playbackRate = track.speed;
+        audio.loop = track.repeat;
+        audio.currentTime = track.start;
+        if (!track.paused) {
+          audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328:`, e));
+        }
+      }
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+      },
+      update: () => {
+      }
+    };
+  });
   audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     const audioMap = ctx.renderer.config.audios;
     if (cmd.action === "play") {
@@ -2800,6 +2914,7 @@
         });
       }
       const audio = new Audio(url);
+      audio.__srcKey = playCmd.src;
       audio.volume = duration > 0 ? 0 : targetVolume;
       audio.playbackRate = speed;
       audio.loop = repeat;
@@ -3266,14 +3381,16 @@
     config,
     variables = {},
     initial,
-    next
+    next,
+    hooks
   }, dialogues) {
     return {
       kind: "dialogue",
       dialogues,
       localVars: variables,
       nextScene: next,
-      initial
+      initial,
+      hooks
     };
   }
 
@@ -16867,6 +16984,21 @@ ${addLineNumbers(fragment)}`);
     _modules = /* @__PURE__ */ new Map();
     /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
     _uiRegistry = /* @__PURE__ */ new Map();
+    /** Novel 전용 훅 시스템 (novel:* 이벤트 전용) */
+    _novelHooker = useHookallSync({});
+    /**
+     * 통합 훅 프록시. `novel:*` 키 는 내부 Novel 훅으로, 구모듈 훅은 해당 모듈의 `hooker`로 라우팅합니다.
+     * 
+     * @example
+     * ```ts
+     * // novel 레벨 훅
+     * novel.hooker.onBefore('novel:next', (v) => v)
+     * // 모듈 훅 (dialogue모듈의 DialogueHook)
+     * novel.hooker.onBefore('dialogue:text', (v) => v)
+     * ```
+     */
+    // @ts-ignore — AllModuleHooksOf<TConfig>는 조건부 타입이라 ListenerSignature<M> 제약을 TS가 검증 불가. 런타임 정상.
+    hooker;
     _currentScene = null;
     _currentSceneDef = null;
     _inputMode = "none";
@@ -16888,6 +17020,7 @@ ${addLineNumbers(fragment)}`);
       });
       this.vars = { ...config.vars };
       this._collectModules(config.modules);
+      this.hooker = this._createHookerProxy();
       this._world.start();
       for (const [name, scene] of Object.entries(option.scenes)) {
         scene.name = name;
@@ -16905,6 +17038,46 @@ ${addLineNumbers(fragment)}`);
           this._modules.set(key, module);
         }
       }
+    }
+    /**
+     * novel:* 키는 _novelHooker로, 나머지 키는 접두사로 찾은 모듈의 hooker로
+     * 자동 라우팅하는 IHookallSync 프록시를 생성합니다.
+     */
+    _createHookerProxy() {
+      const getHooker = (command) => {
+        if (command.startsWith("novel:")) return this._novelHooker;
+        const moduleKey = command.split(":")[0];
+        const mod = this._modules.get(moduleKey);
+        return mod?.hooker ?? this._novelHooker;
+      };
+      const proxy = {
+        onBefore: (cmd, cb) => {
+          getHooker(cmd).onBefore(cmd, cb);
+          return proxy;
+        },
+        onAfter: (cmd, cb) => {
+          getHooker(cmd).onAfter(cmd, cb);
+          return proxy;
+        },
+        onceBefore: (cmd, cb) => {
+          getHooker(cmd).onceBefore(cmd, cb);
+          return proxy;
+        },
+        onceAfter: (cmd, cb) => {
+          getHooker(cmd).onceAfter(cmd, cb);
+          return proxy;
+        },
+        offBefore: (cmd, cb) => {
+          getHooker(cmd).offBefore(cmd, cb);
+          return proxy;
+        },
+        offAfter: (cmd, cb) => {
+          getHooker(cmd).offAfter(cmd, cb);
+          return proxy;
+        },
+        trigger: (cmd, initialValue, callback, ...params) => getHooker(cmd).trigger(cmd, initialValue, callback, ...params)
+      };
+      return proxy;
     }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
     async load() {
@@ -16944,12 +17117,21 @@ ${addLineNumbers(fragment)}`);
       this.loadScene(name);
     }
     loadScene(target) {
-      const sceneName = typeof target === "string" ? target : target.scene;
+      const rawSceneName = typeof target === "string" ? target : target.scene;
       const preserve = typeof target === "object" && target.preserve === true;
+      const sceneName = this._novelHooker.trigger(
+        "novel:scene",
+        rawSceneName,
+        (name) => name
+      );
       const def = this._scenes.get(sceneName);
       if (!def) {
         console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
+      }
+      if (this._currentSceneDef?.kind === "dialogue") {
+        const prevHooks = this._currentSceneDef.hooks;
+        prevHooks?._unregister(this);
       }
       const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
       if (this._currentScene instanceof ExploreScene) {
@@ -16969,6 +17151,10 @@ ${addLineNumbers(fragment)}`);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
+      if (def.kind === "dialogue") {
+        const newHooks = def.hooks;
+        newHooks?._register(this);
+      }
       scene.start(preserve);
       this._syncUIState();
     }
@@ -17042,7 +17228,7 @@ ${addLineNumbers(fragment)}`);
       if (!this._currentScene || !(this._currentScene instanceof DialogueScene) || !this._currentSceneDef) {
         throw new Error("[leviar-novel] save()\uB294 DialogueScene \uC9C4\uD589 \uC911\uC5D0\uB9CC \uD638\uCD9C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
       }
-      return {
+      const rawData = {
         sceneName: this._currentSceneDef.name,
         cursor: this._currentScene.getCursor(),
         globalVars: { ...this.vars },
@@ -17050,38 +17236,54 @@ ${addLineNumbers(fragment)}`);
         rendererState: this._renderer.captureState(),
         states: Object.fromEntries(this._stateStore)
       };
+      return this._novelHooker.trigger(
+        "novel:save",
+        rawData,
+        (data) => data
+      );
     }
     /**
      * SaveData로부터 진행 상태를 복원합니다.
      */
     loadSave(data) {
-      const def = this._scenes.get(data.sceneName);
+      const resolvedData = this._novelHooker.trigger(
+        "novel:load",
+        data,
+        (d2) => d2
+      );
+      const def = this._scenes.get(resolvedData.sceneName);
       if (!def || def.kind !== "dialogue") {
-        console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${data.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
+      }
+      if (this._currentSceneDef?.kind === "dialogue") {
+        const prevHooks = this._currentSceneDef.hooks;
+        prevHooks?._unregister(this);
       }
       if (this._currentScene instanceof ExploreScene) {
         this._currentScene.cleanup();
       }
       this._cleanupChoiceUI();
       this.stopSkip();
-      Object.assign(this.vars, data.globalVars);
+      Object.assign(this.vars, resolvedData.globalVars);
       this._stateStore.clear();
-      for (const [k2, v2] of Object.entries(data.states ?? {})) {
+      for (const [k2, v2] of Object.entries(resolvedData.states ?? {})) {
         this._stateStore.set(k2, v2);
       }
       this._uiRegistry.clear();
       this._renderer.clear();
-      this._renderer.restoreState(data.rendererState);
+      this._renderer.restoreState(resolvedData.rendererState);
       this._renderer.rebuildFromState();
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      const subIndex = data.states?.["dialogue"]?.subIndex ?? 0;
-      scene.restoreState(data.cursor, data.localVars, subIndex);
+      const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
+      scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
+      const newHooks = def.hooks;
+      newHooks?._register(this);
       this._syncUIState();
     }
     /**
@@ -17133,6 +17335,12 @@ ${addLineNumbers(fragment)}`);
      * 대화를 한 단계 진행합니다.
      */
     next() {
+      const canAdvance = this._novelHooker.trigger(
+        "novel:next",
+        true,
+        (value) => value
+      );
+      if (!canAdvance) return;
       if (Date.now() < this._inputDisabledUntil) return;
       if (this._inputMode !== "dialogue") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
@@ -17388,7 +17596,6 @@ ${addLineNumbers(fragment)}`);
   var commonInitial = defineInitial(novel_config_default, {
     "dialogue": {
       bg: {
-        color: "#00000000",
         gradientType: "linear",
         gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%",
         height: 168
@@ -17422,9 +17629,11 @@ ${addLineNumbers(fragment)}`);
         borderWidth: void 0,
         borderColor: void 0,
         gradientType: "linear",
-        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%",
-        minWidth: 600,
-        maxWidth: 600
+        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%"
+      },
+      layout: {
+        buttonMinWidth: 600,
+        buttonMaxWidth: 600
       },
       buttonHover: {
         gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%"
@@ -17450,6 +17659,12 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     initial: commonInitial,
+    hooks: defineHook(novel_config_default, {
+      "dialogue:text": (state) => {
+        console.log(state);
+        return state;
+      }
+    }),
     next: {
       scene: "scene-zena-game",
       preserve: true
@@ -18902,9 +19117,8 @@ ${addLineNumbers(fragment)}`);
     await novel.load();
     await novel.loadAssets(OBJECTS);
     await novel.boot();
-    const hooker = useHookallSync(novel);
     let before = 0;
-    hooker.onBefore("dialogue:text", (state) => {
+    novel.hooker.onBefore("dialogue:text", (state) => {
       if (novel.isSkipping) return state;
       if (!novel.vars.useHeroineVoice) return state;
       const { speaker, text } = state;
