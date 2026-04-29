@@ -137,9 +137,9 @@ const pool = new Map<string, HTMLAudioElement>()
 const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
 
 audioModule.defineView((_data, _ctx) => ({
-  show: () => {},
-  hide: () => {},
-  update: () => {},
+  show: () => { },
+  hide: () => { },
+  update: () => { },
 }))
 
 audioModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -169,7 +169,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (existing && existingSrc === (playCmd.src as string)) {
       existing.playbackRate = speed
       existing.loop = repeat
-      
+
       // 일시정지 상태였다면 다시 재생 시작
       if (existing.paused) {
         existing.play().catch((e) => {
@@ -208,6 +208,11 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     audio.playbackRate = speed
     audio.loop = repeat
     audio.currentTime = startSec
+
+    ctx.novel.hooker.onceBefore('novel:load', (saveData) => {
+      audio.pause()
+      return saveData
+    })
 
     // end 시간 제한 처리
     if (endSec > 0) {

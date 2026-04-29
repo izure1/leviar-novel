@@ -5,6 +5,8 @@
 import type { World } from 'leviar'
 import type { SceneContext, CommandResult } from '../core/SceneContext'
 import type { UIRuntimeEntry } from '../core/UIRegistry'
+import type { IHookallSync } from 'hookall'
+import { useHookallSync } from 'hookall'
 
 // ─── onBoot 콜백 타입 ────────────────────────────────────────
 
@@ -43,6 +45,16 @@ export type SetStateFn<TSchema> = (
   partial: Partial<TSchema> | ((prev: Readonly<TSchema>) => Partial<TSchema>)
 ) => void
 
+// ─── hookall 리스너 서명 타입 ─────────────────────────────────
+
+/** hookall이 요구하는 리스너 서명 제약 */
+export type ListenerSignature<M> = {
+  [K in keyof M]: (...args: any) => any
+}
+
+/** 훅 맵이 없는 경우의 기본 타입 */
+export type DefaultHook = Record<never, never>
+
 // ─── NovelModule 타입 ────────────────────────────────────────
 
 /**
@@ -68,10 +80,13 @@ export interface NovelModuleMeta<TSchema extends Record<string, any> = any> {
  *
  * - `defineCommand`: 커맨드 핸들러 등록 (Controller)
  * - `defineView`: View 빌더 등록 (View)
+ * - `hooker`: 모듈 고유의 훅 시스템 (`IHookallSync<THook>`)
  * - schema: 공유 상태 (Model)
  */
-export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
+export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, THook extends ListenerSignature<THook> = DefaultHook> =
   NovelModuleMeta<TSchema> & {
+    /** 이 모듈에 등록된 훅 시스템. `useHookallSync(module.hooker)` 형태로 사용합니다. */
+    readonly hooker: IHookallSync<THook>
     /**
      * 커맨드 핸들러를 등록합니다.
      * - `cmd`: `{ type: 'key', ...TCmd }` 에서 type을 제외한 커맨드 속성
@@ -81,10 +96,10 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
      */
     defineCommand(
       handler: (cmd: TCmd, ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => Generator<CommandResult, CommandResult, any>
-    ): NovelModule<TCmd, TSchema>
+    ): NovelModule<TCmd, TSchema, THook>
     defineView(
       builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
-    ): NovelModule<TCmd, TSchema>
+    ): NovelModule<TCmd, TSchema, THook>
     /**
      * 모듈이 Novel world에 등록될 때 딱 한 번 호출되는 비동기 초기화 콜백을 등록합니다.
      * `novel.boot()` 호출 시 실행됩니다.
@@ -97,7 +112,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
      * })
      * ```
      */
-    onBoot(callback: BootCallback): NovelModule<TCmd, TSchema>
+    onBoot(callback: BootCallback): NovelModule<TCmd, TSchema, THook>
   }
 
 // ─── define() 팩토리 ─────────────────────────────────────────
@@ -108,10 +123,27 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any> =
  * - `schema`: 공유 상태 초깃값 (Model)
  * - `.defineCommand(handler)`: 커맨드 핸들러 등록 (Controller). 핸들러 내부에서 setState() 호출 시 _onUpdate() 자동 호출.
  * - `.defineView(builder)`: View 빌더 등록.
+ * - `.hooker`: 이 모듈의 훅 시스템 (`IHookallSync<THook>`).
+ *
+ * @example
+ * ```ts
+ * // 모듈 정의
+ * const myModule = define<MyCmd, MySchema, MyHook>({ ... })
+ *
+ * // 훅 방출 (모듈 내부)
+ * myModule.hooker.trigger('my:event', initialValue, (val) => val, ...params)
+ *
+ * // 훅 구독 (외부)
+ * defineHook(config, { 'my:event': (val, ...params) => val })
+ * ```
  */
-export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>>(schema?: TSchema): NovelModule<TCmd, TSchema> {
+export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>, THook extends ListenerSignature<THook> = DefaultHook>(schema?: TSchema): NovelModule<TCmd, TSchema, THook> {
   let _onUpdate: ((data: TSchema) => void) | null = null
   let _moduleKey: string | null = null
+
+  // 이 모듈 전용 훅 시스템 (target 객체 기반 로컬 훅)
+  const _hookerTarget = {}
+  const _hooker = useHookallSync<THook>(_hookerTarget)
 
   // 공유 상태 객체
   const data: TSchema = { ...(schema ?? {}) } as TSchema
@@ -129,13 +161,14 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
   let _bootFn: BootCallback | null = null
 
   // ─── 모듈 객체 ───────────────────────────────────────────
-  const module: NovelModule<TCmd, TSchema> = {
+  const module: NovelModule<TCmd, TSchema, THook> = {
     __isModule: true as const,
     __schemaDefault: (schema ?? {}) as TSchema,
 
     get __handler() { return _handlerFn },
     get __viewBuilder() { return _viewBuilderFn },
     get __bootFn() { return _bootFn },
+    get hooker() { return _hooker },
 
     __setKey(key: string) {
       _moduleKey = key
@@ -143,7 +176,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
 
     defineCommand(
       handler: (cmd: TCmd, ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => Generator<CommandResult, CommandResult, any>
-    ): NovelModule<TCmd, TSchema> {
+    ): NovelModule<TCmd, TSchema, THook> {
       _handlerFn = function* (rawParams: any, ctx: SceneContext) {
         const resolved = resolveParams(rawParams, ctx)
         const gen = handler(resolved as TCmd, ctx, data, setState)
@@ -165,7 +198,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
 
     defineView(
       builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
-    ): NovelModule<TCmd, TSchema> {
+    ): NovelModule<TCmd, TSchema, THook> {
       /**
        * `__viewBuilder`: Novel 엔진이 씬 시작 / 세이브 로드 시 직접 호출.
        */
@@ -195,12 +228,52 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
       return module
     },
 
-    onBoot(callback: BootCallback): NovelModule<TCmd, TSchema> {
+    onBoot(callback: BootCallback): NovelModule<TCmd, TSchema, THook> {
       _bootFn = callback
       return module
     },
   }
 
   return module
+}
+
+// ─── defineHook 헬퍼 ─────────────────────────────────────────
+
+/**
+ * 모듈의 훅 이벤트를 구독하는 헬퍼 함수입니다.
+ * hookMap의 각 키/콜백 타입은 `THook`에서 자동으로 추론됩니다.
+ *
+ * @example
+ * ```ts
+ * defineHook(dialogueModule, {
+ *   'dialogue:text': (value, { speaker, text }) => {
+ *     console.log(speaker, text)
+ *     return value
+ *   }
+ * })
+ * ```
+ *
+ * @param module - `define()`으로 생성된 NovelModule 인스턴스
+ * @param hookMap - 구독할 훅 키와 콜백의 맵. `onBefore` 방식으로 등록됩니다.
+ */
+export function defineHook<
+  THook extends ListenerSignature<THook>
+>(
+  module: NovelModule<any, any, THook>,
+  hookMap: {
+    [K in keyof THook]?: (
+      value: ReturnType<THook[K]>,
+      ...params: THook[K] extends (first: any, ...rest: infer R) => any ? R : never
+    ) => ReturnType<THook[K]>
+  }
+): void {
+  // module.hooker는 이미 공유된 HookallSync 인스턴스 — 직접 onBefore 등록
+  const hooker = module.hooker
+  for (const key of Object.keys(hookMap) as (keyof THook & string)[]) {
+    const cb = hookMap[key]
+    if (cb) {
+      hooker.onBefore(key, cb as any)
+    }
+  }
 }
 

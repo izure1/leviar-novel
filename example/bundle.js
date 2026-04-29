@@ -731,6 +731,8 @@
   function define2(schema) {
     let _onUpdate = null;
     let _moduleKey = null;
+    const _hookerTarget = {};
+    const _hooker = useHookallSync(_hookerTarget);
     const data = { ...schema ?? {} };
     const setState = (partial) => {
       const updates = typeof partial === "function" ? partial(data) : partial;
@@ -751,6 +753,9 @@
       },
       get __bootFn() {
         return _bootFn;
+      },
+      get hooker() {
+        return _hooker;
       },
       __setKey(key) {
         _moduleKey = key;
@@ -904,25 +909,32 @@
     let _prevLines = null;
     let _prevSubIndex = -1;
     const _renderText = (speaker, text, speed, immediate = false) => {
+      const resolved = dialogueModule.hooker.trigger(
+        "dialogue:text",
+        { speaker, text },
+        (value) => value
+      );
+      const resolvedSpeaker = resolved.speaker;
+      const resolvedText = resolved.text;
       bgObj.fadeIn(200, "easeOut");
-      speakerObj.attribute.text = speaker ?? "";
+      speakerObj.attribute.text = resolvedSpeaker ?? "";
       speakerObj.fadeIn(200, "easeOut");
       if (immediate || speed === 0) {
         _isTyping = false;
-        _fullText = text;
+        _fullText = resolvedText;
         _activeTx?.stop?.();
         _activeTx = null;
-        textObj.attribute.text = text;
+        textObj.attribute.text = resolvedText;
         textObj.fadeIn(200, "easeOut");
       } else {
         const spd = speed ?? 30;
         _isTyping = true;
-        _fullText = text;
+        _fullText = resolvedText;
         if (_activeTx) {
           _activeTx.stop();
           _activeTx = null;
         }
-        const anim = textObj.transition(text, spd);
+        const anim = textObj.transition(resolvedText, spd);
         _activeTx = anim;
         textObj.fadeIn(200, "easeOut");
         if (anim && typeof anim.on === "function") {
@@ -2823,6 +2835,10 @@
       audio.playbackRate = speed;
       audio.loop = repeat;
       audio.currentTime = startSec;
+      ctx.novel.hooker.onceBefore("novel:load", (saveData) => {
+        audio.pause();
+        return saveData;
+      });
       if (endSec > 0) {
         audio.addEventListener("timeupdate", () => {
           if (audio.currentTime >= endSec) {
@@ -16886,6 +16902,9 @@ ${addLineNumbers(fragment)}`);
     _modules = /* @__PURE__ */ new Map();
     /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
     _uiRegistry = /* @__PURE__ */ new Map();
+    /** Novel 레벨 훅 시스템. `useHookallSync(this.hooker)` 또는 직접 `.hooker`로 접근합니다. */
+    _hookerTarget = {};
+    hooker = useHookallSync(this._hookerTarget);
     _currentScene = null;
     _currentSceneDef = null;
     _inputMode = "none";
@@ -16963,8 +16982,13 @@ ${addLineNumbers(fragment)}`);
       this.loadScene(name);
     }
     loadScene(target) {
-      const sceneName = typeof target === "string" ? target : target.scene;
+      const rawSceneName = typeof target === "string" ? target : target.scene;
       const preserve = typeof target === "object" && target.preserve === true;
+      const sceneName = useHookallSync(this._hookerTarget).trigger(
+        "novel:scene",
+        rawSceneName,
+        (name) => name
+      );
       const def = this._scenes.get(sceneName);
       if (!def) {
         console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
@@ -17061,7 +17085,7 @@ ${addLineNumbers(fragment)}`);
       if (!this._currentScene || !(this._currentScene instanceof DialogueScene) || !this._currentSceneDef) {
         throw new Error("[leviar-novel] save()\uB294 DialogueScene \uC9C4\uD589 \uC911\uC5D0\uB9CC \uD638\uCD9C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
       }
-      return {
+      const rawData = {
         sceneName: this._currentSceneDef.name,
         cursor: this._currentScene.getCursor(),
         globalVars: { ...this.vars },
@@ -17069,14 +17093,24 @@ ${addLineNumbers(fragment)}`);
         rendererState: this._renderer.captureState(),
         states: Object.fromEntries(this._stateStore)
       };
+      return useHookallSync(this._hookerTarget).trigger(
+        "novel:save",
+        rawData,
+        (data) => data
+      );
     }
     /**
      * SaveData로부터 진행 상태를 복원합니다.
      */
     loadSave(data) {
-      const def = this._scenes.get(data.sceneName);
+      const resolvedData = useHookallSync(this._hookerTarget).trigger(
+        "novel:load",
+        data,
+        (d2) => d2
+      );
+      const def = this._scenes.get(resolvedData.sceneName);
       if (!def || def.kind !== "dialogue") {
-        console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${data.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
       if (this._currentScene instanceof ExploreScene) {
@@ -17084,20 +17118,20 @@ ${addLineNumbers(fragment)}`);
       }
       this._cleanupChoiceUI();
       this.stopSkip();
-      Object.assign(this.vars, data.globalVars);
+      Object.assign(this.vars, resolvedData.globalVars);
       this._stateStore.clear();
-      for (const [k2, v2] of Object.entries(data.states ?? {})) {
+      for (const [k2, v2] of Object.entries(resolvedData.states ?? {})) {
         this._stateStore.set(k2, v2);
       }
       this._uiRegistry.clear();
       this._renderer.clear();
-      this._renderer.restoreState(data.rendererState);
+      this._renderer.restoreState(resolvedData.rendererState);
       this._renderer.rebuildFromState();
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      const subIndex = data.states?.["dialogue"]?.subIndex ?? 0;
-      scene.restoreState(data.cursor, data.localVars, subIndex);
+      const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
+      scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
@@ -17152,6 +17186,12 @@ ${addLineNumbers(fragment)}`);
      * 대화를 한 단계 진행합니다.
      */
     next() {
+      const canAdvance = useHookallSync(this._hookerTarget).trigger(
+        "novel:next",
+        true,
+        (value) => value
+      );
+      if (!canAdvance) return;
       if (Date.now() < this._inputDisabledUntil) return;
       if (this._inputMode !== "dialogue") return;
       if (!this._currentScene || this._currentScene.isEnded) return;

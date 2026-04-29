@@ -1,6 +1,5 @@
 import type { Style } from 'leviar'
 import type { CharDefs, CharacterKeysOf } from '../types/config'
-import { type IHookallSync, useHookallSync } from 'hookall'
 import { define } from '../define/defineCmdUI'
 
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
@@ -138,7 +137,7 @@ export interface DialogueCmd<TConfig = any> {
  * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
  * ```
  */
-const dialogueModule = define<DialogueCmd<any>, DialogueSchema>({
+const dialogueModule = define<DialogueCmd<any>, DialogueSchema, DialogueHook>({
   style: undefined,
   bg: undefined,
   speaker: undefined,
@@ -238,30 +237,39 @@ dialogueModule.defineView((data, ctx) => {
     speed?: number,
     immediate = false
   ) => {
+    // 'dialogue:text' 훅 방출 — 외부에서 speaker/text 변환 가능
+    const resolved = dialogueModule.hooker.trigger(
+      'dialogue:text',
+      { speaker, text },
+      (value) => value
+    )
+    const resolvedSpeaker = resolved.speaker
+    const resolvedText = resolved.text
+
     // 배경 페이드인
     bgObj.fadeIn(200, 'easeOut')
 
     // 화자
-    speakerObj.attribute.text = speaker ?? ''
+    speakerObj.attribute.text = resolvedSpeaker ?? ''
     speakerObj.fadeIn(200, 'easeOut')
 
     // 대사 — 즉시 or 타이핑
     if (immediate || speed === 0) {
       _isTyping = false
-      _fullText = text
+      _fullText = resolvedText
       _activeTx?.stop?.()
       _activeTx = null
-      textObj.attribute.text = text
+      textObj.attribute.text = resolvedText
       textObj.fadeIn(200, 'easeOut')
     } else {
       const spd = speed ?? 30
       _isTyping = true
-      _fullText = text
+      _fullText = resolvedText
       if (_activeTx) {
         _activeTx.stop();
         _activeTx = null
       }
-      const anim = textObj.transition(text, spd)
+      const anim = textObj.transition(resolvedText, spd)
       _activeTx = anim
       textObj.fadeIn(200, 'easeOut')
       if (anim && typeof anim.on === 'function') {

@@ -14,6 +14,8 @@ import type { NovelConfig, NovelOption } from '../types/config'
 import type { UIRuntimeEntry } from './UIRegistry'
 import type { SceneContext } from './SceneContext'
 import type { NovelModule } from '../define/defineCmdUI'
+import type { IHookallSync } from 'hookall'
+import { useHookallSync } from 'hookall'
 
 // =============================================================
 // 내부 타입
@@ -47,6 +49,32 @@ export interface SaveData {
   states: Record<string, any>
 }
 
+// ─── NovelHook 타입 ──────────────────────────────────────────
+
+/**
+ * Novel 인스턴스가 방출하는 훅 이벤트 목록.
+ * `useHookallSync(novel.hooker)` 또는 `ctx.novel.hooker`로 구독합니다.
+ *
+ * @example
+ * ```ts
+ * useHookallSync<NovelHook>(novel.hooker)
+ *   .onBefore('novel:next', (value) => {
+ *     console.log('next called')
+ *     return value
+ *   })
+ * ```
+ */
+export interface NovelHook {
+  /** novel.save() 호출 시 방출. initialValue = 저장될 SaveData */
+  'novel:save': (value: SaveData) => SaveData
+  /** novel.loadSave() 호출 시 방출. initialValue = 복원될 SaveData */
+  'novel:load': (value: SaveData) => SaveData
+  /** novel.next() 호출 시 방출. initialValue = 진행 가능 여부 */
+  'novel:next': (value: boolean) => boolean
+  /** novel.start() / loadScene() 호출 시 방출. initialValue = 씬 이름 */
+  'novel:scene': (value: string) => string
+}
+
 // =============================================================
 // Novel 클래스
 // =============================================================
@@ -72,6 +100,10 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
 
   /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
   private readonly _uiRegistry: Map<string, UIRuntimeEntry> = new Map()
+
+  /** Novel 레벨 훅 시스템. `useHookallSync(this.hooker)` 또는 직접 `.hooker`로 접근합니다. */
+  private readonly _hookerTarget = {}
+  readonly hooker: IHookallSync<NovelHook> = useHookallSync<NovelHook>(this._hookerTarget)
 
   private _currentScene: ActiveScene | null = null
   private _currentSceneDef: AnySceneDef | null = null
@@ -171,8 +203,15 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
   }
 
   loadScene(target: string | { scene: string; preserve: boolean }): void {
-    const sceneName = typeof target === 'string' ? target : target.scene
+    const rawSceneName = typeof target === 'string' ? target : target.scene
     const preserve = typeof target === 'object' && target.preserve === true
+
+    const sceneName = useHookallSync<NovelHook>(this._hookerTarget).trigger(
+      'novel:scene',
+      rawSceneName,
+      (name) => name
+    )
+
 
     const def = this._scenes.get(sceneName)
     if (!def) {
@@ -299,7 +338,7 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       throw new Error('[leviar-novel] save()는 DialogueScene 진행 중에만 호출할 수 있습니다.')
     }
 
-    return {
+    const rawData: SaveData = {
       sceneName: this._currentSceneDef.name as string,
       cursor: this._currentScene.getCursor(),
       globalVars: { ...this.vars as object },
@@ -307,15 +346,27 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
       rendererState: this._renderer.captureState(),
       states: Object.fromEntries(this._stateStore),
     }
+
+    return useHookallSync<NovelHook>(this._hookerTarget).trigger(
+      'novel:save',
+      rawData,
+      (data) => data
+    )
   }
 
   /**
    * SaveData로부터 진행 상태를 복원합니다.
    */
   loadSave(data: SaveData): void {
-    const def = this._scenes.get(data.sceneName)
+    const resolvedData = useHookallSync<NovelHook>(this._hookerTarget).trigger(
+      'novel:load',
+      data,
+      (d) => d
+    )
+
+    const def = this._scenes.get(resolvedData.sceneName)
     if (!def || def.kind !== 'dialogue') {
-      console.error(`[leviar-novel] load() 실패: 씬 '${data.sceneName}'을 찾을 수 없습니다.`)
+      console.error(`[leviar-novel] load() 실패: 씬 '${resolvedData.sceneName}'을 찾을 수 없습니다.`)
       return
     }
 
@@ -326,18 +377,18 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     this.stopSkip()
 
     // 전역 변수 복원
-    Object.assign(this.vars as object, data.globalVars)
+    Object.assign(this.vars as object, resolvedData.globalVars)
 
     // State 복원
     this._stateStore.clear()
-    for (const [k, v] of Object.entries(data.states ?? {})) {
+    for (const [k, v] of Object.entries(resolvedData.states ?? {})) {
       this._stateStore.set(k, v)
     }
 
     // 렌더러 초기화 + 상태 복원
     this._uiRegistry.clear()
     this._renderer.clear()
-    this._renderer.restoreState(data.rendererState)
+    this._renderer.restoreState(resolvedData.rendererState)
     this._renderer.rebuildFromState()
 
     // 모듈 View 재생성 (state에서 스키마 읽어 빌더 실행)
@@ -348,8 +399,8 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
 
     // 지역 변수 + cursor 복원
-    const subIndex = (data.states?.['dialogue'] as any)?.subIndex ?? 0
-    scene.restoreState(data.cursor, data.localVars, subIndex)
+    const subIndex = (resolvedData.states?.['dialogue'] as any)?.subIndex ?? 0
+    scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex)
 
     this._currentScene = scene
     this._currentSceneDef = def
@@ -403,6 +454,13 @@ export class Novel<TConfig extends NovelConfig<any, readonly string[], any, any>
    * 대화를 한 단계 진행합니다.
    */
   next(): void {
+    const canAdvance = useHookallSync<NovelHook>(this._hookerTarget).trigger(
+      'novel:next',
+      true,
+      (value) => value
+    )
+    if (!canAdvance) return
+
     if (Date.now() < this._inputDisabledUntil) return
     if (this._inputMode !== 'dialogue') return
     if (!this._currentScene || this._currentScene.isEnded) return

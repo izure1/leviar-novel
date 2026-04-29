@@ -78,12 +78,12 @@ export type { SceneDefinition } from './define/defineScene'
 export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
-export { define } from './define/defineCmdUI'
-export type { NovelModule, NovelModuleMeta, BootCallback } from './define/defineCmdUI'
+export { define, defineHook } from './define/defineCmdUI'
+export type { NovelModule, NovelModuleMeta, BootCallback, ListenerSignature, DefaultHook } from './define/defineCmdUI'
 
 // ─── UI 시스템 ───────────────────────────────────────────────
 export type { UIRuntimeEntry } from './core/UIRegistry'
-export type { DialogueSchema } from './modules/dialogue'
+export type { DialogueSchema, DialogueHook } from './modules/dialogue'
 export type { ChoiceSchema } from './modules/choice'
 export type { DialogBoxSchema } from './modules/dialogBox'
 
@@ -106,6 +106,6 @@ export { default as dialogBoxModule } from './modules/dialogBox'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'
-export type { SaveData } from './core/Novel'
+export type { SaveData, NovelHook } from './core/Novel'
 export { Renderer } from './core/Renderer'
 export type { RendererOption, RendererState, CameraState } from './core/Renderer'
