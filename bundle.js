@@ -1216,7 +1216,7 @@
   choiceModule.defineCommand(function* (cmd, ctx) {
     const entry = ctx.ui.get(choiceModule.__key);
     if (!entry) {
-      console.warn("[mio-js] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
+      console.warn("[kotonoha] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
     const resolvedChoices = cmd.choices.map((c) => {
       const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
@@ -1227,7 +1227,7 @@
       { choices: resolvedChoices },
       (value) => value
     );
-    console.log("[mio-js] choiceHandler: opening choices", showData.choices);
+    console.log("[kotonoha] choiceHandler: opening choices", showData.choices);
     let selected = null;
     entry?._onChoices?.(showData.choices, (i) => {
       const selectData = choiceModule.hooker.trigger(
@@ -3276,7 +3276,7 @@
   dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     const entry = ctx.ui.get(dialogBoxModule.__key);
     if (!entry) {
-      console.warn("[mio-js] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.");
+      console.warn("[kotonoha] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.");
       return true;
     }
     const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value);
@@ -3757,7 +3757,7 @@
   inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
     const entry = ctx.ui.get(inputModule.__key);
     if (!entry) {
-      console.warn("[mio-js] input UI entry not found. Ensure it is defined in novel.config.ts modules.");
+      console.warn("[kotonoha] input UI entry not found. Ensure it is defined in novel.config.ts modules.");
       return true;
     }
     const openData = inputModule.hooker.trigger(
@@ -17120,7 +17120,7 @@ ${addLineNumbers(fragment)}`);
           const func = new Function(...keys, `return (${expr});`);
           return String(func(...values));
         } catch (e) {
-          console.warn(`[mio-js] Template interpolation failed for expression: ${expr}`, e);
+          console.warn(`[kotonoha] Template interpolation failed for expression: ${expr}`, e);
           return "";
         }
       });
@@ -17257,7 +17257,7 @@ ${addLineNumbers(fragment)}`);
       this._activeGenerator = null;
       const idx = this.labelIndex.get(label);
       if (idx === void 0) {
-        console.warn(`[mio-js] label '${label}' not found in scene '${this.definition.name}'`);
+        console.warn(`[kotonoha] label '${label}' not found in scene '${this.definition.name}'`);
         this.cursor++;
         this.textSubIndex = 0;
         return;
@@ -17349,7 +17349,7 @@ ${addLineNumbers(fragment)}`);
       if (BUILTIN_HANDLERS[type]) {
         return BUILTIN_HANDLERS[type](params, ctx);
       }
-      console.warn(`[mio-js] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
+      console.warn(`[kotonoha] \uC54C \uC218 \uC5C6\uB294 \uCEE4\uB9E8\uB4DC \uD0C0\uC785:`, type);
       return (function* () {
         return false;
       })();
@@ -17633,7 +17633,7 @@ ${addLineNumbers(fragment)}`);
       );
       const def = this._scenes.get(sceneName);
       if (!def) {
-        console.error(`[mio-js] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
+        console.error(`[kotonoha] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
       this._currentSceneDef?.hooks?._unregister(this);
@@ -17723,7 +17723,7 @@ ${addLineNumbers(fragment)}`);
      */
     save() {
       if (!this._currentScene || !(this._currentScene instanceof DialogueScene) || !this._currentSceneDef) {
-        throw new Error("[mio-js] save()\uB294 DialogueScene \uC9C4\uD589 \uC911\uC5D0\uB9CC \uD638\uCD9C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
+        throw new Error("[kotonoha] save()\uB294 DialogueScene \uC9C4\uD589 \uC911\uC5D0\uB9CC \uD638\uCD9C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
       }
       const rawData = {
         sceneName: this._currentSceneDef.name,
@@ -17750,7 +17750,7 @@ ${addLineNumbers(fragment)}`);
       );
       const def = this._scenes.get(resolvedData.sceneName);
       if (!def || def.kind !== "dialogue") {
-        console.error(`[mio-js] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        console.error(`[kotonoha] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
       this._currentSceneDef?.hooks?._unregister(this);
@@ -19725,7 +19725,7 @@ ${addLineNumbers(fragment)}`);
       try {
         const data = novel.save();
         console.log(data);
-        localStorage.setItem("mio-js-save", JSON.stringify(data));
+        localStorage.setItem("kotonoha-save", JSON.stringify(data));
         showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
       } catch (e2) {
         console.error(e2);
@@ -19734,7 +19734,7 @@ ${addLineNumbers(fragment)}`);
     });
     btnLoad.addEventListener("click", (e) => {
       e.stopPropagation();
-      const raw = localStorage.getItem("mio-js-save");
+      const raw = localStorage.getItem("kotonoha-save");
       if (!raw) {
         showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
         return;
