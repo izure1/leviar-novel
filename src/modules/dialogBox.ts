@@ -64,13 +64,13 @@ export interface DialogBoxSchema {
   /** 전체 화면 오버레이(반투명 배경) 스타일 */
   overlay?: Partial<Style>
   /** 대화상자 패널 스타일 */
-  panel?: Partial<Style> & { minWidth?: number; maxWidth?: number; height?: number }
+  panel?: Partial<Style>
   /** 제목 텍스트 스타일 */
   titleStyle?: Partial<Style>
   /** 본문 텍스트 스타일 */
   contentStyle?: Partial<Style>
   /** 버튼 기본 스타일 */
-  button?: Partial<Style> & { width?: number; minWidth?: number; maxWidth?: number }
+  button?: Partial<Style>
   /** 버튼 호버 스타일 */
   buttonHover?: Partial<Style>
   /** 버튼 텍스트 스타일 */
@@ -273,10 +273,10 @@ dialogBoxModule.defineView((data, ctx) => {
   // ─── panelObj: overlayObj 자식 ────────────────────────────
   const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel
   // 초기 PANEL_W: _render 시 갱신되므로 임시값으로 초기화
-  const INIT_PANEL_W = Math.max(
-    (panelCfgInit.minWidth as number) ?? 0,
-    0
-  ) || 480
+  const _initMinW = (panelCfgInit.minWidth as number) ?? 400
+  const _initMaxW = (panelCfgInit.maxWidth as number) ?? Infinity
+  const _initW = (panelCfgInit.width as number) ?? 480
+  const INIT_PANEL_W = Math.max(_initMinW, Math.min(_initW, _initMaxW))
 
   const panelObj = ctx.world.createRectangle({
     style: {
@@ -348,11 +348,14 @@ dialogBoxModule.defineView((data, ctx) => {
 
     // ─── 패널 너비: _render마다 cfg 기반으로 재계산 ─────────
     const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel
-    const PANEL_W = Math.min(
-      (panelCfg.maxWidth as number) ?? Infinity,
-      Math.max((panelCfg.minWidth as number) ?? 480, 0)
-    )
-    panelObj.style.width = PANEL_W
+    const _minW = (panelCfg.minWidth as number) ?? 400
+    const _maxW = (panelCfg.maxWidth as number) ?? Infinity
+    const _w = (panelCfg.width as number) ?? 480
+    const PANEL_W = Math.max(_minW, Math.min(_w, _maxW))
+    panelObj.style.width = panelCfg.width ?? PANEL_W
+    if (panelCfg.minWidth !== undefined) panelObj.style.minWidth = panelCfg.minWidth
+    if (panelCfg.maxWidth !== undefined) panelObj.style.maxWidth = panelCfg.maxWidth
+    if (panelCfg.height !== undefined) panelObj.style.height = panelCfg.height
     _currentPanelW = PANEL_W
 
     const titleFontSize = (titleCfgR.fontSize as number) ?? 22
@@ -375,12 +378,10 @@ dialogBoxModule.defineView((data, ctx) => {
     // ─── 버튼 너비 계산 ───────────────────────────────────────
     const btnWidths = buttons.map(buttonDef => {
       const estimatedW = buttonDef.text.length * btnFontSize * 0.8
-      return btnCfg.width
-        ? btnCfg.width
-        : Math.min(
-          (btnCfg.maxWidth as number) ?? Infinity,
-          Math.max((btnCfg.minWidth as number) ?? 120, estimatedW + layoutCfg.buttonPaddingX)
-        )
+      const rawW = (btnCfg.width as number) ?? (estimatedW + layoutCfg.buttonPaddingX)
+      const minW = (btnCfg.minWidth as number) ?? 100
+      const maxW = (btnCfg.maxWidth as number) ?? 400
+      return Math.max(minW, Math.min(rawW, maxW))
     })
 
     // ─── greedy 행 분배 ───────────────────────────────────────

@@ -28,16 +28,6 @@ export interface ChoiceLayout {
    * @default 24
    */
   paddingY?: number
-  /**
-   * 버튼 최소 너비(px). 텍스트가 짧아도 이 값 이상 유지.
-   * @default 260
-   */
-  buttonMinWidth?: number
-  /**
-   * 버튼 최대 너비(px). 지정 시 텍스트가 길어도 이 너비로 고정되며,
-   * 텍스트가 여러 줄로 자동 래핑됩니다.
-   */
-  buttonMaxWidth?: number
 }
 
 /** choiceModule이 공유하는 데이터 스키마 */
@@ -86,8 +76,6 @@ const DEFAULT_LAYOUT: Required<ChoiceLayout> = {
   gap: 12,
   paddingX: 64,
   paddingY: 24,
-  buttonMinWidth: 260,
-  buttonMaxWidth: Infinity,
 }
 
 // ─── ChoiceCmd 타입 ──────────────────────────────────────────
@@ -214,15 +202,15 @@ choiceModule.defineView((data, ctx) => {
       const paddingY = layoutCfg.paddingY / 2   // 단방향(상 or 하) 패딩
 
       // ─── 버튼별 너비·높이 사전 계산 ─────────────────────────────
-      const resolvedMinW = layoutCfg.buttonMinWidth
-      const resolvedMaxW = layoutCfg.buttonMaxWidth
+      const resolvedMinW = (defaultBtnStyle.minWidth as number) ?? 260
+      const resolvedMaxW = (defaultBtnStyle.maxWidth as number) ?? Infinity
 
       type BtnDim = { w: number; h: number; lines: number }
       const dims: BtnDim[] = choices.map((choice: ResolvedChoiceItem) => {
         const textStr = String(choice.text)
         const estimatedTextW = textStr.length * fSize * 0.8
-        // 너비: minWidth 이상, maxWidth 이하
-        const rawW = estimatedTextW + layoutCfg.paddingX
+        // 너비: 기본 너비 또는 텍스트 기반 너비를 minWidth와 maxWidth 사이로 클램프
+        const rawW = (defaultBtnStyle.width as number) ?? (estimatedTextW + layoutCfg.paddingX)
         const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW))
         // 텍스트 가용 너비 = btnW - paddingX
         const textAvailW = btnW - layoutCfg.paddingX

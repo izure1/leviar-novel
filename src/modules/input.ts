@@ -78,7 +78,7 @@ export interface InputSchema {
   /** 전체 화면 반투명 배경 오버레이 스타일 */
   overlay?: Partial<Style>
   /** 입력 패널 스타일 */
-  panel?: Partial<Style> & { minWidth?: number; maxWidth?: number }
+  panel?: Partial<Style>
   /** 레이블 텍스트 스타일 */
   labelStyle?: Partial<Style>
   /** 입력 텍스트(가상) 스타일 */
@@ -344,13 +344,15 @@ inputModule.defineView((data, ctx) => {
   overlayObj.fadeOut(0).stop()
 
   const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel
-  const INIT_PANEL_W = Math.max((panelCfgInit.minWidth as number) ?? 0, 420)
+  const _initMinW = (panelCfgInit.minWidth as number) ?? 420
+  const _initMaxW = (panelCfgInit.maxWidth as number) ?? Infinity
+  const _initW = (panelCfgInit.width as number) ?? 420
+  const INIT_PANEL_W = Math.max(_initMinW, Math.min(_initW, _initMaxW))
 
   const panelObj = ctx.world.createRectangle({
     style: {
       ...panelCfgInit,
       width: INIT_PANEL_W,
-      height: 10,
       zIndex: 701,
       pointerEvents: true,
     },
@@ -437,8 +439,14 @@ inputModule.defineView((data, ctx) => {
     const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover
 
     const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel
-    const PANEL_W = Math.max((panelCfg.minWidth as number) ?? 420, 0)
-    panelObj.style.width = PANEL_W
+    const _minW = (panelCfg.minWidth as number) ?? 420
+    const _maxW = (panelCfg.maxWidth as number) ?? Infinity
+    const _w = (panelCfg.width as number) ?? 420
+    const PANEL_W = Math.max(_minW, Math.min(_w, _maxW))
+    
+    panelObj.style.width = panelCfg.width ?? PANEL_W
+    if (panelCfg.minWidth !== undefined) panelObj.style.minWidth = panelCfg.minWidth
+    if (panelCfg.maxWidth !== undefined) panelObj.style.maxWidth = panelCfg.maxWidth
 
     const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg
     const AVAILABLE_W = PANEL_W - paddingX * 2

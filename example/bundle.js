@@ -1074,9 +1074,7 @@
   var DEFAULT_LAYOUT2 = {
     gap: 12,
     paddingX: 64,
-    paddingY: 24,
-    buttonMinWidth: 260,
-    buttonMaxWidth: Infinity
+    paddingY: 24
   };
   var choiceModule = define2({
     bg: void 0,
@@ -1140,12 +1138,12 @@
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
         const paddingY = layoutCfg.paddingY / 2;
-        const resolvedMinW = layoutCfg.buttonMinWidth;
-        const resolvedMaxW = layoutCfg.buttonMaxWidth;
+        const resolvedMinW = defaultBtnStyle.minWidth ?? 260;
+        const resolvedMaxW = defaultBtnStyle.maxWidth ?? Infinity;
         const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
-          const rawW = estimatedTextW + layoutCfg.paddingX;
+          const rawW = defaultBtnStyle.width ?? estimatedTextW + layoutCfg.paddingX;
           const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW));
           const textAvailW = btnW - layoutCfg.paddingX;
           const lineCount = textAvailW > 0 ? Math.ceil(estimatedTextW / textAvailW) : 1;
@@ -3091,10 +3089,10 @@
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
     const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel;
-    const INIT_PANEL_W = Math.max(
-      panelCfgInit.minWidth ?? 0,
-      0
-    ) || 480;
+    const _initMinW = panelCfgInit.minWidth ?? 400;
+    const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
+    const _initW = panelCfgInit.width ?? 480;
+    const INIT_PANEL_W = Math.max(_initMinW, Math.min(_initW, _initMaxW));
     const panelObj = ctx.world.createRectangle({
       style: {
         ...panelCfgInit,
@@ -3138,11 +3136,14 @@
       const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle;
       const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle;
       const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel;
-      const PANEL_W = Math.min(
-        panelCfg.maxWidth ?? Infinity,
-        Math.max(panelCfg.minWidth ?? 480, 0)
-      );
-      panelObj.style.width = PANEL_W;
+      const _minW = panelCfg.minWidth ?? 400;
+      const _maxW = panelCfg.maxWidth ?? Infinity;
+      const _w = panelCfg.width ?? 480;
+      const PANEL_W = Math.max(_minW, Math.min(_w, _maxW));
+      panelObj.style.width = panelCfg.width ?? PANEL_W;
+      if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
+      if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
+      if (panelCfg.height !== void 0) panelObj.style.height = panelCfg.height;
       _currentPanelW = PANEL_W;
       const titleFontSize = titleCfgR.fontSize ?? 22;
       const contentFontSize = contentCfgR.fontSize ?? 18;
@@ -3160,10 +3161,10 @@
       const AVAILABLE_W = PANEL_W - PADDING_X * 2;
       const btnWidths = buttons.map((buttonDef) => {
         const estimatedW = buttonDef.text.length * btnFontSize * 0.8;
-        return btnCfg.width ? btnCfg.width : Math.min(
-          btnCfg.maxWidth ?? Infinity,
-          Math.max(btnCfg.minWidth ?? 120, estimatedW + layoutCfg.buttonPaddingX)
-        );
+        const rawW = btnCfg.width ?? estimatedW + layoutCfg.buttonPaddingX;
+        const minW = btnCfg.minWidth ?? 100;
+        const maxW = btnCfg.maxWidth ?? 400;
+        return Math.max(minW, Math.min(rawW, maxW));
       });
       const rows = [];
       let currentRow = { indices: [], totalWidth: 0 };
@@ -3472,12 +3473,14 @@
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
     const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel;
-    const INIT_PANEL_W = Math.max(panelCfgInit.minWidth ?? 0, 420);
+    const _initMinW = panelCfgInit.minWidth ?? 420;
+    const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
+    const _initW = panelCfgInit.width ?? 420;
+    const INIT_PANEL_W = Math.max(_initMinW, Math.min(_initW, _initMaxW));
     const panelObj = ctx.world.createRectangle({
       style: {
         ...panelCfgInit,
         width: INIT_PANEL_W,
-        height: 10,
         zIndex: 701,
         pointerEvents: true
       },
@@ -3536,8 +3539,13 @@
       const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT.buttonText;
       const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover;
       const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel;
-      const PANEL_W = Math.max(panelCfg.minWidth ?? 420, 0);
-      panelObj.style.width = PANEL_W;
+      const _minW = panelCfg.minWidth ?? 420;
+      const _maxW = panelCfg.maxWidth ?? Infinity;
+      const _w = panelCfg.width ?? 420;
+      const PANEL_W = Math.max(_minW, Math.min(_w, _maxW));
+      panelObj.style.width = panelCfg.width ?? PANEL_W;
+      if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
+      if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
       const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg;
       const AVAILABLE_W = PANEL_W - paddingX * 2;
       const LABEL_FS = labelCfgR.fontSize ?? 16;
@@ -12362,6 +12370,10 @@ ${addLineNumbers(fragment)}`);
     letterSpacing: ["texture", "physics"],
     width: ["texture", "physics"],
     height: ["texture", "physics"],
+    minWidth: ["texture", "physics"],
+    maxWidth: ["texture", "physics"],
+    minHeight: ["texture", "physics"],
+    maxHeight: ["texture", "physics"],
     borderWidth: ["texture", "physics"],
     // 물리 바디만 재계산
     margin: ["physics"]
@@ -12406,6 +12418,10 @@ ${addLineNumbers(fragment)}`);
       opacity: partial?.opacity ?? 1,
       width: partial?.width,
       height: partial?.height,
+      minWidth: partial?.minWidth,
+      maxWidth: partial?.maxWidth,
+      minHeight: partial?.minHeight,
+      maxHeight: partial?.maxHeight,
       blur: partial?.blur,
       borderColor: partial?.borderColor,
       borderWidth: partial?.borderWidth,
@@ -14585,6 +14601,12 @@ ${addLineNumbers(fragment)}`);
   var AXIS_X = new Vec3(1, 0, 0);
   var AXIS_Y = new Vec3(0, 1, 0);
   var AXIS_Z = new Vec3(0, 0, 1);
+  function clampSize(value, min, max) {
+    let result = value;
+    if (min !== void 0) result = Math.max(result, min);
+    if (max !== void 0) result = Math.min(result, max);
+    return result;
+  }
   function createQuadGeometry(gl) {
     return new Geometry(gl, {
       position: {
@@ -15126,8 +15148,10 @@ ${addLineNumbers(fragment)}`);
     // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
     _drawObject(obj, assets, timestamp) {
       const { style, transform } = obj;
-      const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
-      const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const rawW = obj.__renderedSize?.w ?? style.width ?? 0;
+      const rawH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const baseW = clampSize(rawW, style.minWidth, style.maxWidth);
+      const baseH = clampSize(rawH, style.minHeight, style.maxHeight);
       const w = baseW;
       const h = baseH;
       this._activeObj = obj;
@@ -16220,6 +16244,12 @@ ${addLineNumbers(fragment)}`);
   var AXIS_X2 = new Vec3(1, 0, 0);
   var AXIS_Y2 = new Vec3(0, 1, 0);
   var AXIS_Z2 = new Vec3(0, 0, 1);
+  function clampSize2(value, min, max) {
+    let result = value;
+    if (min !== void 0) result = Math.max(result, min);
+    if (max !== void 0) result = Math.min(result, max);
+    return result;
+  }
   function wrapMouseEvent(e) {
     const wrapped = e;
     if (wrapped._propagationStopped !== void 0) return wrapped;
@@ -16420,8 +16450,10 @@ ${addLineNumbers(fragment)}`);
         const perspectiveScale = data.dz === 0 ? 1 : focalLength / data.dz;
         const screenX = data.dx * perspectiveScale;
         const screenY = data.dy * perspectiveScale;
-        const baseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
-        const baseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
+        const rawBaseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
+        const rawBaseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
+        const baseW = clampSize2(rawBaseW, data.obj.style.minWidth, data.obj.style.maxWidth);
+        const baseH = clampSize2(rawBaseH, data.obj.style.minHeight, data.obj.style.maxHeight);
         const w = baseW * perspectiveScale * Math.abs(data.obj.transform.scale.x);
         const h = baseH * perspectiveScale * Math.abs(data.obj.transform.scale.y);
         const safeRadius = w + h;
@@ -16438,8 +16470,10 @@ ${addLineNumbers(fragment)}`);
         const perspectiveScale = dz === 0 ? 1 : focalLength / dz;
         const screenX = dx * perspectiveScale;
         const screenY = dy * perspectiveScale;
-        const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
-        const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
+        const rawBaseW = obj.__renderedSize?.w ?? style.width ?? 0;
+        const rawBaseH = obj.__renderedSize?.h ?? style.height ?? 0;
+        const baseW = clampSize2(rawBaseW, style.minWidth, style.maxWidth);
+        const baseH = clampSize2(rawBaseH, style.minHeight, style.maxHeight);
         const w = baseW * perspectiveScale * transform.scale.x;
         const h = baseH * perspectiveScale * transform.scale.y;
         if (w <= 0 || h <= 0) continue;
@@ -16691,11 +16725,11 @@ ${addLineNumbers(fragment)}`);
       if (!obj.attribute.physics) return;
       this.physics.addBody(obj, w ?? 32, h ?? 32);
       const resizeBody = () => {
-        const sw = (obj.style.width ?? w ?? 32) * obj.transform.scale.x;
-        const sh = (obj.style.height ?? h ?? 32) * obj.transform.scale.y;
+        const sw = clampSize2(obj.style.width ?? w ?? 32, obj.style.minWidth, obj.style.maxWidth) * obj.transform.scale.x;
+        const sh = clampSize2(obj.style.height ?? h ?? 32, obj.style.minHeight, obj.style.maxHeight) * obj.transform.scale.y;
         this.physics.updateBodySize(obj, sw, sh);
       };
-      const CSS_RESIZE_KEYS = /* @__PURE__ */ new Set(["width", "height", "borderWidth", "margin"]);
+      const CSS_RESIZE_KEYS = /* @__PURE__ */ new Set(["width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight", "borderWidth", "margin"]);
       obj.on("cssmodified", (key) => {
         if (CSS_RESIZE_KEYS.has(key)) resizeBody();
       });
@@ -18068,11 +18102,9 @@ ${addLineNumbers(fragment)}`);
       }
     },
     "choice": {
-      layout: {
-        buttonMinWidth: 600,
-        buttonMaxWidth: 600
-      },
       button: {
+        minWidth: 600,
+        maxWidth: 600,
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
