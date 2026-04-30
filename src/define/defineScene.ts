@@ -23,7 +23,7 @@ export type InitialOf<TModules> = {
  * @example
  * ```ts
  * import config from '../novel.config'
- * import { defineInitial } from 'leviar-novel'
+ * import { defineInitial } from 'mio-js'
  * 
  * export const commonInitial = defineInitial(config, {
  *   dialogue: { text: { fontSize: 18 } }
@@ -37,8 +37,8 @@ export function defineInitial<
   config: TConfig,
   initial: TInitial & (
     [TConfig['modules']] extends [undefined]
-      ? unknown
-      : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
+    ? unknown
+    : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
   )
 ): typeof initial {
   return initial
@@ -124,8 +124,8 @@ export function defineScene<
     /** 씬 시작 시 적용할 모듈 초기 데이터 (optional). config.modules 키/값 타입 추론. */
     initial?: TInitial & (
       [TConfig['modules']] extends [undefined]
-        ? unknown
-        : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
+      ? unknown
+      : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
     )
     /** 씬 종료 시 자동으로 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. */
     next?: SceneNextTarget<TConfig>

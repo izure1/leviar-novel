@@ -57,7 +57,7 @@ novel.hooker.onBefore('dialogue:text', (value) => {
 `defineHook`은 훅 이벤트를 키로 사용하고, 그 내부에 `hookall` 라이프사이클 메서드(`onBefore`, `onAfter`, `onceBefore`, `onceAfter`)를 지정하여 동작합니다.
 
 ```typescript
-import { defineScene, defineHook } from 'leviar-novel'
+import { defineScene, defineHook } from 'mio-js'
 import config from './novel.config'
 
 export default defineScene({

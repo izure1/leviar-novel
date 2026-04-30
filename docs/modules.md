@@ -1,6 +1,6 @@
 # 🧩 Custom Module Guide
 
-`leviar-novel`은 모든 기능을 독립적인 모듈 단위로 관리합니다. 이 가이드는 엔진의 핵심 클래스(`Novel`, `Renderer`, `SceneContext`)와 모듈이 상호작용하는 기술적 원리와 구현 방법을 상세히 설명합니다.
+`mio-js`은 모든 기능을 독립적인 모듈 단위로 관리합니다. 이 가이드는 엔진의 핵심 클래스(`Novel`, `Renderer`, `SceneContext`)와 모듈이 상호작용하는 기술적 원리와 구현 방법을 상세히 설명합니다.
 
 ---
 

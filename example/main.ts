@@ -181,7 +181,7 @@ async function main() {
     try {
       const data = novel.save()
       console.log(data)
-      localStorage.setItem('leviar-novel-save', JSON.stringify(data))
+      localStorage.setItem('mio-js-save', JSON.stringify(data))
       showToast('💾 저장 완료!', 'success')
     } catch (e) {
       console.error(e)
@@ -192,7 +192,7 @@ async function main() {
   // Load 버튼
   btnLoad.addEventListener('click', (e) => {
     e.stopPropagation()
-    const raw = localStorage.getItem('leviar-novel-save')
+    const raw = localStorage.getItem('mio-js-save')
     if (!raw) {
       showToast('📂 저장 데이터 없음', 'info')
       return

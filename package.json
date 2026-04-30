@@ -1,17 +1,17 @@
 {
-  "name": "leviar-novel",
+  "name": "mio-js",
   "version": "0.0.1",
   "description": "A powerful and flexible modular visual novel engine based on web technologies.",
   "license": "MIT",
   "author": "izure <admin@izure.org>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/izure1/leviar-novel.git"
+    "url": "git+https://github.com/izure1/mio-js.git"
   },
   "bugs": {
-    "url": "https://github.com/izure1/leviar-novel/issues"
+    "url": "https://github.com/izure1/mio-js/issues"
   },
-  "homepage": "https://github.com/izure1/leviar-novel#readme",
+  "homepage": "https://github.com/izure1/mio-js#readme",
   "keywords": [
     "visual-novel",
     "engine",

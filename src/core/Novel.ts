@@ -279,7 +279,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const def = this._scenes.get(sceneName)
     if (!def) {
-      console.error(`[leviar-novel] 씬 '${sceneName}'이 등록되어 있지 않습니다.`)
+      console.error(`[mio-js] 씬 '${sceneName}'이 등록되어 있지 않습니다.`)
       return
     }
 
@@ -400,7 +400,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       !(this._currentScene instanceof DialogueScene) ||
       !this._currentSceneDef
     ) {
-      throw new Error('[leviar-novel] save()는 DialogueScene 진행 중에만 호출할 수 있습니다.')
+      throw new Error('[mio-js] save()는 DialogueScene 진행 중에만 호출할 수 있습니다.')
     }
 
     const rawData: SaveData = {
@@ -431,7 +431,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const def = this._scenes.get(resolvedData.sceneName)
     if (!def || def.kind !== 'dialogue') {
-      console.error(`[leviar-novel] load() 실패: 씬 '${resolvedData.sceneName}'을 찾을 수 없습니다.`)
+      console.error(`[mio-js] load() 실패: 씬 '${resolvedData.sceneName}'을 찾을 수 없습니다.`)
       return
     }
 

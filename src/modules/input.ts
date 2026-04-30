@@ -668,13 +668,13 @@ inputModule.defineView((data, ctx) => {
     // 실시간 완성: 커서가 포함된 초기 텍스트 표시
     _updateDisplay()
 
-    // 렌더링 즉시 포커스 부여
+    // 렌더링 직후 포커스 부여
     _hiddenEl.focus({ preventScroll: true })
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       if (_isActive && _hiddenEl && document.activeElement !== _hiddenEl) {
         _hiddenEl.focus({ preventScroll: true })
       }
-    }, 50)
+    })
 
     overlayObj.fadeIn(200, 'easeOut')
   }
@@ -720,7 +720,7 @@ inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
   const entry = ctx.ui.get(inputModule.__key!) as any
 
   if (!entry) {
-    console.warn('[leviar-novel] input UI entry not found. Ensure it is defined in novel.config.ts modules.')
+    console.warn('[mio-js] input UI entry not found. Ensure it is defined in novel.config.ts modules.')
     return true
   }
 

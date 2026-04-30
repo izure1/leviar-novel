@@ -1,12 +1,12 @@
-# 🌌 Leviar-novel
+# 🌌 Mio-js
 
-**Leviar-novel**은 웹 기반의 강력하고 유연한 모듈형 비주얼 노벨 엔진입니다.
+**Mio-js**은 웹 기반의 강력하고 유연한 모듈형 비주얼 노벨 엔진입니다.
 
-## 💡 왜 Leviar-novel인가?
+## 💡 왜 Mio-js인가?
 
-기존의 웹 기반 노벨 엔진들은 DOM 조작의 한계로 인해 복잡한 카메라 연출이나 고성능 파티클 효과를 구현하는 데 성능적 제약이 있었습니다. `leviar-novel`은 **Canvas 기반의 고성능 렌더러**와 **반응형 상태 관리(MVC)**를 결합하여, 웹 환경에서도 고품질 게임에 버금가는 입체적인 연출을 쉽고 직관적인 코드로 구현하기 위해 탄생했습니다.
+기존의 웹 기반 노벨 엔진들은 DOM 조작의 한계로 인해 복잡한 카메라 연출이나 고성능 파티클 효과를 구현하는 데 성능적 제약이 있었습니다. `mio-js`은 **Canvas 기반의 고성능 렌더러**와 **반응형 상태 관리(MVC)**를 결합하여, 웹 환경에서도 고품질 게임에 버금가는 입체적인 연출을 쉽고 직관적인 코드로 구현하기 위해 탄생했습니다.
 
-[데모 플레이](https://izure1.github.io/leviar-novel/)
+[데모 플레이](https://izure1.github.io/mio-js/)
 
 ---
 
@@ -52,13 +52,13 @@
 ### 1. 설치 (Installation)
 
 ```bash
-npm install leviar-novel
+npm install mio-js
 ```
 
 ### 2. 최소 구동 예제
 
 ```typescript
-import { Novel } from 'leviar-novel'
+import { Novel } from 'mio-js'
 import config from './novel.config'
 import sceneIntro from './scenes/scene-intro'
 

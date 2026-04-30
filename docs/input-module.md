@@ -18,7 +18,7 @@
 `inputModule`은 **내장 모듈**이므로 별도 등록 없이 `defineNovelConfig`만으로 사용 가능합니다.
 
 ```ts
-import { defineNovelConfig } from 'leviar-novel'
+import { defineNovelConfig } from 'mio-js'
 
 export default defineNovelConfig({
   vars: { playerName: '' },

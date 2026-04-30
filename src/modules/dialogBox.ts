@@ -524,7 +524,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
   const entry = ctx.ui.get(dialogBoxModule.__key!)
 
   if (!entry) {
-    console.warn('[leviar-novel] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.')
+    console.warn('[mio-js] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.')
     return true
   }
 
@@ -544,14 +544,14 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     entry.hide?.(duration)
 
     const selectedObj = i >= 0 ? finalCmd.buttons[i] : undefined
-    
+
     // 'dialogBox:select' 훅 방출
     const selectData = dialogBoxModule.hooker.trigger(
       'dialogBox:select',
       { index: i, selected: selectedObj },
       (value) => value
     )
-    
+
     const finalSelected = selectData.selected
 
     if (finalSelected?.var) {
