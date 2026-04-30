@@ -23,7 +23,7 @@ import { useHookallSync } from 'hookall'
 type AnySceneDef = SceneDefinition<any, any, any, any, any, any>
 type ActiveScene = DialogueScene
 
-type InputMode = 'advance' | 'block' | 'none'
+type InputMode = 'advance' | 'block'
 
 /** novel.save()가 반환하는 세이브 데이터 */
 export interface SaveData {
@@ -137,7 +137,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   private _currentScene: ActiveScene | null = null
   private _currentSceneDef: AnySceneDef | null = null
-  private _inputMode: InputMode = 'none'
+  private _inputMode: InputMode = 'block'
   private _isSkipping: boolean = false
   /** 사용자 입력 무시 만료 시간 (ms) */
   private _inputDisabledUntil: number = 0
@@ -303,7 +303,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     this._currentScene = scene
     this._currentSceneDef = def
-    this._inputMode = 'none'
+    this._inputMode = 'block'
 
     // 새 씬의 훅 등록
     def.hooks?._register(this)
@@ -463,7 +463,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     this._currentScene = scene
     this._currentSceneDef = def
-    this._inputMode = 'none'
+    this._inputMode = 'block'
 
     // 새 씬 훅 등록
     def.hooks?._register(this)
@@ -541,7 +541,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   private _syncUIState(): void {
     if (!this._currentScene || this._currentScene.isEnded) {
-      this._inputMode = 'none'
+      this._inputMode = 'block'
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
         const next = (this._currentSceneDef as SceneDefinition<any, any, any, any, any>).nextScene
         if (next) { this.loadScene(next); return }
@@ -557,15 +557,15 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       if (!entry.inputSteps) continue
       const mode = entry.inputSteps[stepType ?? '']
       if (mode !== undefined) {
-        this._inputMode = mode
-        if (mode !== 'advance') {
+        this._inputMode = mode ? 'advance' : 'block'
+        if (!mode) {
           this._suppressUIs(entry.hideGroups)
         }
         return
       }
     }
 
-    this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'none'
+    this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'
   }
 
   /**

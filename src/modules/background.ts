@@ -134,7 +134,7 @@ backgroundModule.defineView((data, ctx) => {
   return {
     show: (dur = 250) => { _bgObj?.fadeIn?.(dur, 'easeOut') },
     hide: (dur = 300) => { _bgObj?.fadeOut?.(dur, 'easeIn') },
-    update: (d: BackgroundSchema) => {
+    onUpdate: (d: BackgroundSchema) => {
       if (!d._key) return
       const bgDefs = ctx.renderer.config.backgrounds as BgDefs
       const def = bgDefs[d._key]

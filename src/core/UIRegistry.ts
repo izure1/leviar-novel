@@ -37,13 +37,12 @@ export interface UIRuntimeEntry {
    */
   hideGroups?: string[]
   /**
-   * step type → 입력 모드 매핑.
-   * - `'advance'`: `novel.next()`로 진행 가능
-   * - `'block'`  : `novel.next()` 호출은 되지만 진행되지 않음 (선택지 대기 등)
-   * - `'none'`   : `novel.next()`를 완전히 무시 (자체 버튼으로만 진행)
-   * @example { 'dialogue': 'advance' }
+   * step type → 진행 가능 여부 매핑.
+   * - `true` : `novel.next()`로 진행 가능 (`'advance'`)
+   * - `false` : `novel.next()` 차단 (`'block'`)
+   * @example { 'dialogue': true, 'choice': false }
    */
-  inputSteps?: Record<string, 'advance' | 'block' | 'none'>
+  inputSteps?: Record<string, boolean>
   /**
    * `novel.next()` 호출 시 진행 가능 여부를 판단합니다.
    * - `true` : 진행 가능

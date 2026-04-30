@@ -966,7 +966,7 @@
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
       uiGroup: "dialogue",
-      inputSteps: { "dialogue": "advance" },
+      inputSteps: { "dialogue": true },
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1124,7 +1124,7 @@
         _clearButtons();
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      inputSteps: { "choice": "block" },
+      inputSteps: { "choice": false },
       hideGroups: ["dialogue"],
       /** 씬 전환 시 버튼 즉시 제거 */
       onCleanup: () => {
@@ -1363,7 +1363,7 @@
       hide: (dur = 300) => {
         _bgObj?.fadeOut?.(dur, "easeIn");
       },
-      update: (d2) => {
+      onUpdate: (d2) => {
         if (!d2._key) return;
         const bgDefs = ctx.renderer.config.backgrounds;
         const def = bgDefs[d2._key];
@@ -1642,7 +1642,7 @@
       },
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
-      update: (d2) => {
+      onUpdate: (d2) => {
         const dur = d2._lastDuration;
         const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
@@ -1886,7 +1886,7 @@
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
-      update: (d2) => {
+      onUpdate: (d2) => {
         const dur = d2._lastDuration ?? 800;
         const newMoods = new Set(Object.keys(d2._activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
@@ -2082,7 +2082,7 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      update: (d2) => {
+      onUpdate: (d2) => {
         const newTypes = new Set(Object.keys(d2._activeEffects));
         for (const type of Object.keys(_effectObjs)) {
           if (!newTypes.has(type)) _removeEffect(type, 600);
@@ -2268,7 +2268,7 @@
         }
       },
       getObj: (name) => _overlayObjs[name],
-      update: (d2) => {
+      onUpdate: (d2) => {
         const dur = d2._lastDuration;
         const newKeys = new Set(Object.keys(d2._overlays));
         for (const key of Object.keys(_overlayObjs)) {
@@ -2417,7 +2417,7 @@
       },
       hide: () => {
       },
-      update: () => {
+      onUpdate: () => {
       }
     };
   });
@@ -2478,7 +2478,7 @@
       },
       hide: () => {
       },
-      update: () => {
+      onUpdate: () => {
       }
     };
   });
@@ -2855,7 +2855,7 @@
       },
       hide: () => {
       },
-      update: () => {
+      onUpdate: () => {
       }
     };
   });
@@ -3272,7 +3272,7 @@
         _hide(duration);
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      inputSteps: { "dialogBox": "none" },
+      inputSteps: { "dialogBox": false },
       hideGroups: ["dialogue"],
       onUpdate: (d2) => {
         if (d2._resolve && d2._buttons.length > 0) {
@@ -16935,7 +16935,7 @@ ${addLineNumbers(fragment)}`);
     hooker;
     _currentScene = null;
     _currentSceneDef = null;
-    _inputMode = "none";
+    _inputMode = "block";
     _isSkipping = false;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
@@ -17078,7 +17078,7 @@ ${addLineNumbers(fragment)}`);
       const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
-      this._inputMode = "none";
+      this._inputMode = "block";
       def.hooks?._register(this);
       scene.start(preserve);
       this._syncUIState();
@@ -17199,7 +17199,7 @@ ${addLineNumbers(fragment)}`);
       scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
-      this._inputMode = "none";
+      this._inputMode = "block";
       def.hooks?._register(this);
       this._syncUIState();
     }
@@ -17271,7 +17271,7 @@ ${addLineNumbers(fragment)}`);
     }
     _syncUIState() {
       if (!this._currentScene || this._currentScene.isEnded) {
-        this._inputMode = "none";
+        this._inputMode = "block";
         if (this._currentScene?.isEnded && this._currentSceneDef?.kind === "dialogue") {
           const next = this._currentSceneDef.nextScene;
           if (next) {
@@ -17287,14 +17287,14 @@ ${addLineNumbers(fragment)}`);
         if (!entry.inputSteps) continue;
         const mode = entry.inputSteps[stepType ?? ""];
         if (mode !== void 0) {
-          this._inputMode = mode;
-          if (mode !== "advance") {
+          this._inputMode = mode ? "advance" : "block";
+          if (!mode) {
             this._suppressUIs(entry.hideGroups);
           }
           return;
         }
       }
-      this._inputMode = this._currentScene.isWaitingInput ? "advance" : "none";
+      this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
     }
     /**
      * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.

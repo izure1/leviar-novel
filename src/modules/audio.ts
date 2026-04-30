@@ -198,7 +198,7 @@ audioModule.defineView((data, ctx) => {
   return {
     show: () => { },
     hide: () => { },
-    update: () => { },
+    onUpdate: () => { },
   }
 })
 

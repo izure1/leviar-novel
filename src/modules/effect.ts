@@ -144,7 +144,7 @@ effectModule.defineView((data, ctx) => {
         obj?.fadeOut?.(300, 'easeIn')
       }
     },
-    update: (d: EffectSchema) => {
+    onUpdate: (d: EffectSchema) => {
       const newTypes = new Set(Object.keys(d._activeEffects))
       for (const type of Object.keys(_effectObjs)) {
         if (!newTypes.has(type)) _removeEffect(type as EffectType, 600)

@@ -165,7 +165,7 @@ moodModule.defineView((data, ctx) => {
     },
     // flicker용 오브젝트 접근
     getObj: (mood: string) => _moodObjs[mood],
-    update: (d: MoodSchema) => {
+    onUpdate: (d: MoodSchema) => {
       const dur = d._lastDuration ?? 800
       const newMoods = new Set(Object.keys(d._activeMoods))
       // 제거된 무드

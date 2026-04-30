@@ -354,7 +354,7 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
       }
     },
     getObj: (name: string) => _overlayObjs[name] as any | undefined,
-    update: (d: OverlaySchema) => {
+    onUpdate: (d: OverlaySchema) => {
       const dur = d._lastDuration
       const newKeys = new Set(Object.keys(d._overlays))
       // 제거된 항목

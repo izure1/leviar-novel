@@ -195,7 +195,7 @@ choiceModule.defineView((data, ctx) => {
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    inputSteps: { 'choice': 'block' },
+    inputSteps: { 'choice': false },
     hideGroups: ['dialogue'],
 
     /** 씬 전환 시 버튼 즉시 제거 */

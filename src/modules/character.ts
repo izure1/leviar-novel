@@ -119,7 +119,7 @@ interface CharacterViewEntry {
   show: () => void
   hide: () => void
   getObj: (name: string) => CharacterRenderObj | undefined
-  update: (d: CharacterSchema) => void
+  onUpdate: (d: CharacterSchema) => void
 }
 
 /**
@@ -216,7 +216,7 @@ characterModule.defineView((data, ctx) => {
     },
     // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
     getObj: (name: string) => _charObjs[name],
-    update: (d: CharacterSchema) => {
+    onUpdate: (d: CharacterSchema) => {
       const dur = d._lastDuration
       const newNames = new Set(Object.keys(d._characters))
       // 제거된 캐릭터

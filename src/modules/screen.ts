@@ -109,7 +109,7 @@ screenFadeModule.defineView((data, ctx) => {
   return {
     show: () => { },
     hide: () => { },
-    update: () => { },
+    onUpdate: () => { },
   }
 })
 
@@ -190,7 +190,7 @@ screenFlashModule.defineView((_data, ctx) => {
   return {
     show: () => { },
     hide: () => { },
-    update: () => { }
+    onUpdate: () => { }
   }
 })
 
