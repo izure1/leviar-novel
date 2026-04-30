@@ -3715,6 +3715,12 @@
         _updateDisplay();
       }, 500);
       _updateDisplay();
+      _hiddenEl.focus({ preventScroll: true });
+      setTimeout(() => {
+        if (_isActive && _hiddenEl && document.activeElement !== _hiddenEl) {
+          _hiddenEl.focus({ preventScroll: true });
+        }
+      }, 50);
       overlayObj.fadeIn(200, "easeOut");
     };
     const _hide = (duration = 200) => {

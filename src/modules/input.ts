@@ -668,6 +668,14 @@ inputModule.defineView((data, ctx) => {
     // 실시간 완성: 커서가 포함된 초기 텍스트 표시
     _updateDisplay()
 
+    // 렌더링 즉시 포커스 부여
+    _hiddenEl.focus({ preventScroll: true })
+    setTimeout(() => {
+      if (_isActive && _hiddenEl && document.activeElement !== _hiddenEl) {
+        _hiddenEl.focus({ preventScroll: true })
+      }
+    }, 50)
+
     overlayObj.fadeIn(200, 'easeOut')
   }
 
