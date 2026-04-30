@@ -1,17 +1,17 @@
 {
-  "name": "sori",
+  "name": "fumika",
   "version": "0.0.1",
   "description": "A powerful and flexible modular visual novel engine based on web technologies.",
   "license": "MIT",
   "author": "izure <admin@izure.org>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/izure1/sori.git"
+    "url": "git+https://github.com/izure1/fumika.git"
   },
   "bugs": {
-    "url": "https://github.com/izure1/sori/issues"
+    "url": "https://github.com/izure1/fumika/issues"
   },
-  "homepage": "https://github.com/izure1/sori#readme",
+  "homepage": "https://github.com/izure1/fumika#readme",
   "keywords": [
     "visual-novel",
     "engine",
