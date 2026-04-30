@@ -1,6 +1,5 @@
 import type { Renderer, RendererState } from './Renderer'
 import type { SceneDefinition } from '../define/defineScene'
-import type { ExploreSceneDefinition, ExploreObject } from '../define/defineExploreScene'
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
 import type { SceneContext, CommandResult } from './SceneContext'
 import type { UIRuntimeEntry } from './UIRegistry'
@@ -24,28 +23,28 @@ import type { NovelModule } from '../define/defineCmdUI'
 
 // 내장 모듈 핸들러 테이블
 const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
-  'dialogue':             (p, c) => dialogueModule.__handler!(p, c),
-  'choice':               (p, c) => choiceModule.__handler!(p, c),
-  'condition':            (p, c) => conditionModule.__handler!(p, c),
-  'var':                  (p, c) => varModule.__handler!(p, c),
-  'label':                (p, c) => labelModule.__handler!(p, c),
-  'background':           (p, c) => backgroundModule.__handler!(p, c),
-  'mood':                 (p, c) => moodModule.__handler!(p, c),
-  'effect':               (p, c) => effectModule.__handler!(p, c),
-  'overlay-text':         (p, c) => overlayTextModule.__handler!(p, c),
-  'overlay-image':        (p, c) => overlayImageModule.__handler!(p, c),
-  'character':            (p, c) => characterModule.__handler!(p, c),
-  'character-focus':      (p, c) => characterFocusModule.__handler!(p, c),
-  'character-highlight':  (p, c) => characterHighlightModule.__handler!(p, c),
-  'camera-zoom':          (p, c) => cameraZoomModule.__handler!(p, c),
-  'camera-pan':           (p, c) => cameraPanModule.__handler!(p, c),
-  'camera-effect':        (p, c) => cameraEffectModule.__handler!(p, c),
-  'screen-fade':          (p, c) => screenFadeModule.__handler!(p, c),
-  'screen-flash':         (p, c) => screenFlashModule.__handler!(p, c),
-  'screen-wipe':          (p, c) => screenWipeModule.__handler!(p, c),
-  'ui':                   (p, c) => uiModule.__handler!(p, c),
-  'control':              (p, c) => controlModule.__handler!(p, c),
-  'audio':                (p, c) => audioModule.__handler!(p, c),
+  'dialogue': (p, c) => dialogueModule.__handler!(p, c),
+  'choice': (p, c) => choiceModule.__handler!(p, c),
+  'condition': (p, c) => conditionModule.__handler!(p, c),
+  'var': (p, c) => varModule.__handler!(p, c),
+  'label': (p, c) => labelModule.__handler!(p, c),
+  'background': (p, c) => backgroundModule.__handler!(p, c),
+  'mood': (p, c) => moodModule.__handler!(p, c),
+  'effect': (p, c) => effectModule.__handler!(p, c),
+  'overlay-text': (p, c) => overlayTextModule.__handler!(p, c),
+  'overlay-image': (p, c) => overlayImageModule.__handler!(p, c),
+  'character': (p, c) => characterModule.__handler!(p, c),
+  'character-focus': (p, c) => characterFocusModule.__handler!(p, c),
+  'character-highlight': (p, c) => characterHighlightModule.__handler!(p, c),
+  'camera-zoom': (p, c) => cameraZoomModule.__handler!(p, c),
+  'camera-pan': (p, c) => cameraPanModule.__handler!(p, c),
+  'camera-effect': (p, c) => cameraEffectModule.__handler!(p, c),
+  'screen-fade': (p, c) => screenFadeModule.__handler!(p, c),
+  'screen-flash': (p, c) => screenFlashModule.__handler!(p, c),
+  'screen-wipe': (p, c) => screenWipeModule.__handler!(p, c),
+  'ui': (p, c) => uiModule.__handler!(p, c),
+  'control': (p, c) => controlModule.__handler!(p, c),
+  'audio': (p, c) => audioModule.__handler!(p, c),
 }
 
 // =============================================================
@@ -516,84 +515,4 @@ export class DialogueScene {
 
   get isEnded(): boolean { return this._ended }
   get isWaitingInput(): boolean { return this._waitingInput }
-}
-
-// =============================================================
-// ExploreScene 실행기
-// =============================================================
-
-/**
- * 탐색형 씬(Explore Scene)을 실행하고 관리하는 실행기 클래스.
- * 배경 위에 클릭 가능한 오브젝트를 배치하고, 클릭 시 다른 씬으로 이동하는 등의 상호작용을 처리합니다.
- */
-export class ExploreScene {
-  private readonly renderer: Renderer
-  private readonly callbacks: SceneCallbacks
-  private readonly definition: ExploreSceneDefinition<any, any>
-  private _clickHandlers: Array<{ obj: any; handler: () => void }> = []
-  private _ended: boolean = false
-
-  constructor(
-    renderer: Renderer,
-    callbacks: SceneCallbacks,
-    definition: ExploreSceneDefinition<any, any>
-  ) {
-    this.renderer = renderer
-    this.callbacks = callbacks
-    this.definition = definition
-  }
-
-  start(_preserve: boolean = false): void {
-    const { background, objects } = this.definition.options
-    setBackground(
-      { renderer: this.renderer } as any,
-      background,
-      'stretch',
-      1000
-    )
-    this._spawnObjects(objects)
-  }
-
-  private _spawnObjects(objects: ExploreObject<any>[]): void {
-    objects.forEach(objDef => {
-      const world = this.renderer.world
-      const img = world.createImage({
-        attribute: {
-          src: objDef.src
-        } as any,
-        style: {
-          width: objDef.width ?? 100,
-          height: objDef.height ?? 100,
-          zIndex: 10,
-        } as any,
-        transform: {
-          position: {
-            x: objDef.position.x - (this.renderer as any).width / 2,
-            y: objDef.position.y - (this.renderer as any).height / 2,
-            z: 0
-          }
-        },
-      })
-
-      const handler = () => {
-        if (this._ended) return
-        this._ended = true
-        this.callbacks.loadScene(objDef.next)
-      }
-      img.on('click', handler as any)
-      this._clickHandlers.push({ obj: img, handler })
-    })
-  }
-
-  cleanup(): void {
-    this._clickHandlers.forEach(({ obj, handler }) => {
-      obj.off?.('click', handler)
-      obj.remove?.()
-    })
-    this._clickHandlers = []
-  }
-
-  advance(): void { /* no-op */ }
-
-  get isEnded(): boolean { return this._ended }
 }

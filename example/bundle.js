@@ -19096,6 +19096,17 @@ ${addLineNumbers(fragment)}`);
     await novel.load();
     await novel.loadAssets(OBJECTS);
     await novel.boot();
+    const vk = navigator.virtualKeyboard;
+    if ("virtualKeyboard" in navigator) {
+      vk.overlaysContent = true;
+    }
+    document.getElementById("hidden-input")?.addEventListener("focus", () => {
+      throw 1;
+    });
+    novel.hooker.onAfter("choice:show", (state) => {
+      document.getElementById("hidden-input")?.focus();
+      return state;
+    });
     let before = 0;
     novel.hooker.onBefore("dialogue:text-run", (state) => {
       if (novel.isSkipping) return state;

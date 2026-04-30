@@ -4,12 +4,11 @@
 
 import { World } from 'leviar'
 import { Renderer } from './Renderer'
-import { DialogueScene, ExploreScene } from './Scene'
+import { DialogueScene } from './Scene'
 import type { SceneCallbacks } from './Scene'
 import type { RendererState } from './Renderer'
 import type { SceneDefinition } from '../define/defineScene'
 export type { SceneDefinition }
-import type { ExploreSceneDefinition } from '../define/defineExploreScene'
 import type { NovelConfig, NovelOption } from '../types/config'
 import type { UIRuntimeEntry } from './UIRegistry'
 import type { SceneContext } from './SceneContext'
@@ -21,11 +20,8 @@ import { useHookallSync } from 'hookall'
 // 내부 타입
 // =============================================================
 
-type AnySceneDef =
-  | SceneDefinition<any, any, any, any, any, any>
-  | ExploreSceneDefinition<any, any>
-
-type ActiveScene = DialogueScene | ExploreScene
+type AnySceneDef = SceneDefinition<any, any, any, any, any, any>
+type ActiveScene = DialogueScene
 
 type InputMode = 'dialogue' | 'choice' | 'none'
 
@@ -90,8 +86,8 @@ type UnionToIntersectionLocal<U> =
 export type AllModuleHooksOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
   ? UnionToIntersectionLocal<{
-      [K in keyof TMods]: TMods[K] extends NovelModule<any, any, infer THook> ? THook : DefaultHook
-    }[keyof TMods]>
+    [K in keyof TMods]: TMods[K] extends NovelModule<any, any, infer THook> ? THook : DefaultHook
+  }[keyof TMods]>
   : DefaultHook
 
 
@@ -170,8 +166,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     // config.modules 수집 및 key 주입
     this._collectModules(config.modules)
 
-    // 훅 프록시 초기화 (_modules 수집 후에 호출)
-    ;(this as any).hooker = this._createHookerProxy()
+      // 훅 프록시 초기화 (_modules 수집 후에 호출)
+      ; (this as any).hooker = this._createHookerProxy()
 
     this._world.start()
 
@@ -207,12 +203,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     const proxy: IHookallSync<any> = {
-      onBefore:   (cmd, cb) => { getHooker(cmd).onBefore(cmd, cb);   return proxy },
-      onAfter:    (cmd, cb) => { getHooker(cmd).onAfter(cmd, cb);    return proxy },
+      onBefore: (cmd, cb) => { getHooker(cmd).onBefore(cmd, cb); return proxy },
+      onAfter: (cmd, cb) => { getHooker(cmd).onAfter(cmd, cb); return proxy },
       onceBefore: (cmd, cb) => { getHooker(cmd).onceBefore(cmd, cb); return proxy },
-      onceAfter:  (cmd, cb) => { getHooker(cmd).onceAfter(cmd, cb);  return proxy },
-      offBefore:  (cmd, cb) => { getHooker(cmd).offBefore(cmd, cb);  return proxy },
-      offAfter:   (cmd, cb) => { getHooker(cmd).offAfter(cmd, cb);   return proxy },
+      onceAfter: (cmd, cb) => { getHooker(cmd).onceAfter(cmd, cb); return proxy },
+      offBefore: (cmd, cb) => { getHooker(cmd).offBefore(cmd, cb); return proxy },
+      offAfter: (cmd, cb) => { getHooker(cmd).offAfter(cmd, cb); return proxy },
       trigger: (cmd, initialValue, callback, ...params) =>
         getHooker(cmd).trigger(cmd, initialValue, callback, ...params),
     }
@@ -291,9 +287,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       ? this._renderer.captureState()
       : null
 
-    if (this._currentScene instanceof ExploreScene) {
-      this._currentScene.cleanup()
-    }
     // 씬 전환 시 choice UI DOM 정리
     this._cleanupChoiceUI()
     this._currentScene = null
@@ -306,12 +299,10 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       // UI 레지스트리 초기화 (새 씬에서 view 빌더가 재등록)
       this._uiRegistry.clear()
     }
-    // preserve=true 시: 추적 오브젝트, state 맵, UIRegistry 모두 유지
+    // preserve=true 시: 추적 오브젝트, state 맵 모두 유지
 
     const callbacks = this._buildCallbacks()
-    const scene = def.kind === 'dialogue'
-      ? new DialogueScene(this._renderer, callbacks, def)
-      : new ExploreScene(this._renderer, callbacks, def)
+    const scene = new DialogueScene(this._renderer, callbacks, def)
 
     this._currentScene = scene
     this._currentSceneDef = def
@@ -451,9 +442,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       prevHooks?._unregister(this)
     }
 
-    if (this._currentScene instanceof ExploreScene) {
-      this._currentScene.cleanup()
-    }
     this._cleanupChoiceUI()
     this.stopSkip()
 

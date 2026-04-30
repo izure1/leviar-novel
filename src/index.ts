@@ -71,11 +71,9 @@ export type {
 // ─── define 헬퍼 함수 ────────────────────────────────────────
 export { defineNovelConfig, BUILTIN_MODULES } from './define/defineNovelConfig'
 export type { BuiltinModules } from './define/defineNovelConfig'
-export { defineExploreScene } from './define/defineExploreScene'
 export { defineCharacter } from './define/defineCharacter'
 export { defineScene, defineInitial } from './define/defineScene'
 export type { SceneDefinition } from './define/defineScene'
-export type { ExploreSceneDefinition, ExploreSceneOptions, ExploreObject } from './define/defineExploreScene'
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
 export { define, defineHook } from './define/defineCmdUI'
