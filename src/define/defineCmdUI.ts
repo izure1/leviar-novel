@@ -71,6 +71,8 @@ export interface NovelModuleMeta<TSchema extends Record<string, any> = any> {
   readonly __viewBuilder: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null
   /** onBoot()로 등록된 비동기 초기화 콜백 (없으면 null) */
   readonly __bootFn: BootCallback | null
+  /** Novel 엔진이 등록 시 주입하는 모듈 key. `novel.boot()` 이전에는 null */
+  readonly __key: string | null
   /** Novel 엔진이 등록 시 key를 주입합니다 */
   __setKey(key: string): void
 }
@@ -168,6 +170,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
     get __handler() { return _handlerFn },
     get __viewBuilder() { return _viewBuilderFn },
     get __bootFn() { return _bootFn },
+    get __key() { return _moduleKey },
     get hooker() { return _hooker },
 
     __setKey(key: string) {
@@ -218,10 +221,10 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
         }
 
         const entry = builder(data, ctx)
-        _onUpdate = (d) => entry.update?.(d)
+        _onUpdate = (d) => entry.onUpdate?.(d)
 
-        // 초기 렌더링 정합성을 위해 즉시 update 1회 호출
-        entry.update?.(data)
+        // 초기 렌더링 정합성을 위해 즉시 onUpdate 1회 호출
+        entry.onUpdate?.(data)
 
         return entry
       }

@@ -303,21 +303,32 @@ dialogueModule.defineView((data, ctx) => {
       speakerObj.fadeOut(dur, 'easeIn')
       textObj.fadeOut(dur, 'easeIn')
     },
-    isTyping: () => _isTyping,
-    completeTyping: () => {
-      if (!_isTyping) return
-      _isTyping = false
-      _activeTx?.stop?.()
-      _activeTx = null
-      textObj.attribute.text = _fullText
-      textObj.style.opacity = 1
+
+    // ─── 입력 역할 선언 ─────────────────────────────────
+    uiGroup: 'dialogue',
+    inputSteps: { 'dialogue': 'advance' },
+
+    /**
+     * novel.next() 호출 시 타이핑 완성 여부 판단.
+     * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
+     * - 타이핑 완료: true 반환 (진행 가능)
+     */
+    canAdvance: () => {
+      if (_isTyping) {
+        _isTyping = false
+        _activeTx?.stop?.()
+        _activeTx = null
+        textObj.attribute.text = _fullText
+        textObj.style.opacity = 1
+        return false
+      }
+      return true
     },
+
     /**
      * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
-     * - lines가 바뀐 경우: 텍스트 재렌더
-     * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
      */
-    update: (d: DialogueSchema) => {
+    onUpdate: (d: DialogueSchema) => {
       // 스타일 갱신
       const newBgCfg = (d.style ?? d.bg ?? DEFAULT_BG) as Style
       const newSpkCfg = (d.speaker ?? DEFAULT_SPEAKER) as Style
@@ -363,8 +374,6 @@ dialogueModule.defineView((data, ctx) => {
 dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
   const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text]
   const lines = textArray.map(t => ctx.scene.interpolateText(t))
-
-  const ui = ctx.ui.get('dialogue') as any
   const charDefs = ctx.renderer.config.characters
 
   for (let index = 0; index < lines.length; index++) {
@@ -384,13 +393,8 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
     ctx.scene.setTextSubIndex(index + 1)
 
     // 타이핑 완료 또는 사용자 입력 대기
+    // 타이핑 중 클릭 시 canAdvance()에서 자동 처리
     yield false
-
-    // 타이핑 중 클릭 시 즉시 완료 후 다시 대기
-    if (ui && typeof ui.isTyping === 'function' && ui.isTyping()) {
-      ui.completeTyping()
-      yield false
-    }
   }
 
   return true

@@ -512,7 +512,12 @@ dialogBoxModule.defineView((data, ctx) => {
   return {
     show: (duration = 200) => { overlayObj.fadeIn(duration, 'easeOut') },
     hide: (duration = 200) => { _hide(duration) },
-    update: (d: DialogBoxSchema) => {
+
+    // ─── 입력 역할 선언 ────────────────────────────────
+    inputSteps: { 'dialogBox': 'none' },
+    hideGroups: ['dialogue'],
+
+    onUpdate: (d: DialogBoxSchema) => {
       if (d._resolve && d._buttons.length > 0) {
         _render(d._title, d._content, d._buttons, d._resolve, d._duration, d._persist, d)
       }
@@ -521,14 +526,14 @@ dialogBoxModule.defineView((data, ctx) => {
 })
 
 dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
-  const entry = ctx.ui.get('dialogBox')
+  const entry = ctx.ui.get(dialogBoxModule.__key!)
 
   if (!entry) {
     console.warn('[leviar-novel] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.')
     return true
   }
 
-  ctx.ui.get('dialogue')?.hide?.()
+  // 대화창 숨김 — suppressRoles를 통해 onSuppress() 이벤트로 자동 처리됨
 
   // 'dialogBox:show' 훅 방출
   const finalCmd = dialogBoxModule.hooker.trigger('dialogBox:show', cmd, (value) => value)

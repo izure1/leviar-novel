@@ -193,7 +193,16 @@ choiceModule.defineView((data, ctx) => {
       bgObj.fadeOut(200, 'easeIn')
       _clearButtons()
     },
-    onChoices: (choices: any[], onSelect: (i: number) => void, layoutOverride?: ChoiceLayout) => {
+
+    // ─── 입력 역할 선언 ─────────────────────────────────
+    inputSteps: { 'choice': 'block' },
+    hideGroups: ['dialogue'],
+
+    /** 씬 전환 시 버튼 즉시 제거 */
+    onCleanup: () => { _clearButtons() },
+
+    // ─── 모듈 내부 전용 ─────────────────────────────────
+    _onChoices: (choices: ResolvedChoiceItem[], onSelect: (i: number) => void, layoutOverride?: ChoiceLayout) => {
       bgObj.fadeIn(200, 'easeOut')
       _clearButtons()
 
@@ -298,21 +307,20 @@ choiceModule.defineView((data, ctx) => {
         _btnObjs.push(btnObj)
       })
     },
-    update: (d: ChoiceSchema) => {
+    onUpdate: (d: ChoiceSchema) => {
       Object.assign(cfg, d)
     },
   }
 })
 
 choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
-  const entry = ctx.ui.get('choice')
+  const entry = ctx.ui.get(choiceModule.__key!) as any
 
   if (!entry) {
     console.warn('[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.')
   }
 
-  // 대화창 숨김
-  ctx.ui.get('dialogue')?.hide?.()
+  // 대화창 숨김 — suppressRoles를 통해 onSuppress() 이벤트로 자동 처리됨
 
   // 텍스트(resolvable) 평가
   const resolvedChoices: ResolvedChoiceItem[] = cmd.choices.map((c) => {
@@ -329,7 +337,7 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   console.log('[leviar-novel] choiceHandler: opening choices', showData.choices)
 
-  entry?.onChoices?.(showData.choices, (i: number) => {
+  entry?._onChoices?.(showData.choices, (i: number) => {
     // 'choice:select' 훅 방출
     const selectData = choiceModule.hooker.trigger(
       'choice:select',

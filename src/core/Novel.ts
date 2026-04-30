@@ -23,7 +23,7 @@ import { useHookallSync } from 'hookall'
 type AnySceneDef = SceneDefinition<any, any, any, any, any, any>
 type ActiveScene = DialogueScene
 
-type InputMode = 'dialogue' | 'choice' | 'none'
+type InputMode = 'advance' | 'block' | 'none'
 
 /** novel.save()가 반환하는 세이브 데이터 */
 export interface SaveData {
@@ -278,17 +278,14 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     // 이전 씬의 훅 해제
-    if (this._currentSceneDef?.kind === 'dialogue') {
-      const prevHooks = (this._currentSceneDef as any).hooks
-      prevHooks?._unregister(this)
-    }
+    this._currentSceneDef?.hooks?._unregister(this)
 
     const prevState: RendererState | null = (!preserve && this._currentScene)
       ? this._renderer.captureState()
       : null
 
-    // 씬 전환 시 choice UI DOM 정리
-    this._cleanupChoiceUI()
+    // 씬 전환 시 UI 정리
+    this._cleanupUI()
     this._currentScene = null
 
     if (!preserve) {
@@ -309,20 +306,16 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._inputMode = 'none'
 
     // 새 씬의 훅 등록
-    if (def.kind === 'dialogue') {
-      const newHooks = (def as any).hooks
-      newHooks?._register(this)
-    }
+    def.hooks?._register(this)
 
     scene.start(preserve)
     this._syncUIState()
   }
 
-  /** 씬 전환 시 choice HTML 컨테이너 정리 */
-  private _cleanupChoiceUI(): void {
-    const choiceEntry = this._uiRegistry.get('choices') as any
-    if (choiceEntry?.__novelRemove) {
-      choiceEntry.__novelRemove()
+  /** 씬 전환 시 모든 UI 엔트리의 onCleanup() 호출 */
+  private _cleanupUI(): void {
+    for (const entry of this._uiRegistry.values()) {
+      entry.onCleanup?.()
     }
   }
 
@@ -437,12 +430,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     // 이전 씬 훅 해제
-    if (this._currentSceneDef?.kind === 'dialogue') {
-      const prevHooks = (this._currentSceneDef as any).hooks
-      prevHooks?._unregister(this)
-    }
+    this._currentSceneDef?.hooks?._unregister(this)
 
-    this._cleanupChoiceUI()
+    this._cleanupUI()
     this.stopSkip()
 
     // 전역 변수 복원
@@ -476,8 +466,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._inputMode = 'none'
 
     // 새 씬 훅 등록
-    const newHooks = (def as any).hooks
-    newHooks?._register(this)
+    def.hooks?._register(this)
 
     this._syncUIState()
   }
@@ -536,14 +525,14 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     if (!canAdvance) return
 
     if (Date.now() < this._inputDisabledUntil) return
-    if (this._inputMode !== 'dialogue') return
+    if (this._inputMode !== 'advance') return
     if (!this._currentScene || this._currentScene.isEnded) return
 
-    // 타이핑 중이면 즉시 완성 (advance 하지 않음)
-    const dialogueEntry = this._uiRegistry.get('dialogue')
-    if (dialogueEntry?.isTyping?.()) {
-      dialogueEntry.completeTyping?.()
-      return
+    // 타이핑 중이면 canAdvance()로 작업 위임
+    for (const entry of this._uiRegistry.values()) {
+      if (!entry.canAdvance) continue
+      const result = entry.canAdvance()
+      if (!result) return
     }
 
     this._currentScene.advance()
@@ -561,20 +550,34 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
     if (!(this._currentScene instanceof DialogueScene)) return
 
-    const choice = this._currentScene.getCurrentChoice()
-    if (choice) {
-      this._inputMode = 'choice'
-      return
+    const stepType = this._currentScene.getCurrentStepType()
+
+    // UIRuntimeEntry의 inputSteps 선언을 기반으로 모드 결정
+    for (const entry of this._uiRegistry.values()) {
+      if (!entry.inputSteps) continue
+      const mode = entry.inputSteps[stepType ?? '']
+      if (mode !== undefined) {
+        this._inputMode = mode
+        if (mode !== 'advance') {
+          this._suppressUIs(entry.hideGroups)
+        }
+        return
+      }
     }
 
-    if (this._currentScene.isWaitingInput) {
-      // dialogBox는 자체 버튼으로만 진행 가능 — novel.next() 차단
-      const stepType = this._currentScene.getCurrentStepType()
-      this._inputMode = stepType === 'dialogBox' ? 'none' : 'dialogue'
-      return
-    }
+    this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'none'
+  }
 
-    this._inputMode = 'none'
+  /**
+   * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
+   */
+  private _suppressUIs(groups?: string[]): void {
+    if (!groups?.length) return
+    for (const entry of this._uiRegistry.values()) {
+      if (entry.uiGroup && groups.includes(entry.uiGroup)) {
+        entry.hide()
+      }
+    }
   }
 
   // ─── 전체화면 ─────────────────────────────────────────────

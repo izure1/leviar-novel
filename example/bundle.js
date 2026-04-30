@@ -754,6 +754,9 @@
       get __bootFn() {
         return _bootFn;
       },
+      get __key() {
+        return _moduleKey;
+      },
       get hooker() {
         return _hooker;
       },
@@ -790,8 +793,8 @@
             ctx.state.set(_moduleKey, { ...data });
           }
           const entry = builder(data, ctx);
-          _onUpdate = (d2) => entry.update?.(d2);
-          entry.update?.(data);
+          _onUpdate = (d2) => entry.onUpdate?.(d2);
+          entry.onUpdate?.(data);
           return entry;
         };
         return module;
@@ -961,21 +964,29 @@
         speakerObj.fadeOut(dur, "easeIn");
         textObj.fadeOut(dur, "easeIn");
       },
-      isTyping: () => _isTyping,
-      completeTyping: () => {
-        if (!_isTyping) return;
-        _isTyping = false;
-        _activeTx?.stop?.();
-        _activeTx = null;
-        textObj.attribute.text = _fullText;
-        textObj.style.opacity = 1;
+      // ─── 입력 역할 선언 ─────────────────────────────────
+      uiGroup: "dialogue",
+      inputSteps: { "dialogue": "advance" },
+      /**
+       * novel.next() 호출 시 타이핑 완성 여부 판단.
+       * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
+       * - 타이핑 완료: true 반환 (진행 가능)
+       */
+      canAdvance: () => {
+        if (_isTyping) {
+          _isTyping = false;
+          _activeTx?.stop?.();
+          _activeTx = null;
+          textObj.attribute.text = _fullText;
+          textObj.style.opacity = 1;
+          return false;
+        }
+        return true;
       },
       /**
        * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
-       * - lines가 바뀐 경우: 텍스트 재렌더
-       * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */
-      update: (d2) => {
+      onUpdate: (d2) => {
         const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_BG;
         const newSpkCfg = d2.speaker ?? DEFAULT_SPEAKER;
         const newTxtCfg = d2.text ?? DEFAULT_TEXT;
@@ -1011,7 +1022,6 @@
   dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
-    const ui = ctx.ui.get("dialogue");
     const charDefs = ctx.renderer.config.characters;
     for (let index = 0; index < lines.length; index++) {
       const speaker = resolveSpeaker(cmd.speaker, charDefs);
@@ -1026,10 +1036,6 @@
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
-      if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
-        ui.completeTyping();
-        yield false;
-      }
     }
     return true;
   });
@@ -1117,7 +1123,15 @@
         bgObj.fadeOut(200, "easeIn");
         _clearButtons();
       },
-      onChoices: (choices, onSelect, layoutOverride) => {
+      // ─── 입력 역할 선언 ─────────────────────────────────
+      inputSteps: { "choice": "block" },
+      hideGroups: ["dialogue"],
+      /** 씬 전환 시 버튼 즉시 제거 */
+      onCleanup: () => {
+        _clearButtons();
+      },
+      // ─── 모듈 내부 전용 ─────────────────────────────────
+      _onChoices: (choices, onSelect, layoutOverride) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
         const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
@@ -1199,17 +1213,16 @@
           _btnObjs.push(btnObj);
         });
       },
-      update: (d2) => {
+      onUpdate: (d2) => {
         Object.assign(cfg, d2);
       }
     };
   });
   choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const entry = ctx.ui.get("choice");
+    const entry = ctx.ui.get(choiceModule.__key);
     if (!entry) {
       console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
-    ctx.ui.get("dialogue")?.hide?.();
     const resolvedChoices = cmd.choices.map((c) => {
       const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
       return { ...c, text: ctx.scene.interpolateText(textStr) };
@@ -1220,7 +1233,7 @@
       (value) => value
     );
     console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
-    entry?.onChoices?.(showData.choices, (i) => {
+    entry?._onChoices?.(showData.choices, (i) => {
       const selectData = choiceModule.hooker.trigger(
         "choice:select",
         { index: i, selected: showData.choices[i] },
@@ -1397,9 +1410,6 @@
     return true;
   });
   var background_default = backgroundModule;
-  function setBackground(ctx, name, fit, duration = 1e3, isVideo = false) {
-    backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx);
-  }
 
   // src/core/motion.ts
   var MOTION_EFFECT_PRESETS = {
@@ -3261,7 +3271,10 @@
       hide: (duration = 200) => {
         _hide(duration);
       },
-      update: (d2) => {
+      // ─── 입력 역할 선언 ────────────────────────────────
+      inputSteps: { "dialogBox": "none" },
+      hideGroups: ["dialogue"],
+      onUpdate: (d2) => {
         if (d2._resolve && d2._buttons.length > 0) {
           _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
         }
@@ -3269,12 +3282,11 @@
     };
   });
   dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
-    const entry = ctx.ui.get("dialogBox");
+    const entry = ctx.ui.get(dialogBoxModule.__key);
     if (!entry) {
       console.warn("[leviar-novel] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.");
       return true;
     }
-    ctx.ui.get("dialogue")?.hide?.();
     const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value);
     const duration = finalCmd.duration ?? 200;
     const persist = finalCmd.buttons.length > 0 ? true : finalCmd.persist ?? false;
@@ -16887,69 +16899,6 @@ ${addLineNumbers(fragment)}`);
       return this._waitingInput;
     }
   };
-  var ExploreScene = class {
-    renderer;
-    callbacks;
-    definition;
-    _clickHandlers = [];
-    _ended = false;
-    constructor(renderer, callbacks, definition) {
-      this.renderer = renderer;
-      this.callbacks = callbacks;
-      this.definition = definition;
-    }
-    start(_preserve = false) {
-      const { background, objects } = this.definition.options;
-      setBackground(
-        { renderer: this.renderer },
-        background,
-        "stretch",
-        1e3
-      );
-      this._spawnObjects(objects);
-    }
-    _spawnObjects(objects) {
-      objects.forEach((objDef) => {
-        const world = this.renderer.world;
-        const img = world.createImage({
-          attribute: {
-            src: objDef.src
-          },
-          style: {
-            width: objDef.width ?? 100,
-            height: objDef.height ?? 100,
-            zIndex: 10
-          },
-          transform: {
-            position: {
-              x: objDef.position.x - this.renderer.width / 2,
-              y: objDef.position.y - this.renderer.height / 2,
-              z: 0
-            }
-          }
-        });
-        const handler = () => {
-          if (this._ended) return;
-          this._ended = true;
-          this.callbacks.loadScene(objDef.next);
-        };
-        img.on("click", handler);
-        this._clickHandlers.push({ obj: img, handler });
-      });
-    }
-    cleanup() {
-      this._clickHandlers.forEach(({ obj, handler }) => {
-        obj.off?.("click", handler);
-        obj.remove?.();
-      });
-      this._clickHandlers = [];
-    }
-    advance() {
-    }
-    get isEnded() {
-      return this._ended;
-    }
-  };
 
   // src/core/Novel.ts
   var Novel = class {
@@ -17114,15 +17063,9 @@ ${addLineNumbers(fragment)}`);
         console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      if (this._currentSceneDef?.kind === "dialogue") {
-        const prevHooks = this._currentSceneDef.hooks;
-        prevHooks?._unregister(this);
-      }
+      this._currentSceneDef?.hooks?._unregister(this);
       const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
-      if (this._currentScene instanceof ExploreScene) {
-        this._currentScene.cleanup();
-      }
-      this._cleanupChoiceUI();
+      this._cleanupUI();
       this._currentScene = null;
       if (!preserve) {
         this._renderer.clear();
@@ -17132,22 +17075,18 @@ ${addLineNumbers(fragment)}`);
         this._uiRegistry.clear();
       }
       const callbacks = this._buildCallbacks();
-      const scene = def.kind === "dialogue" ? new DialogueScene(this._renderer, callbacks, def) : new ExploreScene(this._renderer, callbacks, def);
+      const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
-      if (def.kind === "dialogue") {
-        const newHooks = def.hooks;
-        newHooks?._register(this);
-      }
+      def.hooks?._register(this);
       scene.start(preserve);
       this._syncUIState();
     }
-    /** 씬 전환 시 choice HTML 컨테이너 정리 */
-    _cleanupChoiceUI() {
-      const choiceEntry = this._uiRegistry.get("choices");
-      if (choiceEntry?.__novelRemove) {
-        choiceEntry.__novelRemove();
+    /** 씬 전환 시 모든 UI 엔트리의 onCleanup() 호출 */
+    _cleanupUI() {
+      for (const entry of this._uiRegistry.values()) {
+        entry.onCleanup?.();
       }
     }
     // ─── 스킵 기능 ───────────────────────────────────────────────
@@ -17241,14 +17180,8 @@ ${addLineNumbers(fragment)}`);
         console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      if (this._currentSceneDef?.kind === "dialogue") {
-        const prevHooks = this._currentSceneDef.hooks;
-        prevHooks?._unregister(this);
-      }
-      if (this._currentScene instanceof ExploreScene) {
-        this._currentScene.cleanup();
-      }
-      this._cleanupChoiceUI();
+      this._currentSceneDef?.hooks?._unregister(this);
+      this._cleanupUI();
       this.stopSkip();
       Object.assign(this.vars, resolvedData.globalVars);
       this._stateStore.clear();
@@ -17267,8 +17200,7 @@ ${addLineNumbers(fragment)}`);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "none";
-      const newHooks = def.hooks;
-      newHooks?._register(this);
+      def.hooks?._register(this);
       this._syncUIState();
     }
     /**
@@ -17327,12 +17259,12 @@ ${addLineNumbers(fragment)}`);
       );
       if (!canAdvance) return;
       if (Date.now() < this._inputDisabledUntil) return;
-      if (this._inputMode !== "dialogue") return;
+      if (this._inputMode !== "advance") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
-      const dialogueEntry = this._uiRegistry.get("dialogue");
-      if (dialogueEntry?.isTyping?.()) {
-        dialogueEntry.completeTyping?.();
-        return;
+      for (const entry of this._uiRegistry.values()) {
+        if (!entry.canAdvance) continue;
+        const result = entry.canAdvance();
+        if (!result) return;
       }
       this._currentScene.advance();
       this._syncUIState();
@@ -17350,17 +17282,30 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       if (!(this._currentScene instanceof DialogueScene)) return;
-      const choice = this._currentScene.getCurrentChoice();
-      if (choice) {
-        this._inputMode = "choice";
-        return;
+      const stepType = this._currentScene.getCurrentStepType();
+      for (const entry of this._uiRegistry.values()) {
+        if (!entry.inputSteps) continue;
+        const mode = entry.inputSteps[stepType ?? ""];
+        if (mode !== void 0) {
+          this._inputMode = mode;
+          if (mode !== "advance") {
+            this._suppressUIs(entry.hideGroups);
+          }
+          return;
+        }
       }
-      if (this._currentScene.isWaitingInput) {
-        const stepType = this._currentScene.getCurrentStepType();
-        this._inputMode = stepType === "dialogBox" ? "none" : "dialogue";
-        return;
+      this._inputMode = this._currentScene.isWaitingInput ? "advance" : "none";
+    }
+    /**
+     * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
+     */
+    _suppressUIs(groups) {
+      if (!groups?.length) return;
+      for (const entry of this._uiRegistry.values()) {
+        if (entry.uiGroup && groups.includes(entry.uiGroup)) {
+          entry.hide();
+        }
       }
-      this._inputMode = "none";
     }
     // ─── 전체화면 ─────────────────────────────────────────────
     /** 현재 전체화면 모드인지 확인합니다. */
