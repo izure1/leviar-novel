@@ -966,7 +966,6 @@
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
       uiGroup: "dialogue",
-      inputSteps: { "dialogue": true },
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1124,7 +1123,6 @@
         _clearButtons();
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      inputSteps: { "choice": false },
       hideGroups: ["dialogue"],
       /** 씬 전환 시 버튼 즉시 제거 */
       onCleanup: () => {
@@ -1218,7 +1216,7 @@
       }
     };
   });
-  choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
+  choiceModule.defineCommand(function* (cmd, ctx) {
     const entry = ctx.ui.get(choiceModule.__key);
     if (!entry) {
       console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
@@ -1233,34 +1231,39 @@
       (value) => value
     );
     console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
+    let selected = null;
     entry?._onChoices?.(showData.choices, (i) => {
       const selectData = choiceModule.hooker.trigger(
         "choice:select",
         { index: i, selected: showData.choices[i] },
         (value) => value
       );
-      const selected = selectData.selected;
-      if (!selected) return;
-      if (selected.var) {
-        const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
-        if (vars) {
-          for (const [key, value] of Object.entries(vars)) {
-            ctx.scene.setGlobalVar(key, value);
-          }
+      selected = selectData.selected ?? null;
+      ctx.callbacks.advance();
+    }, showData.layout);
+    while (selected === null) {
+      yield false;
+    }
+    const item = selected;
+    entry?.hide?.();
+    if (item.var) {
+      const vars = resolveVarResolvable(item.var, ctx.scene.getVars());
+      if (vars) {
+        for (const [key, value] of Object.entries(vars)) {
+          ctx.scene.setGlobalVar(key, value);
         }
       }
-      entry.hide?.();
-      if (selected.next) {
-        const nextVal = typeof selected.next === "function" ? selected.next(ctx.scene.getVars()) : selected.next;
-        ctx.scene.loadScene(nextVal);
-      } else if (selected.goto) {
-        const gotoVal = typeof selected.goto === "function" ? selected.goto(ctx.scene.getVars()) : selected.goto;
-        ctx.scene.jumpToLabel(gotoVal);
-      } else {
-        ctx.scene.end();
-      }
-    }, showData.layout);
-    return "handled";
+    }
+    if (item.next) {
+      const nextVal = typeof item.next === "function" ? item.next(ctx.scene.getVars()) : item.next;
+      ctx.scene.loadScene(nextVal);
+    } else if (item.goto) {
+      const gotoVal = typeof item.goto === "function" ? item.goto(ctx.scene.getVars()) : item.goto;
+      ctx.scene.jumpToLabel(gotoVal);
+    } else {
+      ctx.scene.end();
+    }
+    return true;
   });
   var choice_default = choiceModule;
 
@@ -2681,36 +2684,26 @@
   conditionModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  conditionModule.defineCommand(function* (cmd, ctx, state, setState) {
+  conditionModule.defineCommand(function* (cmd, ctx) {
     const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
     if (result) {
       if (cmd.goto) {
         ctx.scene.jumpToLabel(cmd.goto);
-        return "handled";
       } else if (cmd.next) {
-        ctx.scene.end();
         ctx.scene.loadScene(cmd.next);
-        return "handled";
-      } else {
-        return true;
       }
     } else {
       if (cmd.else) {
         if (ctx.scene.hasLabel(cmd.else)) {
           ctx.scene.jumpToLabel(cmd.else);
         } else {
-          ctx.scene.end();
           ctx.scene.loadScene(cmd.else);
         }
-        return "handled";
       } else if (cmd["else-next"]) {
-        ctx.scene.end();
         ctx.scene.loadScene(cmd["else-next"]);
-        return "handled";
-      } else {
-        return true;
       }
     }
+    return true;
   });
   var condition_default = conditionModule;
 
@@ -3272,7 +3265,6 @@
         _hide(duration);
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      inputSteps: { "dialogBox": false },
       hideGroups: ["dialogue"],
       onUpdate: (d2) => {
         if (d2._resolve && d2._buttons.length > 0) {
@@ -16621,7 +16613,10 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (target) => this.callbacks.loadScene(target),
+          loadScene: (target) => {
+            this._ended = true;
+            this.callbacks.loadScene(target);
+          },
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16663,20 +16658,24 @@ ${addLineNumbers(fragment)}`);
       }
       const step = steps[this.cursor];
       const cmd = step;
+      const cursorBefore = this.cursor;
       if (!this._activeGenerator) {
         this._activeGenerator = this._executeCmd(cmd);
       }
       const currentGen = this._activeGenerator;
       const nextVal = currentGen.next();
-      const result = nextVal.value;
-      if (result === "handled") {
+      if (this._ended || this.cursor !== cursorBefore) {
         if (this._activeGenerator === currentGen) {
           this._activeGenerator = null;
         }
-        this.callbacks.syncUIState();
+        if (!this._ended) {
+          this._executeNext();
+        } else {
+          this.callbacks.syncUIState();
+        }
         return;
       }
-      if (result === true || nextVal.done || cmd.skip) {
+      if (nextVal.value === true || nextVal.done || cmd.skip) {
         if (this._activeGenerator === currentGen) {
           this._activeGenerator = null;
         }
@@ -16695,12 +16694,10 @@ ${addLineNumbers(fragment)}`);
         console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`);
         this.cursor++;
         this.textSubIndex = 0;
-        this._executeNext();
         return;
       }
       this.cursor = idx;
       this.textSubIndex = 0;
-      this._executeNext();
     }
     _isFallbackMatch(cmd, rule) {
       if (!cmd || typeof cmd !== "object") return false;
@@ -16768,7 +16765,10 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (target) => this.callbacks.loadScene(target),
+          loadScene: (target) => {
+            this._ended = true;
+            this.callbacks.loadScene(target);
+          },
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16869,14 +16869,17 @@ ${addLineNumbers(fragment)}`);
       const step = steps[this.cursor];
       if (!step) return;
       const cmd = step;
+      const cursorBefore = this.cursor;
       this._activeGenerator = this._executeCmd(cmd);
       const nextVal = this._activeGenerator.next();
-      const result = nextVal.value;
-      if (result === "handled") {
+      if (this._ended || this.cursor !== cursorBefore) {
         this._activeGenerator = null;
-        this._waitingInput = true;
-        this.callbacks.syncUIState();
-      } else if (result === true || nextVal.done || cmd.skip) {
+        if (!this._ended) {
+          this._executeNext();
+        } else {
+          this.callbacks.syncUIState();
+        }
+      } else if (nextVal.value === true || nextVal.done || cmd.skip) {
         this._activeGenerator = null;
         this.cursor++;
         this.textSubIndex = 0;
@@ -17283,16 +17286,11 @@ ${addLineNumbers(fragment)}`);
       }
       if (!(this._currentScene instanceof DialogueScene)) return;
       const stepType = this._currentScene.getCurrentStepType();
-      for (const entry of this._uiRegistry.values()) {
-        if (!entry.inputSteps) continue;
-        const mode = entry.inputSteps[stepType ?? ""];
-        if (mode !== void 0) {
-          this._inputMode = mode ? "advance" : "block";
-          if (!mode) {
-            this._suppressUIs(entry.hideGroups);
-          }
-          return;
-        }
+      const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
+      if (activeEntry) {
+        this._suppressUIs(activeEntry.hideGroups);
+        this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
+        return;
       }
       this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
     }

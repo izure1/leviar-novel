@@ -514,7 +514,6 @@ dialogBoxModule.defineView((data, ctx) => {
     hide: (duration = 200) => { _hide(duration) },
 
     // ─── 입력 역할 선언 ────────────────────────────────
-    inputSteps: { 'dialogBox': false },
     hideGroups: ['dialogue'],
 
     onUpdate: (d: DialogBoxSchema) => {

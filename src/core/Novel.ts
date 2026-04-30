@@ -552,17 +552,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const stepType = this._currentScene.getCurrentStepType()
 
-    // UIRuntimeEntry의 inputSteps 선언을 기반으로 모드 결정
-    for (const entry of this._uiRegistry.values()) {
-      if (!entry.inputSteps) continue
-      const mode = entry.inputSteps[stepType ?? '']
-      if (mode !== undefined) {
-        this._inputMode = mode ? 'advance' : 'block'
-        if (!mode) {
-          this._suppressUIs(entry.hideGroups)
-        }
-        return
-      }
+    // stepType에 해당하는 UI 엔트리 직접 조회 → hideGroups 발동
+    const activeEntry = stepType ? this._uiRegistry.get(stepType) : undefined
+    if (activeEntry) {
+      this._suppressUIs(activeEntry.hideGroups)
+      this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'
+      return
     }
 
     this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'

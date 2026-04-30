@@ -210,7 +210,10 @@ export class DialogueScene {
         getVars: () => this._vars,
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
         setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
-        loadScene: (target: string | { scene: string; preserve: boolean }) => this.callbacks.loadScene(target),
+        loadScene: (target: string | { scene: string; preserve: boolean }) => {
+          this._ended = true
+          this.callbacks.loadScene(target)
+        },
         end: () => {
           this._ended = true
           this.callbacks.syncUIState()
@@ -261,6 +264,7 @@ export class DialogueScene {
 
     const step = steps[this.cursor]
     const cmd = step as DialogueEntry<any, any, any>
+    const cursorBefore = this.cursor
 
     if (!this._activeGenerator) {
       this._activeGenerator = this._executeCmd(cmd)
@@ -268,17 +272,21 @@ export class DialogueScene {
 
     const currentGen = this._activeGenerator
     const nextVal = currentGen.next()
-    const result = nextVal.value
 
-    if (result === 'handled') {
+    // cursor 변화(jumpToLabel) 또는 씬 종료(loadScene/end) 감지
+    if (this._ended || this.cursor !== cursorBefore) {
       if (this._activeGenerator === currentGen) {
         this._activeGenerator = null
       }
-      this.callbacks.syncUIState()
+      if (!this._ended) {
+        this._executeNext()
+      } else {
+        this.callbacks.syncUIState()
+      }
       return
     }
 
-    if (result === true || nextVal.done || cmd.skip) {
+    if (nextVal.value === true || nextVal.done || cmd.skip) {
       if (this._activeGenerator === currentGen) {
         this._activeGenerator = null
       }
@@ -300,12 +308,12 @@ export class DialogueScene {
       console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`)
       this.cursor++
       this.textSubIndex = 0
-      this._executeNext()
+      // cursor 변화를 감지하여 outer _executeNext가 처리
       return
     }
     this.cursor = idx
     this.textSubIndex = 0
-    this._executeNext()
+    // cursor 변화를 감지하여 outer _executeNext가 처리
   }
 
   private _isFallbackMatch(cmd: any, rule: any): boolean {
@@ -373,7 +381,10 @@ export class DialogueScene {
         getVars: () => this._vars,
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
         setLocalVar: (key: string, value: any) => { this.localVars[key] = value },
-        loadScene: (target: string | { scene: string; preserve: boolean }) => this.callbacks.loadScene(target),
+        loadScene: (target: string | { scene: string; preserve: boolean }) => {
+          this._ended = true
+          this.callbacks.loadScene(target)
+        },
         end: () => {
           this._ended = true
           this.callbacks.syncUIState()
@@ -485,17 +496,20 @@ export class DialogueScene {
     if (!step) return
 
     const cmd = step as DialogueEntry<any, any, any>
+    const cursorBefore = this.cursor
 
-    // 재표시 시 커맨드를 다시 실행하여 상태(예: choice 버튼 렌더링 등)를 복원합니다.
     this._activeGenerator = this._executeCmd(cmd)
     const nextVal = this._activeGenerator.next()
-    const result = nextVal.value
 
-    if (result === 'handled') {
+    // cursor 변화(jumpToLabel) 또는 씬 종료(loadScene/end) 감지
+    if (this._ended || this.cursor !== cursorBefore) {
       this._activeGenerator = null
-      this._waitingInput = true
-      this.callbacks.syncUIState()
-    } else if (result === true || nextVal.done || cmd.skip) {
+      if (!this._ended) {
+        this._executeNext()
+      } else {
+        this.callbacks.syncUIState()
+      }
+    } else if (nextVal.value === true || nextVal.done || cmd.skip) {
       this._activeGenerator = null
       this.cursor++
       this.textSubIndex = 0

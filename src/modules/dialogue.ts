@@ -306,7 +306,6 @@ dialogueModule.defineView((data, ctx) => {
 
     // ─── 입력 역할 선언 ─────────────────────────────────
     uiGroup: 'dialogue',
-    inputSteps: { 'dialogue': true },
 
     /**
      * novel.next() 호출 시 타이핑 완성 여부 판단.

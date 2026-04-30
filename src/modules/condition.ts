@@ -31,37 +31,28 @@ const conditionModule = define<ConditionCmd<any, any>>({})
 
 conditionModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
 
-conditionModule.defineCommand(function* (cmd, ctx, state, setState) {
+conditionModule.defineCommand(function* (cmd, ctx) {
   const result = typeof cmd.if === 'function' ? cmd.if(ctx.scene.getVars()) : (cmd.if as unknown as boolean)
 
   if (result) {
     if (cmd.goto) {
       ctx.scene.jumpToLabel(cmd.goto)
-      return 'handled'
     } else if (cmd.next) {
-      ctx.scene.end()
       ctx.scene.loadScene(cmd.next)
-      return 'handled'
-    } else {
-      return true
     }
   } else {
     if (cmd.else) {
       if (ctx.scene.hasLabel(cmd.else)) {
         ctx.scene.jumpToLabel(cmd.else)
       } else {
-        ctx.scene.end()
         ctx.scene.loadScene(cmd.else)
       }
-      return 'handled'
     } else if (cmd['else-next']) {
-      ctx.scene.end()
       ctx.scene.loadScene(cmd['else-next'])
-      return 'handled'
-    } else {
-      return true
     }
   }
+
+  return true
 })
 
 export default conditionModule

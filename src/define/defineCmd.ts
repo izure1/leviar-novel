@@ -104,7 +104,6 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * ## 반환값
  * - `true`: 즉시 완료. 다음 스텝으로 자동 진행
  * - `false` / `void`: 사용자 입력 대기. 입력 시 해당 커맨드가 **다시 실행**됨
- * - `'handled'`: 씬 이동 등으로 인한 즉시 중단
  *
  * @example 단순 완료
  * ```ts

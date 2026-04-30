@@ -195,7 +195,6 @@ choiceModule.defineView((data, ctx) => {
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    inputSteps: { 'choice': false },
     hideGroups: ['dialogue'],
 
     /** 씬 전환 시 버튼 즉시 제거 */
@@ -313,14 +312,12 @@ choiceModule.defineView((data, ctx) => {
   }
 })
 
-choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
+choiceModule.defineCommand(function* (cmd, ctx) {
   const entry = ctx.ui.get(choiceModule.__key!) as any
 
   if (!entry) {
     console.warn('[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.')
   }
-
-  // 대화창 숨김 — suppressRoles를 통해 onSuppress() 이벤트로 자동 처리됨
 
   // 텍스트(resolvable) 평가
   const resolvedChoices: ResolvedChoiceItem[] = cmd.choices.map((c) => {
@@ -337,6 +334,8 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   console.log('[leviar-novel] choiceHandler: opening choices', showData.choices)
 
+  let selected: ResolvedChoiceItem | null = null
+
   entry?._onChoices?.(showData.choices, (i: number) => {
     // 'choice:select' 훅 방출
     const selectData = choiceModule.hooker.trigger(
@@ -344,36 +343,42 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
       { index: i, selected: showData.choices[i] },
       (value) => value
     )
-
-    const selected = selectData.selected
-    if (!selected) return
-
-    // var 설정
-    if (selected.var) {
-      const vars = resolveVarResolvable(selected.var, ctx.scene.getVars())
-      if (vars) {
-        for (const [key, value] of Object.entries(vars)) {
-          ctx.scene.setGlobalVar(key, value)
-        }
-      }
-    }
-
-    // 선택지 숨기기
-    entry.hide?.()
-
-    // 분기
-    if (selected.next) {
-      const nextVal = typeof selected.next === 'function' ? selected.next(ctx.scene.getVars()) : selected.next
-      ctx.scene.loadScene(nextVal)
-    } else if (selected.goto) {
-      const gotoVal = typeof selected.goto === 'function' ? selected.goto(ctx.scene.getVars()) : selected.goto
-      ctx.scene.jumpToLabel(gotoVal)
-    } else {
-      ctx.scene.end()
-    }
+    selected = selectData.selected ?? null
+    ctx.callbacks.advance()
   }, showData.layout)
 
-  return 'handled'
+  // 선택 완료까지 block
+  while (selected === null) {
+    yield false
+  }
+
+  const item = selected as ResolvedChoiceItem
+
+  // 선택지 숨기기
+  entry?.hide?.()
+
+  // var 설정
+  if (item.var) {
+    const vars = resolveVarResolvable(item.var, ctx.scene.getVars())
+    if (vars) {
+      for (const [key, value] of Object.entries(vars)) {
+        ctx.scene.setGlobalVar(key, value)
+      }
+    }
+  }
+
+  // 분기
+  if (item.next) {
+    const nextVal = typeof item.next === 'function' ? item.next(ctx.scene.getVars()) : item.next
+    ctx.scene.loadScene(nextVal)
+  } else if (item.goto) {
+    const gotoVal = typeof item.goto === 'function' ? item.goto(ctx.scene.getVars()) : item.goto
+    ctx.scene.jumpToLabel(gotoVal)
+  } else {
+    ctx.scene.end()
+  }
+
+  return true
 })
 
 export default choiceModule

@@ -76,7 +76,6 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    * ## 반환값 (`CommandResult`)
    * - `true` : 해당 cmd 즉시 완료
    * - `false` / `void` : 해당 cmd가 입력 대기 상태. 사용자 입력 시 해당 cmd 재실행됨
-   * - `'handled'` : 씬 이동 등으로 즉시 중단됨
    *
    * 반환값을 caller가 그대로 `return`하면 해당 cmd의 실행 흐름이 Scene으로 전파됩니다.
    * 무시하고 caller가 별도의 값을 반환해도 됩니다.
@@ -105,6 +104,5 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
  * - `true`: 커맨드 즉시 완료, 대기 없이 다음 스텝 자동 진행
  * - `false` | `void`: 커맨드 실행 후 멈춤, 사용자 입력(클릭/엔터 등) 대기.
  *   입력 시 제너레이터의 next()가 호출됩니다.
- * - `'handled'`: 씬 이동 등으로 인해 엔진의 기본 실행 루프 즉시 중단
  */
-export type CommandResult = boolean | 'handled' | void
+export type CommandResult = boolean | void

@@ -36,13 +36,7 @@ export interface UIRuntimeEntry {
    * @example ['dialogue']
    */
   hideGroups?: string[]
-  /**
-   * step type → 진행 가능 여부 매핑.
-   * - `true` : `novel.next()`로 진행 가능 (`'advance'`)
-   * - `false` : `novel.next()` 차단 (`'block'`)
-   * @example { 'dialogue': true, 'choice': false }
-   */
-  inputSteps?: Record<string, boolean>
+
   /**
    * `novel.next()` 호출 시 진행 가능 여부를 판단합니다.
    * - `true` : 진행 가능
