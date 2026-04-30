@@ -443,7 +443,7 @@ inputModule.defineView((data, ctx) => {
     const _maxW = (panelCfg.maxWidth as number) ?? Infinity
     const _w = (panelCfg.width as number) ?? 420
     const PANEL_W = Math.max(_minW, Math.min(_w, _maxW))
-    
+
     panelObj.style.width = panelCfg.width ?? PANEL_W
     if (panelCfg.minWidth !== undefined) panelObj.style.minWidth = panelCfg.minWidth
     if (panelCfg.maxWidth !== undefined) panelObj.style.maxWidth = panelCfg.maxWidth
@@ -527,11 +527,15 @@ inputModule.defineView((data, ctx) => {
       style: {
         ...inputTxtCfg,
         width: AVAILABLE_W - TEXT_PAD * 2,
+        height: INPUT_H - TEXT_PAD * 2,
         zIndex: 703,
         pointerEvents: false,
         textAlign: 'left',
       },
-      transform: { position: { x: -TEXT_PAD, y: INPUT_H / 2 - INPUT_FS * 1.0, z: 0 } },
+      transform: {
+        position: { x: -AVAILABLE_W / 2 + TEXT_PAD, y: INPUT_H / 2 - TEXT_PAD, z: 0 },
+        pivot: { x: 0, y: 0 },
+      },
     })
     inputBgObj.addChild(_textObj)
     ctx.renderer.track(_textObj)

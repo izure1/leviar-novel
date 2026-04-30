@@ -48,6 +48,6 @@
   },
   "dependencies": {
     "hookall": "^2.2.0",
-    "leviar": "^1.0.7"
+    "leviar": "^1.0.8"
   }
 }

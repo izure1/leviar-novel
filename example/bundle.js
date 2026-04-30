@@ -3604,11 +3604,15 @@
         style: {
           ...inputTxtCfg,
           width: AVAILABLE_W - TEXT_PAD * 2,
+          height: INPUT_H - TEXT_PAD * 2,
           zIndex: 703,
           pointerEvents: false,
           textAlign: "left"
         },
-        transform: { position: { x: -TEXT_PAD, y: INPUT_H / 2 - INPUT_FS * 1, z: 0 } }
+        transform: {
+          position: { x: -AVAILABLE_W / 2 + TEXT_PAD, y: INPUT_H / 2 - TEXT_PAD, z: 0 },
+          pivot: { x: 0, y: 0 }
+        }
       });
       inputBgObj.addChild(_textObj);
       ctx.renderer.track(_textObj);
@@ -15634,9 +15638,9 @@ ${addLineNumbers(fragment)}`);
       const id = obj.attribute.id;
       const rawText = attribute.text ?? "";
       const baseFontSize = style.fontSize ?? 16;
-      const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : null;
-      const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null;
-      const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
+      const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : style.maxWidth != null ? style.maxWidth * TEXT_RENDER_SCALE : null;
+      const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : style.maxHeight != null ? style.maxHeight * TEXT_RENDER_SCALE : null;
+      const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.minWidth ?? ""}|${style.minHeight ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
       let entry = this.textCache.get(id);
       obj.__textureThrottleCount++;
       if (obj.__dirtyTexture) obj.__textureIdleCount++;
@@ -15797,8 +15801,10 @@ ${addLineNumbers(fragment)}`);
         }
         return w;
       });
-      const containerW = maxW ?? Math.max(...measuredWidths, 0);
+      const naturalW = maxW ?? Math.max(...measuredWidths, 0);
+      const containerW = style.minWidth != null ? Math.max(naturalW, style.minWidth * TEXT_RENDER_SCALE) : naturalW;
       const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
+      const clampedH = style.minHeight != null ? Math.max(maxH ?? totalH, style.minHeight * TEXT_RENDER_SCALE) : maxH ?? totalH;
       let maxBorderWidth = 0;
       let maxShadowBlur = shadowBlur;
       let maxShadowOffsetX = Math.abs(shadowOffsetX);
@@ -15813,8 +15819,8 @@ ${addLineNumbers(fragment)}`);
           maxShadowOffsetY = Math.max(maxShadowOffsetY, Math.abs((span.style.textShadowOffsetY ?? style.textShadowOffsetY ?? 0) * TEXT_RENDER_SCALE));
         }
       }
-      const canvasW = Math.ceil(maxW ?? containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2;
-      const canvasH = Math.ceil(maxH ?? totalH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2;
+      const canvasW = Math.ceil(containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2;
+      const canvasH = Math.ceil(clampedH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2;
       canvas.width = canvasW;
       canvas.height = canvasH;
       ctx.clearRect(0, 0, canvasW, canvasH);
@@ -15906,16 +15912,31 @@ ${addLineNumbers(fragment)}`);
           return;
         }
         let drawW, drawH;
-        if (w && !h) {
-          drawW = w;
-          drawH = w * (asset.naturalHeight / asset.naturalWidth);
-        } else if (!w && h) {
-          drawW = h * (asset.naturalWidth / asset.naturalHeight);
-          drawH = h;
+        const reqW = obj.style.width;
+        const reqH = obj.style.height;
+        const natW = asset.naturalWidth;
+        const natH = asset.naturalHeight;
+        if (reqW && !reqH) {
+          drawW = reqW;
+          drawH = reqW * (natH / natW);
+        } else if (!reqW && reqH) {
+          drawH = reqH;
+          drawW = reqH * (natW / natH);
         } else {
-          drawW = w || asset.naturalWidth * perspectiveScale;
-          drawH = h || asset.naturalHeight * perspectiveScale;
+          drawW = reqW || natW;
+          drawH = reqH || natH;
         }
+        const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth);
+        const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight);
+        if (clampedW !== drawW || clampedH !== drawH) {
+          const ratioW = clampedW / drawW;
+          const ratioH = clampedH / drawH;
+          const minRatio = Math.min(ratioW, ratioH);
+          drawW *= minRatio;
+          drawH *= minRatio;
+        }
+        drawW *= perspectiveScale;
+        drawH *= perspectiveScale;
         obj.__renderedSize = {
           w: drawW / perspectiveScale,
           h: drawH / perspectiveScale
@@ -15974,16 +15995,31 @@ ${addLineNumbers(fragment)}`);
         }
       }
       let drawW, drawH;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (asset.videoHeight / asset.videoWidth);
-      } else if (!w && h) {
-        drawW = h * (asset.videoWidth / asset.videoHeight);
-        drawH = h;
+      const reqW = obj.style.width;
+      const reqH = obj.style.height;
+      const natW = asset.videoWidth;
+      const natH = asset.videoHeight;
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (natH / natW);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (natW / natH);
       } else {
-        drawW = w || asset.videoWidth * perspectiveScale;
-        drawH = h || asset.videoHeight * perspectiveScale;
+        drawW = reqW || natW;
+        drawH = reqH || natH;
       }
+      const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth);
+      const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight);
+      if (clampedW !== drawW || clampedH !== drawH) {
+        const ratioW = clampedW / drawW;
+        const ratioH = clampedH / drawH;
+        const minRatio = Math.min(ratioW, ratioH);
+        drawW *= minRatio;
+        drawH *= minRatio;
+      }
+      drawW *= perspectiveScale;
+      drawH *= perspectiveScale;
       obj.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale
@@ -16014,16 +16050,31 @@ ${addLineNumbers(fragment)}`);
       const texture = this._getOrCreateAssetTexture(src, asset);
       if (!clip) {
         let drawW2, drawH2;
-        if (w && !h) {
-          drawW2 = w;
-          drawH2 = w * (asset.naturalHeight / asset.naturalWidth);
-        } else if (!w && h) {
-          drawW2 = h * (asset.naturalWidth / asset.naturalHeight);
-          drawH2 = h;
+        const reqW2 = sprite.style.width;
+        const reqH2 = sprite.style.height;
+        const natW = asset.naturalWidth;
+        const natH = asset.naturalHeight;
+        if (reqW2 && !reqH2) {
+          drawW2 = reqW2;
+          drawH2 = reqW2 * (natH / natW);
+        } else if (!reqW2 && reqH2) {
+          drawH2 = reqH2;
+          drawW2 = reqH2 * (natW / natH);
         } else {
-          drawW2 = w || asset.naturalWidth * perspectiveScale;
-          drawH2 = h || asset.naturalHeight * perspectiveScale;
+          drawW2 = reqW2 || natW;
+          drawH2 = reqH2 || natH;
         }
+        const clampedW2 = clampSize(drawW2, sprite.style.minWidth, sprite.style.maxWidth);
+        const clampedH2 = clampSize(drawH2, sprite.style.minHeight, sprite.style.maxHeight);
+        if (clampedW2 !== drawW2 || clampedH2 !== drawH2) {
+          const ratioW = clampedW2 / drawW2;
+          const ratioH = clampedH2 / drawH2;
+          const minRatio = Math.min(ratioW, ratioH);
+          drawW2 *= minRatio;
+          drawH2 *= minRatio;
+        }
+        drawW2 *= perspectiveScale;
+        drawH2 *= perspectiveScale;
         sprite.__renderedSize = {
           w: drawW2 / perspectiveScale,
           h: drawH2 / perspectiveScale
@@ -16044,16 +16095,29 @@ ${addLineNumbers(fragment)}`);
       const uvOffsetX = col * uvScaleX;
       const uvOffsetY = 1 - (row + 1) * uvScaleY;
       let drawW, drawH;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (frameHeight / frameWidth);
-      } else if (!w && h) {
-        drawW = h * (frameWidth / frameHeight);
-        drawH = h;
+      const reqW = sprite.style.width;
+      const reqH = sprite.style.height;
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (frameHeight / frameWidth);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (frameWidth / frameHeight);
       } else {
-        drawW = w || frameWidth * perspectiveScale;
-        drawH = h || frameHeight * perspectiveScale;
+        drawW = reqW || frameWidth;
+        drawH = reqH || frameHeight;
       }
+      const clampedW = clampSize(drawW, sprite.style.minWidth, sprite.style.maxWidth);
+      const clampedH = clampSize(drawH, sprite.style.minHeight, sprite.style.maxHeight);
+      if (clampedW !== drawW || clampedH !== drawH) {
+        const ratioW = clampedW / drawW;
+        const ratioH = clampedH / drawH;
+        const minRatio = Math.min(ratioW, ratioH);
+        drawW *= minRatio;
+        drawH *= minRatio;
+      }
+      drawW *= perspectiveScale;
+      drawH *= perspectiveScale;
       sprite.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale
