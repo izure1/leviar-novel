@@ -1029,8 +1029,7 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines],
-        ...cmd.layout !== void 0 ? { layout: cmd.layout } : {}
+        _lines: [...lines]
       });
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
@@ -1075,9 +1074,7 @@
   var DEFAULT_LAYOUT2 = {
     gap: 12,
     paddingX: 64,
-    paddingY: 24,
-    buttonMinWidth: 260,
-    buttonMaxWidth: Infinity
+    paddingY: 24
   };
   var choiceModule = define2({
     bg: void 0,
@@ -1129,24 +1126,24 @@
         _clearButtons();
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
-      _onChoices: (choices, onSelect, layoutOverride) => {
+      _onChoices: (choices, onSelect) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
         const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
         const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
         const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE.text;
         const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
-        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {}, ...layoutOverride ?? {} };
+        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
         const paddingY = layoutCfg.paddingY / 2;
-        const resolvedMinW = layoutCfg.buttonMinWidth;
-        const resolvedMaxW = layoutCfg.buttonMaxWidth;
+        const resolvedMinW = defaultBtnStyle.minWidth ?? 260;
+        const resolvedMaxW = defaultBtnStyle.maxWidth ?? Infinity;
         const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
-          const rawW = estimatedTextW + layoutCfg.paddingX;
+          const rawW = defaultBtnStyle.width ?? estimatedTextW + layoutCfg.paddingX;
           const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW));
           const textAvailW = btnW - layoutCfg.paddingX;
           const lineCount = textAvailW > 0 ? Math.ceil(estimatedTextW / textAvailW) : 1;
@@ -1227,7 +1224,7 @@
     });
     const showData = choiceModule.hooker.trigger(
       "choice:show",
-      { choices: resolvedChoices, layout: cmd.layout },
+      { choices: resolvedChoices },
       (value) => value
     );
     console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
@@ -1240,7 +1237,7 @@
       );
       selected = selectData.selected ?? null;
       ctx.callbacks.advance();
-    }, showData.layout);
+    });
     while (selected === null) {
       yield false;
     }
@@ -3092,10 +3089,10 @@
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
     const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel;
-    const INIT_PANEL_W = Math.max(
-      panelCfgInit.minWidth ?? 0,
-      0
-    ) || 480;
+    const _initMinW = panelCfgInit.minWidth ?? 400;
+    const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
+    const _initW = panelCfgInit.width ?? 480;
+    const INIT_PANEL_W = Math.max(_initMinW, Math.min(_initW, _initMaxW));
     const panelObj = ctx.world.createRectangle({
       style: {
         ...panelCfgInit,
@@ -3139,11 +3136,14 @@
       const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle;
       const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle;
       const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel;
-      const PANEL_W = Math.min(
-        panelCfg.maxWidth ?? Infinity,
-        Math.max(panelCfg.minWidth ?? 480, 0)
-      );
-      panelObj.style.width = PANEL_W;
+      const _minW = panelCfg.minWidth ?? 400;
+      const _maxW = panelCfg.maxWidth ?? Infinity;
+      const _w = panelCfg.width ?? 480;
+      const PANEL_W = Math.max(_minW, Math.min(_w, _maxW));
+      panelObj.style.width = panelCfg.width ?? PANEL_W;
+      if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
+      if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
+      if (panelCfg.height !== void 0) panelObj.style.height = panelCfg.height;
       _currentPanelW = PANEL_W;
       const titleFontSize = titleCfgR.fontSize ?? 22;
       const contentFontSize = contentCfgR.fontSize ?? 18;
@@ -3161,10 +3161,10 @@
       const AVAILABLE_W = PANEL_W - PADDING_X * 2;
       const btnWidths = buttons.map((buttonDef) => {
         const estimatedW = buttonDef.text.length * btnFontSize * 0.8;
-        return btnCfg.width ? btnCfg.width : Math.min(
-          btnCfg.maxWidth ?? Infinity,
-          Math.max(btnCfg.minWidth ?? 120, estimatedW + layoutCfg.buttonPaddingX)
-        );
+        const rawW = btnCfg.width ?? estimatedW + layoutCfg.buttonPaddingX;
+        const minW = btnCfg.minWidth ?? 100;
+        const maxW = btnCfg.maxWidth ?? 400;
+        return Math.max(minW, Math.min(rawW, maxW));
       });
       const rows = [];
       let currentRow = { indices: [], totalWidth: 0 };
@@ -3324,6 +3324,485 @@
   });
   var dialogBox_default = dialogBoxModule;
 
+  // src/modules/input.ts
+  var DEFAULT_INPUT = {
+    overlay: { color: "rgba(0,0,0,0.5)" },
+    panel: {
+      color: "rgba(20,20,40,0.92)",
+      borderColor: "rgba(255,255,255,0.25)",
+      borderWidth: 1,
+      borderRadius: "3%",
+      minWidth: 420
+    },
+    labelStyle: {
+      fontSize: 16,
+      color: "rgba(255,255,255,0.6)",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center"
+    },
+    inputTextStyle: {
+      fontSize: 22,
+      color: "#ffffff",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "left",
+      textShadowBlur: 0,
+      textShadowColor: "#000",
+      textShadowOffsetX: 1,
+      textShadowOffsetY: 1
+    },
+    cursorStyle: {
+      color: "rgba(255,255,255,0.85)"
+    },
+    button: {
+      color: "rgba(255,255,255,0.12)",
+      borderColor: "rgba(255,255,255,0.28)",
+      borderWidth: 1,
+      borderRadius: "10%"
+    },
+    buttonHover: {
+      color: "rgba(255,255,255,0.26)",
+      borderColor: "rgba(255,255,255,0.65)"
+    },
+    buttonText: {
+      fontSize: 15,
+      color: "rgba(255,255,255,0.92)",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center",
+      fontWeight: "bold"
+    },
+    buttonTextHover: { color: "#ffffff" }
+  };
+  var DEFAULT_LAYOUT4 = {
+    paddingX: 32,
+    paddingY: 24,
+    labelInputGap: 12,
+    inputButtonGap: 20,
+    buttonGap: 8,
+    buttonPaddingX: 40,
+    buttonPaddingY: 16
+  };
+  var inputModule = define2({
+    overlay: void 0,
+    panel: void 0,
+    labelStyle: void 0,
+    inputTextStyle: void 0,
+    cursorStyle: void 0,
+    button: void 0,
+    buttonHover: void 0,
+    buttonText: void 0,
+    buttonTextHover: void 0,
+    layout: void 0,
+    _value: "",
+    _label: "",
+    _multiline: false,
+    _buttons: [],
+    _resolve: null
+  });
+  inputModule.defineView((data, ctx) => {
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    let _hiddenEl = null;
+    let _blurHandler = null;
+    let _cursorBlink = null;
+    let _cursorVisible = true;
+    let _isActive = false;
+    let _isComposing = false;
+    let _captureKeydownHandler = null;
+    const _createHiddenInput = (multiline) => {
+      const el = document.createElement(multiline ? "textarea" : "input");
+      el.style.cssText = [
+        "position:fixed",
+        "top:-9999px",
+        "left:-9999px",
+        "width:1000px",
+        // 폭이 좁으면 브라우저가 스크롤 연산 중 커서를 0으로 튕겨내는 버그 발생
+        "height:100px",
+        "opacity:0",
+        "z-index:-1",
+        "font-size:24px",
+        // 모바일 브라우저 줌 방지
+        "background:transparent",
+        "color:transparent",
+        "border:none",
+        "outline:none"
+      ].join(";");
+      const container = document.fullscreenElement ?? document.body;
+      container.appendChild(el);
+      const nav = navigator;
+      if (nav.virtualKeyboard) {
+        nav.virtualKeyboard.overlaysContent = true;
+      }
+      return el;
+    };
+    const _destroyHiddenInput = () => {
+      if (_hiddenEl) {
+        _hiddenEl.removeEventListener("input", _onInput);
+        if (_blurHandler) {
+          _hiddenEl.removeEventListener("blur", _blurHandler);
+          _blurHandler = null;
+        }
+        _hiddenEl.parentElement?.removeChild(_hiddenEl);
+        _hiddenEl = null;
+      }
+      if (_captureKeydownHandler) {
+        document.removeEventListener("keydown", _captureKeydownHandler, true);
+        _captureKeydownHandler = null;
+      }
+      if (_cursorBlink !== null) {
+        clearInterval(_cursorBlink);
+        _cursorBlink = null;
+      }
+      _isActive = false;
+    };
+    const overlayCfg = data.overlay ?? DEFAULT_INPUT.overlay;
+    const overlayObj = ctx.world.createRectangle({
+      style: {
+        ...overlayCfg,
+        width: w,
+        height: h,
+        zIndex: 700,
+        opacity: 1,
+        display: "none",
+        pointerEvents: true
+      },
+      transform: { position: toLocal(w / 2, h / 2) }
+    });
+    ctx.world.camera?.addChild(overlayObj);
+    ctx.renderer.track(overlayObj);
+    overlayObj.fadeOut(0).stop();
+    const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel;
+    const _initMinW = panelCfgInit.minWidth ?? 420;
+    const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
+    const _initW = panelCfgInit.width ?? 420;
+    const INIT_PANEL_W = Math.max(_initMinW, Math.min(_initW, _initMaxW));
+    const panelObj = ctx.world.createRectangle({
+      style: {
+        ...panelCfgInit,
+        width: INIT_PANEL_W,
+        zIndex: 701,
+        pointerEvents: true
+      },
+      transform: { position: { x: 0, y: 0, z: 0 } }
+    });
+    overlayObj.addChild(panelObj);
+    ctx.renderer.track(panelObj);
+    panelObj.on("click", () => {
+    });
+    let _dynamicObjs = [];
+    const _clearDynamic = () => {
+      _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
+      _dynamicObjs = [];
+    };
+    let _currentResolve = null;
+    let _textObj = null;
+    const _updateDisplay = () => {
+      if (!_textObj) return;
+      const val = _hiddenEl?.value ?? "";
+      _textObj.attribute.text = val + (_cursorVisible ? "|" : "") || " ";
+    };
+    const _onInput = () => {
+      if (!_hiddenEl) return;
+      if (!_isComposing) {
+        const len = _hiddenEl.value.length;
+        if (_hiddenEl.selectionStart !== len || _hiddenEl.selectionEnd !== len) {
+          _hiddenEl.setSelectionRange(len, len);
+        }
+      }
+      _updateDisplay();
+    };
+    const _onKeydown = (e) => {
+      const ke = e;
+      if (ke.key === "Enter" && !(_hiddenEl?.tagName === "TEXTAREA") && _currentResolve) {
+        e.preventDefault();
+        const val = _hiddenEl?.value ?? "";
+        _currentResolve(val, 0);
+        return;
+      }
+      if (_hiddenEl && !_isComposing) {
+        const len = _hiddenEl.value.length;
+        if (_hiddenEl.selectionStart !== len || _hiddenEl.selectionEnd !== len) {
+          _hiddenEl.setSelectionRange(len, len);
+        }
+      }
+    };
+    const _render = (label, multiline, buttons, resolve, cfg) => {
+      _currentResolve = resolve;
+      _clearDynamic();
+      const layoutCfg = { ...DEFAULT_LAYOUT4, ...cfg.layout ?? {} };
+      const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT.labelStyle;
+      const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT.inputTextStyle;
+      const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT.cursorStyle;
+      const btnCfg = cfg.button ?? DEFAULT_INPUT.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover;
+      const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel;
+      const _minW = panelCfg.minWidth ?? 420;
+      const _maxW = panelCfg.maxWidth ?? Infinity;
+      const _w = panelCfg.width ?? 420;
+      const PANEL_W = Math.max(_minW, Math.min(_w, _maxW));
+      panelObj.style.width = panelCfg.width ?? PANEL_W;
+      if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
+      if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
+      const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg;
+      const AVAILABLE_W = PANEL_W - paddingX * 2;
+      const LABEL_FS = labelCfgR.fontSize ?? 16;
+      const INPUT_FS = inputTxtCfg.fontSize ?? 22;
+      const BTN_FS = btnTxtCfg.fontSize ?? 15;
+      const LABEL_H = label ? LABEL_FS * 1.6 : 0;
+      const INPUT_H = multiline ? INPUT_FS * 1.5 * 4 : INPUT_FS * 1.8;
+      const BTN_H = BTN_FS * 1.2 + buttonPaddingY;
+      const btnWidths = buttons.map((btn) => {
+        const estimated = btn.text.length * BTN_FS * 0.9;
+        return Math.max(100, estimated + buttonPaddingX);
+      });
+      const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? buttonGap : 0), 0);
+      const PANEL_H = paddingY + LABEL_H + (label ? labelInputGap : 0) + INPUT_H + inputButtonGap + BTN_H + paddingY;
+      panelObj.style.height = PANEL_H;
+      let cursorY = PANEL_H / 2 - paddingY;
+      if (label) {
+        cursorY -= LABEL_H / 2;
+        const labelObj = ctx.world.createText({
+          attribute: { text: label },
+          style: { ...labelCfgR, width: AVAILABLE_W, zIndex: 702, pointerEvents: false },
+          transform: { position: { x: 0, y: cursorY, z: 0 } }
+        });
+        panelObj.addChild(labelObj);
+        ctx.renderer.track(labelObj);
+        _dynamicObjs.push(labelObj);
+        cursorY -= LABEL_H / 2 + labelInputGap;
+      }
+      cursorY -= INPUT_H / 2;
+      const inputBgObj = ctx.world.createRectangle({
+        style: {
+          width: AVAILABLE_W,
+          height: INPUT_H,
+          color: "rgba(255,255,255,0.06)",
+          borderColor: "rgba(255,255,255,0.35)",
+          borderWidth: 1,
+          borderRadius: "2%",
+          zIndex: 702,
+          pointerEvents: true
+        },
+        transform: { position: { x: 0, y: cursorY, z: 0 } }
+      });
+      inputBgObj.on("click", () => {
+        if (_hiddenEl && _isActive) {
+          _hiddenEl.focus({ preventScroll: true });
+          const len = _hiddenEl.value.length;
+          _hiddenEl.setSelectionRange(len, len);
+        }
+      });
+      panelObj.addChild(inputBgObj);
+      ctx.renderer.track(inputBgObj);
+      _dynamicObjs.push(inputBgObj);
+      const TEXT_PAD = 10;
+      _textObj = ctx.world.createText({
+        attribute: { text: " " },
+        style: {
+          ...inputTxtCfg,
+          width: AVAILABLE_W - TEXT_PAD * 2,
+          height: INPUT_H - TEXT_PAD * 2,
+          zIndex: 703,
+          pointerEvents: false,
+          textAlign: "left"
+        },
+        transform: {
+          position: { x: -AVAILABLE_W / 2 + TEXT_PAD, y: INPUT_H / 2 - TEXT_PAD, z: 0 },
+          pivot: { x: 0, y: 0 }
+        }
+      });
+      inputBgObj.addChild(_textObj);
+      ctx.renderer.track(_textObj);
+      _dynamicObjs.push(_textObj);
+      cursorY -= INPUT_H / 2 + inputButtonGap;
+      cursorY -= BTN_H / 2;
+      let btnX = -totalBtnW / 2;
+      buttons.forEach((btn, i) => {
+        const bw = btnWidths[i];
+        const btnLocalX = btnX + bw / 2;
+        btnX += bw + buttonGap;
+        const btnStyleDef = {
+          ...btnCfg,
+          ...btn.style ?? {},
+          width: bw,
+          height: BTN_H,
+          zIndex: 703,
+          pointerEvents: true
+        };
+        const btnHoverStyleDef = { ...btnHoverCfg, ...btn.hoverStyle ?? {} };
+        const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: 704, pointerEvents: false };
+        const txtHoverStyleDef = { ...btnTxtHoverCfg, ...btn.textHoverStyle ?? {} };
+        const btnObj = ctx.world.createRectangle({
+          style: btnStyleDef,
+          transform: { position: { x: btnLocalX, y: cursorY, z: 0 } }
+        });
+        const txtObj = ctx.world.createText({
+          attribute: { text: btn.text },
+          style: txtStyleDef,
+          transform: { position: { x: 0, y: 0, z: 0 } }
+        });
+        const normalBtnProps = Object.fromEntries(
+          Object.keys(btnHoverStyleDef).map((key) => [key, btnStyleDef[key]])
+        );
+        const normalTxtProps = Object.fromEntries(
+          Object.keys(txtHoverStyleDef).map((key) => [key, txtStyleDef[key]])
+        );
+        btnObj.on("mouseover", () => {
+          btnObj.animate({ style: btnHoverStyleDef }, 150);
+          txtObj.animate({ style: txtHoverStyleDef }, 150);
+        });
+        btnObj.on("mouseout", () => {
+          btnObj.animate({ style: normalBtnProps }, 150);
+          txtObj.animate({ style: normalTxtProps }, 150);
+        });
+        btnObj.on("click", () => {
+          if (_currentResolve && _hiddenEl) {
+            _currentResolve(_hiddenEl.value, i);
+          }
+        });
+        btnObj.addChild(txtObj);
+        panelObj.addChild(btnObj);
+        ctx.renderer.track(btnObj);
+        ctx.renderer.track(txtObj);
+        _dynamicObjs.push(btnObj);
+      });
+      _destroyHiddenInput();
+      _hiddenEl = _createHiddenInput(multiline);
+      _hiddenEl.value = "";
+      _hiddenEl.addEventListener("input", _onInput);
+      _hiddenEl.addEventListener("compositionstart", () => {
+        _isComposing = true;
+      });
+      _hiddenEl.addEventListener("compositionend", () => {
+        _isComposing = false;
+      });
+      _hiddenEl.addEventListener("focus", () => {
+        if (_hiddenEl && !_isComposing) {
+          const len = _hiddenEl.value.length;
+          _hiddenEl.setSelectionRange(len, len);
+          setTimeout(() => {
+            if (_hiddenEl && !_isComposing) {
+              const len2 = _hiddenEl.value.length;
+              _hiddenEl.setSelectionRange(len2, len2);
+            }
+          }, 10);
+        }
+      });
+      _isActive = true;
+      _captureKeydownHandler = (e) => {
+        if (_isActive && document.activeElement === _hiddenEl) {
+          _onKeydown(e);
+          e.stopPropagation();
+        }
+      };
+      document.addEventListener("keydown", _captureKeydownHandler, true);
+      _blurHandler = () => {
+        if (!_isActive || !_hiddenEl) return;
+        setTimeout(() => {
+          if (!_isActive || !_hiddenEl) return;
+          if (document.activeElement !== _hiddenEl) {
+            _hiddenEl.focus({ preventScroll: true });
+          }
+        }, 50);
+      };
+      _hiddenEl.addEventListener("blur", _blurHandler);
+      _cursorVisible = true;
+      _cursorBlink = setInterval(() => {
+        _cursorVisible = !_cursorVisible;
+        _updateDisplay();
+      }, 500);
+      _updateDisplay();
+      _hiddenEl.focus({ preventScroll: true });
+      setTimeout(() => {
+        if (_isActive && _hiddenEl && document.activeElement !== _hiddenEl) {
+          _hiddenEl.focus({ preventScroll: true });
+        }
+      }, 50);
+      overlayObj.fadeIn(200, "easeOut");
+    };
+    const _hide = (duration = 200) => {
+      _currentResolve = null;
+      _destroyHiddenInput();
+      _textObj = null;
+      overlayObj.fadeOut(duration, "easeIn");
+    };
+    return {
+      show: (dur = 200) => {
+        overlayObj.fadeIn(dur, "easeOut");
+      },
+      hide: (dur = 200) => {
+        _hide(dur);
+      },
+      hideGroups: ["dialogue"],
+      onCleanup: () => {
+        _destroyHiddenInput();
+        _clearDynamic();
+      },
+      onUpdate: (d2) => {
+        if (!d2._resolve || d2._buttons.length === 0) return;
+        if (_hiddenEl) {
+          _currentResolve = d2._resolve;
+        } else {
+          _render(d2._label, d2._multiline, d2._buttons, d2._resolve, d2);
+        }
+      },
+      // ─── 모듈 내부 전용 ─────────────────────────────────
+      _render,
+      _hide
+    };
+  });
+  inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
+    const entry = ctx.ui.get(inputModule.__key);
+    if (!entry) {
+      console.warn("[leviar-novel] input UI entry not found. Ensure it is defined in novel.config.ts modules.");
+      return true;
+    }
+    const openData = inputModule.hooker.trigger(
+      "input:open",
+      { label: cmd.label ?? "", multiline: cmd.multiline ?? false },
+      (v2) => v2
+    );
+    const buttons = cmd.buttons?.length ? cmd.buttons : [{ text: "\uD655\uC778" }];
+    let _resolved = false;
+    const resolve = (value, buttonIndex) => {
+      if (_resolved) return;
+      _resolved = true;
+      entry._hide?.(200);
+      const isCancelled = buttons[buttonIndex]?.cancel === true;
+      const submitData = inputModule.hooker.trigger(
+        "input:submit",
+        { varName: cmd.to, text: value, buttonIndex, cancelled: isCancelled },
+        (v2) => v2
+      );
+      if (!submitData.cancelled) {
+        const finalText = submitData.text;
+        const finalVarName = submitData.varName;
+        if (finalVarName.startsWith("_")) {
+          ctx.scene.setLocalVar(finalVarName, finalText);
+        } else {
+          ctx.scene.setGlobalVar(finalVarName, finalText);
+        }
+      }
+      ctx.callbacks.advance();
+    };
+    setState({
+      _label: openData.label,
+      _multiline: openData.multiline,
+      _buttons: buttons,
+      _resolve: resolve,
+      _value: ""
+    });
+    while (!_resolved) {
+      yield false;
+    }
+    setState({ _resolve: null, _buttons: [], _value: "", _label: "" });
+    return true;
+  });
+  var input_default = inputModule;
+
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
@@ -3350,7 +3829,8 @@
     "ui": ui_default,
     "control": control_default,
     "audio": audio_default,
-    "dialogBox": dialogBox_default
+    "dialogBox": dialogBox_default,
+    "input": input_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -11900,6 +12380,10 @@ ${addLineNumbers(fragment)}`);
     letterSpacing: ["texture", "physics"],
     width: ["texture", "physics"],
     height: ["texture", "physics"],
+    minWidth: ["texture", "physics"],
+    maxWidth: ["texture", "physics"],
+    minHeight: ["texture", "physics"],
+    maxHeight: ["texture", "physics"],
     borderWidth: ["texture", "physics"],
     // 물리 바디만 재계산
     margin: ["physics"]
@@ -11944,6 +12428,10 @@ ${addLineNumbers(fragment)}`);
       opacity: partial?.opacity ?? 1,
       width: partial?.width,
       height: partial?.height,
+      minWidth: partial?.minWidth,
+      maxWidth: partial?.maxWidth,
+      minHeight: partial?.minHeight,
+      maxHeight: partial?.maxHeight,
       blur: partial?.blur,
       borderColor: partial?.borderColor,
       borderWidth: partial?.borderWidth,
@@ -14123,6 +14611,12 @@ ${addLineNumbers(fragment)}`);
   var AXIS_X = new Vec3(1, 0, 0);
   var AXIS_Y = new Vec3(0, 1, 0);
   var AXIS_Z = new Vec3(0, 0, 1);
+  function clampSize(value, min, max) {
+    let result = value;
+    if (min !== void 0) result = Math.max(result, min);
+    if (max !== void 0) result = Math.min(result, max);
+    return result;
+  }
   function createQuadGeometry(gl) {
     return new Geometry(gl, {
       position: {
@@ -14664,8 +15158,10 @@ ${addLineNumbers(fragment)}`);
     // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
     _drawObject(obj, assets, timestamp) {
       const { style, transform } = obj;
-      const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
-      const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const rawW = obj.__renderedSize?.w ?? style.width ?? 0;
+      const rawH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const baseW = clampSize(rawW, style.minWidth, style.maxWidth);
+      const baseH = clampSize(rawH, style.minHeight, style.maxHeight);
       const w = baseW;
       const h = baseH;
       this._activeObj = obj;
@@ -15148,9 +15644,9 @@ ${addLineNumbers(fragment)}`);
       const id = obj.attribute.id;
       const rawText = attribute.text ?? "";
       const baseFontSize = style.fontSize ?? 16;
-      const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : null;
-      const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null;
-      const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
+      const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : style.maxWidth != null ? style.maxWidth * TEXT_RENDER_SCALE : null;
+      const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : style.maxHeight != null ? style.maxHeight * TEXT_RENDER_SCALE : null;
+      const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.minWidth ?? ""}|${style.minHeight ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
       let entry = this.textCache.get(id);
       obj.__textureThrottleCount++;
       if (obj.__dirtyTexture) obj.__textureIdleCount++;
@@ -15311,8 +15807,10 @@ ${addLineNumbers(fragment)}`);
         }
         return w;
       });
-      const containerW = maxW ?? Math.max(...measuredWidths, 0);
+      const naturalW = maxW ?? Math.max(...measuredWidths, 0);
+      const containerW = style.minWidth != null ? Math.max(naturalW, style.minWidth * TEXT_RENDER_SCALE) : naturalW;
       const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
+      const clampedH = style.minHeight != null ? Math.max(maxH ?? totalH, style.minHeight * TEXT_RENDER_SCALE) : maxH ?? totalH;
       let maxBorderWidth = 0;
       let maxShadowBlur = shadowBlur;
       let maxShadowOffsetX = Math.abs(shadowOffsetX);
@@ -15327,8 +15825,8 @@ ${addLineNumbers(fragment)}`);
           maxShadowOffsetY = Math.max(maxShadowOffsetY, Math.abs((span.style.textShadowOffsetY ?? style.textShadowOffsetY ?? 0) * TEXT_RENDER_SCALE));
         }
       }
-      const canvasW = Math.ceil(maxW ?? containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2;
-      const canvasH = Math.ceil(maxH ?? totalH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2;
+      const canvasW = Math.ceil(containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2;
+      const canvasH = Math.ceil(clampedH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2;
       canvas.width = canvasW;
       canvas.height = canvasH;
       ctx.clearRect(0, 0, canvasW, canvasH);
@@ -15420,16 +15918,31 @@ ${addLineNumbers(fragment)}`);
           return;
         }
         let drawW, drawH;
-        if (w && !h) {
-          drawW = w;
-          drawH = w * (asset.naturalHeight / asset.naturalWidth);
-        } else if (!w && h) {
-          drawW = h * (asset.naturalWidth / asset.naturalHeight);
-          drawH = h;
+        const reqW = obj.style.width;
+        const reqH = obj.style.height;
+        const natW = asset.naturalWidth;
+        const natH = asset.naturalHeight;
+        if (reqW && !reqH) {
+          drawW = reqW;
+          drawH = reqW * (natH / natW);
+        } else if (!reqW && reqH) {
+          drawH = reqH;
+          drawW = reqH * (natW / natH);
         } else {
-          drawW = w || asset.naturalWidth * perspectiveScale;
-          drawH = h || asset.naturalHeight * perspectiveScale;
+          drawW = reqW || natW;
+          drawH = reqH || natH;
         }
+        const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth);
+        const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight);
+        if (clampedW !== drawW || clampedH !== drawH) {
+          const ratioW = clampedW / drawW;
+          const ratioH = clampedH / drawH;
+          const minRatio = Math.min(ratioW, ratioH);
+          drawW *= minRatio;
+          drawH *= minRatio;
+        }
+        drawW *= perspectiveScale;
+        drawH *= perspectiveScale;
         obj.__renderedSize = {
           w: drawW / perspectiveScale,
           h: drawH / perspectiveScale
@@ -15488,16 +16001,31 @@ ${addLineNumbers(fragment)}`);
         }
       }
       let drawW, drawH;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (asset.videoHeight / asset.videoWidth);
-      } else if (!w && h) {
-        drawW = h * (asset.videoWidth / asset.videoHeight);
-        drawH = h;
+      const reqW = obj.style.width;
+      const reqH = obj.style.height;
+      const natW = asset.videoWidth;
+      const natH = asset.videoHeight;
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (natH / natW);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (natW / natH);
       } else {
-        drawW = w || asset.videoWidth * perspectiveScale;
-        drawH = h || asset.videoHeight * perspectiveScale;
+        drawW = reqW || natW;
+        drawH = reqH || natH;
       }
+      const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth);
+      const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight);
+      if (clampedW !== drawW || clampedH !== drawH) {
+        const ratioW = clampedW / drawW;
+        const ratioH = clampedH / drawH;
+        const minRatio = Math.min(ratioW, ratioH);
+        drawW *= minRatio;
+        drawH *= minRatio;
+      }
+      drawW *= perspectiveScale;
+      drawH *= perspectiveScale;
       obj.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale
@@ -15528,16 +16056,31 @@ ${addLineNumbers(fragment)}`);
       const texture = this._getOrCreateAssetTexture(src, asset);
       if (!clip) {
         let drawW2, drawH2;
-        if (w && !h) {
-          drawW2 = w;
-          drawH2 = w * (asset.naturalHeight / asset.naturalWidth);
-        } else if (!w && h) {
-          drawW2 = h * (asset.naturalWidth / asset.naturalHeight);
-          drawH2 = h;
+        const reqW2 = sprite.style.width;
+        const reqH2 = sprite.style.height;
+        const natW = asset.naturalWidth;
+        const natH = asset.naturalHeight;
+        if (reqW2 && !reqH2) {
+          drawW2 = reqW2;
+          drawH2 = reqW2 * (natH / natW);
+        } else if (!reqW2 && reqH2) {
+          drawH2 = reqH2;
+          drawW2 = reqH2 * (natW / natH);
         } else {
-          drawW2 = w || asset.naturalWidth * perspectiveScale;
-          drawH2 = h || asset.naturalHeight * perspectiveScale;
+          drawW2 = reqW2 || natW;
+          drawH2 = reqH2 || natH;
         }
+        const clampedW2 = clampSize(drawW2, sprite.style.minWidth, sprite.style.maxWidth);
+        const clampedH2 = clampSize(drawH2, sprite.style.minHeight, sprite.style.maxHeight);
+        if (clampedW2 !== drawW2 || clampedH2 !== drawH2) {
+          const ratioW = clampedW2 / drawW2;
+          const ratioH = clampedH2 / drawH2;
+          const minRatio = Math.min(ratioW, ratioH);
+          drawW2 *= minRatio;
+          drawH2 *= minRatio;
+        }
+        drawW2 *= perspectiveScale;
+        drawH2 *= perspectiveScale;
         sprite.__renderedSize = {
           w: drawW2 / perspectiveScale,
           h: drawH2 / perspectiveScale
@@ -15558,16 +16101,29 @@ ${addLineNumbers(fragment)}`);
       const uvOffsetX = col * uvScaleX;
       const uvOffsetY = 1 - (row + 1) * uvScaleY;
       let drawW, drawH;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (frameHeight / frameWidth);
-      } else if (!w && h) {
-        drawW = h * (frameWidth / frameHeight);
-        drawH = h;
+      const reqW = sprite.style.width;
+      const reqH = sprite.style.height;
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (frameHeight / frameWidth);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (frameWidth / frameHeight);
       } else {
-        drawW = w || frameWidth * perspectiveScale;
-        drawH = h || frameHeight * perspectiveScale;
+        drawW = reqW || frameWidth;
+        drawH = reqH || frameHeight;
       }
+      const clampedW = clampSize(drawW, sprite.style.minWidth, sprite.style.maxWidth);
+      const clampedH = clampSize(drawH, sprite.style.minHeight, sprite.style.maxHeight);
+      if (clampedW !== drawW || clampedH !== drawH) {
+        const ratioW = clampedW / drawW;
+        const ratioH = clampedH / drawH;
+        const minRatio = Math.min(ratioW, ratioH);
+        drawW *= minRatio;
+        drawH *= minRatio;
+      }
+      drawW *= perspectiveScale;
+      drawH *= perspectiveScale;
       sprite.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale
@@ -15758,6 +16314,12 @@ ${addLineNumbers(fragment)}`);
   var AXIS_X2 = new Vec3(1, 0, 0);
   var AXIS_Y2 = new Vec3(0, 1, 0);
   var AXIS_Z2 = new Vec3(0, 0, 1);
+  function clampSize2(value, min, max) {
+    let result = value;
+    if (min !== void 0) result = Math.max(result, min);
+    if (max !== void 0) result = Math.min(result, max);
+    return result;
+  }
   function wrapMouseEvent(e) {
     const wrapped = e;
     if (wrapped._propagationStopped !== void 0) return wrapped;
@@ -15958,8 +16520,10 @@ ${addLineNumbers(fragment)}`);
         const perspectiveScale = data.dz === 0 ? 1 : focalLength / data.dz;
         const screenX = data.dx * perspectiveScale;
         const screenY = data.dy * perspectiveScale;
-        const baseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
-        const baseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
+        const rawBaseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
+        const rawBaseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
+        const baseW = clampSize2(rawBaseW, data.obj.style.minWidth, data.obj.style.maxWidth);
+        const baseH = clampSize2(rawBaseH, data.obj.style.minHeight, data.obj.style.maxHeight);
         const w = baseW * perspectiveScale * Math.abs(data.obj.transform.scale.x);
         const h = baseH * perspectiveScale * Math.abs(data.obj.transform.scale.y);
         const safeRadius = w + h;
@@ -15976,8 +16540,10 @@ ${addLineNumbers(fragment)}`);
         const perspectiveScale = dz === 0 ? 1 : focalLength / dz;
         const screenX = dx * perspectiveScale;
         const screenY = dy * perspectiveScale;
-        const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
-        const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
+        const rawBaseW = obj.__renderedSize?.w ?? style.width ?? 0;
+        const rawBaseH = obj.__renderedSize?.h ?? style.height ?? 0;
+        const baseW = clampSize2(rawBaseW, style.minWidth, style.maxWidth);
+        const baseH = clampSize2(rawBaseH, style.minHeight, style.maxHeight);
         const w = baseW * perspectiveScale * transform.scale.x;
         const h = baseH * perspectiveScale * transform.scale.y;
         if (w <= 0 || h <= 0) continue;
@@ -16229,11 +16795,11 @@ ${addLineNumbers(fragment)}`);
       if (!obj.attribute.physics) return;
       this.physics.addBody(obj, w ?? 32, h ?? 32);
       const resizeBody = () => {
-        const sw = (obj.style.width ?? w ?? 32) * obj.transform.scale.x;
-        const sh = (obj.style.height ?? h ?? 32) * obj.transform.scale.y;
+        const sw = clampSize2(obj.style.width ?? w ?? 32, obj.style.minWidth, obj.style.maxWidth) * obj.transform.scale.x;
+        const sh = clampSize2(obj.style.height ?? h ?? 32, obj.style.minHeight, obj.style.maxHeight) * obj.transform.scale.y;
         this.physics.updateBodySize(obj, sw, sh);
       };
-      const CSS_RESIZE_KEYS = /* @__PURE__ */ new Set(["width", "height", "borderWidth", "margin"]);
+      const CSS_RESIZE_KEYS = /* @__PURE__ */ new Set(["width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight", "borderWidth", "margin"]);
       obj.on("cssmodified", (key) => {
         if (CSS_RESIZE_KEYS.has(key)) resizeBody();
       });
@@ -16942,6 +17508,8 @@ ${addLineNumbers(fragment)}`);
     _isSkipping = false;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
+    /** fullscreenchange 핸들러 참조 (정리용) */
+    _onFullscreenChange;
     constructor(config, option) {
       this._config = config;
       const canvas = option.canvas;
@@ -16963,6 +17531,8 @@ ${addLineNumbers(fragment)}`);
         scene.name = name;
         this._scenes.set(name, scene);
       }
+      this._onFullscreenChange = () => this._handleFullscreenChange();
+      document.addEventListener("fullscreenchange", this._onFullscreenChange);
     }
     /**
      * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
@@ -17308,12 +17878,17 @@ ${addLineNumbers(fragment)}`);
     // ─── 전체화면 ─────────────────────────────────────────────
     /** 현재 전체화면 모드인지 확인합니다. */
     get isFullscreen() {
-      return document.fullscreenElement === this._option.canvas;
+      const el = this._option.canvas;
+      return document.fullscreenElement === el || document.fullscreenElement === el.parentElement;
     }
-    /** 전체화면 모드로 전환합니다. */
+    /** 전체화면 모드로 전환합니다.
+     * canvas.parentElement를 거의 요소로 사용하여
+     * 자식 DOM 요소(hidden input 등)이 포커스를 받을 수 있도록 합니다.
+     */
     async requestFullscreen() {
       if (!this.isFullscreen) {
-        await this._option.canvas.requestFullscreen();
+        const target = this._option.canvas.parentElement ?? this._option.canvas;
+        await target.requestFullscreen();
       }
     }
     /** 전체화면 모드를 해제합니다. */
@@ -17328,6 +17903,50 @@ ${addLineNumbers(fragment)}`);
         await this.exitFullscreen();
       } else {
         await this.requestFullscreen();
+      }
+    }
+    /**
+     * fullscreenchange 이벤트 핸들러.
+     * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
+     * 부모 요소를 중앙 정렬 flex 컨테이너로 설정합니다.
+     * 전체화면 해제 시 원래 스타일로 복원합니다.
+     */
+    _handleFullscreenChange() {
+      const canvas = this._option.canvas;
+      const parentEl = canvas.parentElement;
+      if (this.isFullscreen) {
+        const sw = screen.width;
+        const sh = screen.height;
+        const ratio = canvas.width / canvas.height;
+        let dispW, dispH;
+        if (sw / sh > ratio) {
+          dispH = sh;
+          dispW = dispH * ratio;
+        } else {
+          dispW = sw;
+          dispH = dispW / ratio;
+        }
+        canvas.style.width = `${dispW}px`;
+        canvas.style.height = `${dispH}px`;
+        if (parentEl) {
+          parentEl.style.display = "flex";
+          parentEl.style.alignItems = "center";
+          parentEl.style.justifyContent = "center";
+          parentEl.style.backgroundColor = "#000";
+          parentEl.style.width = "100%";
+          parentEl.style.height = "100%";
+        }
+      } else {
+        canvas.style.width = "";
+        canvas.style.height = "";
+        if (parentEl) {
+          parentEl.style.display = "";
+          parentEl.style.alignItems = "";
+          parentEl.style.justifyContent = "";
+          parentEl.style.backgroundColor = "";
+          parentEl.style.width = "";
+          parentEl.style.height = "";
+        }
       }
     }
     // ─── rebuild용 SceneContext stub ────────────────────────────
@@ -17460,7 +18079,8 @@ ${addLineNumbers(fragment)}`);
       likeability: 0,
       metHeroine: false,
       endingReached: false,
-      useHeroineVoice: true
+      useHeroineVoice: true,
+      username: ""
     },
     modules: {
       "test-cmd": testModule,
@@ -17552,11 +18172,9 @@ ${addLineNumbers(fragment)}`);
       }
     },
     "choice": {
-      layout: {
-        buttonMinWidth: 600,
-        buttonMaxWidth: 600
-      },
       button: {
+        minWidth: 600,
+        maxWidth: 600,
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
@@ -17607,6 +18225,16 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
+    {
+      type: "input",
+      to: "username",
+      label: "\uB2F9\uC2E0\uC758 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694",
+      multiline: false,
+      buttons: [
+        { text: "\uC800\uC7A5" },
+        { text: "\uCDE8\uC18C", cancel: true }
+      ]
+    },
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -17652,7 +18280,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: '\uB108, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?'
+      text: '{{username}}, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?'
     },
     {
       type: "dialogue",

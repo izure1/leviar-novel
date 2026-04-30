@@ -32,11 +32,9 @@ export const commonInitial = defineInitial(config, {
     },
   },
   'choice': {
-    layout: {
-      buttonMinWidth: 600,
-      buttonMaxWidth: 600,
-    },
     button: {
+      minWidth: 600,
+      maxWidth: 600,
       color: undefined,
       borderWidth: undefined,
       borderColor: undefined,

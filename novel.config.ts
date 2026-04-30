@@ -40,6 +40,7 @@ export default defineNovelConfig({
     metHeroine: false,
     endingReached: false,
     useHeroineVoice: true,
+    username: '',
   },
   modules: {
     'test-cmd': testModule,
