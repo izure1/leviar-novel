@@ -141,6 +141,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   private _isSkipping: boolean = false
   /** 사용자 입력 무시 만료 시간 (ms) */
   private _inputDisabledUntil: number = 0
+  /** fullscreenchange 핸들러 참조 (정리용) */
+  private readonly _onFullscreenChange: () => void
 
   constructor(
     config: TConfig,
@@ -175,6 +177,10 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       scene.name = name
       this._scenes.set(name, scene)
     }
+
+    // 전체화면 전환 시 canvas 스케일 조정
+    this._onFullscreenChange = () => this._handleFullscreenChange()
+    document.addEventListener('fullscreenchange', this._onFullscreenChange)
   }
 
   /**
@@ -579,13 +585,21 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   /** 현재 전체화면 모드인지 확인합니다. */
   get isFullscreen(): boolean {
-    return document.fullscreenElement === this._option.canvas
+    const el = this._option.canvas
+    return (
+      document.fullscreenElement === el ||
+      document.fullscreenElement === el.parentElement
+    )
   }
 
-  /** 전체화면 모드로 전환합니다. */
+  /** 전체화면 모드로 전환합니다.
+   * canvas.parentElement를 거의 요소로 사용하여
+   * 자식 DOM 요소(hidden input 등)이 포커스를 받을 수 있도록 합니다.
+   */
   async requestFullscreen(): Promise<void> {
     if (!this.isFullscreen) {
-      await this._option.canvas.requestFullscreen()
+      const target = this._option.canvas.parentElement ?? this._option.canvas
+      await target.requestFullscreen()
     }
   }
 
@@ -602,6 +616,56 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       await this.exitFullscreen()
     } else {
       await this.requestFullscreen()
+    }
+  }
+
+  /**
+   * fullscreenchange 이벤트 핸들러.
+   * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
+   * 부모 요소를 중앙 정렬 flex 컨테이너로 설정합니다.
+   * 전체화면 해제 시 원래 스타일로 복원합니다.
+   */
+  private _handleFullscreenChange(): void {
+    const canvas = this._option.canvas
+    const parentEl = canvas.parentElement
+
+    if (this.isFullscreen) {
+      // screen 기준으로 canvas를 letter-box 방식으로 스케일
+      const sw = screen.width
+      const sh = screen.height
+      const ratio = canvas.width / canvas.height
+      let dispW: number, dispH: number
+      if (sw / sh > ratio) {
+        // 화면이 더 넓음 → 높이 기준
+        dispH = sh
+        dispW = dispH * ratio
+      } else {
+        // 화면이 더 좁음 → 너비 기준
+        dispW = sw
+        dispH = dispW / ratio
+      }
+      canvas.style.width = `${dispW}px`
+      canvas.style.height = `${dispH}px`
+      if (parentEl) {
+        parentEl.style.display = 'flex'
+        parentEl.style.alignItems = 'center'
+        parentEl.style.justifyContent = 'center'
+        parentEl.style.backgroundColor = '#000'
+        parentEl.style.width = '100%'
+        parentEl.style.height = '100%'
+      }
+    } else {
+      // 전체화면 해제 → 스타일 복원
+      canvas.style.width = ''
+      canvas.style.height = ''
+      if (parentEl) {
+        parentEl.style.display = ''
+        parentEl.style.alignItems = ''
+        parentEl.style.justifyContent = ''
+        parentEl.style.backgroundColor = ''
+        parentEl.style.width = ''
+        parentEl.style.height = ''
+      }
     }
   }
 

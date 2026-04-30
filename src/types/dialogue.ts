@@ -32,13 +32,14 @@ import type { UICmd } from '../modules/ui'
 import type { ControlCmd } from '../modules/control'
 import type { AudioCmd } from '../modules/audio'
 import type { DialogBoxCmd } from '../modules/dialogBox'
+import type { InputCmd } from '../modules/input'
 
 // 재수출
 export type {
   DialogueCmd, ChoiceCmd, ConditionCmd, VarCmd, LabelCmd, BackgroundCmd,
   MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
-  UICmd, ControlCmd, AudioCmd, DialogBoxCmd
+  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd
 }
 
 export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
@@ -81,6 +82,7 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<ControlCmd, 'control', TVars, TLocalVars>
   | _WithType<AudioCmd<TConfig>, 'audio', TVars, TLocalVars>
   | _WithType<DialogBoxCmd<TConfig>, 'dialogBox', TVars, TLocalVars>
+  | _WithType<InputCmd<TConfig, TLocalVars>, 'input', TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 
 type _WithSkip<T> = T extends any ? T & {

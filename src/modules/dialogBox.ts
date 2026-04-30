@@ -183,11 +183,6 @@ export interface DialogBoxCmd<TConfig = any, TLocalVars = Record<never, never>> 
    */
   persist?: boolean
   /**
-   * 내부 간격 레이아웃. 미지정 시 schema의 layout 또는 기본값 사용.
-   * 커맨드 단위로 일시 재정의할 때 유용합니다.
-   */
-  layout?: DialogBoxLayout
-  /**
    * 버튼 목록. 1개 이상 필수.
    * - `text`: 버튼 레이블
    * - `var`: 버튼 클릭 시 설정할 전역 변수를 반환하는 콜백 (선택)

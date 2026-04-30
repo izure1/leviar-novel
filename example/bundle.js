@@ -1029,8 +1029,7 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines],
-        ...cmd.layout !== void 0 ? { layout: cmd.layout } : {}
+        _lines: [...lines]
       });
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
@@ -1129,14 +1128,14 @@
         _clearButtons();
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
-      _onChoices: (choices, onSelect, layoutOverride) => {
+      _onChoices: (choices, onSelect) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
         const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
         const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
         const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE.text;
         const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
-        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {}, ...layoutOverride ?? {} };
+        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
@@ -1227,7 +1226,7 @@
     });
     const showData = choiceModule.hooker.trigger(
       "choice:show",
-      { choices: resolvedChoices, layout: cmd.layout },
+      { choices: resolvedChoices },
       (value) => value
     );
     console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
@@ -1240,7 +1239,7 @@
       );
       selected = selectData.selected ?? null;
       ctx.callbacks.advance();
-    }, showData.layout);
+    });
     while (selected === null) {
       yield false;
     }
@@ -3324,6 +3323,468 @@
   });
   var dialogBox_default = dialogBoxModule;
 
+  // src/modules/input.ts
+  var DEFAULT_INPUT = {
+    overlay: { color: "rgba(0,0,0,0.5)" },
+    panel: {
+      color: "rgba(20,20,40,0.92)",
+      borderColor: "rgba(255,255,255,0.25)",
+      borderWidth: 1,
+      borderRadius: "3%",
+      minWidth: 420
+    },
+    labelStyle: {
+      fontSize: 16,
+      color: "rgba(255,255,255,0.6)",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center"
+    },
+    inputTextStyle: {
+      fontSize: 22,
+      color: "#ffffff",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "left",
+      textShadowBlur: 0,
+      textShadowColor: "#000",
+      textShadowOffsetX: 1,
+      textShadowOffsetY: 1
+    },
+    cursorStyle: {
+      color: "rgba(255,255,255,0.85)"
+    },
+    button: {
+      color: "rgba(255,255,255,0.12)",
+      borderColor: "rgba(255,255,255,0.28)",
+      borderWidth: 1,
+      borderRadius: "10%"
+    },
+    buttonHover: {
+      color: "rgba(255,255,255,0.26)",
+      borderColor: "rgba(255,255,255,0.65)"
+    },
+    buttonText: {
+      fontSize: 15,
+      color: "rgba(255,255,255,0.92)",
+      fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
+      textAlign: "center",
+      fontWeight: "bold"
+    },
+    buttonTextHover: { color: "#ffffff" }
+  };
+  var DEFAULT_LAYOUT4 = {
+    paddingX: 32,
+    paddingY: 24,
+    labelInputGap: 12,
+    inputButtonGap: 20,
+    buttonGap: 8,
+    buttonPaddingX: 40,
+    buttonPaddingY: 16
+  };
+  var inputModule = define2({
+    overlay: void 0,
+    panel: void 0,
+    labelStyle: void 0,
+    inputTextStyle: void 0,
+    cursorStyle: void 0,
+    button: void 0,
+    buttonHover: void 0,
+    buttonText: void 0,
+    buttonTextHover: void 0,
+    layout: void 0,
+    _value: "",
+    _label: "",
+    _multiline: false,
+    _buttons: [],
+    _resolve: null
+  });
+  inputModule.defineView((data, ctx) => {
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    let _hiddenEl = null;
+    let _blurHandler = null;
+    let _cursorBlink = null;
+    let _cursorVisible = true;
+    let _isActive = false;
+    let _isComposing = false;
+    let _captureKeydownHandler = null;
+    const _createHiddenInput = (multiline) => {
+      const el = document.createElement(multiline ? "textarea" : "input");
+      el.style.cssText = [
+        "position:fixed",
+        "top:-9999px",
+        "left:-9999px",
+        "width:1000px",
+        // 폭이 좁으면 브라우저가 스크롤 연산 중 커서를 0으로 튕겨내는 버그 발생
+        "height:100px",
+        "opacity:0",
+        "z-index:-1",
+        "font-size:24px",
+        // 모바일 브라우저 줌 방지
+        "background:transparent",
+        "color:transparent",
+        "border:none",
+        "outline:none"
+      ].join(";");
+      const container = document.fullscreenElement ?? document.body;
+      container.appendChild(el);
+      const nav = navigator;
+      if (nav.virtualKeyboard) {
+        nav.virtualKeyboard.overlaysContent = true;
+      }
+      return el;
+    };
+    const _destroyHiddenInput = () => {
+      if (_hiddenEl) {
+        _hiddenEl.removeEventListener("input", _onInput);
+        if (_blurHandler) {
+          _hiddenEl.removeEventListener("blur", _blurHandler);
+          _blurHandler = null;
+        }
+        _hiddenEl.parentElement?.removeChild(_hiddenEl);
+        _hiddenEl = null;
+      }
+      if (_captureKeydownHandler) {
+        document.removeEventListener("keydown", _captureKeydownHandler, true);
+        _captureKeydownHandler = null;
+      }
+      if (_cursorBlink !== null) {
+        clearInterval(_cursorBlink);
+        _cursorBlink = null;
+      }
+      _isActive = false;
+    };
+    const overlayCfg = data.overlay ?? DEFAULT_INPUT.overlay;
+    const overlayObj = ctx.world.createRectangle({
+      style: {
+        ...overlayCfg,
+        width: w,
+        height: h,
+        zIndex: 700,
+        opacity: 1,
+        display: "none",
+        pointerEvents: true
+      },
+      transform: { position: toLocal(w / 2, h / 2) }
+    });
+    ctx.world.camera?.addChild(overlayObj);
+    ctx.renderer.track(overlayObj);
+    overlayObj.fadeOut(0).stop();
+    const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel;
+    const INIT_PANEL_W = Math.max(panelCfgInit.minWidth ?? 0, 420);
+    const panelObj = ctx.world.createRectangle({
+      style: {
+        ...panelCfgInit,
+        width: INIT_PANEL_W,
+        height: 10,
+        zIndex: 701,
+        pointerEvents: true
+      },
+      transform: { position: { x: 0, y: 0, z: 0 } }
+    });
+    overlayObj.addChild(panelObj);
+    ctx.renderer.track(panelObj);
+    panelObj.on("click", () => {
+    });
+    let _dynamicObjs = [];
+    const _clearDynamic = () => {
+      _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
+      _dynamicObjs = [];
+    };
+    let _currentResolve = null;
+    let _textObj = null;
+    const _updateDisplay = () => {
+      if (!_textObj) return;
+      const val = _hiddenEl?.value ?? "";
+      _textObj.attribute.text = val + (_cursorVisible ? "|" : "") || " ";
+    };
+    const _onInput = () => {
+      if (!_hiddenEl) return;
+      if (!_isComposing) {
+        const len = _hiddenEl.value.length;
+        if (_hiddenEl.selectionStart !== len || _hiddenEl.selectionEnd !== len) {
+          _hiddenEl.setSelectionRange(len, len);
+        }
+      }
+      _updateDisplay();
+    };
+    const _onKeydown = (e) => {
+      const ke = e;
+      if (ke.key === "Enter" && !(_hiddenEl?.tagName === "TEXTAREA") && _currentResolve) {
+        e.preventDefault();
+        const val = _hiddenEl?.value ?? "";
+        _currentResolve(val, 0);
+        return;
+      }
+      if (_hiddenEl && !_isComposing) {
+        const len = _hiddenEl.value.length;
+        if (_hiddenEl.selectionStart !== len || _hiddenEl.selectionEnd !== len) {
+          _hiddenEl.setSelectionRange(len, len);
+        }
+      }
+    };
+    const _render = (label, multiline, buttons, resolve, cfg) => {
+      _currentResolve = resolve;
+      _clearDynamic();
+      const layoutCfg = { ...DEFAULT_LAYOUT4, ...cfg.layout ?? {} };
+      const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT.labelStyle;
+      const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT.inputTextStyle;
+      const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT.cursorStyle;
+      const btnCfg = cfg.button ?? DEFAULT_INPUT.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover;
+      const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel;
+      const PANEL_W = Math.max(panelCfg.minWidth ?? 420, 0);
+      panelObj.style.width = PANEL_W;
+      const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg;
+      const AVAILABLE_W = PANEL_W - paddingX * 2;
+      const LABEL_FS = labelCfgR.fontSize ?? 16;
+      const INPUT_FS = inputTxtCfg.fontSize ?? 22;
+      const BTN_FS = btnTxtCfg.fontSize ?? 15;
+      const LABEL_H = label ? LABEL_FS * 1.6 : 0;
+      const INPUT_H = multiline ? INPUT_FS * 1.5 * 4 : INPUT_FS * 1.8;
+      const BTN_H = BTN_FS * 1.2 + buttonPaddingY;
+      const btnWidths = buttons.map((btn) => {
+        const estimated = btn.text.length * BTN_FS * 0.9;
+        return Math.max(100, estimated + buttonPaddingX);
+      });
+      const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? buttonGap : 0), 0);
+      const PANEL_H = paddingY + LABEL_H + (label ? labelInputGap : 0) + INPUT_H + inputButtonGap + BTN_H + paddingY;
+      panelObj.style.height = PANEL_H;
+      let cursorY = PANEL_H / 2 - paddingY;
+      if (label) {
+        cursorY -= LABEL_H / 2;
+        const labelObj = ctx.world.createText({
+          attribute: { text: label },
+          style: { ...labelCfgR, width: AVAILABLE_W, zIndex: 702, pointerEvents: false },
+          transform: { position: { x: 0, y: cursorY, z: 0 } }
+        });
+        panelObj.addChild(labelObj);
+        ctx.renderer.track(labelObj);
+        _dynamicObjs.push(labelObj);
+        cursorY -= LABEL_H / 2 + labelInputGap;
+      }
+      cursorY -= INPUT_H / 2;
+      const inputBgObj = ctx.world.createRectangle({
+        style: {
+          width: AVAILABLE_W,
+          height: INPUT_H,
+          color: "rgba(255,255,255,0.06)",
+          borderColor: "rgba(255,255,255,0.35)",
+          borderWidth: 1,
+          borderRadius: "2%",
+          zIndex: 702,
+          pointerEvents: true
+        },
+        transform: { position: { x: 0, y: cursorY, z: 0 } }
+      });
+      inputBgObj.on("click", () => {
+        if (_hiddenEl && _isActive) {
+          _hiddenEl.focus({ preventScroll: true });
+          const len = _hiddenEl.value.length;
+          _hiddenEl.setSelectionRange(len, len);
+        }
+      });
+      panelObj.addChild(inputBgObj);
+      ctx.renderer.track(inputBgObj);
+      _dynamicObjs.push(inputBgObj);
+      const TEXT_PAD = 10;
+      _textObj = ctx.world.createText({
+        attribute: { text: " " },
+        style: {
+          ...inputTxtCfg,
+          width: AVAILABLE_W - TEXT_PAD * 2,
+          zIndex: 703,
+          pointerEvents: false,
+          textAlign: "left"
+        },
+        transform: { position: { x: -TEXT_PAD, y: INPUT_H / 2 - INPUT_FS * 1, z: 0 } }
+      });
+      inputBgObj.addChild(_textObj);
+      ctx.renderer.track(_textObj);
+      _dynamicObjs.push(_textObj);
+      cursorY -= INPUT_H / 2 + inputButtonGap;
+      cursorY -= BTN_H / 2;
+      let btnX = -totalBtnW / 2;
+      buttons.forEach((btn, i) => {
+        const bw = btnWidths[i];
+        const btnLocalX = btnX + bw / 2;
+        btnX += bw + buttonGap;
+        const btnStyleDef = {
+          ...btnCfg,
+          ...btn.style ?? {},
+          width: bw,
+          height: BTN_H,
+          zIndex: 703,
+          pointerEvents: true
+        };
+        const btnHoverStyleDef = { ...btnHoverCfg, ...btn.hoverStyle ?? {} };
+        const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: 704, pointerEvents: false };
+        const txtHoverStyleDef = { ...btnTxtHoverCfg, ...btn.textHoverStyle ?? {} };
+        const btnObj = ctx.world.createRectangle({
+          style: btnStyleDef,
+          transform: { position: { x: btnLocalX, y: cursorY, z: 0 } }
+        });
+        const txtObj = ctx.world.createText({
+          attribute: { text: btn.text },
+          style: txtStyleDef,
+          transform: { position: { x: 0, y: 0, z: 0 } }
+        });
+        const normalBtnProps = Object.fromEntries(
+          Object.keys(btnHoverStyleDef).map((key) => [key, btnStyleDef[key]])
+        );
+        const normalTxtProps = Object.fromEntries(
+          Object.keys(txtHoverStyleDef).map((key) => [key, txtStyleDef[key]])
+        );
+        btnObj.on("mouseover", () => {
+          btnObj.animate({ style: btnHoverStyleDef }, 150);
+          txtObj.animate({ style: txtHoverStyleDef }, 150);
+        });
+        btnObj.on("mouseout", () => {
+          btnObj.animate({ style: normalBtnProps }, 150);
+          txtObj.animate({ style: normalTxtProps }, 150);
+        });
+        btnObj.on("click", () => {
+          if (_currentResolve && _hiddenEl) {
+            _currentResolve(_hiddenEl.value, i);
+          }
+        });
+        btnObj.addChild(txtObj);
+        panelObj.addChild(btnObj);
+        ctx.renderer.track(btnObj);
+        ctx.renderer.track(txtObj);
+        _dynamicObjs.push(btnObj);
+      });
+      _destroyHiddenInput();
+      _hiddenEl = _createHiddenInput(multiline);
+      _hiddenEl.value = "";
+      _hiddenEl.addEventListener("input", _onInput);
+      _hiddenEl.addEventListener("compositionstart", () => {
+        _isComposing = true;
+      });
+      _hiddenEl.addEventListener("compositionend", () => {
+        _isComposing = false;
+      });
+      _hiddenEl.addEventListener("focus", () => {
+        if (_hiddenEl && !_isComposing) {
+          const len = _hiddenEl.value.length;
+          _hiddenEl.setSelectionRange(len, len);
+          setTimeout(() => {
+            if (_hiddenEl && !_isComposing) {
+              const len2 = _hiddenEl.value.length;
+              _hiddenEl.setSelectionRange(len2, len2);
+            }
+          }, 10);
+        }
+      });
+      _isActive = true;
+      _captureKeydownHandler = (e) => {
+        if (_isActive && document.activeElement === _hiddenEl) {
+          _onKeydown(e);
+          e.stopPropagation();
+        }
+      };
+      document.addEventListener("keydown", _captureKeydownHandler, true);
+      _blurHandler = () => {
+        if (!_isActive || !_hiddenEl) return;
+        setTimeout(() => {
+          if (!_isActive || !_hiddenEl) return;
+          if (document.activeElement !== _hiddenEl) {
+            _hiddenEl.focus({ preventScroll: true });
+          }
+        }, 50);
+      };
+      _hiddenEl.addEventListener("blur", _blurHandler);
+      _cursorVisible = true;
+      _cursorBlink = setInterval(() => {
+        _cursorVisible = !_cursorVisible;
+        _updateDisplay();
+      }, 500);
+      _updateDisplay();
+      overlayObj.fadeIn(200, "easeOut");
+    };
+    const _hide = (duration = 200) => {
+      _currentResolve = null;
+      _destroyHiddenInput();
+      _textObj = null;
+      overlayObj.fadeOut(duration, "easeIn");
+    };
+    return {
+      show: (dur = 200) => {
+        overlayObj.fadeIn(dur, "easeOut");
+      },
+      hide: (dur = 200) => {
+        _hide(dur);
+      },
+      hideGroups: ["dialogue"],
+      onCleanup: () => {
+        _destroyHiddenInput();
+        _clearDynamic();
+      },
+      onUpdate: (d2) => {
+        if (!d2._resolve || d2._buttons.length === 0) return;
+        if (_hiddenEl) {
+          _currentResolve = d2._resolve;
+        } else {
+          _render(d2._label, d2._multiline, d2._buttons, d2._resolve, d2);
+        }
+      },
+      // ─── 모듈 내부 전용 ─────────────────────────────────
+      _render,
+      _hide
+    };
+  });
+  inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
+    const entry = ctx.ui.get(inputModule.__key);
+    if (!entry) {
+      console.warn("[leviar-novel] input UI entry not found. Ensure it is defined in novel.config.ts modules.");
+      return true;
+    }
+    const openData = inputModule.hooker.trigger(
+      "input:open",
+      { label: cmd.label ?? "", multiline: cmd.multiline ?? false },
+      (v2) => v2
+    );
+    const buttons = cmd.buttons?.length ? cmd.buttons : [{ text: "\uD655\uC778" }];
+    let _resolved = false;
+    const resolve = (value, buttonIndex) => {
+      if (_resolved) return;
+      _resolved = true;
+      entry._hide?.(200);
+      const isCancelled = buttons[buttonIndex]?.cancel === true;
+      const submitData = inputModule.hooker.trigger(
+        "input:submit",
+        { varName: cmd.to, text: value, buttonIndex, cancelled: isCancelled },
+        (v2) => v2
+      );
+      if (!submitData.cancelled) {
+        const finalText = submitData.text;
+        const finalVarName = submitData.varName;
+        if (finalVarName.startsWith("_")) {
+          ctx.scene.setLocalVar(finalVarName, finalText);
+        } else {
+          ctx.scene.setGlobalVar(finalVarName, finalText);
+        }
+      }
+      ctx.callbacks.advance();
+    };
+    setState({
+      _label: openData.label,
+      _multiline: openData.multiline,
+      _buttons: buttons,
+      _resolve: resolve,
+      _value: ""
+    });
+    while (!_resolved) {
+      yield false;
+    }
+    setState({ _resolve: null, _buttons: [], _value: "", _label: "" });
+    return true;
+  });
+  var input_default = inputModule;
+
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
@@ -3350,7 +3811,8 @@
     "ui": ui_default,
     "control": control_default,
     "audio": audio_default,
-    "dialogBox": dialogBox_default
+    "dialogBox": dialogBox_default,
+    "input": input_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -16942,6 +17404,8 @@ ${addLineNumbers(fragment)}`);
     _isSkipping = false;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
+    /** fullscreenchange 핸들러 참조 (정리용) */
+    _onFullscreenChange;
     constructor(config, option) {
       this._config = config;
       const canvas = option.canvas;
@@ -16963,6 +17427,8 @@ ${addLineNumbers(fragment)}`);
         scene.name = name;
         this._scenes.set(name, scene);
       }
+      this._onFullscreenChange = () => this._handleFullscreenChange();
+      document.addEventListener("fullscreenchange", this._onFullscreenChange);
     }
     /**
      * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
@@ -17308,12 +17774,17 @@ ${addLineNumbers(fragment)}`);
     // ─── 전체화면 ─────────────────────────────────────────────
     /** 현재 전체화면 모드인지 확인합니다. */
     get isFullscreen() {
-      return document.fullscreenElement === this._option.canvas;
+      const el = this._option.canvas;
+      return document.fullscreenElement === el || document.fullscreenElement === el.parentElement;
     }
-    /** 전체화면 모드로 전환합니다. */
+    /** 전체화면 모드로 전환합니다.
+     * canvas.parentElement를 거의 요소로 사용하여
+     * 자식 DOM 요소(hidden input 등)이 포커스를 받을 수 있도록 합니다.
+     */
     async requestFullscreen() {
       if (!this.isFullscreen) {
-        await this._option.canvas.requestFullscreen();
+        const target = this._option.canvas.parentElement ?? this._option.canvas;
+        await target.requestFullscreen();
       }
     }
     /** 전체화면 모드를 해제합니다. */
@@ -17328,6 +17799,50 @@ ${addLineNumbers(fragment)}`);
         await this.exitFullscreen();
       } else {
         await this.requestFullscreen();
+      }
+    }
+    /**
+     * fullscreenchange 이벤트 핸들러.
+     * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
+     * 부모 요소를 중앙 정렬 flex 컨테이너로 설정합니다.
+     * 전체화면 해제 시 원래 스타일로 복원합니다.
+     */
+    _handleFullscreenChange() {
+      const canvas = this._option.canvas;
+      const parentEl = canvas.parentElement;
+      if (this.isFullscreen) {
+        const sw = screen.width;
+        const sh = screen.height;
+        const ratio = canvas.width / canvas.height;
+        let dispW, dispH;
+        if (sw / sh > ratio) {
+          dispH = sh;
+          dispW = dispH * ratio;
+        } else {
+          dispW = sw;
+          dispH = dispW / ratio;
+        }
+        canvas.style.width = `${dispW}px`;
+        canvas.style.height = `${dispH}px`;
+        if (parentEl) {
+          parentEl.style.display = "flex";
+          parentEl.style.alignItems = "center";
+          parentEl.style.justifyContent = "center";
+          parentEl.style.backgroundColor = "#000";
+          parentEl.style.width = "100%";
+          parentEl.style.height = "100%";
+        }
+      } else {
+        canvas.style.width = "";
+        canvas.style.height = "";
+        if (parentEl) {
+          parentEl.style.display = "";
+          parentEl.style.alignItems = "";
+          parentEl.style.justifyContent = "";
+          parentEl.style.backgroundColor = "";
+          parentEl.style.width = "";
+          parentEl.style.height = "";
+        }
       }
     }
     // ─── rebuild용 SceneContext stub ────────────────────────────
@@ -17460,7 +17975,8 @@ ${addLineNumbers(fragment)}`);
       likeability: 0,
       metHeroine: false,
       endingReached: false,
-      useHeroineVoice: true
+      useHeroineVoice: true,
+      username: ""
     },
     modules: {
       "test-cmd": testModule,
@@ -17607,6 +18123,16 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
+    {
+      type: "input",
+      to: "username",
+      label: "\uB2F9\uC2E0\uC758 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694",
+      multiline: false,
+      buttons: [
+        { text: "\uC800\uC7A5" },
+        { text: "\uCDE8\uC18C", cancel: true }
+      ]
+    },
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -17652,7 +18178,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
-      text: '\uB108, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?'
+      text: '{{username}}, \uD639\uC2DC \uC81C \uC5BC\uAD74\uC5D0 "\uB098 \uC624\uB298 \uAC13\uC0DD \uC0B4 \uAC70\uB2E4"\uB77C\uACE0 \uC4F0\uC5EC\uC788\uC5B4?'
     },
     {
       type: "dialogue",

@@ -66,6 +66,7 @@ export type {
   DialogueEntry,
   DialogueStep,
   DialogBoxCmd,
+  InputCmd,
 } from './types/dialogue'
 
 // ─── define 헬퍼 함수 ────────────────────────────────────────
@@ -84,6 +85,7 @@ export type { UIRuntimeEntry } from './core/UIRegistry'
 export type { DialogueSchema, DialogueHook } from './modules/dialogue'
 export type { ChoiceSchema } from './modules/choice'
 export type { DialogBoxSchema } from './modules/dialogBox'
+export type { InputSchema, InputHook, InputLayout, InputButton } from './modules/input'
 
 // ─── 내장 모듈 ───────────────────────────────────────────────
 export { default as dialogueModule } from './modules/dialogue'
@@ -101,6 +103,7 @@ export { default as labelModule } from './modules/label'
 export { default as uiModule } from './modules/ui'
 export { default as controlModule } from './modules/control'
 export { default as dialogBoxModule } from './modules/dialogBox'
+export { default as inputModule } from './modules/input'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'

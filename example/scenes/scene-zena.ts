@@ -30,6 +30,16 @@ export default defineScene({
       }
     ]
   },
+  {
+    type: 'input',
+    to: 'username',
+    label: '당신의 이름을 입력하세요',
+    multiline: false,
+    buttons: [
+      { text: '저장' },
+      { text: '취소', cancel: true },
+    ],
+  },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
@@ -77,7 +87,7 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '너, 혹시 제 얼굴에 "나 오늘 갓생 살 거다"라고 쓰여있어?'
+    text: '{{username}}, 혹시 제 얼굴에 "나 오늘 갓생 살 거다"라고 쓰여있어?'
   },
   {
     type: 'dialogue',

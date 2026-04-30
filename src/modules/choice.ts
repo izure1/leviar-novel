@@ -119,11 +119,6 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
     var?: VarResolvable<TConfig, TLocalVars>
   }[]
-  /**
-   * 내부 간격 레이아웃. 미지정 시 schema의 layout 또는 기본값 사용.
-   * 커맨드 단위로 일시 재정의할 때 유용합니다.
-   */
-  layout?: ChoiceLayout
 }
 
 // ─── ChoiceHook 타입 ───────────────────────────────────────────
@@ -131,7 +126,7 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
 export type ResolvedChoiceItem = Omit<ChoiceCmd<any, any>['choices'][number], 'text'> & { text: string }
 
 export interface ChoiceHook {
-  'choice:show': (value: { choices: ResolvedChoiceItem[], layout?: ChoiceLayout }) => { choices: ResolvedChoiceItem[], layout?: ChoiceLayout }
+  'choice:show': (value: { choices: ResolvedChoiceItem[] }) => { choices: ResolvedChoiceItem[] }
   'choice:select': (value: { index: number, selected: ResolvedChoiceItem }) => { index: number, selected: ResolvedChoiceItem }
 }
 
@@ -201,7 +196,7 @@ choiceModule.defineView((data, ctx) => {
     onCleanup: () => { _clearButtons() },
 
     // ─── 모듈 내부 전용 ─────────────────────────────────
-    _onChoices: (choices: ResolvedChoiceItem[], onSelect: (i: number) => void, layoutOverride?: ChoiceLayout) => {
+    _onChoices: (choices: ResolvedChoiceItem[], onSelect: (i: number) => void) => {
       bgObj.fadeIn(200, 'easeOut')
       _clearButtons()
 
@@ -210,8 +205,8 @@ choiceModule.defineView((data, ctx) => {
       const defaultTextStyle = (cfg.text ?? DEFAULT_CHOICE.text) as Partial<Style>
       const defaultTextHoverStyle = (cfg.textHover ?? DEFAULT_CHOICE.textHover) as Partial<Style>
 
-      // 레이아웃: 커맨드 지정 > schema layout > DEFAULT_LAYOUT
-      const layoutCfg: Required<ChoiceLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}), ...(layoutOverride ?? {}) }
+      // 레이아웃: schema layout > DEFAULT_LAYOUT
+      const layoutCfg: Required<ChoiceLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}) }
 
       const fSize = defaultTextStyle.fontSize ?? 18
       const lineH = (defaultTextStyle.lineHeight as number | undefined) ?? 1.5
@@ -328,7 +323,7 @@ choiceModule.defineCommand(function* (cmd, ctx) {
   // 'choice:show' 훅 방출
   const showData = choiceModule.hooker.trigger(
     'choice:show',
-    { choices: resolvedChoices, layout: cmd.layout },
+    { choices: resolvedChoices },
     (value) => value
   )
 
@@ -345,7 +340,7 @@ choiceModule.defineCommand(function* (cmd, ctx) {
     )
     selected = selectData.selected ?? null
     ctx.callbacks.advance()
-  }, showData.layout)
+  })
 
   // 선택 완료까지 block
   while (selected === null) {

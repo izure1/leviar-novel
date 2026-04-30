@@ -122,11 +122,6 @@ export interface DialogueCmd<TConfig = any> {
    * 미지정 시 시스템 설정 속도 또는 기본값(예: 30ms)이 사용됩니다.
    */
   speed?: number
-  /**
-   * 내부 간격 레이아웃. 미지정 시 schema의 layout 또는 기본값 사용.
-   * 커맨드 단위로 일시 재정의할 때 유용합니다.
-   */
-  layout?: DialogueLayout
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -383,7 +378,6 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
       _speakerKey: cmd.speaker as string | undefined,
       _subIndex: index,
       _lines: [...lines],
-      ...(cmd.layout !== undefined ? { layout: cmd.layout } : {}),
     })
 
     // 'dialogue:text-run' 훅 방출
