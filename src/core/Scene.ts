@@ -154,7 +154,7 @@ export class DialogueScene {
         const func = new Function(...keys, `return (${expr});`)
         return String(func(...values))
       } catch (e) {
-        console.warn(`[mio-js] Template interpolation failed for expression: ${expr}`, e)
+        console.warn(`[kotonoha] Template interpolation failed for expression: ${expr}`, e)
         return ''
       }
     })
@@ -305,7 +305,7 @@ export class DialogueScene {
     this._activeGenerator = null
     const idx = this.labelIndex.get(label)
     if (idx === undefined) {
-      console.warn(`[mio-js] label '${label}' not found in scene '${this.definition.name}'`)
+      console.warn(`[kotonoha] label '${label}' not found in scene '${this.definition.name}'`)
       this.cursor++
       this.textSubIndex = 0
       // cursor 변화를 감지하여 outer _executeNext가 처리
@@ -403,7 +403,7 @@ export class DialogueScene {
       return BUILTIN_HANDLERS[type](params, ctx)
     }
 
-    console.warn(`[mio-js] 알 수 없는 커맨드 타입:`, type)
+    console.warn(`[kotonoha] 알 수 없는 커맨드 타입:`, type)
     return (function* () { return false })()
   }
 

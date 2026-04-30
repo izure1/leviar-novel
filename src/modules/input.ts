@@ -720,7 +720,7 @@ inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
   const entry = ctx.ui.get(inputModule.__key!) as any
 
   if (!entry) {
-    console.warn('[mio-js] input UI entry not found. Ensure it is defined in novel.config.ts modules.')
+    console.warn('[kotonoha] input UI entry not found. Ensure it is defined in novel.config.ts modules.')
     return true
   }
 

@@ -299,7 +299,7 @@ choiceModule.defineCommand(function* (cmd, ctx) {
   const entry = ctx.ui.get(choiceModule.__key!) as any
 
   if (!entry) {
-    console.warn('[mio-js] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.')
+    console.warn('[kotonoha] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.')
   }
 
   // 텍스트(resolvable) 평가
@@ -315,7 +315,7 @@ choiceModule.defineCommand(function* (cmd, ctx) {
     (value) => value
   )
 
-  console.log('[mio-js] choiceHandler: opening choices', showData.choices)
+  console.log('[kotonoha] choiceHandler: opening choices', showData.choices)
 
   let selected: ResolvedChoiceItem | null = null
 

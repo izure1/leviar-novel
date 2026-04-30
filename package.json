@@ -1,17 +1,17 @@
 {
-  "name": "mio-js",
+  "name": "sori",
   "version": "0.0.1",
   "description": "A powerful and flexible modular visual novel engine based on web technologies.",
   "license": "MIT",
   "author": "izure <admin@izure.org>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/izure1/mio-js.git"
+    "url": "git+https://github.com/izure1/sori.git"
   },
   "bugs": {
-    "url": "https://github.com/izure1/mio-js/issues"
+    "url": "https://github.com/izure1/sori/issues"
   },
-  "homepage": "https://github.com/izure1/mio-js#readme",
+  "homepage": "https://github.com/izure1/sori#readme",
   "keywords": [
     "visual-novel",
     "engine",
@@ -36,7 +36,6 @@
     }
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node build/index.js && tsc -p tsconfig.build.json",
     "example:build": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap",
     "example:dev": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap --watch"
