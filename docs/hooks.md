@@ -74,7 +74,7 @@ novel.hooker.onBefore("dialogue:text", (value) => {
 메서드(`onBefore`, `onAfter`, `onceBefore`, `onceAfter`)를 지정하여 동작합니다.
 
 ```typescript
-import { defineHook, defineScene } from "kotonoha";
+import { defineHook, defineScene } from "fumika";
 import config from "./novel.config";
 
 export default defineScene({

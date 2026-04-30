@@ -23,7 +23,7 @@ export type InitialOf<TModules> = {
  * @example
  * ```ts
  * import config from '../novel.config'
- * import { defineInitial } from 'kotonoha'
+ * import { defineInitial } from 'fumika'
  * 
  * export const commonInitial = defineInitial(config, {
  *   dialogue: { text: { fontSize: 18 } }

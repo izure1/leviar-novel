@@ -524,7 +524,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
   const entry = ctx.ui.get(dialogBoxModule.__key!)
 
   if (!entry) {
-    console.warn('[kotonoha] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.')
+    console.warn('[fumika] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.')
     return true
   }
 

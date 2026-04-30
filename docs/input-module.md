@@ -19,7 +19,7 @@
 사용 가능합니다.
 
 ```ts
-import { defineNovelConfig } from "kotonoha";
+import { defineNovelConfig } from "fumika";
 
 export default defineNovelConfig({
   vars: { playerName: "" },
