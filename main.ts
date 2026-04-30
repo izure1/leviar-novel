@@ -107,6 +107,20 @@ async function main() {
   // ── 모든 모듈의 onBoot를 실행
   await novel.boot()
 
+  const vk = (navigator as any).virtualKeyboard
+  if ('virtualKeyboard' in navigator) {
+    vk.overlaysContent = true
+  }
+
+  document.getElementById('hidden-input')?.addEventListener('focus', () => {
+    throw 1
+  })
+
+  novel.hooker.onAfter('choice:show', (state) => {
+    (document.getElementById('hidden-input') as HTMLInputElement)?.focus()
+    return state
+  })
+
   let before = 0
   novel.hooker.onBefore('dialogue:text-run', (state) => {
     if (novel.isSkipping) return state

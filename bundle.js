@@ -754,6 +754,9 @@
       get __bootFn() {
         return _bootFn;
       },
+      get __key() {
+        return _moduleKey;
+      },
       get hooker() {
         return _hooker;
       },
@@ -790,8 +793,8 @@
             ctx.state.set(_moduleKey, { ...data });
           }
           const entry = builder(data, ctx);
-          _onUpdate = (d2) => entry.update?.(d2);
-          entry.update?.(data);
+          _onUpdate = (d2) => entry.onUpdate?.(d2);
+          entry.onUpdate?.(data);
           return entry;
         };
         return module;
@@ -961,21 +964,28 @@
         speakerObj.fadeOut(dur, "easeIn");
         textObj.fadeOut(dur, "easeIn");
       },
-      isTyping: () => _isTyping,
-      completeTyping: () => {
-        if (!_isTyping) return;
-        _isTyping = false;
-        _activeTx?.stop?.();
-        _activeTx = null;
-        textObj.attribute.text = _fullText;
-        textObj.style.opacity = 1;
+      // ─── 입력 역할 선언 ─────────────────────────────────
+      uiGroup: "dialogue",
+      /**
+       * novel.next() 호출 시 타이핑 완성 여부 판단.
+       * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
+       * - 타이핑 완료: true 반환 (진행 가능)
+       */
+      canAdvance: () => {
+        if (_isTyping) {
+          _isTyping = false;
+          _activeTx?.stop?.();
+          _activeTx = null;
+          textObj.attribute.text = _fullText;
+          textObj.style.opacity = 1;
+          return false;
+        }
+        return true;
       },
       /**
        * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
-       * - lines가 바뀐 경우: 텍스트 재렌더
-       * - bg/speaker/text 스타일이 바뀐 경우: 캔버스 오브젝트 스타일 갱신
        */
-      update: (d2) => {
+      onUpdate: (d2) => {
         const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_BG;
         const newSpkCfg = d2.speaker ?? DEFAULT_SPEAKER;
         const newTxtCfg = d2.text ?? DEFAULT_TEXT;
@@ -1011,7 +1021,6 @@
   dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
     const textArray = Array.isArray(cmd.text) ? cmd.text : [cmd.text];
     const lines = textArray.map((t) => ctx.scene.interpolateText(t));
-    const ui = ctx.ui.get("dialogue");
     const charDefs = ctx.renderer.config.characters;
     for (let index = 0; index < lines.length; index++) {
       const speaker = resolveSpeaker(cmd.speaker, charDefs);
@@ -1026,10 +1035,6 @@
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
-      if (ui && typeof ui.isTyping === "function" && ui.isTyping()) {
-        ui.completeTyping();
-        yield false;
-      }
     }
     return true;
   });
@@ -1117,7 +1122,14 @@
         bgObj.fadeOut(200, "easeIn");
         _clearButtons();
       },
-      onChoices: (choices, onSelect, layoutOverride) => {
+      // ─── 입력 역할 선언 ─────────────────────────────────
+      hideGroups: ["dialogue"],
+      /** 씬 전환 시 버튼 즉시 제거 */
+      onCleanup: () => {
+        _clearButtons();
+      },
+      // ─── 모듈 내부 전용 ─────────────────────────────────
+      _onChoices: (choices, onSelect, layoutOverride) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
         const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
@@ -1199,17 +1211,16 @@
           _btnObjs.push(btnObj);
         });
       },
-      update: (d2) => {
+      onUpdate: (d2) => {
         Object.assign(cfg, d2);
       }
     };
   });
-  choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const entry = ctx.ui.get("choice");
+  choiceModule.defineCommand(function* (cmd, ctx) {
+    const entry = ctx.ui.get(choiceModule.__key);
     if (!entry) {
       console.warn("[leviar-novel] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
-    ctx.ui.get("dialogue")?.hide?.();
     const resolvedChoices = cmd.choices.map((c) => {
       const textStr = typeof c.text === "function" ? c.text(ctx.scene.getVars()) : c.text;
       return { ...c, text: ctx.scene.interpolateText(textStr) };
@@ -1220,34 +1231,39 @@
       (value) => value
     );
     console.log("[leviar-novel] choiceHandler: opening choices", showData.choices);
-    entry?.onChoices?.(showData.choices, (i) => {
+    let selected = null;
+    entry?._onChoices?.(showData.choices, (i) => {
       const selectData = choiceModule.hooker.trigger(
         "choice:select",
         { index: i, selected: showData.choices[i] },
         (value) => value
       );
-      const selected = selectData.selected;
-      if (!selected) return;
-      if (selected.var) {
-        const vars = resolveVarResolvable(selected.var, ctx.scene.getVars());
-        if (vars) {
-          for (const [key, value] of Object.entries(vars)) {
-            ctx.scene.setGlobalVar(key, value);
-          }
+      selected = selectData.selected ?? null;
+      ctx.callbacks.advance();
+    }, showData.layout);
+    while (selected === null) {
+      yield false;
+    }
+    const item = selected;
+    entry?.hide?.();
+    if (item.var) {
+      const vars = resolveVarResolvable(item.var, ctx.scene.getVars());
+      if (vars) {
+        for (const [key, value] of Object.entries(vars)) {
+          ctx.scene.setGlobalVar(key, value);
         }
       }
-      entry.hide?.();
-      if (selected.next) {
-        const nextVal = typeof selected.next === "function" ? selected.next(ctx.scene.getVars()) : selected.next;
-        ctx.scene.loadScene(nextVal);
-      } else if (selected.goto) {
-        const gotoVal = typeof selected.goto === "function" ? selected.goto(ctx.scene.getVars()) : selected.goto;
-        ctx.scene.jumpToLabel(gotoVal);
-      } else {
-        ctx.scene.end();
-      }
-    }, showData.layout);
-    return "handled";
+    }
+    if (item.next) {
+      const nextVal = typeof item.next === "function" ? item.next(ctx.scene.getVars()) : item.next;
+      ctx.scene.loadScene(nextVal);
+    } else if (item.goto) {
+      const gotoVal = typeof item.goto === "function" ? item.goto(ctx.scene.getVars()) : item.goto;
+      ctx.scene.jumpToLabel(gotoVal);
+    } else {
+      ctx.scene.end();
+    }
+    return true;
   });
   var choice_default = choiceModule;
 
@@ -1350,7 +1366,7 @@
       hide: (dur = 300) => {
         _bgObj?.fadeOut?.(dur, "easeIn");
       },
-      update: (d2) => {
+      onUpdate: (d2) => {
         if (!d2._key) return;
         const bgDefs = ctx.renderer.config.backgrounds;
         const def = bgDefs[d2._key];
@@ -1397,9 +1413,6 @@
     return true;
   });
   var background_default = backgroundModule;
-  function setBackground(ctx, name, fit, duration = 1e3, isVideo = false) {
-    backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx);
-  }
 
   // src/core/motion.ts
   var MOTION_EFFECT_PRESETS = {
@@ -1632,7 +1645,7 @@
       },
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
-      update: (d2) => {
+      onUpdate: (d2) => {
         const dur = d2._lastDuration;
         const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
@@ -1876,7 +1889,7 @@
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
-      update: (d2) => {
+      onUpdate: (d2) => {
         const dur = d2._lastDuration ?? 800;
         const newMoods = new Set(Object.keys(d2._activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
@@ -2072,7 +2085,7 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      update: (d2) => {
+      onUpdate: (d2) => {
         const newTypes = new Set(Object.keys(d2._activeEffects));
         for (const type of Object.keys(_effectObjs)) {
           if (!newTypes.has(type)) _removeEffect(type, 600);
@@ -2258,7 +2271,7 @@
         }
       },
       getObj: (name) => _overlayObjs[name],
-      update: (d2) => {
+      onUpdate: (d2) => {
         const dur = d2._lastDuration;
         const newKeys = new Set(Object.keys(d2._overlays));
         for (const key of Object.keys(_overlayObjs)) {
@@ -2407,7 +2420,7 @@
       },
       hide: () => {
       },
-      update: () => {
+      onUpdate: () => {
       }
     };
   });
@@ -2468,7 +2481,7 @@
       },
       hide: () => {
       },
-      update: () => {
+      onUpdate: () => {
       }
     };
   });
@@ -2671,36 +2684,26 @@
   conditionModule.defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } }));
-  conditionModule.defineCommand(function* (cmd, ctx, state, setState) {
+  conditionModule.defineCommand(function* (cmd, ctx) {
     const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
     if (result) {
       if (cmd.goto) {
         ctx.scene.jumpToLabel(cmd.goto);
-        return "handled";
       } else if (cmd.next) {
-        ctx.scene.end();
         ctx.scene.loadScene(cmd.next);
-        return "handled";
-      } else {
-        return true;
       }
     } else {
       if (cmd.else) {
         if (ctx.scene.hasLabel(cmd.else)) {
           ctx.scene.jumpToLabel(cmd.else);
         } else {
-          ctx.scene.end();
           ctx.scene.loadScene(cmd.else);
         }
-        return "handled";
       } else if (cmd["else-next"]) {
-        ctx.scene.end();
         ctx.scene.loadScene(cmd["else-next"]);
-        return "handled";
-      } else {
-        return true;
       }
     }
+    return true;
   });
   var condition_default = conditionModule;
 
@@ -2845,7 +2848,7 @@
       },
       hide: () => {
       },
-      update: () => {
+      onUpdate: () => {
       }
     };
   });
@@ -3261,7 +3264,9 @@
       hide: (duration = 200) => {
         _hide(duration);
       },
-      update: (d2) => {
+      // ─── 입력 역할 선언 ────────────────────────────────
+      hideGroups: ["dialogue"],
+      onUpdate: (d2) => {
         if (d2._resolve && d2._buttons.length > 0) {
           _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
         }
@@ -3269,12 +3274,11 @@
     };
   });
   dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
-    const entry = ctx.ui.get("dialogBox");
+    const entry = ctx.ui.get(dialogBoxModule.__key);
     if (!entry) {
       console.warn("[leviar-novel] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.");
       return true;
     }
-    ctx.ui.get("dialogue")?.hide?.();
     const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value);
     const duration = finalCmd.duration ?? 200;
     const persist = finalCmd.buttons.length > 0 ? true : finalCmd.persist ?? false;
@@ -16609,7 +16613,10 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (target) => this.callbacks.loadScene(target),
+          loadScene: (target) => {
+            this._ended = true;
+            this.callbacks.loadScene(target);
+          },
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16651,20 +16658,24 @@ ${addLineNumbers(fragment)}`);
       }
       const step = steps[this.cursor];
       const cmd = step;
+      const cursorBefore = this.cursor;
       if (!this._activeGenerator) {
         this._activeGenerator = this._executeCmd(cmd);
       }
       const currentGen = this._activeGenerator;
       const nextVal = currentGen.next();
-      const result = nextVal.value;
-      if (result === "handled") {
+      if (this._ended || this.cursor !== cursorBefore) {
         if (this._activeGenerator === currentGen) {
           this._activeGenerator = null;
         }
-        this.callbacks.syncUIState();
+        if (!this._ended) {
+          this._executeNext();
+        } else {
+          this.callbacks.syncUIState();
+        }
         return;
       }
-      if (result === true || nextVal.done || cmd.skip) {
+      if (nextVal.value === true || nextVal.done || cmd.skip) {
         if (this._activeGenerator === currentGen) {
           this._activeGenerator = null;
         }
@@ -16683,12 +16694,10 @@ ${addLineNumbers(fragment)}`);
         console.warn(`[leviar-novel] label '${label}' not found in scene '${this.definition.name}'`);
         this.cursor++;
         this.textSubIndex = 0;
-        this._executeNext();
         return;
       }
       this.cursor = idx;
       this.textSubIndex = 0;
-      this._executeNext();
     }
     _isFallbackMatch(cmd, rule) {
       if (!cmd || typeof cmd !== "object") return false;
@@ -16756,7 +16765,10 @@ ${addLineNumbers(fragment)}`);
           setLocalVar: (key, value) => {
             this.localVars[key] = value;
           },
-          loadScene: (target) => this.callbacks.loadScene(target),
+          loadScene: (target) => {
+            this._ended = true;
+            this.callbacks.loadScene(target);
+          },
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
@@ -16857,14 +16869,17 @@ ${addLineNumbers(fragment)}`);
       const step = steps[this.cursor];
       if (!step) return;
       const cmd = step;
+      const cursorBefore = this.cursor;
       this._activeGenerator = this._executeCmd(cmd);
       const nextVal = this._activeGenerator.next();
-      const result = nextVal.value;
-      if (result === "handled") {
+      if (this._ended || this.cursor !== cursorBefore) {
         this._activeGenerator = null;
-        this._waitingInput = true;
-        this.callbacks.syncUIState();
-      } else if (result === true || nextVal.done || cmd.skip) {
+        if (!this._ended) {
+          this._executeNext();
+        } else {
+          this.callbacks.syncUIState();
+        }
+      } else if (nextVal.value === true || nextVal.done || cmd.skip) {
         this._activeGenerator = null;
         this.cursor++;
         this.textSubIndex = 0;
@@ -16885,69 +16900,6 @@ ${addLineNumbers(fragment)}`);
     }
     get isWaitingInput() {
       return this._waitingInput;
-    }
-  };
-  var ExploreScene = class {
-    renderer;
-    callbacks;
-    definition;
-    _clickHandlers = [];
-    _ended = false;
-    constructor(renderer, callbacks, definition) {
-      this.renderer = renderer;
-      this.callbacks = callbacks;
-      this.definition = definition;
-    }
-    start(_preserve = false) {
-      const { background, objects } = this.definition.options;
-      setBackground(
-        { renderer: this.renderer },
-        background,
-        "stretch",
-        1e3
-      );
-      this._spawnObjects(objects);
-    }
-    _spawnObjects(objects) {
-      objects.forEach((objDef) => {
-        const world = this.renderer.world;
-        const img = world.createImage({
-          attribute: {
-            src: objDef.src
-          },
-          style: {
-            width: objDef.width ?? 100,
-            height: objDef.height ?? 100,
-            zIndex: 10
-          },
-          transform: {
-            position: {
-              x: objDef.position.x - this.renderer.width / 2,
-              y: objDef.position.y - this.renderer.height / 2,
-              z: 0
-            }
-          }
-        });
-        const handler = () => {
-          if (this._ended) return;
-          this._ended = true;
-          this.callbacks.loadScene(objDef.next);
-        };
-        img.on("click", handler);
-        this._clickHandlers.push({ obj: img, handler });
-      });
-    }
-    cleanup() {
-      this._clickHandlers.forEach(({ obj, handler }) => {
-        obj.off?.("click", handler);
-        obj.remove?.();
-      });
-      this._clickHandlers = [];
-    }
-    advance() {
-    }
-    get isEnded() {
-      return this._ended;
     }
   };
 
@@ -16986,7 +16938,7 @@ ${addLineNumbers(fragment)}`);
     hooker;
     _currentScene = null;
     _currentSceneDef = null;
-    _inputMode = "none";
+    _inputMode = "block";
     _isSkipping = false;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
@@ -17114,15 +17066,9 @@ ${addLineNumbers(fragment)}`);
         console.error(`[leviar-novel] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      if (this._currentSceneDef?.kind === "dialogue") {
-        const prevHooks = this._currentSceneDef.hooks;
-        prevHooks?._unregister(this);
-      }
+      this._currentSceneDef?.hooks?._unregister(this);
       const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
-      if (this._currentScene instanceof ExploreScene) {
-        this._currentScene.cleanup();
-      }
-      this._cleanupChoiceUI();
+      this._cleanupUI();
       this._currentScene = null;
       if (!preserve) {
         this._renderer.clear();
@@ -17132,22 +17078,18 @@ ${addLineNumbers(fragment)}`);
         this._uiRegistry.clear();
       }
       const callbacks = this._buildCallbacks();
-      const scene = def.kind === "dialogue" ? new DialogueScene(this._renderer, callbacks, def) : new ExploreScene(this._renderer, callbacks, def);
+      const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
-      this._inputMode = "none";
-      if (def.kind === "dialogue") {
-        const newHooks = def.hooks;
-        newHooks?._register(this);
-      }
+      this._inputMode = "block";
+      def.hooks?._register(this);
       scene.start(preserve);
       this._syncUIState();
     }
-    /** 씬 전환 시 choice HTML 컨테이너 정리 */
-    _cleanupChoiceUI() {
-      const choiceEntry = this._uiRegistry.get("choices");
-      if (choiceEntry?.__novelRemove) {
-        choiceEntry.__novelRemove();
+    /** 씬 전환 시 모든 UI 엔트리의 onCleanup() 호출 */
+    _cleanupUI() {
+      for (const entry of this._uiRegistry.values()) {
+        entry.onCleanup?.();
       }
     }
     // ─── 스킵 기능 ───────────────────────────────────────────────
@@ -17241,14 +17183,8 @@ ${addLineNumbers(fragment)}`);
         console.error(`[leviar-novel] load() \uC2E4\uD328: \uC52C '${resolvedData.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      if (this._currentSceneDef?.kind === "dialogue") {
-        const prevHooks = this._currentSceneDef.hooks;
-        prevHooks?._unregister(this);
-      }
-      if (this._currentScene instanceof ExploreScene) {
-        this._currentScene.cleanup();
-      }
-      this._cleanupChoiceUI();
+      this._currentSceneDef?.hooks?._unregister(this);
+      this._cleanupUI();
       this.stopSkip();
       Object.assign(this.vars, resolvedData.globalVars);
       this._stateStore.clear();
@@ -17266,9 +17202,8 @@ ${addLineNumbers(fragment)}`);
       scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
-      this._inputMode = "none";
-      const newHooks = def.hooks;
-      newHooks?._register(this);
+      this._inputMode = "block";
+      def.hooks?._register(this);
       this._syncUIState();
     }
     /**
@@ -17327,19 +17262,19 @@ ${addLineNumbers(fragment)}`);
       );
       if (!canAdvance) return;
       if (Date.now() < this._inputDisabledUntil) return;
-      if (this._inputMode !== "dialogue") return;
+      if (this._inputMode !== "advance") return;
       if (!this._currentScene || this._currentScene.isEnded) return;
-      const dialogueEntry = this._uiRegistry.get("dialogue");
-      if (dialogueEntry?.isTyping?.()) {
-        dialogueEntry.completeTyping?.();
-        return;
+      for (const entry of this._uiRegistry.values()) {
+        if (!entry.canAdvance) continue;
+        const result = entry.canAdvance();
+        if (!result) return;
       }
       this._currentScene.advance();
       this._syncUIState();
     }
     _syncUIState() {
       if (!this._currentScene || this._currentScene.isEnded) {
-        this._inputMode = "none";
+        this._inputMode = "block";
         if (this._currentScene?.isEnded && this._currentSceneDef?.kind === "dialogue") {
           const next = this._currentSceneDef.nextScene;
           if (next) {
@@ -17350,17 +17285,25 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       if (!(this._currentScene instanceof DialogueScene)) return;
-      const choice = this._currentScene.getCurrentChoice();
-      if (choice) {
-        this._inputMode = "choice";
+      const stepType = this._currentScene.getCurrentStepType();
+      const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
+      if (activeEntry) {
+        this._suppressUIs(activeEntry.hideGroups);
+        this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
         return;
       }
-      if (this._currentScene.isWaitingInput) {
-        const stepType = this._currentScene.getCurrentStepType();
-        this._inputMode = stepType === "dialogBox" ? "none" : "dialogue";
-        return;
+      this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
+    }
+    /**
+     * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
+     */
+    _suppressUIs(groups) {
+      if (!groups?.length) return;
+      for (const entry of this._uiRegistry.values()) {
+        if (entry.uiGroup && groups.includes(entry.uiGroup)) {
+          entry.hide();
+        }
       }
-      this._inputMode = "none";
     }
     // ─── 전체화면 ─────────────────────────────────────────────
     /** 현재 전체화면 모드인지 확인합니다. */
@@ -19096,6 +19039,17 @@ ${addLineNumbers(fragment)}`);
     await novel.load();
     await novel.loadAssets(OBJECTS);
     await novel.boot();
+    const vk = navigator.virtualKeyboard;
+    if ("virtualKeyboard" in navigator) {
+      vk.overlaysContent = true;
+    }
+    document.getElementById("hidden-input")?.addEventListener("focus", () => {
+      throw 1;
+    });
+    novel.hooker.onAfter("choice:show", (state) => {
+      document.getElementById("hidden-input")?.focus();
+      return state;
+    });
     let before = 0;
     novel.hooker.onBefore("dialogue:text-run", (state) => {
       if (novel.isSkipping) return state;
