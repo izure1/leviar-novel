@@ -2,6 +2,7 @@ import type { Style } from 'leviar'
 import type { VarResolvable } from '../types/utils'
 import { resolveVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
+import { Z_INDEX } from '../constants/render'
 
 // ─── DialogBoxSchema ──────────────────────────────────────────
 
@@ -257,7 +258,7 @@ dialogBoxModule.defineView((data, ctx) => {
       ...overlayCfg,
       width: w,
       height: h,
-      zIndex: 600,
+      zIndex: Z_INDEX.DIALOG_BOX,
       opacity: 1,
       display: 'none',
       pointerEvents: true,
@@ -283,7 +284,7 @@ dialogBoxModule.defineView((data, ctx) => {
       ...panelCfgInit,
       width: INIT_PANEL_W,
       height: 10,
-      zIndex: 601,
+      zIndex: Z_INDEX.DIALOG_BOX + 1,
       pointerEvents: true,
     },
     transform: { position: { x: 0, y: 0, z: 0 } },

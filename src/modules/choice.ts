@@ -1,9 +1,10 @@
+import type { Style } from 'leviar'
 import type { Resolvable } from '../define/defineCmd'
 import type { SceneNextTarget, VariablesOf } from '../types/config'
 import type { VarResolvable } from '../types/utils'
 import { resolveVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
-import type { Style } from 'leviar'
+import { Z_INDEX } from '../constants/render'
 
 // ─── 선택지 UI 스타일 + 런타임 상태 스키마 ────────────────────
 
@@ -152,7 +153,7 @@ choiceModule.defineView((data, ctx) => {
       ...defaultBgStyle,
       width: w,
       height: h,
-      zIndex: 500,
+      zIndex: Z_INDEX.UI_HELPERS,
       opacity: 0,
       pointerEvents: true,
     },

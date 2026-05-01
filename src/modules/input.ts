@@ -1,6 +1,7 @@
 import type { Style } from 'leviar'
 import type { VariablesOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
+import { Z_INDEX } from '../constants/render'
 
 // ─── InputLayout ─────────────────────────────────────────────
 
@@ -331,7 +332,7 @@ inputModule.defineView((data, ctx) => {
       ...overlayCfg,
       width: w,
       height: h,
-      zIndex: 700,
+      zIndex: Z_INDEX.DIALOG_BOX,
       opacity: 1,
       display: 'none',
       pointerEvents: true,
@@ -352,7 +353,7 @@ inputModule.defineView((data, ctx) => {
     style: {
       ...panelCfgInit,
       width: INIT_PANEL_W,
-      zIndex: 701,
+      zIndex: Z_INDEX.DIALOG_BOX + 1,
       pointerEvents: true,
     },
     transform: { position: { x: 0, y: 0, z: 0 } },
@@ -483,7 +484,7 @@ inputModule.defineView((data, ctx) => {
       cursorY -= LABEL_H / 2
       const labelObj = ctx.world.createText({
         attribute: { text: label },
-        style: { ...labelCfgR, width: AVAILABLE_W, zIndex: 702, pointerEvents: false },
+        style: { ...labelCfgR, width: AVAILABLE_W, zIndex: Z_INDEX.DIALOG_BOX + 2, pointerEvents: false },
         transform: { position: { x: 0, y: cursorY, z: 0 } },
       })
       panelObj.addChild(labelObj)
@@ -502,7 +503,7 @@ inputModule.defineView((data, ctx) => {
         borderColor: 'rgba(255,255,255,0.35)',
         borderWidth: 1,
         borderRadius: '2%',
-        zIndex: 702,
+        zIndex: Z_INDEX.DIALOG_BOX + 2,
         pointerEvents: true,
       },
       transform: { position: { x: 0, y: cursorY, z: 0 } },
@@ -527,7 +528,7 @@ inputModule.defineView((data, ctx) => {
         ...inputTxtCfg,
         width: AVAILABLE_W - TEXT_PAD * 2,
         height: INPUT_H - TEXT_PAD * 2,
-        zIndex: 703,
+        zIndex: Z_INDEX.DIALOG_BOX + 3,
         pointerEvents: false,
         textAlign: 'left',
       },
@@ -559,11 +560,11 @@ inputModule.defineView((data, ctx) => {
         ...(btn.style ?? {}),
         width: bw,
         height: BTN_H,
-        zIndex: 703,
+        zIndex: Z_INDEX.DIALOG_BOX + 3,
         pointerEvents: true,
       }
       const btnHoverStyleDef: Partial<Style> = { ...btnHoverCfg, ...(btn.hoverStyle ?? {}) }
-      const txtStyleDef: Partial<Style> = { ...btnTxtCfg, ...(btn.textStyle ?? {}), zIndex: 704, pointerEvents: false }
+      const txtStyleDef: Partial<Style> = { ...btnTxtCfg, ...(btn.textStyle ?? {}), zIndex: Z_INDEX.DIALOG_BOX + 4, pointerEvents: false }
       const txtHoverStyleDef: Partial<Style> = { ...btnTxtHoverCfg, ...(btn.textHoverStyle ?? {}) }
 
       const btnObj = ctx.world.createRectangle({

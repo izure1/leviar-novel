@@ -811,6 +811,24 @@
     return module;
   }
 
+  // src/constants/render.ts
+  var Z_INDEX = {
+    BACKGROUND: 0,
+    CHARACTER_NORMAL: 100,
+    CHARACTER_HIGHLIGHT: 110,
+    ENVIRONMENT: 200,
+    MOOD: 200,
+    LIGHT: 210,
+    TRANSITION: 300,
+    UI_BASE: 400,
+    OVERLAY_WHISPER: 500,
+    OVERLAY_CAPTION: 510,
+    OVERLAY_TITLE: 520,
+    UI_HELPERS: 600,
+    DIALOG_BOX: 700,
+    CHARACTER_CUTIN: 800
+  };
+
   // src/modules/dialogue.ts
   var DEFAULT_BG = {
     color: "rgba(0,0,0,0.82)"
@@ -870,7 +888,7 @@
         ...bgCfg,
         width: bgCfg.width ?? w,
         height: BOX_H,
-        zIndex: bgCfg.zIndex ?? 300,
+        zIndex: bgCfg.zIndex ?? Z_INDEX.UI_BASE,
         opacity: 1,
         display: "none",
         pointerEvents: false
@@ -885,7 +903,7 @@
       style: {
         ...spkCfg,
         width: spkCfg.width ?? TEXT_W,
-        zIndex: spkCfg.zIndex ?? 301,
+        zIndex: spkCfg.zIndex ?? Z_INDEX.UI_BASE + 1,
         opacity: 1,
         display: "none",
         pointerEvents: false
@@ -900,7 +918,7 @@
       style: {
         ...txtCfg,
         width: txtCfg.width ?? TEXT_W,
-        zIndex: txtCfg.zIndex ?? 301,
+        zIndex: txtCfg.zIndex ?? Z_INDEX.UI_BASE + 1,
         opacity: 1,
         display: "none",
         pointerEvents: false
@@ -1100,7 +1118,7 @@
         ...defaultBgStyle,
         width: w,
         height: h,
-        zIndex: 500,
+        zIndex: Z_INDEX.UI_HELPERS,
         opacity: 0,
         pointerEvents: true
       },
@@ -1267,21 +1285,6 @@
     return true;
   });
   var choice_default = choiceModule;
-
-  // src/constants/render.ts
-  var Z_INDEX = {
-    BACKGROUND: -1,
-    CHARACTER_NORMAL: 10,
-    CHARACTER_HIGHLIGHT: 100,
-    MOOD: 100,
-    LIGHT: 200,
-    UI_BASE: 300,
-    OVERLAY_WHISPER: 400,
-    OVERLAY_CAPTION: 410,
-    OVERLAY_TITLE: 420,
-    CHARACTER_CUTIN: 500,
-    TRANSITION: 999
-  };
 
   // src/modules/background.ts
   var backgroundModule = define2({
@@ -2398,7 +2401,7 @@
           width: w,
           height: h,
           opacity: 0,
-          zIndex: Z_INDEX.UI_BASE,
+          zIndex: Z_INDEX.TRANSITION,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -2467,7 +2470,7 @@
           width: w * 2,
           height: h * 2,
           opacity: 0,
-          zIndex: Z_INDEX.UI_BASE + 1,
+          zIndex: Z_INDEX.TRANSITION + 1,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -3113,7 +3116,7 @@
         ...overlayCfg,
         width: w,
         height: h,
-        zIndex: 600,
+        zIndex: Z_INDEX.DIALOG_BOX,
         opacity: 1,
         display: "none",
         pointerEvents: true
@@ -3133,7 +3136,7 @@
         ...panelCfgInit,
         width: INIT_PANEL_W,
         height: 10,
-        zIndex: 601,
+        zIndex: Z_INDEX.DIALOG_BOX + 1,
         pointerEvents: true
       },
       transform: { position: { x: 0, y: 0, z: 0 } }
@@ -3497,7 +3500,7 @@
         ...overlayCfg,
         width: w,
         height: h,
-        zIndex: 700,
+        zIndex: Z_INDEX.DIALOG_BOX,
         opacity: 1,
         display: "none",
         pointerEvents: true
@@ -3516,7 +3519,7 @@
       style: {
         ...panelCfgInit,
         width: INIT_PANEL_W,
-        zIndex: 701,
+        zIndex: Z_INDEX.DIALOG_BOX + 1,
         pointerEvents: true
       },
       transform: { position: { x: 0, y: 0, z: 0 } }
@@ -3601,7 +3604,7 @@
         cursorY -= LABEL_H / 2;
         const labelObj = ctx.world.createText({
           attribute: { text: label },
-          style: { ...labelCfgR, width: AVAILABLE_W, zIndex: 702, pointerEvents: false },
+          style: { ...labelCfgR, width: AVAILABLE_W, zIndex: Z_INDEX.DIALOG_BOX + 2, pointerEvents: false },
           transform: { position: { x: 0, y: cursorY, z: 0 } }
         });
         panelObj.addChild(labelObj);
@@ -3618,7 +3621,7 @@
           borderColor: "rgba(255,255,255,0.35)",
           borderWidth: 1,
           borderRadius: "2%",
-          zIndex: 702,
+          zIndex: Z_INDEX.DIALOG_BOX + 2,
           pointerEvents: true
         },
         transform: { position: { x: 0, y: cursorY, z: 0 } }
@@ -3640,7 +3643,7 @@
           ...inputTxtCfg,
           width: AVAILABLE_W - TEXT_PAD * 2,
           height: INPUT_H - TEXT_PAD * 2,
-          zIndex: 703,
+          zIndex: Z_INDEX.DIALOG_BOX + 3,
           pointerEvents: false,
           textAlign: "left"
         },
@@ -3664,11 +3667,11 @@
           ...btn.style ?? {},
           width: bw,
           height: BTN_H,
-          zIndex: 703,
+          zIndex: Z_INDEX.DIALOG_BOX + 3,
           pointerEvents: true
         };
         const btnHoverStyleDef = { ...btnHoverCfg, ...btn.hoverStyle ?? {} };
-        const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: 704, pointerEvents: false };
+        const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: Z_INDEX.DIALOG_BOX + 4, pointerEvents: false };
         const txtHoverStyleDef = { ...btnTxtHoverCfg, ...btn.textHoverStyle ?? {} };
         const btnObj = ctx.world.createRectangle({
           style: btnStyleDef,

@@ -1,4 +1,4 @@
-import type { EasingType, Rectangle } from 'leviar'
+import type { EasingType } from 'leviar'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
 
@@ -87,7 +87,7 @@ screenFadeModule.defineView((data, ctx) => {
         gradientType: 'linear',
         gradient: '0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%',
         width: w, height: h,
-        opacity: 0, zIndex: Z_INDEX.UI_BASE, pointerEvents: false,
+        opacity: 0, zIndex: Z_INDEX.TRANSITION, pointerEvents: false,
       },
       transform: { position: { x: 0, y: 0, z: 10 } },
     })
@@ -176,7 +176,7 @@ screenFlashModule.defineView((_data, ctx) => {
     rect = ctx.renderer.world.createRectangle({
       style: {
         color: 'rgba(255,255,255,1)', width: w * 2, height: h * 2,
-        opacity: 0, zIndex: Z_INDEX.UI_BASE + 1, pointerEvents: false,
+        opacity: 0, zIndex: Z_INDEX.TRANSITION + 1, pointerEvents: false,
       },
       transform: { position: { x: 0, y: 0, z: 10 } },
     })

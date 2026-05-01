@@ -12,7 +12,16 @@
 | **`variables`** | - | `object` | 씬 내 전용 임시 상태 관리 (캡슐화 및 메모리 격리) |
 | **`initial`** | - | `object` | 씬 로드 즉시 **모듈의 Scheme State를 강제 초기화** |
 | **`next`** | - | `string \| { scene: string, preserve: boolean }` | 시나리오 종료 후 자동 이동 경로 지정 |
-| **`hooks`** | - | `HookDescriptor` | 씬 전용 라이프사이클 훅 등록 ([상세 가이드](./hooks.md)) |
+| **`hooks`** | - | `HookDescriptor` | 씬 전용 라이프사이클 훅 등록 ([상세 가이드](../defines/defineHook.md)) |
+
+---
+
+## 2. API 상세 가이드
+
+`defineScene`의 구체적인 호출 방식(Curried vs 2-arg)과 타입 정의는 다음 문서를 참조하십시오.
+
+* [⚓ defineScene 정의 가이드](../defines/defineScene.md)
+* [🎨 defineInitial 정의 가이드](../defines/defineInitial.md)
 
 ---
 
@@ -32,7 +41,7 @@ export default defineScene({
     _tryCount: 0,    // 시도 횟수
     _isLocked: true  // 현재 문이 잠겨있는지 여부
   }
-}, [
+})([
   // ... 커맨드 배열
 ])
 ```
@@ -103,5 +112,4 @@ export default defineScene({
 **상세 설명:**
 `defineHook` 함수를 통해 생성된 훅 디스크립터를 주입합니다. 이 훅들은 해당 씬이 활성화될 때 자동으로 등록되며, 씬이 종료될 때 자동으로 해제됩니다. 씬의 상태에 따른 동적인 데이터 변조나 특정 시점의 로직 실행이 필요할 때 사용합니다.
 
-자세한 사용법과 사용 가능한 훅 목록은 **[⚓ Hook 시스템 가이드](./hooks.md)**를 참조하십시오.
-
+자세한 사용법과 사용 가능한 훅 목록은 **[🪝 Hooks 개념 가이드](./hooks.md)** 및 **[⚓ defineHook 정의 가이드](../defines/defineHook.md)**를 참조하십시오.

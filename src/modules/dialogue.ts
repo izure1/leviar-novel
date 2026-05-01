@@ -1,6 +1,7 @@
 import type { Style } from 'leviar'
 import type { CharDefs, CharacterKeysOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
+import { Z_INDEX } from '../constants/render'
 
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
 
@@ -178,7 +179,7 @@ dialogueModule.defineView((data, ctx) => {
       ...bgCfg,
       width: bgCfg.width ?? w,
       height: BOX_H,
-      zIndex: bgCfg.zIndex ?? 300,
+      zIndex: bgCfg.zIndex ?? Z_INDEX.UI_BASE,
       opacity: 1,
       display: 'none',
       pointerEvents: false,
@@ -195,7 +196,7 @@ dialogueModule.defineView((data, ctx) => {
     style: {
       ...spkCfg,
       width: spkCfg.width ?? TEXT_W,
-      zIndex: spkCfg.zIndex ?? 301,
+      zIndex: spkCfg.zIndex ?? Z_INDEX.UI_BASE + 1,
       opacity: 1,
       display: 'none',
       pointerEvents: false,
@@ -212,7 +213,7 @@ dialogueModule.defineView((data, ctx) => {
     style: {
       ...txtCfg,
       width: txtCfg.width ?? TEXT_W,
-      zIndex: txtCfg.zIndex ?? 301,
+      zIndex: txtCfg.zIndex ?? Z_INDEX.UI_BASE + 1,
       opacity: 1,
       display: 'none',
       pointerEvents: false,

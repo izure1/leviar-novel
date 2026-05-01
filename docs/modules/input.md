@@ -82,7 +82,42 @@
 
 ---
 
-## 6. 주의 사항 (Edge Cases)
+## 6. 동작 원리 (Technical Implementation)
+
+### 시퀀스 다이어그램
+
+```mermaid
+sequenceDiagram
+    participant S as Scene
+    participant C as inputModule (Command)
+    participant V as inputModule (View)
+    participant D as Hidden DOM Input
+    participant CV as Canvas (가상 텍스트)
+
+    S->>C: { type: 'input', to: 'playerName' }
+    C->>V: setState({ _resolve, _buttons, _label })
+    V->>D: createElement('input'), focus()
+    V->>CV: _textObj 생성 (실시간 동기화)
+    loop 사용자 타이핑
+        D->>CV: input event → _textObj.attribute.text 갱신
+    end
+    alt 엔터 키 (multiline=false)
+        D->>C: _resolve(value)
+    else 버튼 클릭
+        CV->>C: _resolve(value)
+    end
+    C->>S: setGlobalVar / setLocalVar 후 return true
+```
+
+### 포커스 유지 및 커서 메커니즘
+
+*   **포커스 유지**: 입력창이 활성화되는 동안 엔진은 자동으로 숨겨진 `<input>` 요소에 포커스를 맞춥니다. 사용자가 다른 곳을 클릭하더라도 300ms 주력이 포커스를 복귀시켜 끊김 없는 입력을 보장합니다.
+*   **커서 깜빡임**: 500ms 주기로 `|` 커서 오브젝트의 불투명도를 토글하여 입력 중임을 시각적으로 알립니다.
+*   **가상 텍스트**: 실제 입력은 보이지 않는 DOM 요소에서 처리되지만, 캔버스 위에는 엔진의 텍스트 오브젝트가 실시간으로 동기화되어 렌더링됩니다.
+
+---
+
+## 7. 주의 사항 (Edge Cases)
 
 *   **포커스 관리**: 입력창이 활성화되면 엔진은 자동으로 해당 입력 영역에 포커스를 맞춥니다. 사용자가 다른 곳을 클릭해도 자동으로 포커스가 복귀됩니다.
 *   **엔터 키 동작**: `multiline: false`인 경우 엔터 키를 누르면 첫 번째 버튼(인덱스 0)을 클릭한 것과 동일하게 작동합니다.
