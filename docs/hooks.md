@@ -79,7 +79,7 @@ import config from "./novel.config";
 
 export default defineScene({
   config,
-  hooks: defineHook(config, {
+  hooks: defineHook(config)({
     "dialogue:text-render": {
       // 이 씬에서만 모든 대화를 대문자로 변경 (출력 직전 가로채기)
       onBefore: (value) => {
@@ -123,7 +123,7 @@ export default defineScene({
 | `offBefore(key, callback)`  | 등록된 Before 훅 해제                      |
 | `offAfter(key, callback)`   | 등록된 After 훅 해제                       |
 
-### `defineHook(config, hookMap)`
+### `defineHook(config)(hookMap)`
 
 `defineScene`의 `hooks` 필드에 전달할 디스크립터를 생성합니다.
 

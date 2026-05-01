@@ -174,7 +174,7 @@ sequenceDiagram
 | `input:submit` | `{ varName, text }`    | 입력 완료 시 방출. 저장될 변수명·텍스트 변환 가능 |
 
 ```ts
-defineHook(config, {
+defineHook(config)({
   "input:submit": {
     onBefore: ({ varName, text }) => ({ varName, text: text.trim() }),
   },

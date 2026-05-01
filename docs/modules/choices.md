@@ -72,7 +72,15 @@ var: ({ heart }) => ({ heart: heart + 10 })
 
 ---
 
-## 4. 상태 및 레이아웃 (State & Layout)
+## 4. 훅 (Hooks)
+
+선택지가 표시되거나 항목이 선택되는 시점에 로직을 개입시킬 수 있습니다.
+
+* [상세 가이드: Choices Hooks (선택지 훅)](./hooks/choices.md)
+
+---
+
+## 5. 상태 및 레이아웃 (State & Layout)
 
 선택지 버튼의 색상, 둥글기, 텍스트 크기 및 간격 등 모듈의 상태를 자유롭게 설정할 수 있습니다.
 
@@ -88,17 +96,6 @@ export default defineScene({
 })
 ```
 * [상세 가이드: Choices 상태 및 레이아웃](./state/choices.md)
-
----
-
-## 5. 훅 (Hooks)
-
-`choices` 모듈의 동작 전후에 개입할 수 있는 훅을 제공합니다.
-
-| 키 | 인자 타입 | 설명 |
-| :--- | :--- | :--- |
-| `choice:show` | `{ choices: ResolvedChoiceItem[] }` | 선택지가 화면에 표시되기 직전에 호출됩니다. |
-| `choice:select` | `{ index: number, selected: ResolvedChoiceItem }` | 사용자가 특정 항목을 선택했을 때 호출됩니다. |
 
 ---
 

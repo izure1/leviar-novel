@@ -140,7 +140,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
  * myModule.hooker.trigger('my:event', initialValue, (val) => val, ...params)
  *
  * // 훅 구독 (외부)
- * defineHook(config, { 'my:event': (val, ...params) => val })
+ * defineHook(config)({ 'my:event': (val, ...params) => val })
  * ```
  */
 type _IsAny<T> = 0 extends 1 & T ? true : false;
@@ -346,7 +346,7 @@ export type SceneHookMap<TConfig> = {
  * ```ts
  * defineScene({
  *   config,
- *   hooks: defineHook(config, {
+ *   hooks: defineHook(config)({
  *     'dialogue:text': {
  *       onBefore: (value) => ({ ...value, text: value.text.toUpperCase() }),
  *     },
@@ -358,57 +358,58 @@ export type SceneHookMap<TConfig> = {
  * ```
  *
  * @param config - `defineNovelConfig()`로 생성된 NovelConfig
- * @param hookMap - 구독할 훅 키와 콜백의 맵.
+ * @returns 훅 맵을 받는 함수를 반환합니다.
  */
 export function defineHook<
   TConfig extends { modules?: Record<string, NovelModule<any, any, any>> }
 >(
-  config: TConfig,
-  hookMap: SceneHookMap<TConfig>
-): SceneHookDescriptor {
-  const methodKeys = ['onBefore', 'onAfter', 'onceBefore', 'onceAfter'] as const
-  type MethodKey = typeof methodKeys[number]
+  config: TConfig
+): (hookMap: SceneHookMap<TConfig>) => SceneHookDescriptor {
+  return (hookMap: SceneHookMap<TConfig>) => {
+    const methodKeys = ['onBefore', 'onAfter', 'onceBefore', 'onceAfter'] as const
+    type MethodKey = typeof methodKeys[number]
 
-  const registrations: Array<{ method: MethodKey, key: string, cb: any }> = []
+    const registrations: Array<{ method: MethodKey, key: string, cb: any }> = []
 
-  for (const [key, methods] of Object.entries(hookMap)) {
-    if (!methods) continue
-    for (const method of methodKeys) {
-      const cb = (methods as any)[method]
-      if (cb) {
-        registrations.push({ method, key, cb })
+    for (const [key, methods] of Object.entries(hookMap)) {
+      if (!methods) continue
+      for (const method of methodKeys) {
+        const cb = (methods as any)[method]
+        if (cb) {
+          registrations.push({ method, key, cb })
+        }
       }
     }
-  }
 
-  return {
-    _register(novel: any) {
-      for (const { method, key, cb } of registrations) {
-        if (key.startsWith('novel:')) {
-          novel.hooker[method](key, cb)
-        } else {
-          const moduleKey = key.split(':')[0]
-          const module = (config as any).modules?.[moduleKey]
-          if (module?.hooker) {
-            module.hooker[method](key, cb)
+    return {
+      _register(novel: any) {
+        for (const { method, key, cb } of registrations) {
+          if (key.startsWith('novel:')) {
+            novel.hooker[method](key, cb)
+          } else {
+            const moduleKey = key.split(':')[0]
+            const module = (config as any).modules?.[moduleKey]
+            if (module?.hooker) {
+              module.hooker[method](key, cb)
+            }
           }
         }
-      }
-    },
-    _unregister(novel: any) {
-      for (const { method, key, cb } of registrations) {
-        const offMethod = method.includes('After') ? 'offAfter' : 'offBefore'
+      },
+      _unregister(novel: any) {
+        for (const { method, key, cb } of registrations) {
+          const offMethod = method.includes('After') ? 'offAfter' : 'offBefore'
 
-        if (key.startsWith('novel:')) {
-          novel.hooker[offMethod](key, cb)
-        } else {
-          const moduleKey = key.split(':')[0]
-          const module = (config as any).modules?.[moduleKey]
-          if (module?.hooker) {
-            module.hooker[offMethod](key, cb)
+          if (key.startsWith('novel:')) {
+            novel.hooker[offMethod](key, cb)
+          } else {
+            const moduleKey = key.split(':')[0]
+            const module = (config as any).modules?.[moduleKey]
+            if (module?.hooker) {
+              module.hooker[offMethod](key, cb)
+            }
           }
         }
-      }
-    },
+      },
+    }
   }
 }

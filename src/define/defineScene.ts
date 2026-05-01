@@ -126,7 +126,7 @@ type _SceneOptions<
   /** 씬 종료 시 자동으로 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. */
   next?: SceneNextTarget<TConfig>
   /**
-   * 씬 스코프 훅 디스크립터. `defineHook(config, { ... })`의 반환값.
+   * 씬 스코프 훅 디스크립터. `defineHook(config)({ ... })`의 반환값.
    * 씬 시작 시 자동으로 훅이 등록되고, 씬 종료/전환 시 자동으로 해제됩니다.
    */
   hooks?: SceneHookDescriptor
