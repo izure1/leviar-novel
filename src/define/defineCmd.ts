@@ -81,7 +81,7 @@ export type ResolvableItem<T, TVars, TLocalVars> =
  * $ 접두사 분기는 KEY 기반 조건부 타입이므로 이 문제가 발생하지 않습니다.
  */
 export type ResolvableProps<TCmd, TVars = any, TLocalVars = any> = {
-  [K in keyof TCmd]: K extends 'type'
+  [K in keyof TCmd]: K extends 'type' | 'skip'
     ? TCmd[K]
     : K extends `$${string}`
       ? TCmd[K]

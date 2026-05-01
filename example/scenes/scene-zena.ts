@@ -14,7 +14,7 @@ export default defineScene({
     scene: 'scene-zena-game',
     preserve: true,
   },
-}, [
+})([
   {
     type: 'dialogBox',
     title: '음성 제어',
@@ -230,6 +230,11 @@ export default defineScene({
     text: '방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계야. 도망 못 가.'
   },
   { type: 'condition', if: ({ username }) => true, goto: 'common-end' },
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: 'hello',
+  },
 
   // ─── 공통 엔딩 ───
   { type: 'label', name: 'common-end' },
