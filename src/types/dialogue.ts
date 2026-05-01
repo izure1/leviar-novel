@@ -59,6 +59,7 @@ type _WithType<T, K extends string, TVars, TLocalVars> =
 type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<DialogueCmd<TConfig>, 'dialogue', TVars, TLocalVars>
   | _WithType<ChoiceCmd<TConfig, TLocalVars>, 'choice', TVars, TLocalVars>
+  | _WithType<ConditionCmd<TConfig, TVars, TLocalVars>, 'condition', TVars, TLocalVars>
   | _WithType<VarCmd<TVars, TLocalVars>, 'var', TVars, TLocalVars>
   | _WithType<LabelCmd, 'label', TVars, TLocalVars>
   | _WithType<BackgroundCmd<TConfig>, 'background', TVars, TLocalVars>
@@ -91,7 +92,6 @@ type _WithSkip<T> = T extends any ? T & {
 
 export type DialogueEntry<TConfig, TVars, TLocalVars> =
   | _WithSkip<_DialogueEntryUnion<TConfig, TVars, TLocalVars>>
-  | ({ type: 'condition' } & ResolvableProps<ConditionCmd<TConfig, TVars, TLocalVars>, TVars, TLocalVars> & { skip?: boolean })
 
 export type DialogueStep<TConfig, TLocalVars = Record<never, never>, TVars = VarsOf<TConfig>> =
   DialogueEntry<TConfig, TVars, TLocalVars>

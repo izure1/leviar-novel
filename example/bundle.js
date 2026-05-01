@@ -721,7 +721,11 @@
   function resolveObj(obj, vars) {
     const result = {};
     for (const key in obj) {
-      result[key] = resolveVal(obj[key], vars);
+      if (key.startsWith("$")) {
+        result[key] = obj[key];
+      } else {
+        result[key] = resolveVal(obj[key], vars);
+      }
     }
     return result;
   }
@@ -2682,7 +2686,7 @@
   }, hide: () => {
   } }));
   conditionModule.defineCommand(function* (cmd, ctx) {
-    const result = cmd.$if(ctx.scene.getVars());
+    const result = cmd.if;
     if (result) {
       if (cmd.goto) {
         ctx.scene.jumpToLabel(cmd.goto);
@@ -18065,6 +18069,7 @@ ${addLineNumbers(fragment)}`);
   }).defineView((_data, _ctx) => ({ show: () => {
   }, hide: () => {
   } })).defineCommand(function* (cmd, ctx) {
+    cmd.$callback(Date.now());
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
@@ -18245,6 +18250,9 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
     { type: "effect", action: "add", effect: "dust", src: "dust", rate: 25 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
+    { type: "test-cmd", message: "hello", $callback: (now) => {
+      console.log(now);
+    } },
     {
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."
@@ -18345,7 +18353,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uC544, \uB18D\uB2F4\uC774\uC57C. \uBC34(Ban) \uB2F9\uD558\uAE30 \uC2EB\uC73C\uBA74 \uC870\uC2EC\uD574."
     },
-    { type: "condition", $if: () => true, goto: "common-end" },
+    { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 버그 질문 ───
     { type: "label", name: "ask-bug" },
     { type: "camera-effect", preset: "shake", duration: 400 },
@@ -18387,7 +18395,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
     },
-    { type: "condition", $if: () => true, goto: "common-end" },
+    { type: "condition", if: () => true, goto: "common-end" },
     // ─── 분기: 도망 ───
     { type: "label", name: "escape" },
     {
@@ -18423,7 +18431,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "zena",
       text: "\uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC57C. \uB3C4\uB9DD \uBABB \uAC00."
     },
-    { type: "condition", $if: ({ username }) => true, goto: "common-end" },
+    { type: "condition", if: ({ username }) => true, goto: "common-end" },
     // ─── 공통 엔딩 ───
     { type: "label", name: "common-end" },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 800 },
@@ -18554,7 +18562,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
     },
     { type: "var", name: "likeability", value: 10 },
-    { type: "condition", $if: () => true, goto: "play-game" },
+    { type: "condition", if: () => true, goto: "play-game" },
     // ─── 분기: 반대 ───
     { type: "label", name: "disagree" },
     {
@@ -18585,7 +18593,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC624\uD788\uB824 \uD3C9\uC0DD \uC774\uD574\uD558\uACE0 \uC2F6\uC9C0 \uC54A\uB2E4."
     },
-    { type: "condition", $if: () => true, goto: "play-game" },
+    { type: "condition", if: () => true, goto: "play-game" },
     // ─── 게임 플레이 ───
     { type: "label", name: "play-game" },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 500 },
@@ -18711,7 +18719,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uD14C\uB7EC\uBC29\uC9C0\uBC95\uC740 \uD1B5\uACFC\uB410\uC9C0\uB9CC, \uCC1C\uB2ED\uBC29\uC9C0\uBC95\uC740 \uC544\uC9C1\uC774\uAC70\uB4E0, \uB0B4\uAC00."
     },
     { type: "dialogue", text: "\uD560 \uB9D0\uC744 \uC783\uC5C8\uB2E4." },
-    { type: "condition", $if: () => true, goto: "order" },
+    { type: "condition", if: () => true, goto: "order" },
     // ─── 매운거 ───
     { type: "label", name: "spicy" },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 300 },
@@ -18740,7 +18748,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uB300\uCCB4 \uC5B4\uB514\uC11C\uBD80\uD130 \uD0DC\uD074\uC744 \uAC78\uC5B4\uC57C \uD560\uC9C0 \uBAA8\uB974\uACA0\uB2E4."
     },
     { type: "dialogue", text: "\uAE30\uC801\uC758 \uB17C\uB9AC\uB2E4." },
-    { type: "condition", $if: () => true, goto: "order" },
+    { type: "condition", if: () => true, goto: "order" },
     // ─── 공통 주문 ───
     { type: "label", name: "order" },
     {
@@ -19042,7 +19050,7 @@ ${addLineNumbers(fragment)}`);
       speed: 10
     },
     { type: "camera-effect", preset: "reset" },
-    { type: "condition", $if: () => true, goto: "stream-end" },
+    { type: "condition", if: () => true, goto: "stream-end" },
     { type: "label", name: "troll" },
     {
       type: "dialogue",
@@ -19128,7 +19136,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC544\uBB34\uB3C4 \uBBFF\uC9C0 \uC54A\uC744 \uBCC0\uBA85\uC744 \uB358\uC9C0\uACE0\uB294, \uADF8\uB140\uAC00 \uB2E4\uAE09\uD558\uAC8C \uB9C8\uC6B0\uC2A4\uB97C \uC950\uC5C8\uB2E4."
     },
-    { type: "condition", $if: () => true, goto: "stream-end" },
+    { type: "condition", if: () => true, goto: "stream-end" },
     { type: "label", name: "stream-end" },
     { type: "camera-effect", preset: "reset", duration: 500 },
     { type: "character-effect", name: "zena", preset: "reset", duration: 500 },
@@ -19244,7 +19252,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC544\uCE68\uBD80\uD130 \uC2DC\uBE44 \uAC70\uB294 \uC19C\uC528\uAC00 \uBCF4\uD1B5\uC774 \uC544\uB2C8\uB2E4."
     },
-    { type: "condition", $if: () => true, goto: "walk" },
+    { type: "condition", if: () => true, goto: "walk" },
     { type: "label", name: "content" },
     { type: "character", action: "show", name: "zena", image: "normal", focus: "", duration: 300 },
     {
@@ -19274,7 +19282,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB300\uCCB4 \uADF8 \uC810\uC218\uB294 \uC5B4\uB514\uB2E4 \uC4F0\uB294 \uAC74\uC9C0 \uBB3B\uACE0 \uC2F6\uC5C8\uC9C0\uB9CC \uAFB9 \uCC38\uC558\uB2E4."
     },
-    { type: "condition", $if: () => true, goto: "walk" },
+    { type: "condition", if: () => true, goto: "walk" },
     { type: "label", name: "walk" },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 300 },
     {
@@ -19360,7 +19368,7 @@ ${addLineNumbers(fragment)}`);
         "\uB108 \uBC29\uAE08 \uB514\uBC84\uAE45 \uC18D\uB3C4 \uAC1C\uCA54\uC5C8\uC5B4. \uC778\uC815."
       ]
     },
-    { type: "condition", $if: () => true, goto: "calm" },
+    { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "run" },
     { type: "camera-effect", preset: "shake", duration: 800 },
     { type: "character", action: "show", name: "zena", image: "embarrassed", duration: 300 },
@@ -19381,7 +19389,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "mood", mood: "horror", action: "remove", duration: 1e3 },
-    { type: "condition", $if: () => true, goto: "calm" },
+    { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "prank" },
     {
       type: "dialogue",
@@ -19520,7 +19528,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD56D\uC0C1 \uB51C\uB7EC\uB9CC \uACE0\uC9D1\uD558\uBA70 \uB3CC\uC9C4\uD558\uB2E4 \uC8FD\uB294 \uC81C\uB098\uC758 \uC131\uD5A5\uC744 \uC0DD\uAC01\uD558\uBA74 \uC5C4\uCCAD\uB09C \uD30C\uACA9 \uB300\uC6B0\uB2E4."
     },
-    { type: "condition", $if: () => true, goto: "epilogue" },
+    { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "tired" },
     {
       type: "dialogue",
@@ -19546,7 +19554,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uACB0\uAD6D \uAC15\uC81C \uC9D5\uC6A9 \uC5D4\uB529\uC774\uB2E4."
     },
-    { type: "condition", $if: () => true, goto: "epilogue" },
+    { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "epilogue" },
     { type: "character", action: "show", name: "zena", image: "smile", duration: 800 },
     {

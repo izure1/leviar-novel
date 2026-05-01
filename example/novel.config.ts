@@ -3,13 +3,14 @@ import { defineNovelConfig, define } from '../src'
 import chat from './characters/chat'
 import zena from './characters/zena'
 
-const testModule = define<{ message: string }>()
+const testModule = define<{ message: string, $callback: (now: number) => void }>()
 testModule
   .onBoot(async (world) => {
     console.log('booting...')
   })
   .defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
   .defineCommand(function* (cmd, ctx) {
+    cmd.$callback(Date.now())
     console.log('[test-cmd]', cmd.message, ctx.globalVars)
     return true
   })

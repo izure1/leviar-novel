@@ -3,6 +3,7 @@
 // =============================================================
 
 import type { SceneContext, CommandResult } from '../core/SceneContext'
+import type { ValidateCmd } from './defineCmdUI'
 
 
 // ─── Resolvable 유틸리티 타입 ────────────────────────────────
@@ -104,7 +105,11 @@ function resolveVal(val: any, vars: any): any {
 function resolveObj(obj: Record<string, any>, vars: any): Record<string, any> {
   const result: Record<string, any> = {}
   for (const key in obj) {
-    result[key] = resolveVal(obj[key], vars)
+    if (key.startsWith('$')) {
+      result[key] = obj[key]
+    } else {
+      result[key] = resolveVal(obj[key], vars)
+    }
   }
   return result
 }
@@ -150,7 +155,7 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * })
  * ```
  */
-export function defineCmd<TCmd>(
+export function defineCmd<TCmd extends ValidateCmd<TCmd>>(
   handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult
 ): (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult {
   return (rawParams, ctx) => {

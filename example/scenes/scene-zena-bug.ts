@@ -60,7 +60,7 @@ export default defineScene({
       '너 방금 디버깅 속도 개쩔었어. 인정.'
     ]
   },
-  { type: 'condition', $if: () => true, goto: 'calm' },
+  { type: 'condition', if: () => true, goto: 'calm' },
 
   { type: 'label', name: 'run' },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
@@ -82,7 +82,7 @@ export default defineScene({
     ]
   },
   { type: 'mood', mood: 'horror', action: 'remove', duration: 1000 },
-  { type: 'condition', $if: () => true, goto: 'calm' },
+  { type: 'condition', if: () => true, goto: 'calm' },
 
   { type: 'label', name: 'prank' },
   {

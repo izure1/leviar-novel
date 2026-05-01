@@ -90,7 +90,7 @@ export default defineScene({
     type: 'dialogue',
     text: '항상 딜러만 고집하며 돌진하다 죽는 제나의 성향을 생각하면 엄청난 파격 대우다.'
   },
-  { type: 'condition', $if: () => true, goto: 'epilogue' },
+  { type: 'condition', if: () => true, goto: 'epilogue' },
 
   { type: 'label', name: 'tired' },
   {
@@ -117,7 +117,7 @@ export default defineScene({
     type: 'dialogue',
     text: '결국 강제 징용 엔딩이다.'
   },
-  { type: 'condition', $if: () => true, goto: 'epilogue' },
+  { type: 'condition', if: () => true, goto: 'epilogue' },
 
   { type: 'label', name: 'epilogue' },
   { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 800 },

@@ -109,7 +109,7 @@ export interface SceneDefinition<
  */
 export function defineScene<
   TVars extends Record<string, any>,
-  TConfig extends NovelConfig<any, readonly string[], any, any, any> & { modules?: Record<string, NovelModule<any>> },
+  TConfig extends NovelConfig<TVars, readonly string[], any, any, any> & { modules?: Record<string, NovelModule<any>> },
   TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
   TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>) = ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
 >(
