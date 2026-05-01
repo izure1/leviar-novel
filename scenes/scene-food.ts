@@ -1,4 +1,3 @@
-// example/scenes/scene-zena-food.ts
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
@@ -7,17 +6,17 @@ export default defineScene({
   config,
   initial: commonInitial,
   next: {
-    scene: 'scene-zena-stream',
+    scene: 'scene-stream',
     preserve: true,
   },
-}, [
+})([
   { type: 'mood', mood: 'sunset', action: 'remove', duration: 3000 },
   { type: 'mood', mood: 'night', action: 'add', intensity: 0.7, duration: 3000, disable: true },
   { type: 'dialogue', text: '해가 진다.' },
 
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '하... 게임 억까 당해서 멘탈 터지니까 배고파졌다.'
   },
   {
@@ -26,8 +25,8 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
-    text: '인간의 3대 욕구는 코딩, 수면, 야식 아니야?'
+    speaker: 'fumika',
+    text: '인간의 3大 욕구는 코딩, 수면, 야식 아니야?'
   },
   {
     type: 'dialogue',
@@ -39,17 +38,17 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '당연하지. 현대인에게 야식은 중꺾마의 원천이야.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '중요한 건 꺾이지 않는 마라맛.'
   },
   {
     type: 'dialogue',
-    text: '제나는 스마트폰을 꺼내 배달 앱을 미친 듯이 스크롤하기 시작했다.'
+    text: '후미카는 스마트폰을 꺼내 배달 앱을 미친 듯이 스크롤하기 시작했다.'
   },
   {
     type: 'choice',
@@ -61,10 +60,10 @@ export default defineScene({
 
   // ─── 치킨 ───
   { type: 'label', name: 'chicken' },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '치킨?',
       '너 T야? 공감 능력 죽었네.',
@@ -76,10 +75,10 @@ export default defineScene({
     text: '그게 무슨 끔찍한 혼종인가.'
   },
   { type: 'dialogue', text: '"마라에 로제에 크림치즈...? 위장 테러 아냐?"' },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '테러방지법은 통과됐지만, 찜닭방지법은 아직이거든, 내가.',
   },
   { type: 'dialogue', text: '할 말을 잃었다.' },
@@ -87,25 +86,25 @@ export default defineScene({
 
   // ─── 매운거 ───
   { type: 'label', name: 'spicy' },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '오, 기억력 좋은데? 대화가 된다 대화가.'
   },
   {
     type: 'dialogue',
-    text: '제나가 만족스러운 미소를 지었다.'
+    text: '후미카가 만족스러운 미소를 지었다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '근데 매운 거 먹으면 내 위장이 위험해질 수도...'
   },
   { type: 'dialogue', text: '"그렇다면?"' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '그러니까 마라로제크림치즈찜닭으로 간다.'
   },
   {
@@ -123,11 +122,11 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    text: '제나는 익숙한 손놀림으로 결제를 마쳤다.'
+    text: '후미카는 익숙한 손놀림으로 결제를 마쳤다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '배달 60분 걸린대.'
   },
   { type: 'camera-effect', preset: 'shake', duration: 300 },
@@ -138,15 +137,15 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '어, 음식 올 때까지 시간 남았네!'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '유튜브 숏폼으로 도파민 좀 채워야지~'
   },
-  { type: 'dialogue', text: '제나는 내 말을 깔끔하게 씹어버렸다.' },
+  { type: 'dialogue', text: '후미카는 내 말을 깔끔하게 씹어버렸다.' },
   {
     type: 'dialogue',
     text: '그리고는 곧바로 화면 속 숏폼 영상으로 빨려 들어갔다.'

@@ -1,6 +1,5 @@
-// example/scenes/scene-zena.ts
 import config from '../novel.config'
-import { defineScene, defineHook } from '../../src'
+import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
 
 export default defineScene({
@@ -11,10 +10,10 @@ export default defineScene({
   },
   initial: commonInitial,
   next: {
-    scene: 'scene-zena-game',
+    scene: 'scene-game',
     preserve: true,
   },
-}, [
+})([
   {
     type: 'dialogBox',
     title: '음성 제어',
@@ -30,22 +29,12 @@ export default defineScene({
       }
     ]
   },
-  {
-    type: 'input',
-    to: 'username',
-    label: '당신의 이름을 입력하세요',
-    multiline: false,
-    buttons: [
-      { text: '저장' },
-      { text: '취소', cancel: true },
-    ],
-  },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
   { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 25 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
-
+  { type: 'test-cmd', message: 'hello', $callback: (now: number) => { console.log(now) } },
 
   {
     type: 'dialogue',
@@ -64,10 +53,10 @@ export default defineScene({
     type: 'dialogue',
     text: '그곳에는 마치 세상 모든 짐을 짊어진 듯한 표정의 소녀가 있었다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '아... 인생 진짜 로그아웃하고 싶다.'
   },
   {
@@ -83,11 +72,11 @@ export default defineScene({
     text: '내가 힐끔 쳐다보자, 살벌한 눈빛과 딱 마주쳤다.'
   },
   { type: 'camera-zoom', preset: 'close-up' },
-  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
-    text: '{{username}}, 혹시 제 얼굴에 "나 오늘 갓생 살 거다"라고 쓰여있어?'
+    speaker: 'fumika',
+    text: '혹시 내 얼굴에 "나 오늘 갓생 살 거다"라고 쓰여있어?'
   },
   {
     type: 'dialogue',
@@ -95,15 +84,15 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '왜 하필 내 앞에서 그렇게 해맑게 커피를 마시는 거야?'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '자비 좀 베풀어줘.'
   },
-  { type: 'character-focus', name: 'zena', point: 'face', zoom: 'reset' },
+  { type: 'character-focus', name: 'fumika', point: 'face', zoom: 'reset' },
 
   {
     type: 'choice',
@@ -118,7 +107,7 @@ export default defineScene({
   { type: 'label', name: 'ask-job' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '일? 하, 비즈니스 토크 금지야. 지금 내 두뇌는 404 Error 상태라고.'
   },
   {
@@ -127,17 +116,17 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '그냥... 세상의 모든 코드를 삭제하고 평화로운 자연인으로 살고 싶을 뿐이야.'
   },
   {
     type: 'dialogue',
     text: '확실히 제정신은 아닌 것 같다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 500 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 500 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '근데 너 커피 맛있어 보인다. 한 입만?'
   },
   {
@@ -146,18 +135,18 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
-    text: '아, 농담이야. 밴(Ban) 당하기 싫으면 조심해.'
+    speaker: 'fumika',
+    text: '농담임.'
   },
   { type: 'condition', if: () => true, goto: 'common-end' },
 
   // ─── 분기: 버그 질문 ───
   { type: 'label', name: 'ask-bug' },
   { type: 'camera-effect', preset: 'shake', duration: 400 },
-  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '버그?! 너, 지금 금기어 썼어.'
   },
   {
@@ -166,12 +155,12 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '내 인생 자체가 거대한 버그인데 무슨 소릴 하는 거야?'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '세미콜론 하나 때문에 내 주말이 통째로 날아갔다고! 이건 인권 침해야!'
   },
   {
@@ -180,7 +169,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '...근데 너 개발자야? 아니면 그냥 훈수 두는 하청 업자야?'
   },
   {
@@ -189,7 +178,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '말투가 딱 트위치 채팅창인데.'
   },
   { type: 'condition', if: () => true, goto: 'common-end' },
@@ -200,10 +189,10 @@ export default defineScene({
     type: 'dialogue',
     text: '똥이 무서워서 피하나. 나는 슬그머니 자리에서 일어났다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'angry', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'angry', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '어? 어딜 도망가?'
   },
   {
@@ -212,12 +201,12 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '지금 내 기분이 떡락 중인데 관객도 없이 혼자 화나 있으라고?'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '너, 앉아.'
   },
   {
@@ -226,17 +215,22 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계야. 도망 못 가.'
   },
   { type: 'condition', if: () => true, goto: 'common-end' },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: 'hello',
+  },
 
   // ─── 공통 엔딩 ───
   { type: 'label', name: 'common-end' },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 800 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '하... 모르겠다. 갓생은 내일부터 살지 뭐.'
   },
   {
@@ -245,12 +239,75 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    text: '잠시 후 그녀가 고개를 들며 나를 쳐다보았다.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '어이, 너 이름이 뭐야?'
+  },
+  {
+    type: 'dialogue',
+    text: [
+      '그녀가 내 이름을 물어보았다.',
+      '확실히 그녀의 이름은 후미카였지...',
+      '내 이름은...'
+    ]
+  },
+  {
+    type: 'input',
+    to: 'username',
+    label: '당신의 이름을 입력하세요',
+    multiline: false,
+    buttons: [
+      { text: '저장' },
+      { text: '취소', cancel: true },
+    ],
+  },
+  {
+    type: 'dialogue',
+    text: [
+      '"내 이름은 {{ username }}이야."',
+      '나는 그녀에게 대답했다.',
+    ]
+  },
+  {
+    type: 'condition',
+    if: ({ username }) => username === '후미카',
+    'goto': 'same-name',
+    'else-goto': 'choice-game'
+  },
+
+  // ─── 분기: 이름 ───
+  { type: 'label', name: 'same-name' },
+  {
+    type: 'dialogue',
+    text: [
+      '그녀는 잠시 나를 쳐다보았고',
+      '잠시 후 어리둥절한 표정으로 말했다.'
+    ]
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '뭐... 알 바 아니지만 이름이 나랑 같네.'
+  },
+  {
+    type: 'dialogue',
+    text: '확실히 신기한 우연이다.'
+  },
+  { type: 'condition', if: () => true, goto: 'choice-game' },
+
+  // ─── 분기: 게임 ───
+  { type: 'label', name: 'choice-game' },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
     text: '너, 나랑 게임이나 한 판 때릴래?'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '요즘 유행하는 그 똥겜 있어. 버그 덩어리인 거.'
   },
   {
@@ -267,7 +324,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    text: '이것이 나와 제나의 끔찍한 첫 만남이었다.'
+    text: '이것이 나와 후미카의 끔찍한 첫 만남이었다.'
   },
   { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 3000, disable: true },
 ])

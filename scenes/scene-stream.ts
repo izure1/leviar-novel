@@ -1,4 +1,3 @@
-// example/scenes/scene-zena-stream.ts
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
@@ -6,31 +5,31 @@ import { commonInitial } from './common-initial'
 export default defineScene({
   config,
   initial: commonInitial,
-  next: 'scene-zena-outside',
-}, [
+  next: 'scene-outside',
+})([
   {
     type: 'dialogue',
     text: [
       '어둑한 침실 문틈 사이로 불빛이 새어 나오고 있었다.',
       '나는 소파에 편하게 기대어 누워있었다.',
-      '배달 음식을 기다리며 유튜브를 보던 제나가 갑자기 마이크 선을 건드렸다.',
+      '배달 음식을 기다리며 유튜브를 보던 후미카가 갑자기 마이크 선을 건드렸다.',
       '그녀의 손가락이 의도치 않게 카메라 전원 버튼을 스치고 지나갔다.'
     ]
   },
   { type: 'camera-effect', preset: 'shake', duration: 500 },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '앗, 잠깐!'
   },
   {
     type: 'dialogue',
-    text: '제나의 손놀림이 다급해졌다. 마우스를 마구 클릭하는 소리가 방 안을 채운다.'
+    text: '후미카의 손놀림이 다급해졌다. 마우스를 마구 클릭하는 소리가 방 안을 채운다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '이거 방송 켜진 거 아니야?!'
   },
   {
@@ -41,10 +40,10 @@ export default defineScene({
     type: 'dialogue',
     text: '놀랍게도, 그 당황함은 단 1초 만에 흔적도 없이 사라졌다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '하이룽~ 트수들!'
   },
   {
@@ -53,7 +52,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '방송 안 켠다고 해놓고 실수로 켜버렸다!'
   },
   {
@@ -66,7 +65,7 @@ export default defineScene({
     text: [
       '<style color="rgb(150,150,150)">[ 앗 기습 뱅온 ㄷㄷ ]</style>',
       '<style color="rgb(150,150,150)">[ 오늘 휴방이라며! 휴방이라며! ]</style>',
-      '<style color="rgb(150,150,150)">[ 헐레벌떡 들어왔습니다 제나님 ]</style>',
+      '<style color="rgb(150,150,150)">[ 헐레벌떡 들어왔습니다 후미카님 ]</style>',
     ],
     speed: 10,
   },
@@ -82,7 +81,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '아니야~ 방금 세수하고 와서 완전 쌩얼이긴 한데,'
   },
   {
@@ -91,7 +90,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '우리 트수들 보고 싶어서 잠깐 켰지~'
   },
   {
@@ -113,7 +112,7 @@ export default defineScene({
   { type: 'label', name: 'wave' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '오늘 야식은 찜닭 시켰어용~'
   },
   {
@@ -122,7 +121,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '혼자 먹기엔 좀 많지만 남으면 낼 먹어야지!'
   },
   {
@@ -158,31 +157,31 @@ export default defineScene({
     ],
     speed: 10,
   },
-  { type: 'character-effect', name: 'zena', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
+  { type: 'character-effect', name: 'fumika', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
-    text: '제나의 얼굴이 사색이 되었다. 그녀는 마이크를 황급히 가렸다.'
+    text: '후미카의 얼굴이 사색이 되었다. 그녀는 마이크를 황급히 가렸다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '<style fontSize="14">미쳤어?! 손 치워!</style>'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '<style fontSize="14">나 육수 우려서 먹고사는 심해 방송이란 말이야!</style>'
   },
   {
     type: 'dialogue',
-    text: '제나는 다시 마이크에서 손을 떼고 억지웃음을 지었다.'
+    text: '후미카는 다시 마이크에서 손을 떼고 억지웃음을 지었다.'
   },
-  { type: 'character-effect', name: 'zena', preset: 'reset' },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character-effect', name: 'fumika', preset: 'reset' },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '아, 여러분! 방금 그거 제 손이에요!'
   },
   {
@@ -191,7 +190,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '남자 손 같죠?',
       '제가 뼈대 굵은 거 아시잖아요? 하하하!'
@@ -215,11 +214,11 @@ export default defineScene({
     ],
     speed: 10,
   },
-  { type: 'character-effect', name: 'zena', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed' },
+  { type: 'character-effect', name: 'fumika', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '아니야! 형 아니라고!'
   },
   {
@@ -228,27 +227,27 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '민방위 안 끝났냐니 선 넘네 진짜!',
       '거근...?',
-      '그건 또 무슨 미친 소리야 그런 게 왜 있어!',
+      '그건 또 무슨 미친 소리야 그런 게 왜 달려있어!',
     ]
   },
   {
     type: 'dialogue',
-    text: '화가 머리끝까지 난 제나가 마침내 이성을 놓아버렸다.'
+    text: '화가 머리끝까지 난 후미카가 마침내 이성을 놓아버렸다.'
   },
   { type: 'camera-effect', preset: 'shake-y', intensity: 100, duration: 500, repeat: -1 },
-  { type: 'character-effect', name: 'zena', preset: 'reset' },
+  { type: 'character-effect', name: 'fumika', preset: 'reset' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '<style fontSize="30">야, 너 때문에 채팅창 창났잖아!</style>'
   },
   {
     type: 'dialogue',
-    text: '제나가 내 멱살을 잡고 흔드는 장면까지...'
+    text: '후미카가 내 멱살을 잡고 흔드는 장면까지...'
   },
   {
     type: 'dialogue',
@@ -271,7 +270,7 @@ export default defineScene({
   { type: 'label', name: 'troll' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '오늘 야식은 찜닭 시켰어용~'
   },
   {
@@ -280,7 +279,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '외롭게 혼자 먹방 할 예정이니까 다들 끝까지 봐줘야 해?'
   },
   { type: 'camera-effect', preset: 'shake', duration: 300 },
@@ -312,14 +311,14 @@ export default defineScene({
     ],
     speed: 10,
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
   {
     type: 'dialogue',
-    text: '제나의 얼굴에서 영업용 미소가 완전히 증발했다.'
+    text: '후미카의 얼굴에서 영업용 미소가 완전히 증발했다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '악! 야! 너 지금 뭐 하는 거야?!'
   },
   {
@@ -330,14 +329,14 @@ export default defineScene({
     type: 'dialogue',
     text: '하지만 이미 엎질러진 물이다. 채팅창의 폭주는 멈출 기미가 보이지 않았다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    text: '제나는 황급히 다시 억지 미소를 장착했다.'
+    text: '후미카는 황급히 다시 억지 미소를 장착했다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '...아, 여러분. 방금 그건 제 GPT입니다.'
   },
   {
@@ -346,7 +345,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '배달 알림 기능이 좀 리얼하죠? 땀땀...'
   },
   {
@@ -357,20 +356,20 @@ export default defineScene({
 
   { type: 'label', name: 'stream-end' },
   { type: 'camera-effect', preset: 'reset', duration: 500 },
-  { type: 'character-effect', name: 'zena', preset: 'reset', duration: 500 },
+  { type: 'character-effect', name: 'fumika', preset: 'reset', duration: 500 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '오늘 방송은 3분 만에 방종하겠습니다!!'
   },
   {
     type: 'dialogue',
     text: '다급한 인사와 함께 화면이 꺼졌다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
   {
     type: 'dialogue',
-    text: '방송 종료 버튼을 누르자마자 제나는...'
+    text: '방송 종료 버튼을 누르자마자 후미카는...'
   },
   {
     type: 'dialogue',

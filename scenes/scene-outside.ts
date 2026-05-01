@@ -1,4 +1,3 @@
-// example/scenes/scene-zena-outside.ts
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
@@ -7,10 +6,10 @@ export default defineScene({
   config,
   initial: commonInitial,
   next: {
-    scene: 'scene-zena-bug',
+    scene: 'scene-bug',
     preserve: true,
   },
-}, [
+})([
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'park', duration: 1000 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
@@ -20,7 +19,7 @@ export default defineScene({
     action: 'play',
     name: 'bgm',
     src: 'daytime',
-    duration: 1000,
+    duration: 3000,
     repeat: true,
     volume: 0.1,
   },
@@ -39,24 +38,24 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    text: '나는 어젯밤 방송 사고의 충격에서 헤어나오지 못하는 제나를 강제로 끌고 나왔다.'
+    text: '나는 어젯밤 방송 사고의 충격에서 헤어나오지 못하는 후미카를 강제로 끌고 나왔다.'
   },
   {
     type: 'dialogue',
     text: '방구석에만 박혀있다가는 정말로 곰팡이가 피어오를 것 같았기 때문이다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', position: 'center', duration: 800 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 800, flicker: 'candle' },
   {
     type: 'dialogue',
     text: [
-      '햇빛을 쬐자마자 제나가 눈을 감싸 쥐며 비명을 질렀다.',
+      '햇빛을 쬐자마자 후미카가 눈을 감싸 쥐며 비명을 질렀다.',
       '꼭 퇴마당하는 거 같다.'
     ]
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '햇빛 에임핵 켰냐! 이거 블루라이트 필터 안 돼?!'
   },
   {
@@ -76,19 +75,19 @@ export default defineScene({
     type: 'dialogue',
     text: '"광합성 좀 해. 창백해서 뱀파이어인 줄 알겠다."'
   },
-  { type: 'character', name: 'zena', action: 'show', image: 'angry' },
+  { type: 'character', name: 'fumika', action: 'show', image: 'angry' },
   {
     type: 'dialogue',
-    text: '내 지적에 제나가 덧니를 드러내며 으르렁거렸다.'
+    text: '내 지적에 후미카가 덧니를 드러내며 으르렁거렸다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '뱀파이어면 너부터 물었어.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '근데 넌 피도 맛없게 생겨서 물기도 싫어.'
   },
   {
@@ -98,28 +97,28 @@ export default defineScene({
   { type: 'condition', if: () => true, goto: 'walk' },
 
   { type: 'label', name: 'content' },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', focus: '', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', focus: '', duration: 300 },
   {
     type: 'dialogue',
     text: '"야외 방송 콘텐츠라고 생각해."'
   },
   {
     type: 'dialogue',
-    text: '내가 어르고 달래자, 제나의 귀가 쫑긋거렸다.'
+    text: '내가 어르고 달래자, 후미카의 귀가 쫑긋거렸다.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '오? 콘텐츠?'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '너 제법 매니저 마인드가 장착됐네.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '가산점 +1점 주겠어.'
   },
   {
@@ -129,7 +128,7 @@ export default defineScene({
   { type: 'condition', if: () => true, goto: 'walk' },
 
   { type: 'label', name: 'walk' },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
   {
     type: 'dialogue',
     text: '결국 그녀는 입술을 삐죽거리면서도 나를 따라나섰다.'
@@ -140,7 +139,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '뭐... 나쁘진 않네.'
   },
   {
@@ -149,7 +148,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '그래픽 렌더링도 잘 됐고. 풀 텍스처도 나름 고해상도고.'
   },
   {
