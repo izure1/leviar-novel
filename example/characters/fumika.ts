@@ -1,7 +1,7 @@
 import { defineCharacter } from '../../src'
 
 export default defineCharacter({
-  name: '제나',
+  name: '후미카',
   images: {
     normal: {
       src: 'girl_normal',

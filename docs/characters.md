@@ -19,11 +19,11 @@
 
 **사용 예시:**
 ```typescript
-const zena = defineCharacter({
-  name: '제나',
+const fumika = defineCharacter({
+  name: '후미카',
   images: {
     smile: {
-      src: 'zena_smile_img',
+      src: 'fumika_smile_img',
       width: 400,
       points: { face: { x: 0.5, y: 0.2 } }
     }
@@ -68,10 +68,10 @@ defineCharacter({
 
 ```typescript
 defineScene({ config }, [
-  // 제나의 얼굴('face') 포인트로 클로즈업 줌인
+  // 후미카의 얼굴('face') 포인트로 클로즈업 줌인
   { 
     type: 'character-focus', 
-    name: 'zena', 
+    name: 'fumika', 
     point: 'face', 
     zoom: 'close-up', 
     duration: 800 

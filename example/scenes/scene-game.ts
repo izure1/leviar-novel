@@ -1,4 +1,3 @@
-// example/scenes/scene-zena-game.ts
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
@@ -7,21 +6,20 @@ export default defineScene({
   config,
   variables: {
     _gameScore: 0,
-    _zenaRage: 0,
   },
   initial: commonInitial,
   next: {
-    scene: 'scene-zena-food',
+    scene: 'scene-food',
     preserve: true,
   },
 })([
-  { type: 'character', name: 'zena', action: 'remove', duration: 0 },
+  { type: 'character', name: 'fumika', action: 'remove', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
   { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 3000 },
   {
     type: 'dialogue',
-    text: '제나의 아지트. 낡은 책상 위에는 화려한 RGB 조명이 번쩍이는 키보드와 듀얼 모니터가 놓여 있다.'
+    text: '후미카의 아지트. 낡은 책상 위에는 화려한 RGB 조명이 번쩍이는 키보드와 듀얼 모니터가 놓여 있다.'
   },
   {
     type: 'dialogue',
@@ -31,10 +29,10 @@ export default defineScene({
     type: 'dialogue',
     text: '화면 속에서는 정체불명의 몬스터가 기괴한 폴리곤을 흩뿌리며 춤을 추고 있다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', position: 'center', focus: 'face', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '자, 봐봐. 이 게임이 얼마나 갓겜이냐면...'
   },
   {
@@ -43,17 +41,17 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '여기서 점프키를 세 번 연타하고 앉기를 누르면 하늘을 날 수 있음.'
   },
   {
     type: 'dialogue',
     text: '그게 무슨 미친 조작법인가 싶지만, 화면 속 캐릭터는 정말로 공중부양을 시작했다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '물론 착지할 땐 맵을 뚫고 지하실로 떨어지지만.',
       '완전 아트 아님?'
@@ -84,12 +82,12 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '너 꽤 배운 사람이네.'
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '개발자의 의도를 완벽히 파악했어.'
   },
   { type: 'var', name: 'likeability', value: 10 },
@@ -103,13 +101,13 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    text: '팩트를 꽂아넣자, 제나의 표정이 실시간으로 썩어 들어갔다.'
+    text: '팩트를 꽂아넣자, 후미카의 표정이 실시간으로 썩어 들어갔다.'
   },
   { type: 'camera-effect', preset: 'shake', duration: 300 },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '망겜이라니! 이건 언더독의 반란이자 포스트모더니즘 예술이라고!'
   },
   {
@@ -118,7 +116,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '하... 너는 아직 이 세계를 이해할 준비가 안 된 거야.'
   },
   {
@@ -129,10 +127,10 @@ export default defineScene({
 
   // ─── 게임 플레이 ───
   { type: 'label', name: 'play-game' },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 500 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 500 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '자, 패드 잡아. 보스전이야.'
   },
   {
@@ -153,10 +151,10 @@ export default defineScene({
     type: 'dialogue',
     text: '내 캐릭터가 갑자기 T포즈를 취하더니 하늘로 솟구치기 시작했다.'
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: '아... 또 튕겼다.'
   },
   {
@@ -169,6 +167,6 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    text: '제나와의 기묘한 똥겜 데이트가 허무하게 끝났다.'
+    text: '후미카와의 기묘한 똥겜 데이트가 허무하게 끝났다.'
   },
 ])

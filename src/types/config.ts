@@ -252,7 +252,7 @@ export interface NovelOption {
  * @example
  * ```ts
  * import config from './novel.config'
- * type CharKey = CharacterKeysOf<typeof config>  // 'arisiero' | 'zena'
+ * type CharKey = CharacterKeysOf<typeof config>
  * ```
  */
 export type CharacterKeysOf<TConfig> =

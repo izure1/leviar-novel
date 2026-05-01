@@ -1,7 +1,7 @@
 // example/novel.config.ts
 import { defineNovelConfig, define } from '../src'
 import chat from './characters/chat'
-import zena from './characters/zena'
+import fumika from './characters/fumika'
 
 const testModule = define<{ message: string, $callback: (now: number) => void }>()
 testModule
@@ -48,17 +48,17 @@ export default defineNovelConfig({
     'for': forModule,
   },
   scenes: [
-    'scene-zena',
-    'scene-zena-game',
-    'scene-zena-food',
-    'scene-zena-stream',
-    'scene-zena-outside',
-    'scene-zena-bug',
-    'scene-zena-ending',
+    'scene-start',
+    'scene-game',
+    'scene-food',
+    'scene-stream',
+    'scene-outside',
+    'scene-bug',
+    'scene-ending',
   ],
   characters: {
     'chat': chat,
-    'zena': zena,
+    'fumika': fumika,
   },
   backgrounds: {
     'floor': { src: 'bg_floor', parallax: true },

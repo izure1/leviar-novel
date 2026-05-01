@@ -25,7 +25,9 @@ export interface ConditionCmd<TConfig = any, TVars = any, TLocalVars = any> {
   goto?: string
   /** 조건이 거짓일 때 이동할 현재 씬 내의 라벨 이름 또는 씬 이름입니다. */
   else?: string
-  /** 조건이 거짓일 때 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. */
+  /** 조건이 거짓일 때 이동할 현재 씬 내의 라벨(Label) 이름입니다. goto의 else 대응. */
+  'else-goto'?: string
+  /** 조건이 거짓일 때 이동할 다음 씬. 문자열 또는 { scene, preserve } 객체. next의 else 대응. */
   'else-next'?: SceneNextTarget<TConfig>
 }
 
@@ -43,14 +45,16 @@ conditionModule.defineCommand(function* (cmd, ctx) {
       ctx.scene.loadScene(cmd.next)
     }
   } else {
-    if (cmd.else) {
+    if (cmd['else-goto']) {
+      ctx.scene.jumpToLabel(cmd['else-goto'])
+    } else if (cmd['else-next']) {
+      ctx.scene.loadScene(cmd['else-next'])
+    } else if (cmd.else) {
       if (ctx.scene.hasLabel(cmd.else)) {
         ctx.scene.jumpToLabel(cmd.else)
       } else {
         ctx.scene.loadScene(cmd.else)
       }
-    } else if (cmd['else-next']) {
-      ctx.scene.loadScene(cmd['else-next'])
     }
   }
 

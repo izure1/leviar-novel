@@ -1,4 +1,3 @@
-// example/scenes/scene-zena-bug.ts
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
@@ -6,21 +5,21 @@ import { commonInitial } from './common-initial'
 export default defineScene({
   config,
   initial: commonInitial,
-  next: 'scene-zena-ending',
+  next: 'scene-ending',
 })([
   {
     type: 'dialogue',
     text: [
       '그렇게 공원을 걷던 중,',
-      '갑자기 제나가 발걸음을 멈추고 굳어버렸다.'
+      '갑자기 후미카가 발걸음을 멈추고 굳어버렸다.'
     ]
   },
 
   { type: 'camera-effect', preset: 'shake', duration: 500 },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', focus: 'face', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', focus: 'face', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '헉... 저, 저기...',
       '버그... 리얼 월드 버그 떴어...!'
@@ -48,13 +47,13 @@ export default defineScene({
     type: 'dialogue',
     text: [
       '내가 태연하게 매미를 잡아 숲으로 날려보내자,',
-      '제나가 존경스러운 눈빛으로 나를 보았다.'
+      '후미카가 존경스러운 눈빛으로 나를 보았다.'
     ]
   },
-  { type: 'character', action: 'show', name: 'zena', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '미친 피지컬...',
       '너 방금 디버깅 속도 개쩔었어. 인정.'
@@ -64,11 +63,11 @@ export default defineScene({
 
   { type: 'label', name: 'run' },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
-  { type: 'character', action: 'show', name: 'zena', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
   { type: 'mood', mood: 'horror', action: 'add', intensity: 0.3, flicker: 'strobe' },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '으아아악!',
       '서버 터진다! 도망가!!!'
@@ -88,14 +87,14 @@ export default defineScene({
   {
     type: 'dialogue',
     text: [
-      '나는 재빨리 매미를 낚아채어 제나의 등에 살포시 붙였다.',
-      '매미가 맴맴 울기 시작하자 제나의 눈동자가 미친듯이 흔들렸다.'
+      '나는 재빨리 매미를 낚아채어 후미카의 등에 살포시 붙였다.',
+      '매미가 맴맴 울기 시작하자 후미카의 눈동자가 미친듯이 흔들렸다.'
     ]
   },
   { type: 'camera-effect', preset: 'shake', intensity: 20, duration: 1000 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '꺄아아아아악!!! 야 이 미친!!!',
       '등에! 등에 뭔가 진동이 울리잖아!! 떼 줘!!!'
@@ -110,7 +109,7 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '미친 소리 하지 마아아아!!',
       '살려줘어어!!!'
@@ -119,16 +118,16 @@ export default defineScene({
   {
     type: 'dialogue',
     text: [
-      '제나는 공원을 미친 듯이 뛰어다니기 시작했다.',
+      '후미카는 공원을 미친 듯이 뛰어다니기 시작했다.',
       '강제 달리기 운동으로 오늘치 칼로리 소모는 완벽하다.'
     ]
   },
 
   { type: 'label', name: 'calm' },
-  { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 500 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 500 },
   {
     type: 'dialogue',
-    speaker: 'zena',
+    speaker: 'fumika',
     text: [
       '하아... 하아...',
       '역시 현실 세계는 버그 덩어리야.',

@@ -9,13 +9,13 @@ import {
 import { Novel } from '../src'
 import config from './novel.config'
 
-import sceneZena from './scenes/scene-zena'
-import sceneZenaGame from './scenes/scene-zena-game'
-import sceneZenaFood from './scenes/scene-zena-food'
-import sceneZenaStream from './scenes/scene-zena-stream'
-import sceneZenaOutside from './scenes/scene-zena-outside'
-import sceneZenaBug from './scenes/scene-zena-bug'
-import sceneZenaEnding from './scenes/scene-zena-ending'
+import sceneStart from './scenes/scene-start'
+import sceneGame from './scenes/scene-game'
+import sceneFood from './scenes/scene-food'
+import sceneStream from './scenes/scene-stream'
+import sceneOutside from './scenes/scene-outside'
+import sceneBug from './scenes/scene-bug'
+import sceneEnding from './scenes/scene-ending'
 
 // =============================================================
 // SVG 인라인 유틸 (클릭 오브젝트만 SVG 사용)
@@ -88,13 +88,13 @@ async function main() {
   const novel = new Novel(config, {
     canvas,
     scenes: {
-      'scene-zena': sceneZena,
-      'scene-zena-game': sceneZenaGame,
-      'scene-zena-food': sceneZenaFood,
-      'scene-zena-stream': sceneZenaStream,
-      'scene-zena-outside': sceneZenaOutside,
-      'scene-zena-bug': sceneZenaBug,
-      'scene-zena-ending': sceneZenaEnding,
+      'scene-start': sceneStart,
+      'scene-game': sceneGame,
+      'scene-food': sceneFood,
+      'scene-stream': sceneStream,
+      'scene-outside': sceneOutside,
+      'scene-bug': sceneBug,
+      'scene-ending': sceneEnding,
     },
   })
 
@@ -119,7 +119,7 @@ async function main() {
     const { speaker, text } = state
     const now = performance.now()
     before = now
-    if (speaker === '제나') {
+    if (speaker === '후미카') {
       const speaker = engine.synthesize(text, false);
       (async () => {
         for await (const output of speaker.speak()) {
@@ -134,7 +134,7 @@ async function main() {
   })
 
   // ── 시작
-  novel.start('scene-zena')
+  novel.start('scene-start')
 
   // =============================================================
   // 컨트롤 버튼 연결
