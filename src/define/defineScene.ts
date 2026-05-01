@@ -136,7 +136,7 @@ export function defineScene<
      */
     hooks?: SceneHookDescriptor
   },
-  dialogues: NoInfer<DialogueStep<TConfig, TLocalVars, TVars>>[]
+  dialogues: DialogueStep<TConfig, TLocalVars, TVars>[]
 ): SceneDefinition<
   TConfig['vars'],
   TConfig['scenes'],

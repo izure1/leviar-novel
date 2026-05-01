@@ -18447,6 +18447,16 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "zena",
+      text: "\uADF8\uBCF4\uB2E4 \uB108 \uC774\uB984\uC774 \uB098\uB791 \uAC19\uB124. \uC774\uAC83\uB3C4 \uC778\uC5F0\uC778\uB370, \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798?"
+    },
+    {
+      type: "dialogue",
+      speaker: "asdf",
+      text: "hello"
+    },
+    {
+      type: "dialogue",
+      speaker: "zena",
       text: "\uB108, \uB098\uB791 \uAC8C\uC784\uC774\uB098 \uD55C \uD310 \uB54C\uB9B4\uB798?"
     },
     {

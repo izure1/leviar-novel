@@ -243,6 +243,19 @@ export default defineScene({
     type: 'dialogue',
     text: '그녀는 미련 없이 노트북 화면을 절전 모드로 돌렸다.'
   },
+
+
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: '그보다 너 이름이 나랑 같네. 이것도 인연인데, 게임이나 한 판 때릴래?'
+  },
+
+  {
+    type: 'dialogue',
+    speaker: 'zena',
+    text: 'asdfasdf'
+  },
   {
     type: 'dialogue',
     speaker: 'zena',

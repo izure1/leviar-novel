@@ -45,16 +45,22 @@ export type {
 export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
   [K in keyof ModulesOf<TConfig> & string]:
   ModulesOf<TConfig>[K] extends NovelModule<infer TSchema>
-  ? { type: K } & ResolvableProps<TSchema, TVars, TLocalVars>
+  ? Compute<{ type: K; skip?: boolean } & ResolvableProps<TSchema, TVars, TLocalVars>>
   : never
 }[keyof ModulesOf<TConfig> & string]
 
 /**
- * T를 ResolvableProps로 감싼 뒤 type 키를 붙이는 헬퍼.
+ * T를 ResolvableProps로 감싼 뒤 type 키와 skip을 붙이는 헬퍼.
  * T가 유니온이면 분산(distributive)되어 각 멤버에 개별 적용됩니다.
+ * skip을 직접 포함시켜 Compute 중첩을 줄이고 IDE eager evaluation을 보장합니다.
  */
-type _WithType<T, K extends string, TVars, TLocalVars> =
-  T extends any ? { type: K } & ResolvableProps<T, TVars, TLocalVars> : never
+type Compute<T> = { [K in keyof T]: T[K] } & {}
+
+type _WithType<T, K extends string, TVars, TLocalVars> = {
+  type: K
+  /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */
+  skip?: boolean
+} & ResolvableProps<T, TVars, TLocalVars>
 
 type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<DialogueCmd<TConfig>, 'dialogue', TVars, TLocalVars>
@@ -85,13 +91,8 @@ type _DialogueEntryUnion<TConfig, TVars, TLocalVars> =
   | _WithType<InputCmd<TConfig, TLocalVars>, 'input', TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 
-type _WithSkip<T> = T extends any ? T & {
-  /** true일 경우, 사용자 입력을 기다리지 않고 즉시 다음 스텝으로 넘어갑니다. */
-  skip?: boolean
-} : never
-
 export type DialogueEntry<TConfig, TVars, TLocalVars> =
-  | _WithSkip<_DialogueEntryUnion<TConfig, TVars, TLocalVars>>
+  | _DialogueEntryUnion<TConfig, TVars, TLocalVars>
 
 export type DialogueStep<TConfig, TLocalVars = Record<never, never>, TVars = VarsOf<TConfig>> =
   DialogueEntry<TConfig, TVars, TLocalVars>
