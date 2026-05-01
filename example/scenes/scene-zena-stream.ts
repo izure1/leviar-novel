@@ -7,7 +7,7 @@ export default defineScene({
   config,
   initial: commonInitial,
   next: 'scene-zena-outside',
-}, [
+})([
   {
     type: 'dialogue',
     text: [

@@ -249,18 +249,19 @@ export default defineScene({
     text: '그녀는 미련 없이 노트북 화면을 절전 모드로 돌렸다.'
   },
 
+  { type: 'condition', if: ({ username }) => username !== '제나', goto: 'same-name' },
 
+  // ─── 분기: 이름 ───
+  { type: 'label', name: 'same-name' },
   {
     type: 'dialogue',
     speaker: 'zena',
-    text: '그보다 너 이름이 나랑 같네. 이것도 인연인데, 게임이나 한 판 때릴래?'
+    text: '뭐... 알 바 아니지만 이름이 나랑 같네.'
   },
+  { type: 'condition', if: () => true, goto: 'choice-game' },
 
-  {
-    type: 'dialogue',
-    speaker: 'zena',
-    text: 'asdfasdf'
-  },
+  // ─── 분기: 게임 ───
+  { type: 'label', name: 'choice-game' },
   {
     type: 'dialogue',
     speaker: 'zena',

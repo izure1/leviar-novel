@@ -14,7 +14,7 @@ export default defineScene({
     scene: 'scene-zena-food',
     preserve: true,
   },
-}, [
+})([
   { type: 'character', name: 'zena', action: 'remove', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },

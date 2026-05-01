@@ -3850,21 +3850,25 @@
   function defineInitial(config, initial) {
     return initial;
   }
-  function defineScene({
-    config,
-    variables = {},
-    initial,
-    next,
-    hooks
-  }, dialogues) {
-    return {
+  function defineScene(options, dialogues) {
+    const {
+      variables = {},
+      next,
+      initial,
+      hooks
+    } = options;
+    const build = (steps) => ({
       kind: "dialogue",
-      dialogues,
+      dialogues: steps,
       localVars: variables,
       nextScene: next,
       initial,
       hooks
-    };
+    });
+    if (dialogues !== void 0) {
+      return build(dialogues);
+    }
+    return build;
   }
 
   // node_modules/leviar/dist/index.js
@@ -18219,7 +18223,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-zena-game",
       preserve: true
     }
-  }, [
+  })([
     {
       type: "dialogBox",
       title: "\uC74C\uC131 \uC81C\uC5B4",
@@ -18432,6 +18436,11 @@ ${addLineNumbers(fragment)}`);
       text: "\uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC57C. \uB3C4\uB9DD \uBABB \uAC00."
     },
     { type: "condition", if: ({ username }) => true, goto: "common-end" },
+    {
+      type: "dialogue",
+      speaker: "zena",
+      text: "hello"
+    },
     // ─── 공통 엔딩 ───
     { type: "label", name: "common-end" },
     { type: "character", action: "show", name: "zena", image: "normal", duration: 800 },
@@ -18451,8 +18460,8 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "dialogue",
-      speaker: "asdf",
-      text: "hello"
+      speaker: "zena",
+      text: "asdfasdf"
     },
     {
       type: "dialogue",
@@ -18495,7 +18504,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-zena-food",
       preserve: true
     }
-  }, [
+  })([
     { type: "character", name: "zena", action: "remove", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
@@ -18658,7 +18667,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-zena-stream",
       preserve: true
     }
-  }, [
+  })([
     { type: "mood", mood: "sunset", action: "remove", duration: 3e3 },
     { type: "mood", mood: "night", action: "add", intensity: 0.7, duration: 3e3, disable: true },
     { type: "dialogue", text: "\uD574\uAC00 \uC9C4\uB2E4." },
@@ -18802,7 +18811,7 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     initial: commonInitial,
     next: "scene-zena-outside"
-  }, [
+  })([
     {
       type: "dialogue",
       text: [
@@ -19179,7 +19188,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-zena-bug",
       preserve: true
     }
-  }, [
+  })([
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
@@ -19328,7 +19337,7 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     initial: commonInitial,
     next: "scene-zena-ending"
-  }, [
+  })([
     {
       type: "dialogue",
       text: [
@@ -19459,7 +19468,7 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     // 씬 5개 종료 후 처음으로 롤백
     next: "scene-zena"
-  }, [
+  })([
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },

@@ -10,7 +10,7 @@ export default defineScene({
     scene: 'scene-zena-bug',
     preserve: true,
   },
-}, [
+})([
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'park', duration: 1000 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 0 },

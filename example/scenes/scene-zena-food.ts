@@ -10,7 +10,7 @@ export default defineScene({
     scene: 'scene-zena-stream',
     preserve: true,
   },
-}, [
+})([
   { type: 'mood', mood: 'sunset', action: 'remove', duration: 3000 },
   { type: 'mood', mood: 'night', action: 'add', intensity: 0.7, duration: 3000, disable: true },
   { type: 'dialogue', text: '해가 진다.' },

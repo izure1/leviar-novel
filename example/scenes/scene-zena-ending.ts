@@ -8,7 +8,7 @@ export default defineScene({
   initial: commonInitial,
   // 씬 5개 종료 후 처음으로 롤백
   next: 'scene-zena',
-}, [
+})([
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'mood', mood: 'sunset', intensity: 0.8, duration: 0 },
