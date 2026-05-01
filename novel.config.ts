@@ -36,7 +36,7 @@ forModule
 export default defineNovelConfig({
   width: 800,
   height: 450,
-  vars: {
+  variables: {
     likeability: 0,
     metHeroine: false,
     endingReached: false,

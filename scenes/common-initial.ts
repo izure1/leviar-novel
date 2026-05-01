@@ -1,7 +1,7 @@
 import config from '../novel.config'
 import { defineInitial } from '../../src'
 
-export const commonInitial = defineInitial(config, {
+export const commonInitial = defineInitial(config)({
   'dialogue': {
     bg: {
       gradientType: 'linear',

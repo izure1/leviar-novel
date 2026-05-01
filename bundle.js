@@ -811,6 +811,24 @@
     return module;
   }
 
+  // src/constants/render.ts
+  var Z_INDEX = {
+    BACKGROUND: 0,
+    CHARACTER_NORMAL: 100,
+    CHARACTER_HIGHLIGHT: 110,
+    ENVIRONMENT: 200,
+    MOOD: 200,
+    LIGHT: 210,
+    TRANSITION: 300,
+    UI_BASE: 400,
+    OVERLAY_WHISPER: 500,
+    OVERLAY_CAPTION: 510,
+    OVERLAY_TITLE: 520,
+    UI_HELPERS: 600,
+    DIALOG_BOX: 700,
+    CHARACTER_CUTIN: 800
+  };
+
   // src/modules/dialogue.ts
   var DEFAULT_BG = {
     color: "rgba(0,0,0,0.82)"
@@ -870,7 +888,7 @@
         ...bgCfg,
         width: bgCfg.width ?? w,
         height: BOX_H,
-        zIndex: bgCfg.zIndex ?? 300,
+        zIndex: bgCfg.zIndex ?? Z_INDEX.UI_BASE,
         opacity: 1,
         display: "none",
         pointerEvents: false
@@ -885,7 +903,7 @@
       style: {
         ...spkCfg,
         width: spkCfg.width ?? TEXT_W,
-        zIndex: spkCfg.zIndex ?? 301,
+        zIndex: spkCfg.zIndex ?? Z_INDEX.UI_BASE + 1,
         opacity: 1,
         display: "none",
         pointerEvents: false
@@ -900,7 +918,7 @@
       style: {
         ...txtCfg,
         width: txtCfg.width ?? TEXT_W,
-        zIndex: txtCfg.zIndex ?? 301,
+        zIndex: txtCfg.zIndex ?? Z_INDEX.UI_BASE + 1,
         opacity: 1,
         display: "none",
         pointerEvents: false
@@ -1100,7 +1118,7 @@
         ...defaultBgStyle,
         width: w,
         height: h,
-        zIndex: 500,
+        zIndex: Z_INDEX.UI_HELPERS,
         opacity: 0,
         pointerEvents: true
       },
@@ -1267,21 +1285,6 @@
     return true;
   });
   var choice_default = choiceModule;
-
-  // src/constants/render.ts
-  var Z_INDEX = {
-    BACKGROUND: -1,
-    CHARACTER_NORMAL: 10,
-    CHARACTER_HIGHLIGHT: 100,
-    MOOD: 100,
-    LIGHT: 200,
-    UI_BASE: 300,
-    OVERLAY_WHISPER: 400,
-    OVERLAY_CAPTION: 410,
-    OVERLAY_TITLE: 420,
-    CHARACTER_CUTIN: 500,
-    TRANSITION: 999
-  };
 
   // src/modules/background.ts
   var backgroundModule = define2({
@@ -2398,7 +2401,7 @@
           width: w,
           height: h,
           opacity: 0,
-          zIndex: Z_INDEX.UI_BASE,
+          zIndex: Z_INDEX.TRANSITION,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -2467,7 +2470,7 @@
           width: w * 2,
           height: h * 2,
           opacity: 0,
-          zIndex: Z_INDEX.UI_BASE + 1,
+          zIndex: Z_INDEX.TRANSITION + 1,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -3113,7 +3116,7 @@
         ...overlayCfg,
         width: w,
         height: h,
-        zIndex: 600,
+        zIndex: Z_INDEX.DIALOG_BOX,
         opacity: 1,
         display: "none",
         pointerEvents: true
@@ -3133,7 +3136,7 @@
         ...panelCfgInit,
         width: INIT_PANEL_W,
         height: 10,
-        zIndex: 601,
+        zIndex: Z_INDEX.DIALOG_BOX + 1,
         pointerEvents: true
       },
       transform: { position: { x: 0, y: 0, z: 0 } }
@@ -3497,7 +3500,7 @@
         ...overlayCfg,
         width: w,
         height: h,
-        zIndex: 700,
+        zIndex: Z_INDEX.DIALOG_BOX,
         opacity: 1,
         display: "none",
         pointerEvents: true
@@ -3516,7 +3519,7 @@
       style: {
         ...panelCfgInit,
         width: INIT_PANEL_W,
-        zIndex: 701,
+        zIndex: Z_INDEX.DIALOG_BOX + 1,
         pointerEvents: true
       },
       transform: { position: { x: 0, y: 0, z: 0 } }
@@ -3601,7 +3604,7 @@
         cursorY -= LABEL_H / 2;
         const labelObj = ctx.world.createText({
           attribute: { text: label },
-          style: { ...labelCfgR, width: AVAILABLE_W, zIndex: 702, pointerEvents: false },
+          style: { ...labelCfgR, width: AVAILABLE_W, zIndex: Z_INDEX.DIALOG_BOX + 2, pointerEvents: false },
           transform: { position: { x: 0, y: cursorY, z: 0 } }
         });
         panelObj.addChild(labelObj);
@@ -3618,7 +3621,7 @@
           borderColor: "rgba(255,255,255,0.35)",
           borderWidth: 1,
           borderRadius: "2%",
-          zIndex: 702,
+          zIndex: Z_INDEX.DIALOG_BOX + 2,
           pointerEvents: true
         },
         transform: { position: { x: 0, y: cursorY, z: 0 } }
@@ -3640,7 +3643,7 @@
           ...inputTxtCfg,
           width: AVAILABLE_W - TEXT_PAD * 2,
           height: INPUT_H - TEXT_PAD * 2,
-          zIndex: 703,
+          zIndex: Z_INDEX.DIALOG_BOX + 3,
           pointerEvents: false,
           textAlign: "left"
         },
@@ -3664,11 +3667,11 @@
           ...btn.style ?? {},
           width: bw,
           height: BTN_H,
-          zIndex: 703,
+          zIndex: Z_INDEX.DIALOG_BOX + 3,
           pointerEvents: true
         };
         const btnHoverStyleDef = { ...btnHoverCfg, ...btn.hoverStyle ?? {} };
-        const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: 704, pointerEvents: false };
+        const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: Z_INDEX.DIALOG_BOX + 4, pointerEvents: false };
         const txtHoverStyleDef = { ...btnTxtHoverCfg, ...btn.textHoverStyle ?? {} };
         const btnObj = ctx.world.createRectangle({
           style: btnStyleDef,
@@ -3878,8 +3881,8 @@
   }
 
   // src/define/defineScene.ts
-  function defineInitial(config, initial) {
-    return initial;
+  function defineInitial(config) {
+    return (initial) => initial;
   }
   function defineScene(options, dialogues) {
     const {
@@ -17511,7 +17514,7 @@ ${addLineNumbers(fragment)}`);
   // src/core/Novel.ts
   var Novel = class {
     /** 전역 변수. 씬 전환에도 유지됩니다 */
-    vars;
+    variables;
     /** 엔진 전용 컨테이너 (캔버스와 UI 요소들을 감싸는 래퍼) */
     container;
     _config;
@@ -17577,7 +17580,7 @@ ${addLineNumbers(fragment)}`);
         width: this._option.width,
         height: this._option.height
       });
-      this.vars = { ...config.vars };
+      this.variables = { ...config.variables };
       this._collectModules(config.modules);
       this.hooker = this._createHookerProxy();
       this._world.start();
@@ -17782,7 +17785,7 @@ ${addLineNumbers(fragment)}`);
       const rawData = {
         sceneName: this._currentSceneDef.name,
         cursor: this._currentScene.getCursor(),
-        globalVars: { ...this.vars },
+        globalVars: { ...this.variables },
         localVars: this._currentScene.getLocalVars(),
         rendererState: this._renderer.captureState(),
         states: Object.fromEntries(this._stateStore)
@@ -17810,7 +17813,7 @@ ${addLineNumbers(fragment)}`);
       this._currentSceneDef?.hooks?._unregister(this);
       this._cleanupUI();
       this.stopSkip();
-      Object.assign(this.vars, resolvedData.globalVars);
+      Object.assign(this.variables, resolvedData.globalVars);
       this._stateStore.clear();
       for (const [k2, v2] of Object.entries(resolvedData.states ?? {})) {
         this._stateStore.set(k2, v2);
@@ -17848,9 +17851,9 @@ ${addLineNumbers(fragment)}`);
     _buildCallbacks() {
       return {
         getNovel: () => this,
-        getGlobalVars: () => ({ ...this.vars }),
+        getGlobalVars: () => ({ ...this.variables }),
         setGlobalVar: (name, value) => {
-          this.vars[name] = value;
+          this.variables[name] = value;
         },
         loadScene: (target) => {
           this.loadScene(target);
@@ -18120,7 +18123,7 @@ ${addLineNumbers(fragment)}`);
   var novel_config_default = defineNovelConfig({
     width: 800,
     height: 450,
-    vars: {
+    variables: {
       likeability: 0,
       metHeroine: false,
       endingReached: false,
@@ -18186,7 +18189,7 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/scenes/common-initial.ts
-  var commonInitial = defineInitial(novel_config_default, {
+  var commonInitial = defineInitial(novel_config_default)({
     "dialogue": {
       bg: {
         gradientType: "linear",
@@ -19777,7 +19780,7 @@ ${addLineNumbers(fragment)}`);
     let before = 0;
     novel.hooker.onBefore("dialogue:text-run", (state) => {
       if (novel.isSkipping) return state;
-      if (!novel.vars.useHeroineVoice) return state;
+      if (!novel.variables.useHeroineVoice) return state;
       const { speaker, text } = state;
       const now = performance.now();
       before = now;
