@@ -19,7 +19,7 @@ export default defineScene({
     action: 'play',
     name: 'bgm',
     src: 'daytime',
-    duration: 1000,
+    duration: 3000,
     repeat: true,
     volume: 0.1,
   },

@@ -2775,37 +2775,58 @@
   var control_default = controlModule;
 
   // src/modules/audio.ts
-  function fadeVolume(audio, targetVolume, duration) {
+  var fadeCounter = 0;
+  function fadeVolume(audio, targetVolume, duration, stopOnEnd = false) {
     return new Promise((resolve) => {
+      fadeCounter++;
+      const currentFadeId = fadeCounter;
+      audio.__fadeId = currentFadeId;
+      const cleanup = () => {
+        if (stopOnEnd) {
+          audio.pause();
+          audio.src = "";
+        }
+        fading.delete(audio);
+      };
       if (duration <= 0) {
-        audio.volume = targetVolume;
+        audio.volume = Math.max(0, Math.min(targetVolume, 1));
+        if (audio.__fadeId === currentFadeId) audio.__fadeId = void 0;
+        cleanup();
         resolve();
         return;
       }
       const startVolume = audio.volume;
-      const startTime = performance.now();
-      const tick = (now) => {
-        const elapsed = now - startTime;
+      const startTime = Date.now();
+      const timer = setInterval(() => {
+        if (audio.__fadeId !== currentFadeId) {
+          clearInterval(timer);
+          fading.delete(audio);
+          return;
+        }
+        const elapsed = Date.now() - startTime;
         const t = Math.min(elapsed / duration, 1);
-        audio.volume = startVolume + (targetVolume - startVolume) * t;
-        if (t < 1) {
-          requestAnimationFrame(tick);
-        } else {
-          audio.volume = targetVolume;
+        audio.volume = Math.max(0, Math.min(startVolume + (targetVolume - startVolume) * t, 1));
+        if (t >= 1) {
+          clearInterval(timer);
+          audio.volume = Math.max(0, Math.min(targetVolume, 1));
+          if (audio.__fadeId === currentFadeId) audio.__fadeId = void 0;
+          cleanup();
           resolve();
         }
-      };
-      requestAnimationFrame(tick);
+      }, 16);
     });
   }
   var pool = /* @__PURE__ */ new Map();
+  var fading = /* @__PURE__ */ new Set();
   var audioModule = define2({ _tracks: {} });
   audioModule.defineView((data, ctx) => {
     const audioMap = ctx.renderer.config.audios;
     for (const [name, audio] of pool.entries()) {
       if (!data._tracks[name]) {
-        audio.pause();
-        audio.src = "";
+        if (fading.has(audio)) continue;
+        fading.add(audio);
+        fadeVolume(audio, 0, 1e3, true).catch(() => {
+        });
         pool.delete(name);
       }
     }
@@ -2836,7 +2857,9 @@
           audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328:`, e));
         }
       } else {
-        audio.volume = track.volume;
+        if (audio.__fadeId === void 0) {
+          audio.volume = track.volume;
+        }
         audio.playbackRate = track.speed;
         audio.loop = track.repeat;
         if (track.paused) {
@@ -2894,10 +2917,8 @@
       }
       if (existing) {
         const old = existing;
-        fadeVolume(old, 0, duration).then(() => {
-          old.pause();
-          old.src = "";
-        });
+        fading.add(old);
+        fadeVolume(old, 0, duration, true);
       }
       const audio = new Audio(url);
       audio.__srcKey = playCmd.src;
@@ -2944,6 +2965,11 @@
           audio.pause();
           const track = state._tracks[pauseCmd.name];
           if (track) audio.volume = track.volume;
+          const newPauseTracks = { ...state._tracks };
+          if (newPauseTracks[pauseCmd.name]) {
+            newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
+          }
+          setState({ _tracks: newPauseTracks });
           ctx.callbacks.advance();
         });
         yield false;
@@ -2951,12 +2977,12 @@
         audio.pause();
         const track = state._tracks[pauseCmd.name];
         if (track) audio.volume = track.volume;
+        const newPauseTracks = { ...state._tracks };
+        if (newPauseTracks[pauseCmd.name]) {
+          newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
+        }
+        setState({ _tracks: newPauseTracks });
       }
-      const newPauseTracks = { ...state._tracks };
-      if (newPauseTracks[pauseCmd.name]) {
-        newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
-      }
-      setState({ _tracks: newPauseTracks });
       return true;
     }
     if (cmd.action === "stop") {
@@ -2970,6 +2996,9 @@
           audio.currentTime = 0;
           audio.src = "";
           pool.delete(stopCmd.name);
+          const newStopTracks = { ...state._tracks };
+          delete newStopTracks[stopCmd.name];
+          setState({ _tracks: newStopTracks });
           ctx.callbacks.advance();
         });
         yield false;
@@ -2978,10 +3007,10 @@
         audio.currentTime = 0;
         audio.src = "";
         pool.delete(stopCmd.name);
+        const newStopTracks = { ...state._tracks };
+        delete newStopTracks[stopCmd.name];
+        setState({ _tracks: newStopTracks });
       }
-      const newStopTracks = { ...state._tracks };
-      delete newStopTracks[stopCmd.name];
-      setState({ _tracks: newStopTracks });
       return true;
     }
     return true;
@@ -19240,7 +19269,7 @@ ${addLineNumbers(fragment)}`);
       action: "play",
       name: "bgm",
       src: "daytime",
-      duration: 1e3,
+      duration: 3e3,
       repeat: true,
       volume: 0.1
     },

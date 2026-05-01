@@ -87,50 +87,81 @@ export interface AudioSchema {
 
 // ─── 볼륨 페이드 헬퍼 ────────────────────────────────────────
 
+interface NovelAudioElement extends HTMLAudioElement {
+  __srcKey?: string
+  __fadeId?: number
+}
+
+let fadeCounter = 0
+
 /**
- * HTMLAudioElement의 볼륨을 duration(ms)에 걸쳐 targetVolume까지 선형 보간합니다.
+ * NovelAudioElement의 볼륨을 duration(ms)에 걸쳐 targetVolume까지 선형 보간합니다.
  * @returns 페이드 완료 시 resolve되는 Promise
  */
 function fadeVolume(
-  audio: HTMLAudioElement,
+  audio: NovelAudioElement,
   targetVolume: number,
-  duration: number
+  duration: number,
+  stopOnEnd: boolean = false
 ): Promise<void> {
   return new Promise<void>((resolve) => {
+    fadeCounter++
+    const currentFadeId = fadeCounter
+    audio.__fadeId = currentFadeId
+
+    const cleanup = () => {
+      if (stopOnEnd) {
+        audio.pause()
+        audio.src = ''
+      }
+      fading.delete(audio)
+    }
+
     if (duration <= 0) {
-      audio.volume = targetVolume
+      audio.volume = Math.max(0, Math.min(targetVolume, 1))
+      if (audio.__fadeId === currentFadeId) audio.__fadeId = undefined
+      cleanup()
       resolve()
       return
     }
 
     const startVolume = audio.volume
-    const startTime = performance.now()
+    const startTime = Date.now()
 
-    const tick = (now: number) => {
-      const elapsed = now - startTime
+    const timer = setInterval(() => {
+      if (audio.__fadeId !== currentFadeId) {
+        // 다른 fadeVolume 호출에 의해 취소됨 — fading에서 제거
+        clearInterval(timer)
+        fading.delete(audio)
+        return
+      }
+
+      const elapsed = Date.now() - startTime
       const t = Math.min(elapsed / duration, 1)
-      audio.volume = startVolume + (targetVolume - startVolume) * t
+      audio.volume = Math.max(0, Math.min(startVolume + (targetVolume - startVolume) * t, 1))
 
-      if (t < 1) {
-        requestAnimationFrame(tick)
-      } else {
-        audio.volume = targetVolume
+      if (t >= 1) {
+        clearInterval(timer)
+        audio.volume = Math.max(0, Math.min(targetVolume, 1))
+        if (audio.__fadeId === currentFadeId) audio.__fadeId = undefined
+        cleanup()
         resolve()
       }
-    }
-
-    requestAnimationFrame(tick)
+    }, 16)
   })
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
-interface NovelAudioElement extends HTMLAudioElement {
-  __srcKey?: string
-}
-
 /** name → 현재 재생 중인 HTMLAudioElement */
 const pool = new Map<string, NovelAudioElement>()
+
+/**
+ * 현재 페이드아웃 중인 오디오 엘리먼트 집합.
+ * pool에서 이미 제거되었지만, 페이드아웃이 완료될 때까지
+ * defineView의 cleanup 로직이 즉시 종료시키지 않도록 보호합니다.
+ */
+const fading = new Set<NovelAudioElement>()
 
 /**
  * 오디오 모듈.
@@ -143,11 +174,15 @@ const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
 audioModule.defineView((data, ctx) => {
   const audioMap = (ctx.renderer.config as any).audios as Record<string, string> | undefined
 
-  // 1. 삭제된 트랙 정리
+  // 1. 삭제된 트랙 정리 (페이드아웃 중인 audio는 건드리지 않음)
   for (const [name, audio] of pool.entries()) {
     if (!data._tracks[name]) {
-      audio.pause()
-      audio.src = ''
+      if (fading.has(audio)) continue
+
+      // 스키마에서 사라진 오디오(씬 전환 등)는 즉시 종료하지 않고 페이드아웃 처리
+      fading.add(audio)
+      fadeVolume(audio, 0, 1000, true).catch(() => { })
+
       pool.delete(name)
     }
   }
@@ -178,15 +213,17 @@ audioModule.defineView((data, ctx) => {
       audio.playbackRate = track.speed
       audio.loop = track.repeat
       audio.currentTime = track.start
-      
+
       if (!track.paused) {
         audio.play().catch(e => console.warn(`[audio] 재생 실패:`, e))
       }
     } else {
-      audio.volume = track.volume
+      if (audio.__fadeId === undefined) {
+        audio.volume = track.volume
+      }
       audio.playbackRate = track.speed
       audio.loop = track.repeat
-      
+
       if (track.paused) {
         audio.pause()
       } else if (audio.paused) {
@@ -256,10 +293,10 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     // ── 다른 src (또는 없음): 기존 크로스페이드 아웃 후 새 오디오 생성 ──
     if (existing) {
       const old = existing
-      fadeVolume(old, 0, duration).then(() => {
-        old.pause()
-        old.src = ''
-      })
+      // fading 셋에 등록하여 defineView cleanup이 즉시 종료하지 않도록 보호
+      fading.add(old)
+      // stopOnEnd 플래그를 true로 전달하여 페이드 완료 후 안전하게 정리
+      fadeVolume(old, 0, duration, true)
     }
 
     // 새 오디오 생성 (start/end는 새 재생에만 적용)
@@ -321,6 +358,13 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
         // 볼륨 복원 (다음 resume을 위해)
         const track = state._tracks[pauseCmd.name]
         if (track) audio.volume = track.volume
+
+        const newPauseTracks = { ...state._tracks }
+        if (newPauseTracks[pauseCmd.name]) {
+          newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true }
+        }
+        setState({ _tracks: newPauseTracks })
+
         ctx.callbacks.advance()
       })
 
@@ -329,13 +373,13 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       audio.pause()
       const track = state._tracks[pauseCmd.name]
       if (track) audio.volume = track.volume
-    }
 
-    const newPauseTracks = { ...state._tracks }
-    if (newPauseTracks[pauseCmd.name]) {
-      newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true }
+      const newPauseTracks = { ...state._tracks }
+      if (newPauseTracks[pauseCmd.name]) {
+        newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true }
+      }
+      setState({ _tracks: newPauseTracks })
     }
-    setState({ _tracks: newPauseTracks })
 
     return true
   }
@@ -354,6 +398,11 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
         audio.currentTime = 0
         audio.src = ''
         pool.delete(stopCmd.name)
+
+        const newStopTracks = { ...state._tracks }
+        delete newStopTracks[stopCmd.name]
+        setState({ _tracks: newStopTracks })
+
         ctx.callbacks.advance()
       })
 
@@ -363,11 +412,11 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       audio.currentTime = 0
       audio.src = ''
       pool.delete(stopCmd.name)
-    }
 
-    const newStopTracks = { ...state._tracks }
-    delete newStopTracks[stopCmd.name]
-    setState({ _tracks: newStopTracks })
+      const newStopTracks = { ...state._tracks }
+      delete newStopTracks[stopCmd.name]
+      setState({ _tracks: newStopTracks })
+    }
 
     return true
   }
