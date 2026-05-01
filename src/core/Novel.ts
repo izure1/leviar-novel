@@ -100,6 +100,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /** 전역 변수. 씬 전환에도 유지됩니다 */
   readonly vars: TConfig['vars']
 
+  /** 엔진 전용 컨테이너 (캔버스와 UI 요소들을 감싸는 래퍼) */
+  readonly container: HTMLDivElement
+
   private readonly _config: TConfig
   private readonly _option: { canvas: HTMLCanvasElement; width: number; height: number }
   private readonly _world: World
@@ -151,6 +154,25 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._config = config
 
     const canvas = option.canvas
+
+    // 동적 래퍼 생성 및 캔버스 Reparenting
+    this.container = document.createElement('div')
+    this.container.className = 'fumika-container'
+    this.container.style.position = 'relative'
+    this.container.style.width = '100%'
+    this.container.style.height = '100%'
+    this.container.style.overflow = 'hidden'
+
+    if (canvas.parentElement) {
+      canvas.parentElement.insertBefore(this.container, canvas)
+    }
+    this.container.appendChild(canvas)
+
+    // 캔버스 스타일 초기화 (컨테이너에 꽉 차도록)
+    canvas.style.display = 'block'
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+
     this._option = {
       canvas,
       width: config.width ?? canvas.width,
@@ -585,21 +607,16 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   /** 현재 전체화면 모드인지 확인합니다. */
   get isFullscreen(): boolean {
-    const el = this._option.canvas
-    return (
-      document.fullscreenElement === el ||
-      document.fullscreenElement === el.parentElement
-    )
+    return document.fullscreenElement === this.container
   }
 
   /** 전체화면 모드로 전환합니다.
-   * canvas.parentElement를 거의 요소로 사용하여
-   * 자식 DOM 요소(hidden input 등)이 포커스를 받을 수 있도록 합니다.
+   * 엔진 전용 컨테이너를 전체화면 타겟으로 삼아
+   * 내부 요소(hidden input 등)의 포커스가 전체화면 해제를 유발하지 않도록 방지합니다.
    */
   async requestFullscreen(): Promise<void> {
     if (!this.isFullscreen) {
-      const target = this._option.canvas.parentElement ?? this._option.canvas
-      await target.requestFullscreen()
+      await this.container.requestFullscreen()
     }
   }
 
@@ -622,12 +639,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /**
    * fullscreenchange 이벤트 핸들러.
    * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
-   * 부모 요소를 중앙 정렬 flex 컨테이너로 설정합니다.
+   * 컨테이너를 중앙 정렬 flex 뷰로 설정합니다.
    * 전체화면 해제 시 원래 스타일로 복원합니다.
    */
   private _handleFullscreenChange(): void {
     const canvas = this._option.canvas
-    const parentEl = canvas.parentElement
+    const container = this.container
 
     if (this.isFullscreen) {
       // screen 기준으로 canvas를 letter-box 방식으로 스케일
@@ -646,26 +663,20 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       }
       canvas.style.width = `${dispW}px`
       canvas.style.height = `${dispH}px`
-      if (parentEl) {
-        parentEl.style.display = 'flex'
-        parentEl.style.alignItems = 'center'
-        parentEl.style.justifyContent = 'center'
-        parentEl.style.backgroundColor = '#000'
-        parentEl.style.width = '100%'
-        parentEl.style.height = '100%'
-      }
+
+      container.style.display = 'flex'
+      container.style.alignItems = 'center'
+      container.style.justifyContent = 'center'
+      container.style.backgroundColor = '#000'
     } else {
       // 전체화면 해제 → 스타일 복원
-      canvas.style.width = ''
-      canvas.style.height = ''
-      if (parentEl) {
-        parentEl.style.display = ''
-        parentEl.style.alignItems = ''
-        parentEl.style.justifyContent = ''
-        parentEl.style.backgroundColor = ''
-        parentEl.style.width = ''
-        parentEl.style.height = ''
-      }
+      canvas.style.width = '100%'
+      canvas.style.height = '100%'
+
+      container.style.display = 'block'
+      container.style.alignItems = ''
+      container.style.justifyContent = ''
+      container.style.backgroundColor = ''
     }
   }
 

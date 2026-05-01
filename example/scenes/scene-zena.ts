@@ -149,7 +149,7 @@ export default defineScene({
     speaker: 'zena',
     text: '아, 농담이야. 밴(Ban) 당하기 싫으면 조심해.'
   },
-  { type: 'condition', if: () => true, goto: 'common-end' },
+  { type: 'condition', $if: () => true, goto: 'common-end' },
 
   // ─── 분기: 버그 질문 ───
   { type: 'label', name: 'ask-bug' },
@@ -192,7 +192,7 @@ export default defineScene({
     speaker: 'zena',
     text: '말투가 딱 트위치 채팅창인데.'
   },
-  { type: 'condition', if: () => true, goto: 'common-end' },
+  { type: 'condition', $if: () => true, goto: 'common-end' },
 
   // ─── 분기: 도망 ───
   { type: 'label', name: 'escape' },
@@ -229,7 +229,7 @@ export default defineScene({
     speaker: 'zena',
     text: '방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계야. 도망 못 가.'
   },
-  { type: 'condition', if: () => true, goto: 'common-end' },
+  { type: 'condition', $if: ({ username }) => true, goto: 'common-end' },
 
   // ─── 공통 엔딩 ───
   { type: 'label', name: 'common-end' },

@@ -83,7 +83,7 @@ export default defineScene({
     text: '테러방지법은 통과됐지만, 찜닭방지법은 아직이거든, 내가.',
   },
   { type: 'dialogue', text: '할 말을 잃었다.' },
-  { type: 'condition', if: () => true, goto: 'order' },
+  { type: 'condition', $if: () => true, goto: 'order' },
 
   // ─── 매운거 ───
   { type: 'label', name: 'spicy' },
@@ -113,7 +113,7 @@ export default defineScene({
     text: '대체 어디서부터 태클을 걸어야 할지 모르겠다.'
   },
   { type: 'dialogue', text: '기적의 논리다.' },
-  { type: 'condition', if: () => true, goto: 'order' },
+  { type: 'condition', $if: () => true, goto: 'order' },
 
   // ─── 공통 주문 ───
   { type: 'label', name: 'order' },

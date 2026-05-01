@@ -68,7 +68,7 @@ async function main() {
   const engine = new AnimaleseEngine({
     analyzer: new KoreanAnalyzer(),
     sampler: new WebSampler(
-      './assets/audio_sprite_kor.wav',
+      './assets/audio_sprite_subin.wav',
       [
         "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ",
         "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
@@ -111,15 +111,6 @@ async function main() {
   if ('virtualKeyboard' in navigator) {
     vk.overlaysContent = true
   }
-
-  document.getElementById('hidden-input')?.addEventListener('focus', () => {
-    throw 1
-  })
-
-  novel.hooker.onAfter('choice:show', (state) => {
-    (document.getElementById('hidden-input') as HTMLInputElement)?.focus()
-    return state
-  })
 
   let before = 0
   novel.hooker.onBefore('dialogue:text-run', (state) => {

@@ -287,10 +287,9 @@ inputModule.defineView((data, ctx) => {
       'border:none',
       'outline:none'
     ].join(';')
-    // 전체화면 중이면 fullscreenElement에 추가해야 포커스가 유지됨
-    // canvas.requestFullscreen() 대신 parentElement.requestFullscreen()을 사용하면
-    // fullscreenElement가 div가 되어 자식에 추가한 요소가 포커스를 받을 수 있음
-    const container = document.fullscreenElement ?? document.body
+    // Novel 엔진이 자체 관리하는 컨테이너(Wrapper)에 추가하여
+    // 전체화면 상태에서도 안전하게 포커스가 유지되도록 합니다.
+    const container = (ctx as any).novel?.container ?? document.fullscreenElement ?? document.body
     container.appendChild(el)
 
     // VirtualKeyboard API — overlaysContent = true 설정

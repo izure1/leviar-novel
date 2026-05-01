@@ -95,7 +95,7 @@ export default defineScene({
     type: 'dialogue',
     text: '아침부터 시비 거는 솜씨가 보통이 아니다.'
   },
-  { type: 'condition', if: () => true, goto: 'walk' },
+  { type: 'condition', $if: () => true, goto: 'walk' },
 
   { type: 'label', name: 'content' },
   { type: 'character', action: 'show', name: 'zena', image: 'normal', focus: '', duration: 300 },
@@ -126,7 +126,7 @@ export default defineScene({
     type: 'dialogue',
     text: '대체 그 점수는 어디다 쓰는 건지 묻고 싶었지만 꾹 참았다.'
   },
-  { type: 'condition', if: () => true, goto: 'walk' },
+  { type: 'condition', $if: () => true, goto: 'walk' },
 
   { type: 'label', name: 'walk' },
   { type: 'character', action: 'show', name: 'zena', image: 'normal', duration: 300 },

@@ -266,7 +266,7 @@ export default defineScene({
     speed: 10,
   },
   { type: 'camera-effect', preset: 'reset' },
-  { type: 'condition', if: () => true, goto: 'stream-end' },
+  { type: 'condition', $if: () => true, goto: 'stream-end' },
 
   { type: 'label', name: 'troll' },
   {
@@ -353,7 +353,7 @@ export default defineScene({
     type: 'dialogue',
     text: '아무도 믿지 않을 변명을 던지고는, 그녀가 다급하게 마우스를 쥐었다.'
   },
-  { type: 'condition', if: () => true, goto: 'stream-end' },
+  { type: 'condition', $if: () => true, goto: 'stream-end' },
 
   { type: 'label', name: 'stream-end' },
   { type: 'camera-effect', preset: 'reset', duration: 500 },

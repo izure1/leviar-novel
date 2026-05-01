@@ -93,7 +93,7 @@ export default defineScene({
     text: '개발자의 의도를 완벽히 파악했어.'
   },
   { type: 'var', name: 'likeability', value: 10 },
-  { type: 'condition', if: () => true, goto: 'play-game' },
+  { type: 'condition', $if: () => true, goto: 'play-game' },
 
   // ─── 분기: 반대 ───
   { type: 'label', name: 'disagree' },
@@ -125,7 +125,7 @@ export default defineScene({
     type: 'dialogue',
     text: '오히려 평생 이해하고 싶지 않다.'
   },
-  { type: 'condition', if: () => true, goto: 'play-game' },
+  { type: 'condition', $if: () => true, goto: 'play-game' },
 
   // ─── 게임 플레이 ───
   { type: 'label', name: 'play-game' },
