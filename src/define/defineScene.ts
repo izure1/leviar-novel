@@ -115,7 +115,7 @@ type _SceneOptions<
   TLocalVars extends Record<`_${string}`, any>,
   TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>),
 > = {
-  config: TConfig & { vars: TVars }
+  config: TConfig & { variables: TVars }
   variables?: keyof TLocalVars extends `_${string}` ? TLocalVars : never
   /** 씬 시작 시 적용할 모듈 초기 데이터 (optional). config.modules 키/값 타입 추론. */
   initial?: TInitial & (
@@ -133,7 +133,7 @@ type _SceneOptions<
 }
 
 type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
-  TConfig extends { vars: infer V } ? V : any,
+  TConfig extends { variables: infer V } ? V : any,
   TConfig extends { scenes: infer S extends readonly string[] } ? S : readonly string[],
   TConfig extends { characters: infer C extends CharDefs } ? C : CharDefs,
   TConfig extends { backgrounds: infer B extends BgDefs } ? B : BgDefs,

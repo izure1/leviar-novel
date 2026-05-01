@@ -115,7 +115,7 @@ async function main() {
   let before = 0
   novel.hooker.onBefore('dialogue:text-run', (state) => {
     if (novel.isSkipping) return state
-    if (!novel.vars.useHeroineVoice) return state
+    if (!novel.variables.useHeroineVoice) return state
     const { speaker, text } = state
     const now = performance.now()
     before = now

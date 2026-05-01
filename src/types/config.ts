@@ -148,7 +148,7 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
  * @example
  * ```ts
  * const config: NovelConfig<MyVars, MyScenes, MyChars, MyBgs> = {
- *   vars: { score: 0, flags: [] },
+ *   variables: { score: 0, flags: [] },
  *   scenes: ['intro', 'chapter1'],
  *   characters: { hero: { images: { normal: { src: 'hero_img' } } } },
  *   backgrounds: { classroom: { src: 'class_img' } },
@@ -178,7 +178,7 @@ export interface NovelConfig<
   height?: number
 
   /** 게임의 전역 변수 초기값 목록입니다. */
-  vars: TVars
+  variables: TVars
   /** 게임에 포함된 모든 씬(Scene) 이름 목록입니다. */
   scenes: TScenes
   /** 게임에 등장하는 모든 캐릭터의 정의 목록입니다. */
@@ -339,10 +339,10 @@ export type SceneNextTarget<TConfig> =
  *
  * @example
  * ```ts
- * type Vars = VarsOf<typeof config>  // { likeability: number; metHeroine: boolean; ... }
+ * type Vars = VariablesOf<typeof config>  // { likeability: number; metHeroine: boolean; ... }
  * ```
  */
-export type VarsOf<TConfig> =
+export type VariablesOf<TConfig> =
   TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any>
   ? TVars
   : Record<string, any>

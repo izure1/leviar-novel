@@ -8,50 +8,58 @@
 
 ### 주요 특징
 * **자동 스코프 관리**: 변수 이름의 접두사(`_`) 유무에 따라 스코프가 자동으로 결정됩니다.
-* **영구 보존**: 전역 변수는 세이브 데이터에 포함되어 게임 재개 시 자동으로 복구됩니다.
+* **데이터 보존**: 모든 변수(전역/지역)는 세이브 데이터에 저장됩니다.
 * **유연한 접근**: 대사 텍스트 내에서 직접 출력하거나, 함수형 값(Resolvable)을 통해 로직에 활용할 수 있습니다.
 
----
-
-## 2. 변수의 종류 (Variable Types)
+## 2. 변수 정의 (Definition)
 
 ### 2.1. 전역 변수 (Global Variables)
-*   **특징**: 게임의 모든 씬에서 공유됩니다. 호감도, 소지금, 획득 아이템 등 영구적인 상태를 저장할 때 사용합니다.
-*   **명명 규칙**: 일반적인 식별자 이름을 사용합니다. (예: `gold`, `heart`, `is_heroine_route`)
-
-### 2.2. 지역 변수 (Local Variables / Scene Variables)
-*   **특징**: 현재 실행 중인 씬 내부에서만 유효합니다. 씬이 종료되거나 다른 씬으로 넘어가면 초기화됩니다. 씬 내부의 임시 플래그 등을 관리할 때 적합합니다.
-*   **명명 규칙**: 이름이 반드시 언더바(`_`)로 시작해야 합니다. (예: `_is_first_talk`, `_try_count`)
-
----
-
-## 3. 변수 조작 방법 (Manipulation)
-
-### 3.1. 초기값 설정 (`initial`)
-씬 정의 시 `initial` 섹션에서 해당 씬의 시작 변수 상태를 정의할 수 있습니다.
+게임 전체 세이브 데이터에 포함되며 모든 씬에서 공유되는 변수입니다.
+* **정의 위치**: `novel.config.ts`의 `vars` 속성
+* **명명 규칙**: `_` 접두사를 **사용하지 않습니다.**
 
 ```ts
-export default defineScene({
-  initial: {
-    vars: {
-      gold: 1000,      // 전역 변수 초기화
-      _scene_step: 0   // 지역 변수 초기화
-    }
+// novel.config.ts
+export default defineNovelConfig({
+  variables: {
+    gold: 1000,      // 전역 변수
+    playerName: ''   // 전역 변수
   }
 })
 ```
 
-### 3.2. 커맨드에서의 조작 (`var`)
-`choices`나 `input` 등의 커맨드에서 변수 값을 변경할 수 있습니다.
+### 2.2. 씬 지역 변수 (Local Variables)
+현재 씬에서만 유효하며, 세이브 데이터에 저장됩니다.
+* **정의 위치**: `defineScene`의 `variables` 속성
+* **명명 규칙**: 반드시 `_` 접두사를 **사용해야 합니다.**
+
+```ts
+// scene-start.ts
+export default defineScene({
+  config,
+  variables: {
+    _tempCount: 0,   // 지역 변수 (반드시 _ 시작)
+    _isTalking: true // 지역 변수 (반드시 _ 시작)
+  }
+}, [ ... ])
+```
+
+---
+
+## 3. 변수 조작 (Manipulation)
+
+변수는 커맨드 내의 `var` 속성을 통해 값을 할당하거나 연산할 수 있습니다. `Resolvable` 함수를 사용하면 현재 변수 상태를 참조하여 동적으로 값을 계산할 수 있습니다.
 
 ```ts
 {
   type: 'choices',
   choices: [
     { 
-      text: '물건을 산다', 
-      // 함수형 조작 (+= 효과)
-      var: ({ gold }) => ({ gold: gold - 100, _is_bought: true }) 
+      text: '물건을 산다 (100G)', 
+      var: ({ gold, _tempCount }) => ({ 
+        gold: gold - 100,      // 전역 변수 차감
+        _tempCount: _tempCount + 1 // 지역 변수 가산
+      }) 
     }
   ]
 }
@@ -87,5 +95,5 @@ export default defineScene({
 ## 5. 주의 사항 (Edge Cases)
 
 *   **이름 충돌**: 전역 변수와 지역 변수의 이름이 같을 경우(예: `gold`와 `_gold`), 접두사로 인해 서로 다른 변수로 취급되므로 혼동하지 않도록 주의하십시오.
-*   **초기화 시점**: `initial.vars`에 정의된 값은 씬이 로드되는 시점에 적용됩니다. 씬 전환 시 `preserve` 옵션이 켜져 있다면 이전 씬의 변수 상태가 유지될 수도 있습니다.
+*   **초기화 시점**: `initial.variables`에 정의된 값은 씬이 로드되는 시점에 적용됩니다. 씬 전환 시 `preserve` 옵션이 켜져 있다면 이전 씬의 변수 상태가 유지될 수도 있습니다.
 *   **타입 안전성**: TypeScript를 사용한다면 `defineNovelConfig`에서 전역 변수의 타입을 미리 정의하여 자동완성과 타입 체크 혜택을 누릴 수 있습니다.

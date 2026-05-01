@@ -1,5 +1,5 @@
 import type { Style } from 'leviar'
-import type { VarsOf } from '../types/config'
+import type { VariablesOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
 
 // ─── InputLayout ─────────────────────────────────────────────
@@ -197,7 +197,7 @@ export interface InputCmd<TConfig = any, _TLocalVars = any> {
    * 입력 결과를 저장할 변수 이름.
    * `_`로 시작하면 지역 변수, 그 외에는 전역 변수에 저장됩니다.
    */
-  to: keyof VarsOf<TConfig> & string | (string & {})
+  to: keyof VariablesOf<TConfig> & string | (string & {})
   /**
    * 입력창 상단에 표시할 레이블 텍스트.
    * 생략 시 레이블을 표시하지 않습니다.

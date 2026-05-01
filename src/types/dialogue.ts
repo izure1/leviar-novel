@@ -2,7 +2,7 @@
 // dialogue.ts — 모든 DialogueEntry 유니온 타입 정의
 // =============================================================
 
-import type { ModulesOf, VarsOf } from './config'
+import type { ModulesOf, VariablesOf } from './config'
 import type { ResolvableProps } from '../define/defineCmd'
 import type { NovelModule } from '../define/defineCmdUI'
 
@@ -121,7 +121,7 @@ export type DialogueEntry<TConfig, TVars, TLocalVars> =
   | _BuiltinEntryUnion<TConfig, TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 
-export type DialogueStep<TConfig, TLocalVars = Record<never, never>, TVars = VarsOf<TConfig>> =
+export type DialogueStep<TConfig, TLocalVars = Record<never, never>, TVars = VariablesOf<TConfig>> =
   DialogueEntry<TConfig, TVars, TLocalVars>
 
 // ─── Fallback 룰 ─────────────────────────────────────────────

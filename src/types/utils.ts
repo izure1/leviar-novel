@@ -2,7 +2,7 @@
 // types/utils.ts — 커맨드 공통 유틸리티 타입 & 헬퍼
 // =============================================================
 
-import type { VarsOf } from './config'
+import type { VariablesOf } from './config'
 
 /**
  * 전역/지역 변수 설정값 타입.
@@ -23,8 +23,8 @@ import type { VarsOf } from './config'
  * ```
  */
 export type VarResolvable<TConfig, TLocalVars = Record<never, never>> =
-  | Partial<VarsOf<TConfig> & TLocalVars>
-  | ((vars: VarsOf<TConfig> & TLocalVars) => Partial<VarsOf<TConfig> & TLocalVars>)
+  | Partial<VariablesOf<TConfig> & TLocalVars>
+  | ((vars: VariablesOf<TConfig> & TLocalVars) => Partial<VariablesOf<TConfig> & TLocalVars>)
 
 /**
  * `VarResolvable` 값을 런타임에 resolve합니다.

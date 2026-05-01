@@ -1,4 +1,4 @@
-import type { SceneNamesOf, SceneNextTarget, VarsOf } from '../types/config'
+import type { SceneNamesOf, SceneNextTarget, VariablesOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
 
 /**

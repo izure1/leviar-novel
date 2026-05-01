@@ -1,4 +1,4 @@
-import type { VarsOf } from '../types/config'
+import type { VariablesOf } from '../types/config'
 import { define } from '../define/defineCmdUI'
 
 /**

@@ -71,7 +71,7 @@ export type BuiltinModules = typeof BUILTIN_MODULES
  * export default defineNovelConfig({
  *   width: ..., // default: canvas width
  *   height: ..., // default: canvas height
- *   vars: { likeability: 0, metCharacterA: false },
+ *   variables: { likeability: 0, metCharacterA: false },
  *   scenes: ['scene-a', 'scene-b'],
  *   assets: { ... },
  *   characters: { ... },
@@ -95,7 +95,7 @@ export function defineNovelConfig<
   config: {
     width?: number
     height?: number
-    vars: TVars
+    variables: TVars
     scenes: TScenes
     characters: TCharacters
     backgrounds: TBackgrounds

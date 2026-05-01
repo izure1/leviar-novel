@@ -15,32 +15,26 @@
 
 ## 2. 핵심 예제 (Main Example)
 
-### 기본 분기 및 변수 조작
-선택에 따라 다른 라벨로 이동하며 호감도 변수를 증가시킵니다.
-
-```ts
-{
-  type: 'choices',
-  choices: [
-    { text: '용기를 내어 말을 건다', goto: 'talk_to_her', var: { likeability: 5 } },
-    { text: '조용히 지나간다', goto: 'pass_by' }
-  ]
-}
-```
-
-### 동적 텍스트 및 씬 전환
-변수 상태를 반영한 텍스트를 보여주고 다른 씬으로 전환합니다.
+### 상호작용 시나리오
+변수 상태를 반영한 동적 텍스트를 출력하고, 선택 결과에 따라 변수 연산(Resolvable)과 씬 전환을 동시에 수행합니다.
 
 ```ts
 {
   type: 'choices',
   choices: [
     { 
-      text: ({ gold }) => `뇌물을 준다 (소지 금화: ${gold})`, 
+      // 1. 동적 텍스트: {{ }} 보간법 또는 함수형 반환 사용 가능
+      text: '뇌물을 준다 (현재 소지금: {{gold}}G)', 
+      // 2. 씬 전환: 다른 씬 파일로 즉시 이동
       next: 'bribe_success_scene',
+      // 3. 동적 변수 조작: Resolvable 함수를 이용한 가산 연산
       var: ({ gold }) => ({ gold: gold - 100 })
     },
-    { text: '정면 돌파한다', next: 'battle_scene' }
+    { 
+      text: ({ heart }) => heart > 50 ? '정중하게 부탁한다 (호감도 높음)' : '그냥 지나간다',
+      goto: 'next_label',
+      var: { heart: 5 } // 단순 값 할당도 가능
+    }
   ]
 }
 ```

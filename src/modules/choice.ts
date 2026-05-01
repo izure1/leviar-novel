@@ -1,5 +1,5 @@
 import type { Resolvable } from '../define/defineCmd'
-import type { SceneNextTarget, VarsOf } from '../types/config'
+import type { SceneNextTarget, VariablesOf } from '../types/config'
 import type { VarResolvable } from '../types/utils'
 import { resolveVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
@@ -99,11 +99,11 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
   /** 사용자에게 제공될 선택지 목록입니다. */
   choices: {
     /** 선택지 버튼에 표시될 텍스트입니다. 함수를 사용하면 변수를 참조할 수 있습니다. */
-    text: Resolvable<string, VarsOf<TConfig>, TLocalVars>
+    text: Resolvable<string, VariablesOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 이동할 씬. 문자열 또는 { scene, preserve } 객체. */
-    next?: Resolvable<SceneNextTarget<TConfig>, VarsOf<TConfig>, TLocalVars>
+    next?: Resolvable<SceneNextTarget<TConfig>, VariablesOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 이동할 현재 씬 내의 라벨(Label) 이름입니다. */
-    goto?: Resolvable<string, VarsOf<TConfig>, TLocalVars>
+    goto?: Resolvable<string, VariablesOf<TConfig>, TLocalVars>
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
     var?: VarResolvable<TConfig, TLocalVars>
   }[]

@@ -98,7 +98,7 @@ export type AllModuleHooksOf<TConfig> =
 
 export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any>> {
   /** 전역 변수. 씬 전환에도 유지됩니다 */
-  readonly vars: TConfig['vars']
+  readonly variables: TConfig['variables']
 
   /** 엔진 전용 컨테이너 (캔버스와 UI 요소들을 감싸는 래퍼) */
   readonly container: HTMLDivElement
@@ -185,7 +185,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       height: this._option.height,
     })
 
-    this.vars = { ...(config.vars as object) } as TConfig['vars']
+    this.variables = { ...(config.variables as object) } as TConfig['variables']
 
     // config.modules 수집 및 key 주입
     this._collectModules(config.modules)
@@ -428,7 +428,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const rawData: SaveData = {
       sceneName: this._currentSceneDef.name as string,
       cursor: this._currentScene.getCursor(),
-      globalVars: { ...this.vars as object },
+      globalVars: { ...this.variables as object },
       localVars: this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
       states: Object.fromEntries(this._stateStore),
@@ -464,7 +464,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this.stopSkip()
 
     // 전역 변수 복원
-    Object.assign(this.vars as object, resolvedData.globalVars)
+    Object.assign(this.variables as object, resolvedData.globalVars)
 
     // State 복원
     this._stateStore.clear()
@@ -520,8 +520,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   private _buildCallbacks(): SceneCallbacks {
     return {
       getNovel: () => this as any,
-      getGlobalVars: () => ({ ...this.vars as object }),
-      setGlobalVar: (name, value) => { (this.vars as any)[name] = value },
+      getGlobalVars: () => ({ ...this.variables as object }),
+      setGlobalVar: (name, value) => { (this.variables as any)[name] = value },
       loadScene: (target) => { this.loadScene(target) },
       captureRenderer: () => this._renderer.captureState(),
       isSkipping: () => this._isSkipping,

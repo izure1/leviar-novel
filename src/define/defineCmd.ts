@@ -44,7 +44,7 @@ type _ReturnOf<T> = T extends any
  * ```
  */
 export type Resolvable<T, TVars = any, TLocalVars = any> =
-  T | ((vars: TVars & TLocalVars) => _ReturnOf<T>)
+  T | ((variables: TVars & TLocalVars) => _ReturnOf<T>)
 
 /**
  * 배열이면 원소 타입에도 ResolvableProps를 재귀 적용하고, 배열 자체도 Resolvable.
@@ -70,7 +70,7 @@ export type ResolvableItem<T, TVars, TLocalVars> =
  * @example
  * ```ts
  * // ConditionCmd 정의
- * interface ConditionCmd { $if: (vars: TVars & TLocalVars) => boolean }
+ * interface ConditionCmd { $if: (variables: TVars & TLocalVars) => boolean }
  *
  * // 사용 — vars 타입이 올바르게 추론됨
  * { type: 'condition', $if: (vars) => vars.score > 10 }

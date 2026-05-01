@@ -17511,7 +17511,7 @@ ${addLineNumbers(fragment)}`);
   // src/core/Novel.ts
   var Novel = class {
     /** 전역 변수. 씬 전환에도 유지됩니다 */
-    vars;
+    variables;
     /** 엔진 전용 컨테이너 (캔버스와 UI 요소들을 감싸는 래퍼) */
     container;
     _config;
@@ -17577,7 +17577,7 @@ ${addLineNumbers(fragment)}`);
         width: this._option.width,
         height: this._option.height
       });
-      this.vars = { ...config.vars };
+      this.variables = { ...config.variables };
       this._collectModules(config.modules);
       this.hooker = this._createHookerProxy();
       this._world.start();
@@ -17782,7 +17782,7 @@ ${addLineNumbers(fragment)}`);
       const rawData = {
         sceneName: this._currentSceneDef.name,
         cursor: this._currentScene.getCursor(),
-        globalVars: { ...this.vars },
+        globalVars: { ...this.variables },
         localVars: this._currentScene.getLocalVars(),
         rendererState: this._renderer.captureState(),
         states: Object.fromEntries(this._stateStore)
@@ -17810,7 +17810,7 @@ ${addLineNumbers(fragment)}`);
       this._currentSceneDef?.hooks?._unregister(this);
       this._cleanupUI();
       this.stopSkip();
-      Object.assign(this.vars, resolvedData.globalVars);
+      Object.assign(this.variables, resolvedData.globalVars);
       this._stateStore.clear();
       for (const [k2, v2] of Object.entries(resolvedData.states ?? {})) {
         this._stateStore.set(k2, v2);
@@ -17848,9 +17848,9 @@ ${addLineNumbers(fragment)}`);
     _buildCallbacks() {
       return {
         getNovel: () => this,
-        getGlobalVars: () => ({ ...this.vars }),
+        getGlobalVars: () => ({ ...this.variables }),
         setGlobalVar: (name, value) => {
-          this.vars[name] = value;
+          this.variables[name] = value;
         },
         loadScene: (target) => {
           this.loadScene(target);
@@ -18120,7 +18120,7 @@ ${addLineNumbers(fragment)}`);
   var novel_config_default = defineNovelConfig({
     width: 800,
     height: 450,
-    vars: {
+    variables: {
       likeability: 0,
       metHeroine: false,
       endingReached: false,
@@ -19777,7 +19777,7 @@ ${addLineNumbers(fragment)}`);
     let before = 0;
     novel.hooker.onBefore("dialogue:text-run", (state) => {
       if (novel.isSkipping) return state;
-      if (!novel.vars.useHeroineVoice) return state;
+      if (!novel.variables.useHeroineVoice) return state;
       const { speaker, text } = state;
       const now = performance.now();
       before = now;

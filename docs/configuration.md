@@ -27,7 +27,7 @@
 
 ```typescript
 defineNovelConfig({
-  vars: {
+  variables: {
     playerName: '주인공',
     gold: 500,
     metHeroine: false

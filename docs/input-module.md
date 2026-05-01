@@ -22,7 +22,7 @@
 import { defineNovelConfig } from "fumika";
 
 export default defineNovelConfig({
-  vars: { playerName: "" },
+  variables: { playerName: "" },
   scenes: ["intro"],
   characters: {},
   backgrounds: {},
