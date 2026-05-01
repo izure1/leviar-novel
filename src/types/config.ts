@@ -109,9 +109,9 @@ export interface EffectDef {
     lifespan: number
     /** 파티클 방출 주기(프레임 단위)입니다. 값이 작을수록 자주 방출됩니다. */
     interval: number
-    /** 파티클 크기의 변화 범위입니다. (시작 크기부터 끝 크기까지 배열 형태) */
+    /** 입자 크기의 단계별 변화 범위입니다. [[Min, Max], [Min, Max], ...] 형태로 각 단계에서 랜덤하게 결정됩니다. */
     size: [number, number][]
-    /** 파티클 불투명도의 변화 범위입니다. (시작 불투명도부터 끝 불투명도까지 배열 형태) */
+    /** 입자 투명도의 단계별 변화 범위입니다. [[Min, Max], [Min, Max], ...] 형태로 각 단계에서 랜덤하게 결정됩니다. */
     opacity: [number, number][]
     /** 파티클 애니메이션 루프 여부입니다. */
     loop: boolean

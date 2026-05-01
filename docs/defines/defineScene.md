@@ -93,8 +93,9 @@ next: { scene: 'chapter_2', preserve: true }
 import { defineInitial } from 'fumika'
 import config from './novel.config'
 
-export const spookyInitial = defineInitial(config, {
-  mood: { mood: 'horror', intensity: 0.8 }
+export const spookyInitial = defineInitial(config)({
+  dialogue: { bg: { color: '#000000', height: 168 } },
+  choices:  { background: 'rgba(20,20,50,0.90)', minWidth: 280 },
 })
 
 // 실제 씬에서 사용

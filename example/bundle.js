@@ -3881,8 +3881,8 @@
   }
 
   // src/define/defineScene.ts
-  function defineInitial(config, initial) {
-    return initial;
+  function defineInitial(config) {
+    return (initial) => initial;
   }
   function defineScene(options, dialogues) {
     const {
@@ -18189,7 +18189,7 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/scenes/common-initial.ts
-  var commonInitial = defineInitial(novel_config_default, {
+  var commonInitial = defineInitial(novel_config_default)({
     "dialogue": {
       bg: {
         gradientType: "linear",

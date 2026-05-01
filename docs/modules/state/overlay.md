@@ -23,7 +23,7 @@
 `defineInitial` 또는 `defineScene`의 `initial` 섹션에서 오버레이의 기본 테마를 설정합니다.
 
 ```ts
-export const goldOverlayStyle = defineInitial(config, {
+export const goldOverlayStyle = defineInitial(config)({
   overlay: {
     textStyle: { fontSize: 32, fontColor: '#ffd700', fontWeight: 'bold' },
     imageStyle: { opacity: 0.8, borderRadius: 10 }

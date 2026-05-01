@@ -39,15 +39,16 @@
 
 엔진의 설계 철학과 세부 기능을 파악하기 위해 아래 문서를 참조하십시오.
 
-| 문서명                                          | 주요 내용                                                        |
-| :---------------------------------------------- | :--------------------------------------------------------------- |
-| **[⚙️ Configuration](./docs/configuration.md)** | 프로젝트 전역 설정 및 폴백 규칙 명세                             |
-| **[💡 Core Concepts](./docs/concepts.md)**      | Resolvable, Skip, MVC 등 엔진 작동 철학 해설                     |
-| **[🎭 Characters](./docs/characters.md)**       | 캐릭터 정의 및 상대 좌표 포인트 시스템 가이드                    |
-| **[🎬 Scenes](./docs/scenes.md)**               | 씬 구성, 지역 변수 및 초기 상태 주입 방법                        |
-| **[🧩 Custom Modules](./docs/modules.md)**      | 신규 기능 및 UI 확장을 위한 모듈 제작 방법                       |
-| **[📜 Command Reference](./docs/commands.md)**  | 모든 내장 시나리오 명령어의 속성 레퍼런스                        |
-| **[⚓ Hooks](./docs/hooks.md)**                 | 엔진 및 모듈의 라이프사이클 이벤트를 제어하는 Hook 시스템 가이드 |
+*   **[📚 Documentation Portal (전체 가이드)](./docs/README.md)** - 모든 문서의 통합 인덱스
+*   **[🚀 Step-by-Step Tutorial (입문 가이드)](./docs/tutorial/01-installation.md)** - 10분 만에 첫 게임 만들기
+
+| 상세 문서 | 주요 내용 |
+| :--- | :--- |
+| **[⚙️ Configuration](./docs/config.md)** | 프로젝트 전역 설정 및 폴백 규칙 명세 |
+| **[💡 Core Concepts](./docs/concepts/overview.md)** | Resolvable, Skip, MVC 등 엔진 작동 철학 해설 |
+| **[🎬 Scenes](./docs/concepts/scenes.md)** | 씬 구성, 지역 변수 및 초기 상태 주입 방법 |
+| **[📜 Command Reference](./docs/commands.md)** | 모든 내장 시나리오 명령어의 속성 레퍼런스 |
+| **[⚓ Hooks](./docs/concepts/hooks.md)** | 엔진 및 모듈의 라이프사이클 이벤트를 제어하는 Hook 가이드 |
 
 ---
 

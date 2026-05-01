@@ -21,7 +21,7 @@ import config from './novel.config'
 /** 
  * 특정 연출(예: 호러 분위기)을 위한 공통 초기 설정 정의
  */
-export const horrorInitial = defineInitial(config, {
+export const horrorInitial = defineInitial(config)({
   mood: { mood: 'horror', intensity: 0.8 },
   dialogue: { bg: { color: 'rgba(50, 0, 0, 0.9)' } },
   choices: { buttonStyle: { fontColor: '#ff0000' } }

@@ -25,23 +25,25 @@ export type InitialOf<TModules> = {
  * import config from '../novel.config'
  * import { defineInitial } from 'fumika'
  * 
- * export const commonInitial = defineInitial(config, {
+ * export const commonInitial = defineInitial(config)({
  *   dialogue: { text: { fontSize: 18 } }
  * })
  * ```
  */
 export function defineInitial<
-  TConfig extends NovelConfig<any, any, any, any, any> & { modules?: Record<string, NovelModule<any>> },
+  TConfig extends NovelConfig<any, any, any, any, any> & { modules?: Record<string, NovelModule<any>> }
+>(
+  config: TConfig
+): <
   TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
 >(
-  config: TConfig,
   initial: TInitial & (
     [TConfig['modules']] extends [undefined]
     ? unknown
     : { [K in keyof TInitial]: K extends keyof NonNullable<TConfig['modules']> ? unknown : never }
   )
-): typeof initial {
-  return initial
+) => typeof initial {
+  return (initial) => initial
 }
 
 /** 씬 정의 결과물. Scene 실행기가 소비합니다. */

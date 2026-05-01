@@ -82,6 +82,25 @@ noticeModule.defineView((data, ctx) => {
 | **`onUpdate`** | 상태 데이터 변경 시 | 변경된 데이터를 UI 요소에 즉시 투영하십시오. |
 | **`onCleanup`** | 모듈 제거 또는 씬 전환 시 | 이벤트 리스너 해제 등 모든 자원을 정리하십시오. |
 
+#### 💡 초기화 (onBoot)
+
+모듈이 엔진에 등록된 직후, 비동기적으로 딱 한 번 호출되는 초기화 콜백입니다. `novel.boot()`를 명시적으로 호출할 때 실행됩니다.
+
+| 메서드 | 인자 | 역할 |
+| :--- | :--- | :--- |
+| **`onBoot`** | `(world: World) => Promise<void>` | 모듈 전용 에셋 로딩, 월드 리소스(파티클 등) 초기화 |
+
+```ts
+// 모듈 전용 에셋을 미리 로드하는 예시
+myModule.onBoot(async (world) => {
+  await world.loader.load({ 
+    'private-icon': './assets/icon.png' 
+  })
+})
+```
+
+*   **호출 필수**: 커스텀 모듈에서 에셋 로딩이 필요한 경우, 반드시 메인 진입점(`main.ts`)에서 `await novel.load()` 이후 **`await novel.boot()`**를 호출해 주어야 합니다.
+
 #### 💡 레이어 관리 및 자동 제어 (uiGroup & hideGroups)
 
 엔진은 각 모듈이 선언한 **`uiGroup`** 식별자를 기반으로 UI 가시성을 지능적으로 관리합니다. 이 시스템이 왜 필요하고 어떻게 작동하는지 **단계별 예시**를 통해 알아보겠습니다.

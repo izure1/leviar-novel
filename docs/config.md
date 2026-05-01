@@ -6,6 +6,10 @@
 
 `novel.config.ts`는 `fumika` 엔진의 모든 동작과 데이터를 정의하는 최상위 설정 파일입니다. 게임의 해상도, 전역 변수 초기값, 캐릭터 및 배경 정의, 에셋 경로, 그리고 각종 모듈의 물리적/시각적 기본값을 이곳에서 관리합니다.
 
+**관련 문서:**
+* [엔진 아키텍처 개요](./concepts/overview.md)
+* [동적 설정값 (Resolvable) 활용](./concepts/resolvable.md)
+
 ---
 
 ## 2. 기본 해상도 (Resolution)
@@ -43,7 +47,9 @@ variables: {
 ```
 
 **관련 문서:**
+* [Variable 모듈 (변수 조작)](./modules/var.md)
 * [Condition 모듈 (변수 활용 분기)](./modules/condition.md)
+* [변수 시스템 상세 가이드](./concepts/variables.md)
 
 ---
 
@@ -61,6 +67,8 @@ scenes: ['prologue', 'chapter1', 'ending_good', 'ending_bad']
 
 **관련 문서:**
 * [Scene 개념 가이드](./concepts/scenes.md)
+* [defineScene 정의 상세](./defines/defineScene.md)
+* [공통 초기값 정의 (defineInitial)](./defines/defineInitial.md)
 
 ---
 
@@ -103,7 +111,9 @@ characters: {
 
 **관련 문서:**
 * [Character 모듈 가이드](./modules/character.md)
-* [defineCharacter 정의 가이드](./defines/defineCharacter.md)
+* [캐릭터 포커스 (character-focus)](./modules/character-focus.md)
+* [캐릭터 특수효과 (character-effect)](./modules/character-effect.md)
+* [defineCharacter 정의 상세](./defines/defineCharacter.md)
 
 ---
 
@@ -130,21 +140,101 @@ backgrounds: {
 
 ## 7. 파티클 효과 설정 (Effects)
 
-`effect` 모듈에서 사용하는 파티클 프리셋의 물리/시각 속성을 재정의합니다.
+`effect` 모듈에서 사용하는 파티클(비, 눈, 벚꽃 등) 프리셋의 물리 및 시각 속성을 전역적으로 재정의합니다. 엔진에 내장된 기본 프리셋이 존재하지만, 프로젝트의 분위기에 맞춰 입자의 크기, 속도, 수명 등을 세밀하게 조정할 수 있습니다.
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
-| `clip` | `Object` | 파티클 생성 빈도, 수명, 초기 속도 등 물리 법칙 설정 |
-| `particle` | `Object` | 개별 파티클의 중력Scale, 불투명도, 블렌드 모드 등 스타일 설정 |
+| `effects` | `Record<EffectType, EffectDef>` | 이펙트 종류별 상세 설정 맵 |
+
+### 7.1. 지원되는 이펙트 종류 (EffectType)
+`dust` (먼지), `rain` (비), `snow` (눈), `sakura` (벚꽃), `sparkle` (반짝임), `fog` (안개), `leaves` (낙엽), `fireflies` (반딧불이)
+
+### 7.2. 상세 속성 정의 (EffectDef)
+
+`EffectDef`는 파티클의 생성 및 물리 법칙을 담당하는 **`clip`**과 개별 입자의 시각적 외형을 담당하는 **`particle`**로 나뉩니다.
+
+#### **A. 클립 설정 (`clip`)**
+파티클 시스템의 방출 규칙과 물리적 생명 주기를 정의합니다.
+
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `impulse` | `number` | 방출 시 가해지는 초기 속도(물리 충격량)입니다. |
+| `lifespan` | `number` | 입자가 화면에 머무는 시간(프레임 단위)입니다. |
+| `interval` | `number` | 입자가 방출되는 주기입니다. 값이 낮을수록 입자가 더 자주, 촘촘하게 생성됩니다. |
+| `size` | `[number, number][]` | 입자 크기의 단계별 변화 범위입니다. `[[Min, Max], [Min, Max], ...]` 형태로, 각 단계마다 해당 범위 내에서 랜덤하게 결정된 값을 사용해 보간됩니다. |
+| `opacity` | `[number, number][]` | 입자 투명도의 단계별 변화 범위입니다. `[[Min, Max], [Min, Max], ...]` 형태로, 생존 기간 동안 투명도가 해당 범위 내에서 랜덤하게 결정되며 변화합니다. |
+| `angularImpulse` | `number` | 생성 시 입자에 가해지는 회전력(각속도)입니다. |
+| `loop` | `boolean` | 파티클 애니메이션의 반복 여부입니다. |
+
+#### **B. 파티클 설정 (`particle`)**
+화면에 렌더링되는 개별 입자 객체의 속성을 정의합니다.
+
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `attribute` | `Object` | 입자의 물리적 성질 및 이미지 소스 설정 (아래 상세 참조) |
+| `style` | `Object` | 입자의 크기, 불투명도, 합성 모드 등 시각적 스타일 (아래 상세 참조) |
+
+---
+
+### 7.3. 입자 속성 및 스타일 상세
+
+#### **particle.attribute**
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `src` | `string` | 입자에 사용할 에셋 키 또는 이미지 경로입니다. |
+| `gravityScale` | `number` | 해당 입자에 적용될 중력의 배율입니다. |
+| `frictionAir` | `number` | 공기 저항 계수입니다. 값이 클수록 입자가 금방 멈춥니다. |
+| `strictPhysics` | `boolean` | 물리 엔진의 엄격한 적용 여부입니다. |
+
+#### **particle.style**
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `width` / `height` | `number` | 입자의 논리적 크기(px)입니다. |
+| `opacity` | `number` | 입자의 기본 불투명도입니다. |
+| `blendMode` | `string` | `'lighter'`, `'screen'`, `'multiply'` 등 레이어 합성 방식입니다. |
+
+---
+
+### 7.4. 설정 예시
+
+다음은 벚꽃(`sakura`) 효과를 예로 들어, 입자가 **서서히 나타났다가(Fade-in) 사라지며(Fade-out)**, 크기가 **작은 상태에서 랜덤하게 커졌다가 줄어드는** 복합적인 설정을 보여줍니다.
 
 ```ts
 effects: {
-  snow: {
-    clip: { interval: 50 }, // 더 눈이 많이 오도록 수정
-    particle: { attribute: { gravityScale: 0.1 } } // 더 빨리 떨어지도록 수정
+  sakura: {
+    clip: {
+      impulse: 0.02,
+      lifespan: 6000,
+      interval: 300,
+      // [Min, Max][] - 3단계 크기 변화
+      size: [
+        [0.1, 0.2], // 1단계: 생성 시 (매우 작음)
+        [1.0, 1.5], // 2단계: 생존 중간 (본래 크기보다 커질 수 있음)
+        [0.5, 0.8]  // 3단계: 소멸 시 (중간 크기로 감소)
+      ],
+      // [Min, Max][] - 3단계 투명도 변화 (페이드 인/아웃)
+      opacity: [
+        [0, 0],     // 1단계: 생성 시 (완전 투명)
+        [0.8, 1.0], // 2단계: 생존 중간 (선명함)
+        [0, 0]      // 3단계: 소멸 시 (완전 투명)
+      ],
+      angularImpulse: 0.02,
+      loop: true
+    },
+    particle: {
+      style: {
+        width: 20,
+        height: 20,
+        blendMode: 'normal'
+      }
+    }
   }
 }
 ```
+
+**💡 동작 원리 상세:**
+*   **단계별 보간**: 위 예시처럼 `opacity`가 3개인 경우, 생존 시간(`lifespan`)의 0% 지점에서 1단계를, 50% 지점에서 2단계를, 100% 지점에서 3단계를 기준으로 삼아 그 사이 값을 부드럽게 계산(Interpolation)합니다.
+*   **랜담 범위 적용**: 각 단계의 값은 고정값이 아닌 `[Min, Max]` 범위 내에서 입자마다 독립적으로 결정됩니다. 예를 들어 위 예제의 2단계 `size`는 입자마다 `1.0`에서 `1.5` 사이의 서로 다른 최대 크기를 갖게 됩니다.
 
 **관련 문서:**
 * [Effect 모듈 가이드](./modules/effect.md)
@@ -167,7 +257,8 @@ audios: {
 ```
 
 **관련 문서:**
-* [Audio 모듈 가이드](./modules/audio.md)
+* [Audio 모듈 가이드 (BGM/SFX)](./modules/audio.md)
+* [에셋 로딩 및 관리 시스템](./concepts/overview.md#에셋-시스템)
 
 ---
 
@@ -189,27 +280,87 @@ modules: {
 ```
 
 **관련 문서:**
-* [모듈 시스템 개요](./modules.md)
+* [모듈 시스템 아키텍처](./modules.md)
+* [UI 모듈 가이드 (Visibility 제어)](./modules/ui.md)
+* [커스텀 훅 시스템 (Hooks)](./concepts/hooks.md)
+* [defineHook 정의 상세](./defines/defineHook.md)
 
 ---
 
 ## 10. 폴백 규칙 (Fallback)
 
-커맨드 작성 시 특정 속성을 반복해서 입력하지 않도록 기본값을 설정합니다.
+`fallback` 옵션은 시나리오를 작성할 때 반복되는 속성들을 생략하고 **기본값을 전역적으로 관리**할 수 있게 해주는 시스템입니다.
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
-| `type` | `string` | 적용할 커맨드 타입 (예: `'character'`) |
-| `defaults` | `Object` | 해당 커맨드에 적용할 기본값들 |
+| `fallback` | `FallbackRule[]` | 적용할 폴백 규칙들의 배열 (맨 위에 정의된 규칙이 가장 높은 우선순위를 가짐) |
+
+---
+
+### 10.1. 설정 예시
+
+**상단에는 특정 조건에서 발동할 세부 규칙**을, 하단에는 광범위한 공통 규칙을 정의합니다 (위에 있을수록 아래를 덮어씁니다).
 
 ```ts
 fallback: [
-  // 모든 캐릭터 등장/퇴장 시 기본적으로 500ms 동안 애니메이션 적용
-  { type: 'character', defaults: { duration: 500 } },
-  // 모든 대사의 출력 속도를 30ms로 고정
-  { type: 'dialogue', defaults: { speed: 30 } }
+  // 1. 특정 캐릭터('heroine')에게만 별도 적용 - 높은 우선순위 (하단 규칙을 덮어씀)
+  { 
+    type: 'character', 
+    name: 'heroine', 
+    defaults: { duration: 200, position: 'center' } 
+  },
+
+  // 2. 모든 캐릭터에 공통 적용 (기본 등장 속도 및 이미지) - 낮은 우선순위
+  { 
+    type: 'character', 
+    defaults: { duration: 500, image: 'normal' } 
+  },
+
+  // 3. 대사 모듈의 기본 텍스트 출력 속도
+  { 
+    type: 'dialogue', 
+    defaults: { speed: 30, wait: true } 
+  }
 ]
 ```
 
+### 10.2. 실제 동작 예시
+
+위 설정이 적용된 상태에서 시나리오를 작성할 경우의 변화입니다.
+
+```ts
+// [시나리오 정의]
+{ type: 'character', name: 'heroine' }
+
+// [엔진 내부에서 폴백 적용 후 실제 실행되는 값]
+{ 
+  type: 'character', 
+  name: 'heroine', 
+  duration: 200,     // 1번 규칙이 2번의 500ms를 덮어씀 (더 위에 정의됨)
+  position: 'center', // 1번 규칙에서 주입
+  image: 'normal'    // 2번 규칙에서 상속 (1번에 해당 필드가 없으므로 유지)
+}
+```
+
+---
+
+### 10.3. 폴백 규칙 상세 구조 (FallbackRule)
+
+각 규칙은 **매칭 조건**과 적용할 **기본값(`defaults`)**으로 구성됩니다.
+
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `type` | `string` | **(필수)** 적용 대상 커맨드 타입 (예: `'character'`, `'dialogue'`) |
+| `[prop: string]` | `any` | 특정 속성 값이 일치할 때만 규칙을 적용하도록 하는 필터 조건입니다. |
+| `defaults` | `Object` | 매칭 성공 시 커맨드에 주입될 기본값 객체입니다. |
+
+#### **A. 매칭 조건 및 우선순위 로직**
+*   **복합 매칭**: `type` 외의 속성을 추가하면 해당 값까지 일치해야 폴백이 적용됩니다. (예: `name`, `action` 등)
+*   **우선순위**: `직접 입력한 값` > `맨 위 폴백` > `맨 아래 폴백` 순서로 값이 적용됩니다. 즉, 배열의 인덱스가 작을수록 우선순위가 높습니다. (Firewall 규칙과 유사한 방식)
+
+**💡 활용 팁:**
+*   자주 사용하는 캐릭터의 기본 연출이나 대사 출력 속도 등을 폴백으로 관리하면 시나리오 가독성이 획기적으로 좋아집니다.
+
 **관련 문서:**
-* [Dialogue 모듈 가이드](./modules/dialogue.md)
+* [Dialogue 모듈 가이드 (Fallback 활용 사례)](./modules/dialogue.md)
+* [명령어 시스템 개요](./commands.md)
