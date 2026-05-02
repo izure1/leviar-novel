@@ -53,6 +53,7 @@
 ---
 
 ## 🚀 빠른 시작 (Quick Start)
+> 더욱 상세한 단계별 설정 방법은 **[Quick Start 가이드](./docs/quick-start.md)**를 참조하세요.
 
 ### 1. 설치 (Installation)
 
