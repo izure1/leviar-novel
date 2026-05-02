@@ -787,7 +787,7 @@
         return module;
       },
       defineView(builder) {
-        _viewBuilderFn = (mergedData, ctx) => {
+        _viewBuilderFn = (ctx, mergedData) => {
           for (const key of Object.keys(data)) {
             delete data[key];
           }
@@ -796,9 +796,9 @@
           if (_moduleKey) {
             ctx.state.set(_moduleKey, { ...data });
           }
-          const entry = builder(data, ctx);
-          _onUpdate = (d2) => entry.onUpdate?.(d2);
-          entry.onUpdate?.(data);
+          const entry = builder(ctx, data, setState);
+          _onUpdate = (d2) => entry.onUpdate?.(ctx, d2, setState);
+          entry.onUpdate?.(ctx, data, setState);
           return entry;
         };
         return module;
@@ -873,7 +873,7 @@
     _speakerKey: void 0,
     _speed: void 0
   });
-  dialogueModule.defineView((data, ctx) => {
+  dialogueModule.defineView((ctx, data, setState) => {
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
@@ -1010,11 +1010,11 @@
       /**
        * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
        */
-      onUpdate: (d2) => {
-        const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_DIALOGUE_BG;
-        const newSpkCfg = d2.speaker ?? DEFAULT_DIALOGUE_SPEAKER;
-        const newTxtCfg = d2.text ?? DEFAULT_DIALOGUE_TEXT;
-        const newLayoutCfg = { ...DEFAULT_DIALOGUE_LAYOUT, ...d2.layout ?? {} };
+      onUpdate: (_ctx, state, _setState) => {
+        const newBgCfg = state.style ?? state.bg ?? DEFAULT_DIALOGUE_BG;
+        const newSpkCfg = state.speaker ?? DEFAULT_DIALOGUE_SPEAKER;
+        const newTxtCfg = state.text ?? DEFAULT_DIALOGUE_TEXT;
+        const newLayoutCfg = { ...DEFAULT_DIALOGUE_LAYOUT, ...state.layout ?? {} };
         const newTextW = w - newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight;
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW });
@@ -1034,12 +1034,12 @@
         const txtPos = toLocal(baseX2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
         textObj.transform.position.x = txtPos.x;
         textObj.transform.position.y = txtPos.y;
-        if (d2._lines && d2._lines.length > 0 && (d2._lines !== _prevLines || d2._subIndex !== _prevSubIndex)) {
-          _prevLines = d2._lines;
-          _prevSubIndex = d2._subIndex ?? 0;
-          const txt = d2._lines[d2._subIndex ?? 0];
-          const spkName = resolveSpeaker(d2._speakerKey, charDefs);
-          _renderText(spkName, txt, d2._speed);
+        if (state._lines && state._lines.length > 0 && (state._lines !== _prevLines || state._subIndex !== _prevSubIndex)) {
+          _prevLines = state._lines;
+          _prevSubIndex = state._subIndex ?? 0;
+          const txt = state._lines[state._subIndex ?? 0];
+          const spkName = resolveSpeaker(state._speakerKey, charDefs);
+          _renderText(spkName, txt, state._speed);
         }
       }
     };
@@ -1112,7 +1112,7 @@
     textHover: DEFAULT_CHOICE_STYLE.textHover,
     layout: DEFAULT_CHOICE_LAYOUT
   });
-  choiceModule.defineView((data, ctx) => {
+  choiceModule.defineView((ctx, data, setState) => {
     const cfg = { ...data };
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
@@ -1237,8 +1237,8 @@
           _btnObjs.push(btnObj);
         });
       },
-      onUpdate: (d2) => {
-        Object.assign(cfg, d2);
+      onUpdate: (_ctx, state, _setState) => {
+        Object.assign(cfg, state);
       }
     };
   });
@@ -1301,7 +1301,7 @@
     _parallax: true,
     _isVideo: false
   });
-  backgroundModule.defineView((data, ctx) => {
+  backgroundModule.defineView((ctx, data, setState) => {
     let _bgObj = null;
     let _bgParallax = null;
     const _createBg = (key, fit, parallax, isVideo, opacity = 1) => {
@@ -1377,15 +1377,15 @@
       hide: (dur = 300) => {
         _bgObj?.fadeOut?.(dur, "easeIn");
       },
-      onUpdate: (d2) => {
-        if (!d2._key) return;
+      onUpdate: (_ctx, state, _setState) => {
+        if (!state._key) return;
         const bgDefs = ctx.renderer.config.backgrounds;
-        const def = bgDefs[d2._key];
+        const def = bgDefs[state._key];
         if (!def) return;
-        const src = def.src ?? d2._key;
+        const src = def.src ?? state._key;
         const useParallax = def.parallax ?? true;
-        const dur = ctx.renderer.dur(d2._lastDuration);
-        ctx.renderer.state.set("backgroundKey", d2._key);
+        const dur = ctx.renderer.dur(state._lastDuration);
+        ctx.renderer.state.set("backgroundKey", state._key);
         if (_bgObj) {
           const sameParallax = _bgParallax === useParallax;
           if (sameParallax) {
@@ -1402,7 +1402,7 @@
           _bgObj = null;
         }
         _bgParallax = useParallax;
-        _bgObj = _createBg(d2._key, d2._fit, useParallax, d2._isVideo, dur > 0 ? 0 : 1);
+        _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, dur > 0 ? 0 : 1);
         if (dur > 0 && _bgObj) {
           ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
         }
@@ -1585,7 +1585,7 @@
   var characterModule = define2({
     _characters: {}
   });
-  characterModule.defineView((data, ctx) => {
+  characterModule.defineView((ctx, data, setState) => {
     const _charObjs = {};
     const _showCharacter = (name, position, imageKey, duration, immediate = false) => {
       const charDefs = ctx.renderer.config.characters;
@@ -1656,7 +1656,7 @@
       },
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
-      onUpdate: (d2) => {
+      onUpdate: (_ctx, d2, _setState) => {
         const dur = d2._lastDuration;
         const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
@@ -1732,7 +1732,7 @@
     ];
   }
   var characterFocusModule = define2({ _unused: void 0 });
-  characterFocusModule.defineView((_data, _ctx) => ({
+  characterFocusModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -1766,7 +1766,7 @@
     return true;
   });
   var characterHighlightModule = define2({ _unused: void 0 });
-  characterHighlightModule.defineView((_data, _ctx) => ({
+  characterHighlightModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -1776,7 +1776,7 @@
     return true;
   });
   var characterEffectModule = define2({ _unused: void 0 });
-  characterEffectModule.defineView((_data, _ctx) => ({
+  characterEffectModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -1822,7 +1822,7 @@
     _flickers: {},
     _lastDuration: 800
   });
-  moodModule.defineView((data, ctx) => {
+  moodModule.defineView((ctx, data, setState) => {
     const _moodObjs = {};
     const _addMoodObj = (mood, intensity, duration, immediate = false) => {
       if (mood === "none") {
@@ -1900,17 +1900,17 @@
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
-      onUpdate: (d2) => {
-        const dur = d2._lastDuration ?? 800;
-        const newMoods = new Set(Object.keys(d2._activeMoods));
+      onUpdate: (_ctx, state, _setState) => {
+        const dur = state._lastDuration ?? 800;
+        const newMoods = new Set(Object.keys(state._activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
           if (!newMoods.has(mood)) {
             _removeMoodObj(mood, dur);
           }
         }
-        for (const [mood, intensity] of Object.entries(d2._activeMoods)) {
+        for (const [mood, intensity] of Object.entries(state._activeMoods)) {
           _addMoodObj(mood, intensity, dur);
-          const preset = d2._flickers?.[mood];
+          const preset = state._flickers?.[mood];
           const obj = _moodObjs[mood];
           if (preset && obj) {
             const currentState = ctx.renderer.state.get("_flickerState");
@@ -2030,7 +2030,7 @@
   var effectModule = define2({
     _activeEffects: {}
   });
-  effectModule.defineView((data, ctx) => {
+  effectModule.defineView((ctx, data, setState) => {
     const _effectObjs = {};
     const _addEffect = (type, rate, srcKey, immediate = false) => {
       const configEffect = ctx.renderer.config.effects?.[type];
@@ -2096,12 +2096,12 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      onUpdate: (d2) => {
-        const newTypes = new Set(Object.keys(d2._activeEffects));
+      onUpdate: (_ctx, state, _setState) => {
+        const newTypes = new Set(Object.keys(state._activeEffects));
         for (const type of Object.keys(_effectObjs)) {
           if (!newTypes.has(type)) _removeEffect(type, 600);
         }
-        for (const [type, info] of Object.entries(d2._activeEffects)) {
+        for (const [type, info] of Object.entries(state._activeEffects)) {
           if (!_effectObjs[type]) {
             _addEffect(type, info.rate, info.srcKey);
           }
@@ -2138,7 +2138,7 @@
     }
     return false;
   }
-  function buildOverlayView(data, ctx) {
+  function buildOverlayView(ctx, data, setState) {
     const _overlayObjs = {};
     const _overlayEntries = {};
     const _resolvePresetPos = (y) => {
@@ -2282,13 +2282,13 @@
         }
       },
       getObj: (name) => _overlayObjs[name],
-      onUpdate: (d2) => {
-        const dur = d2._lastDuration;
-        const newKeys = new Set(Object.keys(d2._overlays));
+      onUpdate: (_ctx, state, _setState) => {
+        const dur = state._lastDuration;
+        const newKeys = new Set(Object.keys(state._overlays));
         for (const key of Object.keys(_overlayObjs)) {
           if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600);
         }
-        for (const [key, entry] of Object.entries(d2._overlays)) {
+        for (const [key, entry] of Object.entries(state._overlays)) {
           const prev = _overlayEntries[key];
           if (!_overlayObjs[key]) {
             _addOverlay(entry, false, dur);
@@ -2349,7 +2349,7 @@
     return true;
   });
   var overlayEffectModule = define2({ _unused: void 0 });
-  overlayEffectModule.defineView((_data, _ctx) => ({
+  overlayEffectModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -2396,7 +2396,7 @@
     _isCovered: false,
     _coveredColor: "rgba(0,0,0,1)"
   });
-  screenFadeModule.defineView((data, ctx) => {
+  screenFadeModule.defineView((ctx, data, setState) => {
     let rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) {
       const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
@@ -2431,7 +2431,7 @@
       },
       hide: () => {
       },
-      onUpdate: () => {
+      onUpdate: (_ctx, _state, _setState) => {
       }
     };
   });
@@ -2466,7 +2466,7 @@
     return true;
   });
   var screenFlashModule = define2({ _lastPreset: "white" });
-  screenFlashModule.defineView((_data, ctx) => {
+  screenFlashModule.defineView((ctx, _data, setState) => {
     let rect = ctx.renderer.state.get("_flashObj");
     if (!rect) {
       const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
@@ -2492,7 +2492,7 @@
       },
       hide: () => {
       },
-      onUpdate: () => {
+      onUpdate: (_ctx, _state, _setState) => {
       }
     };
   });
@@ -2523,7 +2523,7 @@
     _lastPreset: "left",
     _lastFadePreset: "black"
   });
-  screenWipeModule.defineView((_data, _ctx) => ({
+  screenWipeModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -2661,7 +2661,7 @@
     playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, "_activeCamEffectStop");
   }
   var cameraZoomModule = define2({ _lastPreset: "reset" });
-  cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
+  cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2671,7 +2671,7 @@
     return true;
   });
   var cameraPanModule = define2({ _lastPreset: "center" });
-  cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
+  cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2681,7 +2681,7 @@
     return true;
   });
   var cameraEffectModule = define2({ _lastPreset: "shake" });
-  cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
+  cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2692,7 +2692,7 @@
 
   // src/modules/condition.ts
   var conditionModule = define2({});
-  conditionModule.defineView((_data, _ctx) => ({ show: () => {
+  conditionModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   conditionModule.defineCommand(function* (cmd, ctx) {
@@ -2722,7 +2722,7 @@
 
   // src/modules/var.ts
   var varModule = define2({});
-  varModule.defineView((_data, _ctx) => ({ show: () => {
+  varModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   varModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2739,7 +2739,7 @@
 
   // src/modules/label.ts
   var labelModule = define2({});
-  labelModule.defineView((_data, _ctx) => ({ show: () => {
+  labelModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   labelModule.defineCommand(function* (_cmd, _ctx, state, setState) {
@@ -2749,7 +2749,7 @@
 
   // src/modules/ui.ts
   var uiModule = define2({});
-  uiModule.defineView((_data, _ctx) => ({ show: () => {
+  uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   uiModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2764,7 +2764,7 @@
 
   // src/modules/control.ts
   var controlModule = define2({ expireAt: 0 });
-  controlModule.defineView((_data, _ctx) => ({ show: () => {
+  controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   controlModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2829,7 +2829,7 @@
   var pool = /* @__PURE__ */ new Map();
   var fading = /* @__PURE__ */ new Set();
   var audioModule = define2({ _tracks: {} });
-  audioModule.defineView((data, ctx) => {
+  audioModule.defineView((ctx, data, setState) => {
     const audioMap = ctx.renderer.config.audios;
     for (const [name, audio] of pool.entries()) {
       if (!data._tracks[name]) {
@@ -2884,7 +2884,7 @@
       },
       hide: () => {
       },
-      onUpdate: () => {
+      onUpdate: (_ctx, _state, _setState) => {
       }
     };
   });
@@ -3115,7 +3115,7 @@
     _duration: 200,
     _persist: false
   });
-  dialogBoxModule.defineView((data, ctx) => {
+  dialogBoxModule.defineView((ctx, data, setState) => {
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
@@ -3325,9 +3325,17 @@
       },
       // ─── 입력 역할 선언 ────────────────────────────────
       hideGroups: ["dialogue"],
-      onUpdate: (d2) => {
-        if (d2._resolve && d2._buttons.length > 0) {
-          _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
+      onUpdate: (_ctx, state, _setState) => {
+        if (state._resolve && state._buttons.length > 0) {
+          _render(
+            state._title,
+            state._content,
+            state._buttons,
+            state._resolve,
+            state._duration,
+            state._persist,
+            state
+          );
         }
       }
     };
@@ -3461,7 +3469,7 @@
     _buttons: [],
     _resolve: null
   });
-  inputModule.defineView((data, ctx) => {
+  inputModule.defineView((ctx, data, setState) => {
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
@@ -3812,12 +3820,12 @@
         _destroyHiddenInput();
         _clearDynamic();
       },
-      onUpdate: (d2) => {
-        if (!d2._resolve || d2._buttons.length === 0) return;
+      onUpdate: (_ctx, state, _setState) => {
+        if (!state._resolve || state._buttons.length === 0) return;
         if (_hiddenEl) {
-          _currentResolve = d2._resolve;
+          _currentResolve = state._resolve;
         } else {
-          _render(d2._label, d2._multiline, d2._buttons, d2._resolve, d2);
+          _render(state._label, state._multiline, state._buttons, state._resolve, state);
         }
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
@@ -14656,6 +14664,19 @@ ${addLineNumbers(fragment)}`);
     }
     return spans;
   }
+  function parseMargin2(value) {
+    const zero = { top: 0, right: 0, bottom: 0, left: 0 };
+    if (value == null) return zero;
+    if (typeof value === "number") {
+      return { top: value, right: value, bottom: value, left: value };
+    }
+    const tokens = value.trim().split(/\s+/).map((t) => parseFloat(t) || 0);
+    if (tokens.length === 0) return zero;
+    if (tokens.length === 1) return { top: tokens[0], right: tokens[0], bottom: tokens[0], left: tokens[0] };
+    if (tokens.length === 2) return { top: tokens[0], right: tokens[1], bottom: tokens[0], left: tokens[1] };
+    if (tokens.length === 3) return { top: tokens[0], right: tokens[1], bottom: tokens[2], left: tokens[1] };
+    return { top: tokens[0], right: tokens[1], bottom: tokens[2], left: tokens[3] };
+  }
   function parseBorderRadius(value, w, h, bw = 0) {
     if (value == null) return [0, 0, 0, 0];
     let tl = 0, tr = 0, br = 0, bl = 0;
@@ -14885,6 +14906,9 @@ ${addLineNumbers(fragment)}`);
     _width = 0;
     _height = 0;
     _lastFocalLength = -1;
+    _debugCamZ = 0;
+    /** 디버그 모드: 활성화 시 각 오브젝트의 렌더 경계(outline)와 margin을 별도 레이어로 시각화합니다. */
+    debugMode = false;
     constructor(canvas) {
       const N = this._batchMaxSize;
       this._batchMat0 = new Float32Array(N * 4);
@@ -15026,6 +15050,9 @@ ${addLineNumbers(fragment)}`);
           uRadius: { value: 0 },
           uSize: { value: [1, 1] },
           uBorderRadius: { value: [0, 0, 0, 0] },
+          uIsBorder: { value: 0 },
+          uInnerSize: { value: [0, 0] },
+          uInnerBorderRadius: { value: [0, 0, 0, 0] },
           uModelMatrix: { value: new Float32Array(16) },
           uViewMatrix: { value: new Float32Array(16) },
           uProjectionMatrix: { value: new Float32Array(16) }
@@ -15168,6 +15195,7 @@ ${addLineNumbers(fragment)}`);
       const camRotY = activeCamera.transform.rotation.y || 0;
       const camRotZ = activeCamera.transform.rotation.z || 0;
       const camZ = activeCamera.transform.position.z;
+      this._debugCamZ = camZ;
       this._buildViewMatrix(activeCamera);
       const rotChanged = camRotX !== this._lastCamRotX || camRotY !== this._lastCamRotY || camRotZ !== this._lastCamRotZ;
       const countChanged = objects.size !== this._lastObjCount;
@@ -15269,6 +15297,91 @@ ${addLineNumbers(fragment)}`);
           break;
         default:
           break;
+      }
+      if (this.debugMode && w > 0 && h > 0) {
+        this._activeObj = obj;
+        this._activeRenderW = w;
+        this._activeRenderH = h;
+        this._drawDebugOverlay(obj, w, h);
+      }
+    }
+    // ─── 디버그 오버레이 ─────────────────────────────────────────────────────
+    /**
+     * 디버그 모드에서 각 오브젝트의 실제 렌더 경계와 margin을 시각화합니다.
+     * 기존 style을 일절 덮어쓰지 않고, 프레임 맨 마지막에 별도 레이어로 그립니다.
+     *
+     * - outline: 청록색(#00e5ff) 1px 테두리 → 오브젝트의 실제 width × height 경계
+     * - margin: 반투명 주황색(#ff9800, 30%) → style.margin 범위를 오브젝트 외측에 표시
+     */
+    _drawDebugOverlay(obj, w, h) {
+      this._flushBatch();
+      this._setBlendMode("source-over");
+      const DEBUG_OUTLINE_COLOR = "#00ff00";
+      const DEBUG_OUTLINE_PIXELS = 1;
+      const DEBUG_MARGIN_COLOR = "rgba(255, 152, 0, 0.3)";
+      const mArr = obj.__worldMatrix;
+      const objDepth = Math.max(-mArr[14] - this._debugCamZ, 0.1);
+      const focalLength = Math.max(this._lastFocalLength, 1);
+      const ow = DEBUG_OUTLINE_PIXELS * objDepth / focalLength;
+      const outerW = w + ow * 2;
+      const outerH = h + ow * 2;
+      const prog = this.colorProgram;
+      prog.uniforms["uColor"].value = parseCSSColor(DEBUG_OUTLINE_COLOR);
+      prog.uniforms["uOpacity"].value = 1;
+      prog.uniforms["uSize"].value = [outerW, outerH];
+      prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uIsBorder"].value = 1;
+      prog.uniforms["uInnerSize"].value = [w, h];
+      prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, outerW, outerH, 0, w, h);
+      prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+      this.colorMesh.draw({ camera: this.camera });
+      const margin = parseMargin2(obj.style.margin);
+      const hasMargin = margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0;
+      if (!hasMargin) return;
+      const [mr, mg, mb, ma] = parseCSSColor(DEBUG_MARGIN_COLOR);
+      prog.uniforms["uColor"].value = [mr, mg, mb, ma];
+      prog.uniforms["uOpacity"].value = 1;
+      prog.uniforms["uIsBorder"].value = 0;
+      prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uInnerSize"].value = [0, 0];
+      prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+      const drawMarginStrip = (mw, mh, offsetX, offsetY) => {
+        const obj2 = this._activeObj;
+        const pivot = obj2.transform.pivot;
+        this._modelMat.copy(obj2.__worldMatrix);
+        this._tmpVec[0] = (0.5 - pivot.x) * w;
+        this._tmpVec[1] = -(0.5 - pivot.y) * h;
+        this._tmpVec[2] = 0;
+        this._modelMat.translate(this._tmpVec);
+        this._tmpVec[0] = offsetX;
+        this._tmpVec[1] = offsetY;
+        this._tmpVec[2] = 0;
+        this._modelMat.translate(this._tmpVec);
+        this._tmpVec[0] = mw;
+        this._tmpVec[1] = mh;
+        this._tmpVec[2] = 1;
+        this._modelMat.scale(this._tmpVec);
+        prog.uniforms["uSize"].value = [mw, mh];
+        prog.uniforms["uModelMatrix"].value = this._modelMat;
+        prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+        this.colorMesh.draw({ camera: this.camera });
+      };
+      if (margin.top > 0) {
+        const mw = w + margin.left + margin.right;
+        const mh = margin.top;
+        drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, (h + mh) / 2);
+      }
+      if (margin.bottom > 0) {
+        const mw = w + margin.left + margin.right;
+        const mh = margin.bottom;
+        drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, -(h + mh) / 2);
+      }
+      if (margin.left > 0) {
+        drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0);
+      }
+      if (margin.right > 0) {
+        drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0);
       }
     }
     // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────
@@ -16688,6 +16801,20 @@ ${addLineNumbers(fragment)}`);
       this._activeCamera = camera;
     }
     /**
+     * 디버그 모드 활성화 여부를 반환합니다.
+     */
+    get debugMode() {
+      return this.renderer.debugMode;
+    }
+    /**
+     * 디버그 모드를 활성화하거나 비활성화합니다.
+     * 활성화 시 각 오브젝트의 실제 렌더 경계(outline)와 margin 영역이
+     * 기존 스타일을 건드리지 않고 별도 레이어로 시각화됩니다.
+     */
+    set debugMode(value) {
+      this.renderer.debugMode = value;
+    }
+    /**
      * CSS querySelector와 유사한 방식으로 오브젝트를 선택합니다.
      * 지원 셀렉터: `.className`, `#id`, `[attribute=value]`
      */
@@ -17269,7 +17396,7 @@ ${addLineNumbers(fragment)}`);
         if (typeof module.__viewBuilder !== "function") continue;
         const initialData = initial[moduleKey];
         const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {});
-        const entry = module.__viewBuilder(mergedData, ctx);
+        const entry = module.__viewBuilder(ctx, mergedData);
         uiRegistry.set(moduleKey, entry);
       }
     }
@@ -17878,7 +18005,7 @@ ${addLineNumbers(fragment)}`);
       for (const [name, module] of this._modules) {
         if (!module.__viewBuilder) continue;
         const savedState = this._stateStore.get(name) ?? {};
-        const entry = module.__viewBuilder(savedState, ctx);
+        const entry = module.__viewBuilder(ctx, savedState);
         this._uiRegistry.set(name, entry);
       }
     }
@@ -17995,6 +18122,20 @@ ${addLineNumbers(fragment)}`);
         await this.requestFullscreen();
       }
     }
+    // ─── 디버그 모드 ─────────────────────────────────────────────
+    /** 
+     * 현재 렌더링 엔진(Leviar)의 디버그 모드 활성화 여부를 가져옵니다. 
+     * 디버그 모드일 경우 UI의 레이아웃 영역이 화면에 표시됩니다.
+     */
+    get debugMode() {
+      return this._world.debugMode ?? false;
+    }
+    /** 
+     * 렌더링 엔진(Leviar)의 디버그 모드를 설정합니다. 
+     */
+    set debugMode(value) {
+      this._world.debugMode = value;
+    }
     // ─── rebuild용 SceneContext stub ────────────────────────────
     _makeRebuildCtx() {
       const noop = () => {
@@ -18103,20 +18244,24 @@ ${addLineNumbers(fragment)}`);
   var testModule = define2();
   testModule.onBoot(async (world) => {
     console.log("booting...");
-  }).defineView((_data, _ctx) => ({ show: () => {
+  }).defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } })).defineCommand(function* (cmd, ctx) {
     cmd.$callback(Date.now());
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
-  var forModule = define2({ start: 0, end: 0, acc: 1 });
-  forModule.defineView(() => ({ show: () => {
-  }, hide: () => {
-  } })).defineCommand(function* (cmd, ctx, state) {
-    for (let i = cmd.start; i < cmd.end; i += cmd.acc ?? 1) {
-      yield* ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
+  var debugModule = define2({ on: false });
+  debugModule.defineView((_ctx, _state, _setState) => ({
+    show: () => {
+    },
+    hide: () => {
+    },
+    onUpdate: (ctx, state, setState) => {
+      ctx.world.debugMode = state.on;
     }
+  })).defineCommand(function* (cmd, ctx, state, setState) {
+    setState({ on: !state.on });
     return true;
   });
   var novel_config_default = defineNovelConfig({
@@ -18131,7 +18276,7 @@ ${addLineNumbers(fragment)}`);
     },
     modules: {
       "test-cmd": testModule,
-      "for": forModule
+      "debug": debugModule
     },
     scenes: [
       "scene-start",
@@ -18189,6 +18334,9 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
+    "debug": {
+      on: false
+    },
     "dialogue": {
       bg: {
         gradientType: "linear",
@@ -18273,6 +18421,34 @@ ${addLineNumbers(fragment)}`);
       layout: {
         panelPaddingTop: 60,
         panelPaddingBottom: 60,
+        contentButtonGap: 45,
+        buttonColumnGap: 12
+      }
+    },
+    "input": {
+      panel: {
+        ...DEFAULT_INPUT_STYLE.panel,
+        minWidth: 720,
+        maxWidth: 720,
+        minHeight: 240,
+        maxHeight: 240
+      },
+      labelStyle: {
+        ...DEFAULT_INPUT_STYLE.labelStyle,
+        fontSize: DEFAULT_INPUT_STYLE.labelStyle.fontSize * 1.6
+      },
+      inputTextStyle: {
+        ...DEFAULT_INPUT_STYLE.inputTextStyle,
+        fontSize: DEFAULT_INPUT_STYLE.inputTextStyle.fontSize * 1.6
+      },
+      buttonText: {
+        ...DEFAULT_INPUT_STYLE.buttonText,
+        fontSize: DEFAULT_INPUT_STYLE.buttonText.fontSize * 1.6
+      },
+      layout: {
+        ...DEFAULT_INPUT_LAYOUT,
+        inputPaddingTop: 60,
+        inputPaddingBottom: 60,
         contentButtonGap: 45,
         buttonColumnGap: 12
       }

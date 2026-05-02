@@ -68,7 +68,7 @@ const effectModule = define<EffectCmd<any>, EffectSchema>({
   _activeEffects: {},
 })
 
-effectModule.defineView((data, ctx) => {
+effectModule.defineView((ctx, data, setState) => {
   const _effectObjs: Record<string, any> = {}
 
   const _addEffect = (
@@ -144,12 +144,12 @@ effectModule.defineView((data, ctx) => {
         obj?.fadeOut?.(300, 'easeIn')
       }
     },
-    onUpdate: (d: EffectSchema) => {
-      const newTypes = new Set(Object.keys(d._activeEffects))
+    onUpdate: (_ctx, state, _setState) => {
+      const newTypes = new Set(Object.keys(state._activeEffects))
       for (const type of Object.keys(_effectObjs)) {
         if (!newTypes.has(type)) _removeEffect(type as EffectType, 600)
       }
-      for (const [type, info] of Object.entries(d._activeEffects)) {
+      for (const [type, info] of Object.entries(state._activeEffects)) {
         if (!_effectObjs[type]) {
           _addEffect(type as EffectType, info.rate, info.srcKey)
         }

@@ -72,7 +72,7 @@ export interface NovelModuleMeta<TSchema extends Record<string, any> = any> {
   /** defineCommand로 등록된 커맨드 핸들러 (없으면 null) */
   readonly __handler: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null
   /** defineView로 등록된 View 빌더 (없으면 null) */
-  readonly __viewBuilder: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null
+  readonly __viewBuilder: ((ctx: SceneContext, state: TSchema) => UIRuntimeEntry<TSchema>) | null
   /** onBoot()로 등록된 비동기 초기화 콜백 (없으면 null) */
   readonly __bootFn: BootCallback | null
   /** Novel 엔진이 등록 시 주입하는 모듈 key. `novel.boot()` 이전에는 null */
@@ -104,7 +104,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
       handler: (cmd: TCmd, ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => Generator<CommandResult, CommandResult, any>
     ): NovelModule<TCmd, TSchema, THook>
     defineView(
-      builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
+      builder: (ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => UIRuntimeEntry<TSchema>
     ): NovelModule<TCmd, TSchema, THook>
     /**
      * 모듈이 Novel world에 등록될 때 딱 한 번 호출되는 비동기 초기화 콜백을 등록합니다.
@@ -177,7 +177,7 @@ export function define<TCmd extends ValidateCmd<TCmd>, TSchema extends Record<st
 
   // ─── 내부 핸들러 참조 ─────────────────────────────────────
   let _handlerFn: ((params: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>) | null = null
-  let _viewBuilderFn: ((data: TSchema, ctx: SceneContext) => UIRuntimeEntry) | null = null
+  let _viewBuilderFn: ((ctx: SceneContext, state: TSchema) => UIRuntimeEntry<TSchema>) | null = null
   let _bootFn: BootCallback | null = null
 
   // ─── 모듈 객체 ───────────────────────────────────────────
@@ -218,12 +218,12 @@ export function define<TCmd extends ValidateCmd<TCmd>, TSchema extends Record<st
     },
 
     defineView(
-      builder: (data: Readonly<TSchema>, ctx: SceneContext) => UIRuntimeEntry
+      builder: (ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => UIRuntimeEntry<TSchema>
     ): NovelModule<TCmd, TSchema, THook> {
       /**
        * `__viewBuilder`: Novel 엔진이 씬 시작 / 세이브 로드 시 직접 호출.
        */
-      _viewBuilderFn = (mergedData: TSchema, ctx: SceneContext): UIRuntimeEntry => {
+      _viewBuilderFn = (ctx: SceneContext, mergedData: TSchema): UIRuntimeEntry<TSchema> => {
         // 기존 상태(data)를 스키마 기본값으로 초기화하여 이전 씬/세이브의 잔여 상태를 제거합니다.
         for (const key of Object.keys(data)) {
           delete (data as any)[key]
@@ -238,11 +238,11 @@ export function define<TCmd extends ValidateCmd<TCmd>, TSchema extends Record<st
           ctx.state.set(_moduleKey, { ...data })
         }
 
-        const entry = builder(data, ctx)
-        _onUpdate = (d) => entry.onUpdate?.(d)
+        const entry = builder(ctx, data, setState)
+        _onUpdate = (d) => entry.onUpdate?.(ctx, d, setState)
 
         // 초기 렌더링 정합성을 위해 즉시 onUpdate 1회 호출
-        entry.onUpdate?.(data)
+        entry.onUpdate?.(ctx, data, setState)
 
         return entry
       }

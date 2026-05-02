@@ -171,7 +171,7 @@ const fading = new Set<NovelAudioElement>()
  */
 const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
 
-audioModule.defineView((data, ctx) => {
+audioModule.defineView((ctx, data, setState) => {
   const audioMap = (ctx.renderer.config as any).audios as Record<string, string> | undefined
 
   // 1. 삭제된 트랙 정리 (페이드아웃 중인 audio는 건드리지 않음)
@@ -235,7 +235,7 @@ audioModule.defineView((data, ctx) => {
   return {
     show: () => { },
     hide: () => { },
-    onUpdate: () => { },
+    onUpdate: (_ctx, _state, _setState) => { },
   }
 })
 

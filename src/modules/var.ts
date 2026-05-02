@@ -26,7 +26,7 @@ export type VarCmd<TVars, TLocalVars> =
 
 const varModule = define<VarCmd<any, any>>({})
 
-varModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
+varModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
 
 varModule.defineCommand(function* (cmd, ctx, state, setState) {
   const nameStr = cmd.name as string

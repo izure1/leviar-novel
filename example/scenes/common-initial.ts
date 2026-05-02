@@ -3,10 +3,15 @@ import {
   defineInitial,
   DEFAULT_DIALOG_BOX_STYLE,
   DEFAULT_DIALOGUE_LAYOUT,
-  DEFAULT_CHOICE_LAYOUT
+  DEFAULT_CHOICE_LAYOUT,
+  DEFAULT_INPUT_STYLE,
+  DEFAULT_INPUT_LAYOUT
 } from '../../src'
 
 export const commonInitial = defineInitial(config)({
+  'debug': {
+    on: false
+  },
   'dialogue': {
     bg: {
       gradientType: 'linear',
@@ -91,6 +96,34 @@ export const commonInitial = defineInitial(config)({
     layout: {
       panelPaddingTop: 60,
       panelPaddingBottom: 60,
+      contentButtonGap: 45,
+      buttonColumnGap: 12,
+    }
+  },
+  'input': {
+    panel: {
+      ...DEFAULT_INPUT_STYLE.panel,
+      minWidth: 720,
+      maxWidth: 720,
+      minHeight: 240,
+      maxHeight: 240,
+    },
+    labelStyle: {
+      ...DEFAULT_INPUT_STYLE.labelStyle,
+      fontSize: DEFAULT_INPUT_STYLE.labelStyle.fontSize! * 1.6,
+    },
+    inputTextStyle: {
+      ...DEFAULT_INPUT_STYLE.inputTextStyle,
+      fontSize: DEFAULT_INPUT_STYLE.inputTextStyle.fontSize! * 1.6,
+    },
+    buttonText: {
+      ...DEFAULT_INPUT_STYLE.buttonText,
+      fontSize: DEFAULT_INPUT_STYLE.buttonText.fontSize! * 1.6,
+    },
+    layout: {
+      ...DEFAULT_INPUT_LAYOUT,
+      inputPaddingTop: 60,
+      inputPaddingBottom: 60,
       contentButtonGap: 45,
       buttonColumnGap: 12,
     }

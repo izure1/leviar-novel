@@ -518,7 +518,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     for (const [name, module] of this._modules) {
       if (!module.__viewBuilder) continue
       const savedState = this._stateStore.get(name) ?? {}
-      const entry = module.__viewBuilder(savedState, ctx)
+      const entry = module.__viewBuilder(ctx, savedState)
       this._uiRegistry.set(name, entry)
     }
   }
@@ -642,6 +642,23 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     } else {
       await this.requestFullscreen()
     }
+  }
+
+  // ─── 디버그 모드 ─────────────────────────────────────────────
+
+  /** 
+   * 현재 렌더링 엔진(Leviar)의 디버그 모드 활성화 여부를 가져옵니다. 
+   * 디버그 모드일 경우 UI의 레이아웃 영역이 화면에 표시됩니다.
+   */
+  get debugMode(): boolean {
+    return this._world.debugMode ?? false
+  }
+
+  /** 
+   * 렌더링 엔진(Leviar)의 디버그 모드를 설정합니다. 
+   */
+  set debugMode(value: boolean) {
+    this._world.debugMode = value
   }
 
   // ─── rebuild용 SceneContext stub ────────────────────────────

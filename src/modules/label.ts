@@ -15,7 +15,7 @@ export interface LabelCmd {
 
 const labelModule = define<LabelCmd>({})
 
-labelModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
+labelModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
 
 labelModule.defineCommand(function* (_cmd, _ctx, state, setState) {
   return true

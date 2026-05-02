@@ -3,8 +3,10 @@ import type { ZoomPreset, CameraPanCmd, CameraZoomCmd, CameraEffectPreset } from
 import { playMotionEffect } from '../core/motion'
 import type { LeviarObject } from 'leviar'
 import type { CommandResult } from '../core/SceneContext'
+import type { SceneContext } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
+import type { SetStateFn } from '../define/defineCmdUI'
 
 export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center' | 'right' | 'far-right' | (string & {})
 
@@ -12,29 +14,29 @@ export type CharacterPositionPreset = 'inherit' | 'far-left' | 'left' | 'center'
  * 캐릭터를 등장 또는 이동시키거나 퇴장시킨다 
  */
 export type CharacterCmd<TConfig = any> = {
-  [Name in CharacterKeysOf<TConfig>]: 
-    | {
-        /** 캐릭터에 수행할 동작입니다. ('show') */
-        action: 'show'
-        /** 조작할 캐릭터의 이름(키)입니다. */
-        name: Name
-        /** 캐릭터의 위치 프리셋입니다. */
-        position?: CharacterPositionPreset
-        /** 표시할 캐릭터 이미지의 키입니다. */
-        image?: ImageKeysOf<TConfig, Name> | (string & {})
-        /** 캐릭터 등장 시 카메라를 해당 캐릭터에 포커스할지 여부입니다. */
-        focus?: boolean | PointsOf<TConfig, Name> | (string & {})
-        /** 등장 애니메이션의 지속 시간(ms)입니다. */
-        duration?: number
-      }
-    | {
-        /** 캐릭터에 수행할 동작입니다. ('remove') */
-        action: 'remove'
-        /** 조작할 캐릭터의 이름(키)입니다. */
-        name: Name
-        /** 퇴장 애니메이션의 지속 시간(ms)입니다. */
-        duration?: number
-      }
+  [Name in CharacterKeysOf<TConfig>]:
+  | {
+    /** 캐릭터에 수행할 동작입니다. ('show') */
+    action: 'show'
+    /** 조작할 캐릭터의 이름(키)입니다. */
+    name: Name
+    /** 캐릭터의 위치 프리셋입니다. */
+    position?: CharacterPositionPreset
+    /** 표시할 캐릭터 이미지의 키입니다. */
+    image?: ImageKeysOf<TConfig, Name> | (string & {})
+    /** 캐릭터 등장 시 카메라를 해당 캐릭터에 포커스할지 여부입니다. */
+    focus?: boolean | PointsOf<TConfig, Name> | (string & {})
+    /** 등장 애니메이션의 지속 시간(ms)입니다. */
+    duration?: number
+  }
+  | {
+    /** 캐릭터에 수행할 동작입니다. ('remove') */
+    action: 'remove'
+    /** 조작할 캐릭터의 이름(키)입니다. */
+    name: Name
+    /** 퇴장 애니메이션의 지속 시간(ms)입니다. */
+    duration?: number
+  }
 }[CharacterKeysOf<TConfig>]
 
 /** 카메라를 캐릭터에 포커스한다 */
@@ -119,7 +121,7 @@ interface CharacterViewEntry {
   show: () => void
   hide: () => void
   getObj: (name: string) => CharacterRenderObj | undefined
-  onUpdate: (d: CharacterSchema) => void
+  onUpdate: (ctx: SceneContext, state: CharacterSchema, setState: SetStateFn<CharacterSchema>) => void
 }
 
 /**
@@ -129,7 +131,7 @@ const characterModule = define<CharacterCmd<any>, CharacterSchema>({
   _characters: {},
 })
 
-characterModule.defineView((data, ctx) => {
+characterModule.defineView((ctx, data, setState) => {
   // 내부 canvas 오브젝트 맵
   const _charObjs: Record<string, CharacterRenderObj> = {}
 
@@ -216,7 +218,7 @@ characterModule.defineView((data, ctx) => {
     },
     // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
     getObj: (name: string) => _charObjs[name],
-    onUpdate: (d: CharacterSchema) => {
+    onUpdate: (_ctx, d: CharacterSchema, _setState) => {
       const dur = d._lastDuration
       const newNames = new Set(Object.keys(d._characters))
       // 제거된 캐릭터
@@ -324,7 +326,7 @@ export interface CharacterFocusSchema { _unused: undefined }
 
 const characterFocusModule = define<CharacterFocusCmd<any>, CharacterFocusSchema>({ _unused: undefined })
 
-characterFocusModule.defineView((_data, _ctx) => ({
+characterFocusModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
 }))
@@ -367,7 +369,7 @@ export interface CharacterHighlightSchema { _unused: undefined }
 
 const characterHighlightModule = define<CharacterHighlightCmd<any>, CharacterHighlightSchema>({ _unused: undefined })
 
-characterHighlightModule.defineView((_data, _ctx) => ({
+characterHighlightModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
 }))
@@ -385,7 +387,7 @@ export interface CharacterEffectSchema { _unused: undefined }
 
 const characterEffectModule = define<CharacterEffectCmd<any>, CharacterEffectSchema>({ _unused: undefined })
 
-characterEffectModule.defineView((_data, _ctx) => ({
+characterEffectModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
 }))

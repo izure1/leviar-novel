@@ -144,7 +144,7 @@ const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema, ChoiceHook>({
   layout: DEFAULT_CHOICE_LAYOUT,
 })
 
-choiceModule.defineView((data, ctx) => {
+choiceModule.defineView((ctx, data, setState) => {
   const cfg = { ...data }
 
   const cam = ctx.world.camera
@@ -302,8 +302,8 @@ choiceModule.defineView((data, ctx) => {
         _btnObjs.push(btnObj)
       })
     },
-    onUpdate: (d: ChoiceSchema) => {
-      Object.assign(cfg, d)
+    onUpdate: (_ctx, state, _setState) => {
+      Object.assign(cfg, state)
     },
   }
 })

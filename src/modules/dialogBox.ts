@@ -256,7 +256,7 @@ const dialogBoxModule = define<DialogBoxCmd<any, any>, DialogBoxSchema, DialogBo
   _persist: false,
 })
 
-dialogBoxModule.defineView((data, ctx) => {
+dialogBoxModule.defineView((ctx, data, setState) => {
   const cam = ctx.world.camera
   const w = ctx.renderer.width
   const h = ctx.renderer.height
@@ -471,7 +471,7 @@ dialogBoxModule.defineView((data, ctx) => {
     // 3. 버튼 배치
     rows.forEach((row, rowIdx) => {
       const rowLocalY = currentY - BTN_H / 2
-      let xOffset = - (row.totalWidth + (row.indices.length - 1) * BTN_H_GAP) / 2 + (PANEL_PAD_L - PANEL_PAD_R) / 2
+      let xOffset = -(row.totalWidth + (row.indices.length - 1) * BTN_H_GAP) / 2 + (PANEL_PAD_L - PANEL_PAD_R) / 2
 
       row.indices.forEach(i => {
         const bw = btnWidths[i]
@@ -541,9 +541,17 @@ dialogBoxModule.defineView((data, ctx) => {
     // ─── 입력 역할 선언 ────────────────────────────────
     hideGroups: ['dialogue'],
 
-    onUpdate: (d: DialogBoxSchema) => {
-      if (d._resolve && d._buttons.length > 0) {
-        _render(d._title, d._content, d._buttons, d._resolve, d._duration, d._persist, d)
+    onUpdate: (_ctx, state, _setState) => {
+      if (state._resolve && state._buttons.length > 0) {
+        _render(
+          state._title,
+          state._content,
+          state._buttons,
+          state._resolve,
+          state._duration,
+          state._persist,
+          state
+        )
       }
     },
   }

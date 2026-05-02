@@ -8,28 +8,28 @@ testModule
   .onBoot(async (world) => {
     console.log('booting...')
   })
-  .defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
+  .defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
   .defineCommand(function* (cmd, ctx) {
     cmd.$callback(Date.now())
     console.log('[test-cmd]', cmd.message, ctx.globalVars)
     return true
   })
 
-const forModule = define<{
-  start: number
-  end: number
-  acc?: number
+const debugModule = define<{
+  on: boolean
 }, {
-  start: number
-  end: number
-  acc: number
-}>({ start: 0, end: 0, acc: 1 })
-forModule
-  .defineView(() => ({ show: () => { }, hide: () => { } }))
-  .defineCommand(function* (cmd, ctx, state) {
-    for (let i = cmd.start; i < cmd.end; i += (cmd.acc ?? 1)) {
-      yield* ctx.execute({ type: 'dialogue', text: () => `dialog ${i}` })
+  on: boolean
+}>({ on: false })
+debugModule
+  .defineView((_ctx, _state, _setState) => ({
+    show: () => { },
+    hide: () => { },
+    onUpdate: (ctx, state, setState) => {
+      ctx.world.debugMode = state.on
     }
+  }))
+  .defineCommand(function* (cmd, ctx, state, setState) {
+    setState({ on: !state.on })
     return true
   })
 
@@ -45,7 +45,7 @@ export default defineNovelConfig({
   },
   modules: {
     'test-cmd': testModule,
-    'for': forModule,
+    'debug': debugModule,
   },
   scenes: [
     'scene-start',

@@ -77,7 +77,7 @@ const screenFadeModule = define<ScreenFadeCmd, ScreenFadeSchema>({
   _coveredColor: 'rgba(0,0,0,1)'
 })
 
-screenFadeModule.defineView((data, ctx) => {
+screenFadeModule.defineView((ctx, data, setState) => {
   let rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) {
     const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
@@ -109,7 +109,7 @@ screenFadeModule.defineView((data, ctx) => {
   return {
     show: () => { },
     hide: () => { },
-    onUpdate: () => { },
+    onUpdate: (_ctx, _state, _setState) => { },
   }
 })
 
@@ -168,7 +168,7 @@ export interface ScreenFlashSchema {
 
 const screenFlashModule = define<ScreenFlashCmd, ScreenFlashSchema>({ _lastPreset: 'white' })
 
-screenFlashModule.defineView((_data, ctx) => {
+screenFlashModule.defineView((ctx, _data, setState) => {
   let rect = ctx.renderer.state.get('_flashObj')
   if (!rect) {
     const w = (ctx.renderer.world.canvas)?.width ?? ctx.renderer.width
@@ -190,7 +190,7 @@ screenFlashModule.defineView((_data, ctx) => {
   return {
     show: () => { },
     hide: () => { },
-    onUpdate: () => { }
+    onUpdate: (_ctx, _state, _setState) => { }
   }
 })
 
@@ -240,7 +240,7 @@ const screenWipeModule = define<ScreenWipeCmd, ScreenWipeSchema>({
   _lastFadePreset: 'black'
 })
 
-screenWipeModule.defineView((_data, _ctx) => ({
+screenWipeModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
 }))

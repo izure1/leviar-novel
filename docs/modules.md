@@ -28,12 +28,12 @@ noticeModule.defineCommand(function* (cmd, ctx, state, setState) {
 })
 
 // 3. 뷰 렌더러 (UI 구현)
-noticeModule.defineView((data, ctx) => {
+noticeModule.defineView((ctx, state, setState) => {
   return {
     show: (dur) => { /* 진입 연출 */ },
     hide: (dur) => { /* 퇴장 연출 */ },
-    onUpdate: (d) => { /* 데이터 변경 시 렌더링 갱신 */ },
-    onCleanup: (d) => { /* 모듈 제거 또는 씬 전환 시 정리 */ },
+    onUpdate: (ctx, state, setState) => { /* 데이터 변경 시 렌더링 갱신 */ },
+    onCleanup: () => { /* 모듈 제거 또는 씬 전환 시 정리 */ },
   }
 })
 ```
@@ -79,8 +79,8 @@ noticeModule.defineView((data, ctx) => {
 | :--- | :--- | :--- |
 | **`show`** | `ui` 커맨드 또는 **`novel.showUI()`** 호출 시 | UI를 다시 표시하는 **진입 연출**을 포함하십시오. 시스템의 '인터페이스 표시' 요청 시에도 호출됩니다. |
 | **`hide`** | `ui` 커맨드, 레이어 간섭, 또는 **`novel.hideUI()`** 호출 시 | UI를 숨기는 **퇴장 연출**을 구현하십시오. 우클릭 등을 통한 '인터페이스 숨기기' 요청 시에도 호출됩니다. |
-| **`onUpdate`** | 상태 데이터 변경 시 | 변경된 데이터를 UI 요소에 즉시 투영하십시오. |
-| **`onCleanup`** | 모듈 제거 또는 씬 전환 시 | 이벤트 리스너 해제 등 모든 자원을 정리하십시오. |
+| **`onUpdate`** | 상태 데이터 변경 시 | `(ctx, state, setState)`를 인자로 받습니다. 변경된 데이터를 UI 요소에 즉시 투영하거나, 필요 시 상태를 재업데이트하십시오. |
+| **`onCleanup`** | 모듈 제거 또는 씬 전환 시 | 인자가 없으며, 이벤트 리스너 해제 등 모든 자원을 정리하십시오. |
 
 #### 💡 초기화 (onBoot)
 

@@ -78,7 +78,7 @@ const moodModule = define<MoodCmd, MoodSchema>({
   _lastDuration: 800,
 })
 
-moodModule.defineView((data, ctx) => {
+moodModule.defineView((ctx, data, setState) => {
   // 내부 canvas 오브젝트 맵
   const _moodObjs: Record<string, any> = {}
 
@@ -123,7 +123,7 @@ moodModule.defineView((data, ctx) => {
     const rect = ctx.renderer.world.createRectangle(rectOpts)
     ctx.renderer.track(rect)
     ctx.renderer.world.camera?.addChild(rect)
-    ;(rect as any)._currentMood = mood
+      ; (rect as any)._currentMood = mood
     _moodObjs[mood] = rect
 
     if (dur > 0) {
@@ -157,7 +157,7 @@ moodModule.defineView((data, ctx) => {
   }
 
   return {
-    show: () => {},
+    show: () => { },
     hide: () => {
       for (const obj of Object.values(_moodObjs)) {
         obj?.fadeOut?.(300, 'easeIn')
@@ -165,9 +165,9 @@ moodModule.defineView((data, ctx) => {
     },
     // flicker용 오브젝트 접근
     getObj: (mood: string) => _moodObjs[mood],
-    onUpdate: (d: MoodSchema) => {
-      const dur = d._lastDuration ?? 800
-      const newMoods = new Set(Object.keys(d._activeMoods))
+    onUpdate: (_ctx, state, _setState) => {
+      const dur = state._lastDuration ?? 800
+      const newMoods = new Set(Object.keys(state._activeMoods))
       // 제거된 무드
       for (const mood of Object.keys(_moodObjs)) {
         if (!newMoods.has(mood)) {
@@ -175,9 +175,9 @@ moodModule.defineView((data, ctx) => {
         }
       }
       // 추가/변경된 무드
-      for (const [mood, intensity] of Object.entries(d._activeMoods)) {
+      for (const [mood, intensity] of Object.entries(state._activeMoods)) {
         _addMoodObj(mood as MoodType, intensity, dur)
-        const preset = d._flickers?.[mood]
+        const preset = state._flickers?.[mood]
         const obj = _moodObjs[mood]
         if (preset && obj) {
           const currentState = ctx.renderer.state.get('_flickerState')

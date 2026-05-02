@@ -227,7 +227,7 @@ export class DialogueScene {
       const initialData = initial[moduleKey]
       // schema 기본값 + 전달된 initial 데이터로 mergedData 준비
       const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {})
-      const entry = module.__viewBuilder(mergedData, ctx)
+      const entry = module.__viewBuilder(ctx, mergedData)
       uiRegistry.set(moduleKey, entry)
     }
   }

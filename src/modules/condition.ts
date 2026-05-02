@@ -33,7 +33,7 @@ export interface ConditionCmd<TConfig = any, TVars = any, TLocalVars = any> {
 
 const conditionModule = define<ConditionCmd<any, any>>({})
 
-conditionModule.defineView((_data, _ctx) => ({ show: () => { }, hide: () => { } }))
+conditionModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
 
 conditionModule.defineCommand(function* (cmd, ctx) {
   const result = cmd.if

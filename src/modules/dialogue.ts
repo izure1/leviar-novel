@@ -162,7 +162,7 @@ const dialogueModule = define<DialogueCmd<any>, DialogueSchema, DialogueHook>({
   _speed: undefined,
 })
 
-dialogueModule.defineView((data, ctx) => {
+dialogueModule.defineView((ctx, data, setState) => {
   const cam = ctx.world.camera
   const w = ctx.renderer.width
   const h = ctx.renderer.height
@@ -335,12 +335,12 @@ dialogueModule.defineView((data, ctx) => {
     /**
      * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
      */
-    onUpdate: (d: DialogueSchema) => {
+    onUpdate: (_ctx, state, _setState) => {
       // 스타일 갱신
-      const newBgCfg = (d.style ?? d.bg ?? DEFAULT_DIALOGUE_BG) as Style
-      const newSpkCfg = (d.speaker ?? DEFAULT_DIALOGUE_SPEAKER) as Style
-      const newTxtCfg = (d.text ?? DEFAULT_DIALOGUE_TEXT) as Style
-      const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_DIALOGUE_LAYOUT, ...(d.layout ?? {}) }
+      const newBgCfg = (state.style ?? state.bg ?? DEFAULT_DIALOGUE_BG) as Style
+      const newSpkCfg = (state.speaker ?? DEFAULT_DIALOGUE_SPEAKER) as Style
+      const newTxtCfg = (state.text ?? DEFAULT_DIALOGUE_TEXT) as Style
+      const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_DIALOGUE_LAYOUT, ...(state.layout ?? {}) }
       const newTextW = w - newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight
 
       Object.assign(bgObj.style, newBgCfg)
@@ -368,12 +368,12 @@ dialogueModule.defineView((data, ctx) => {
       textObj.transform.position.y = txtPos.y
 
       // 텍스트 갱신: _lines 참조 또는 _subIndex가 바뀐 경우에만 렌더 (중복 방지)
-      if (d._lines && d._lines.length > 0 && (d._lines !== _prevLines || d._subIndex !== _prevSubIndex)) {
-        _prevLines = d._lines
-        _prevSubIndex = d._subIndex ?? 0
-        const txt = d._lines[d._subIndex ?? 0] as string
-        const spkName = resolveSpeaker(d._speakerKey, charDefs)
-        _renderText(spkName, txt, d._speed)
+      if (state._lines && state._lines.length > 0 && (state._lines !== _prevLines || state._subIndex !== _prevSubIndex)) {
+        _prevLines = state._lines
+        _prevSubIndex = state._subIndex ?? 0
+        const txt = state._lines[state._subIndex ?? 0] as string
+        const spkName = resolveSpeaker(state._speakerKey, charDefs)
+        _renderText(spkName, txt, state._speed)
       }
     },
   }

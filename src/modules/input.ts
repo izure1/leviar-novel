@@ -274,7 +274,7 @@ const inputModule = define<InputCmd<any, any>, InputSchema, InputHook>({
   _resolve: null,
 })
 
-inputModule.defineView((data, ctx) => {
+inputModule.defineView((ctx, data, setState) => {
   const cam = ctx.world.camera
   const w = ctx.renderer.width
   const h = ctx.renderer.height
@@ -729,16 +729,16 @@ inputModule.defineView((data, ctx) => {
       _clearDynamic()
     },
 
-    onUpdate: (d: InputSchema) => {
-      if (!d._resolve || d._buttons.length === 0) return
+    onUpdate: (_ctx, state, _setState) => {
+      if (!state._resolve || state._buttons.length === 0) return
 
       if (_hiddenEl) {
         // 이미 렌더링된 상태: hidden input이 살아있으므로 _render 재호출 금지
         // resolve 참조만 최신 상태로 갱신
-        _currentResolve = d._resolve
+        _currentResolve = state._resolve
       } else {
         // 처음 활성화: UI 전체 구성
-        _render(d._label, d._multiline, d._buttons, d._resolve, d)
+        _render(state._label, state._multiline, state._buttons, state._resolve, state)
       }
     },
 

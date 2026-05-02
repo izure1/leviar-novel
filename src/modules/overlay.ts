@@ -4,6 +4,8 @@ import type { CameraEffectPreset } from './camera'
 import { playMotionEffect } from '../core/motion'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
+import type { SetStateFn } from '../define/defineCmdUI'
+import type { SceneContext } from '../core/SceneContext'
 
 export type OverlayPreset = 'caption' | 'title' | 'whisper'
 
@@ -54,69 +56,69 @@ export type OverlayEntry = OverlayTextEntry | OverlayImageEntry
 /** 텍스트 오버레이를 표시하거나 숨긴다 */
 export type OverlayTextCmd =
   | {
-      /** 수행할 동작입니다. (표시) */
-      action: 'show'
-      /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
-      name: string
-      /** 화면에 표시할 텍스트입니다. */
-      text: string
-      /**
-       * 텍스트 오버레이의 스타일 프리셋입니다.
-       * 기본값: 'caption'
-       */
-      preset?: OverlayPreset
-      /** 전환 애니메이션의 지속 시간(ms)입니다. */
-      duration?: number
-    }
+    /** 수행할 동작입니다. (표시) */
+    action: 'show'
+    /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
+    name: string
+    /** 화면에 표시할 텍스트입니다. */
+    text: string
+    /**
+     * 텍스트 오버레이의 스타일 프리셋입니다.
+     * 기본값: 'caption'
+     */
+    preset?: OverlayPreset
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
+    duration?: number
+  }
   | {
-      /** 수행할 동작입니다. (숨기기) */
-      action: 'hide'
-      /** 오버레이 고유 이름. */
-      name: string
-      /** 전환 애니메이션의 지속 시간(ms)입니다. */
-      duration?: number
-    }
+    /** 수행할 동작입니다. (숨기기) */
+    action: 'hide'
+    /** 오버레이 고유 이름. */
+    name: string
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
+    duration?: number
+  }
 
 /** 이미지 오버레이를 표시하거나 숨긴다 */
 export type OverlayImageCmd<TConfig = any> =
   | {
-      /** 수행할 동작입니다. (표시) */
-      action: 'show'
-      /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
-      name: string
-      /** 화면에 표시할 이미지 에셋 키입니다. */
-      src: AssetKeysOf<TConfig>
-      /**
-       * 이미지 가로 위치 (0~1). (image 전용)
-       * 기본값: 0.5 (중앙)
-       */
-      x?: number
-      /**
-       * 이미지 세로 위치 (0~1). (image 전용)
-       * 기본값: 0.5 (중앙)
-       */
-      y?: number
-      /** 이미지 너비(px) */
-      width?: number
-      /** 이미지 높이(px) */
-      height?: number
-      /** 이미지 화면 맞춤 방식 (기본값: 'contain') */
-      fit?: 'cover' | 'contain' | 'stretch'
-      /** 이미지 z-index */
-      zIndex?: number
-      /** 이미지 불투명도 (0~1). 기본값: 1 */
-      opacity?: number
-      /** 전환 애니메이션의 지속 시간(ms)입니다. */
-      duration?: number
-    }
+    /** 수행할 동작입니다. (표시) */
+    action: 'show'
+    /** 오버레이 고유 이름. 중복된 name은 transition 처리됩니다. */
+    name: string
+    /** 화면에 표시할 이미지 에셋 키입니다. */
+    src: AssetKeysOf<TConfig>
+    /**
+     * 이미지 가로 위치 (0~1). (image 전용)
+     * 기본값: 0.5 (중앙)
+     */
+    x?: number
+    /**
+     * 이미지 세로 위치 (0~1). (image 전용)
+     * 기본값: 0.5 (중앙)
+     */
+    y?: number
+    /** 이미지 너비(px) */
+    width?: number
+    /** 이미지 높이(px) */
+    height?: number
+    /** 이미지 화면 맞춤 방식 (기본값: 'contain') */
+    fit?: 'cover' | 'contain' | 'stretch'
+    /** 이미지 z-index */
+    zIndex?: number
+    /** 이미지 불투명도 (0~1). 기본값: 1 */
+    opacity?: number
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
+    duration?: number
+  }
   | {
-      /** 수행할 동작입니다. (숨기기) */
-      action: 'hide'
-      /** 오버레이 고유 이름. */
-      name: string
-      /** 전환 애니메이션의 지속 시간(ms)입니다. */
-      duration?: number
-    }
+    /** 수행할 동작입니다. (숨기기) */
+    action: 'hide'
+    /** 오버레이 고유 이름. */
+    name: string
+    /** 전환 애니메이션의 지속 시간(ms)입니다. */
+    duration?: number
+  }
 
 // ─── 텍스트 프리셋 기본값 ────────────────────────────────────
 
@@ -129,8 +131,8 @@ interface TextPresetDefaults {
 }
 
 const OVERLAY_PRESETS: Record<OverlayPreset, TextPresetDefaults> = {
-  caption: { fontSize: 24, color: '#ffffff', opacity: 1,   zIndex: Z_INDEX.OVERLAY_CAPTION, y: 'bottom' },
-  title:   { fontSize: 48, color: '#ffffff', opacity: 1,   zIndex: Z_INDEX.OVERLAY_TITLE,   y: 'center' },
+  caption: { fontSize: 24, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: 'bottom' },
+  title: { fontSize: 48, color: '#ffffff', opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: 'center' },
   whisper: { fontSize: 18, color: '#cccccc', opacity: 0.7, zIndex: Z_INDEX.OVERLAY_WHISPER, y: 'bottom' },
 }
 
@@ -177,7 +179,7 @@ function _isSameEntry(a: OverlayEntry, b: OverlayEntry): boolean {
  * overlay-text, overlay-image 두 모듈이 공유하는 뷰 팩토리.
  * 내부적으로 `_overlayObjs` 맵을 공유합니다.
  */
-function buildOverlayView(data: OverlaySchema, ctx: any) {
+function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetStateFn<OverlaySchema>) {
   const _overlayObjs: Record<string, any> = {}
   /** 현재 렌더 중인 엔트리 스냅샷 (변경 감지용) */
   const _overlayEntries: Record<string, OverlayEntry> = {}
@@ -186,7 +188,7 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
   const _resolvePresetPos = (y: 'top' | 'center' | 'bottom') => {
     const cam = ctx.renderer.world.camera
     const yMap: Record<string, number> = {
-      top:    ctx.renderer.height * 0.1,
+      top: ctx.renderer.height * 0.1,
       center: ctx.renderer.height * 0.5,
       bottom: ctx.renderer.height * 0.85,
     }
@@ -198,7 +200,7 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
   // ─── 이미지 0~1 좌표 → 월드 좌표 변환 ────────────────────
   const _resolveNormPos = (nx: number, ny: number) => {
     const cam = ctx.renderer.world.camera
-    const cx = ctx.renderer.width  * nx
+    const cx = ctx.renderer.width * nx
     const cy = ctx.renderer.height * ny
     return cam && typeof cam.canvasToLocal === 'function'
       ? cam.canvasToLocal(cx, cy)
@@ -347,21 +349,21 @@ function buildOverlayView(data: OverlaySchema, ctx: any) {
   }
 
   return {
-    show: () => {},
+    show: () => { },
     hide: () => {
       for (const obj of Object.values(_overlayObjs)) {
         obj?.fadeOut?.(300, 'easeIn')
       }
     },
     getObj: (name: string) => _overlayObjs[name] as any | undefined,
-    onUpdate: (d: OverlaySchema) => {
-      const dur = d._lastDuration
-      const newKeys = new Set(Object.keys(d._overlays))
+    onUpdate: (_ctx: SceneContext, state: OverlaySchema, _setState: SetStateFn<OverlaySchema>) => {
+      const dur = state._lastDuration
+      const newKeys = new Set(Object.keys(state._overlays))
       // 제거된 항목
       for (const key of Object.keys(_overlayObjs)) {
         if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600)
       }
-      for (const [key, entry] of Object.entries(d._overlays)) {
+      for (const [key, entry] of Object.entries(state._overlays)) {
         const prev = _overlayEntries[key]
         if (!_overlayObjs[key]) {
           // 신규 추가
@@ -511,9 +513,9 @@ export interface OverlayEffectSchema { _unused: undefined }
 
 const overlayEffectModule = define<OverlayEffectCmd, OverlayEffectSchema>({ _unused: undefined })
 
-overlayEffectModule.defineView((_data, _ctx) => ({
-  show: () => {},
-  hide: () => {},
+overlayEffectModule.defineView((_ctx, _data, _setState) => ({
+  show: () => { },
+  hide: () => { },
 }))
 
 overlayEffectModule.defineCommand(function* (cmd, ctx) {
