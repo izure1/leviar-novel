@@ -19,16 +19,25 @@ export interface ChoiceLayout {
    */
   gap?: number
   /**
-   * 버튼 내부 좌우(X) 패딩 합산(px). 주어진 텍스트너비 + paddingX 로 버튼 너비 추정.
-   * `button.width` 를 직접 지정하면 무시.
-   * @default 64
+   * 버튼 내부 좌측 패딩(px).
+   * @default 32
    */
-  paddingX?: number
+  buttonPaddingLeft?: number
   /**
-   * 버튼 내부 상하(Y) 패딩 합산(px). 버튼 높이 = fontSize * lineHeight * lines + paddingY.
-   * @default 24
+   * 버튼 내부 우측 패딩(px).
+   * @default 32
    */
-  paddingY?: number
+  buttonPaddingRight?: number
+  /**
+   * 버튼 내부 상단 패딩(px).
+   * @default 12
+   */
+  buttonPaddingTop?: number
+  /**
+   * 버튼 내부 하단 패딩(px).
+   * @default 12
+   */
+  buttonPaddingBottom?: number
 }
 
 /** choiceModule이 공유하는 데이터 스키마 */
@@ -49,7 +58,7 @@ export interface ChoiceSchema {
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_CHOICE: ChoiceSchema = {
+export const DEFAULT_CHOICE_STYLE: ChoiceSchema = {
   bg: {
     color: 'rgba(0,0,0,0.6)',
   },
@@ -73,10 +82,12 @@ const DEFAULT_CHOICE: ChoiceSchema = {
   },
 }
 
-const DEFAULT_LAYOUT: Required<ChoiceLayout> = {
+export const DEFAULT_CHOICE_LAYOUT: Required<ChoiceLayout> = {
   gap: 12,
-  paddingX: 64,
-  paddingY: 24,
+  buttonPaddingLeft: 32,
+  buttonPaddingRight: 32,
+  buttonPaddingTop: 12,
+  buttonPaddingBottom: 12,
 }
 
 // ─── ChoiceCmd 타입 ──────────────────────────────────────────
@@ -125,12 +136,12 @@ export interface ChoiceHook {
  * 선택지 모듈. `novel.config`의 `modules: { 'choices': choiceModule }` 형태로 등록합니다.
  */
 const choiceModule = define<ChoiceCmd<any, any>, ChoiceSchema, ChoiceHook>({
-  bg: undefined,
-  button: undefined,
-  buttonHover: undefined,
-  text: undefined,
-  textHover: undefined,
-  layout: undefined,
+  bg: DEFAULT_CHOICE_STYLE.bg,
+  button: DEFAULT_CHOICE_STYLE.button,
+  buttonHover: DEFAULT_CHOICE_STYLE.buttonHover,
+  text: DEFAULT_CHOICE_STYLE.text,
+  textHover: DEFAULT_CHOICE_STYLE.textHover,
+  layout: DEFAULT_CHOICE_LAYOUT,
 })
 
 choiceModule.defineView((data, ctx) => {
@@ -146,7 +157,7 @@ choiceModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   // 전체 화면을 덮는 반투명 배경 패널 (이벤트 차단 용도 겸용)
-  const defaultBgStyle = (cfg.bg ?? DEFAULT_CHOICE.bg) as Partial<Style>
+  const defaultBgStyle = (cfg.bg ?? DEFAULT_CHOICE_STYLE.bg) as Partial<Style>
 
   const bgObj = ctx.world.createRectangle({
     style: {
@@ -189,18 +200,19 @@ choiceModule.defineView((data, ctx) => {
       bgObj.fadeIn(200, 'easeOut')
       _clearButtons()
 
-      const defaultBtnStyle = (cfg.button ?? DEFAULT_CHOICE.button) as Partial<Style>
-      const defaultHoverStyle = (cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover) as Partial<Style>
-      const defaultTextStyle = (cfg.text ?? DEFAULT_CHOICE.text) as Partial<Style>
-      const defaultTextHoverStyle = (cfg.textHover ?? DEFAULT_CHOICE.textHover) as Partial<Style>
+      const defaultBtnStyle = (cfg.button ?? DEFAULT_CHOICE_STYLE.button) as Partial<Style>
+      const defaultHoverStyle = (cfg.buttonHover ?? DEFAULT_CHOICE_STYLE.buttonHover) as Partial<Style>
+      const defaultTextStyle = (cfg.text ?? DEFAULT_CHOICE_STYLE.text) as Partial<Style>
+      const defaultTextHoverStyle = (cfg.textHover ?? DEFAULT_CHOICE_STYLE.textHover) as Partial<Style>
 
-      // 레이아웃: schema layout > DEFAULT_LAYOUT
-      const layoutCfg: Required<ChoiceLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}) }
+      // 레이아웃: schema layout > DEFAULT_CHOICE_LAYOUT
+      const layoutCfg: Required<ChoiceLayout> = { ...DEFAULT_CHOICE_LAYOUT, ...(cfg.layout ?? {}) }
 
       const fSize = defaultTextStyle.fontSize ?? 18
       const lineH = (defaultTextStyle.lineHeight as number | undefined) ?? 1.5
       const gap = layoutCfg.gap
-      const paddingY = layoutCfg.paddingY / 2   // 단방향(상 or 하) 패딩
+      const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom
+      const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight
 
       // ─── 버튼별 너비·높이 사전 계산 ─────────────────────────────
       const resolvedMinW = (defaultBtnStyle.minWidth as number) ?? 260
@@ -211,14 +223,14 @@ choiceModule.defineView((data, ctx) => {
         const textStr = String(choice.text)
         const estimatedTextW = textStr.length * fSize * 0.8
         // 너비: 기본 너비 또는 텍스트 기반 너비를 minWidth와 maxWidth 사이로 클램프
-        const rawW = (defaultBtnStyle.width as number) ?? (estimatedTextW + layoutCfg.paddingX)
+        const rawW = (defaultBtnStyle.width as number) ?? (estimatedTextW + BTN_PAD_X_SUM)
         const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW))
-        // 텍스트 가용 너비 = btnW - paddingX
-        const textAvailW = btnW - layoutCfg.paddingX
+        // 텍스트 가용 너비 = btnW - BTN_PAD_X_SUM
+        const textAvailW = btnW - BTN_PAD_X_SUM
         const lineCount = textAvailW > 0
           ? Math.ceil(estimatedTextW / textAvailW)
           : 1
-        const btnH = fSize * lineH * lineCount + paddingY * 2
+        const btnH = fSize * lineH * lineCount + BTN_PAD_Y_SUM
         return { w: btnW, h: btnH, lines: lineCount }
       })
 
@@ -248,7 +260,7 @@ choiceModule.defineView((data, ctx) => {
         const textStyle: Partial<Style> = {
           ...defaultTextStyle,
           // 너비 제한 시 텍스트가 btnW 내에서 래핑되도록 width 지정
-          width: btnW - layoutCfg.paddingX,
+          width: btnW - BTN_PAD_X_SUM,
           textAlign: defaultTextStyle.textAlign ?? 'center',
           zIndex: defaultTextStyle.zIndex ?? 502,
           pointerEvents: false,

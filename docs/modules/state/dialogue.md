@@ -21,8 +21,10 @@
 
 | 속성 | 타입 | 기본값 | 설명 |
 | :--- | :--- | :---: | :--- |
-| `paddingX` | `number` | `0.05` | 대화창 좌우 여백 비율 (0~1). |
-| `paddingTop` | `number` | `24` | 창 상단에서 화자 이름까지의 거리(px). |
+| `panelPaddingLeft` | `number` | `48` | 대화창 패널 좌측 여백(px). |
+| `panelPaddingRight` | `number` | `48` | 대화창 패널 우측 여백(px). |
+| `panelPaddingTop` | `number` | `24` | 패널 안쪽 위에서 화자 이름까지의 거리(px). |
+| `panelPaddingBottom` | `number` | `24` | 대화창 패널 하단 여백(px). |
 | `speakerTextGap` | `number` | `8` | 화자 이름과 대사 텍스트 사이의 수직 간격(px). |
 
 ---
@@ -72,4 +74,4 @@ export default defineScene({
 ## 5. 주의 사항 (Edge Cases)
 
 *   **Z-Index**: 대화창의 기본 zIndex는 `300` 내외로 설정되어 있습니다. 다른 UI 모듈과 겹칠 경우 이를 조정해야 할 수 있습니다.
-*   **반응형 여백**: `paddingX`는 캔버스 너비에 대한 비율이므로, 해상도가 바뀌어도 텍스트 너비가 적절히 유지됩니다.
+*   **여백**: `panelPaddingLeft/Right`는 px 단위로 적용되므로 고해상도 환경에서도 일정한 간격을 유지합니다.

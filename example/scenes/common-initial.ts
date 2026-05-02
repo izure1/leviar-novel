@@ -1,5 +1,10 @@
 import config from '../novel.config'
-import { defineInitial } from '../../src'
+import {
+  defineInitial,
+  DEFAULT_DIALOG_BOX_STYLE,
+  DEFAULT_DIALOGUE_LAYOUT,
+  DEFAULT_CHOICE_LAYOUT
+} from '../../src'
 
 export const commonInitial = defineInitial(config)({
   'dialogue': {
@@ -30,6 +35,10 @@ export const commonInitial = defineInitial(config)({
       textShadowBlur: 0,
       textShadowColor: 'rgb(0,0,0)',
     },
+    layout: {
+      ...DEFAULT_DIALOGUE_LAYOUT,
+      panelPaddingBottom: 0,
+    }
   },
   'choice': {
     button: {
@@ -46,19 +55,44 @@ export const commonInitial = defineInitial(config)({
     },
     text: {
       color: 'rgb(255,255,255)',
+      fontSize: 28,
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
     },
     textHover: {
       color: '#fff0b3',
       textShadowBlur: 6,
       textShadowColor: 'rgba(255,255,255,0.8)',
+    },
+    layout: {
+      ...DEFAULT_CHOICE_LAYOUT,
+      buttonPaddingBottom: 24,
+      buttonPaddingTop: 24,
+      gap: 24,
     }
   },
   'dialogBox': {
     panel: {
-      minWidth: 960,
-      maxWidth: 960,
-      color: 'rgba(255,0,0,0.75)',
+      ...DEFAULT_DIALOG_BOX_STYLE.panel,
+      minWidth: 720,
+      maxWidth: 720,
+    },
+    titleStyle: {
+      ...DEFAULT_DIALOG_BOX_STYLE.titleStyle,
+      fontSize: DEFAULT_DIALOG_BOX_STYLE.titleStyle.fontSize! * 1.6,
+    },
+    contentStyle: {
+      ...DEFAULT_DIALOG_BOX_STYLE.contentStyle,
+      fontSize: DEFAULT_DIALOG_BOX_STYLE.contentStyle.fontSize! * 1.6,
+    },
+    buttonText: {
+      ...DEFAULT_DIALOG_BOX_STYLE.buttonText,
+      fontSize: DEFAULT_DIALOG_BOX_STYLE.buttonText.fontSize! * 1.6,
+    },
+    layout: {
+      panelPaddingTop: 60,
+      panelPaddingBottom: 60,
+      contentButtonGap: 45,
+      buttonColumnGap: 12,
     }
   }
 })

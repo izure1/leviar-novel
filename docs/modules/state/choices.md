@@ -28,8 +28,10 @@
 | 속성 | 타입 | 기본값 | 설명 |
 | :--- | :--- | :---: | :--- |
 | `gap` | `number` | `12` | 버튼 간의 세로 간격(px)입니다. |
-| `paddingX` | `number` | `64` | 버튼 내부 좌우 패딩 합산(px)입니다. |
-| `paddingY` | `number` | `24` | 버튼 내부 상하 패딩 합산(px)입니다. |
+| `buttonPaddingLeft` | `number` | `32` | 버튼 내부 좌측 패딩(px)입니다. |
+| `buttonPaddingRight` | `number` | `32` | 버튼 내부 우측 패딩(px)입니다. |
+| `buttonPaddingTop` | `number` | `12` | 버튼 내부 상단 패딩(px)입니다. |
+| `buttonPaddingBottom` | `number` | `12` | 버튼 내부 하단 패딩(px)입니다. |
 
 ---
 
@@ -68,4 +70,4 @@ export default defineScene({
 ## 5. 주의 사항 (Edge Cases)
 
 *   **상태 병합**: `ui` 커맨드로 상태를 변경할 경우, 명시한 속성만 덮어씌워지며 나머지는 기존 상태를 유지합니다.
-*   **레이아웃 우선순위**: `button.width`를 직접 지정하면 `layout.paddingX` 설정은 무시되고 고정 너비가 적용됩니다.
+*   **레이아웃 우선순위**: `button.width`를 직접 지정하면 `layout.buttonPaddingLeft` 등 수평 패딩 기반 자동 너비 추정은 무시되고 고정 너비가 적용됩니다.

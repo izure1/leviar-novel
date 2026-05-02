@@ -830,17 +830,17 @@
   };
 
   // src/modules/dialogue.ts
-  var DEFAULT_BG = {
+  var DEFAULT_DIALOGUE_BG = {
     color: "rgba(0,0,0,0.82)"
   };
-  var DEFAULT_SPEAKER = {
+  var DEFAULT_DIALOGUE_SPEAKER = {
     fontSize: 18,
     fontWeight: "bold",
     color: "#ffe066",
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
     textAlign: "left"
   };
-  var DEFAULT_TEXT = {
+  var DEFAULT_DIALOGUE_TEXT = {
     fontSize: 20,
     color: "#ffffff",
     lineHeight: 1.6,
@@ -851,9 +851,11 @@
     textShadowOffsetX: 1,
     textShadowOffsetY: 1
   };
-  var DEFAULT_LAYOUT = {
-    paddingX: 0.05,
-    paddingTop: 24,
+  var DEFAULT_DIALOGUE_LAYOUT = {
+    panelPaddingLeft: 48,
+    panelPaddingRight: 48,
+    panelPaddingTop: 24,
+    panelPaddingBottom: 24,
     speakerTextGap: 8
   };
   function resolveSpeaker(speakerKey, charDefs) {
@@ -862,10 +864,10 @@
   }
   var dialogueModule = define2({
     style: void 0,
-    bg: void 0,
-    speaker: void 0,
-    text: void 0,
-    layout: void 0,
+    bg: DEFAULT_DIALOGUE_BG,
+    speaker: DEFAULT_DIALOGUE_SPEAKER,
+    text: DEFAULT_DIALOGUE_TEXT,
+    layout: DEFAULT_DIALOGUE_LAYOUT,
     _subIndex: 0,
     _lines: [],
     _speakerKey: void 0,
@@ -876,13 +878,14 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const bgCfg = data.style ?? data.bg ?? DEFAULT_BG;
-    const spkCfg = data.speaker ?? DEFAULT_SPEAKER;
-    const txtCfg = data.text ?? DEFAULT_TEXT;
-    const layoutCfg = { ...DEFAULT_LAYOUT, ...data.layout ?? {} };
+    const bgCfg = data.style ?? data.bg ?? DEFAULT_DIALOGUE_BG;
+    const spkCfg = data.speaker ?? DEFAULT_DIALOGUE_SPEAKER;
+    const txtCfg = data.text ?? DEFAULT_DIALOGUE_TEXT;
+    const layoutCfg = { ...DEFAULT_DIALOGUE_LAYOUT, ...data.layout ?? {} };
     const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
     const BOX_CY = h - BOX_H / 2;
-    const TEXT_W = w * (1 - layoutCfg.paddingX * 2);
+    const TEXT_W = w - layoutCfg.panelPaddingLeft - layoutCfg.panelPaddingRight;
+    const baseX = w / 2 + (layoutCfg.panelPaddingLeft - layoutCfg.panelPaddingRight) / 2;
     const bgObj = ctx.world.createRectangle({
       style: {
         ...bgCfg,
@@ -897,7 +900,7 @@
     });
     ctx.world.camera?.addChild(bgObj);
     ctx.renderer.track(bgObj);
-    const spkY = h - BOX_H + layoutCfg.paddingTop;
+    const spkY = h - BOX_H + layoutCfg.panelPaddingTop;
     const speakerObj = ctx.world.createText({
       attribute: { text: "" },
       style: {
@@ -908,7 +911,7 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(w / 2, spkY) }
+      transform: { position: toLocal(baseX, spkY) }
     });
     ctx.world.camera?.addChild(speakerObj);
     ctx.renderer.track(speakerObj);
@@ -923,7 +926,7 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(w / 2, spkY + spkH + layoutCfg.speakerTextGap) }
+      transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) }
     });
     ctx.world.camera?.addChild(textObj);
     ctx.renderer.track(textObj);
@@ -1008,26 +1011,27 @@
        * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
        */
       onUpdate: (d2) => {
-        const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_BG;
-        const newSpkCfg = d2.speaker ?? DEFAULT_SPEAKER;
-        const newTxtCfg = d2.text ?? DEFAULT_TEXT;
-        const newLayoutCfg = { ...DEFAULT_LAYOUT, ...d2.layout ?? {} };
-        const newTextW = w * (1 - newLayoutCfg.paddingX * 2);
+        const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_DIALOGUE_BG;
+        const newSpkCfg = d2.speaker ?? DEFAULT_DIALOGUE_SPEAKER;
+        const newTxtCfg = d2.text ?? DEFAULT_DIALOGUE_TEXT;
+        const newLayoutCfg = { ...DEFAULT_DIALOGUE_LAYOUT, ...d2.layout ?? {} };
+        const newTextW = w - newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight;
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW });
         Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW });
         const newBoxH = typeof newBgCfg.height === "number" ? newBgCfg.height : h * 0.28;
         const newBoxCY = h - newBoxH / 2;
-        const newSpkY = h - newBoxH + newLayoutCfg.paddingTop;
+        const newSpkY = h - newBoxH + newLayoutCfg.panelPaddingTop;
         const newSpkH = (newSpkCfg.fontSize ?? 18) * 1.5;
+        const baseX2 = w / 2 + (newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight) / 2;
         bgObj.style.height = newBoxH;
         const bgPos = toLocal(w / 2, newBoxCY);
         bgObj.transform.position.x = bgPos.x;
         bgObj.transform.position.y = bgPos.y;
-        const spkPos = toLocal(w / 2, newSpkY);
+        const spkPos = toLocal(baseX2, newSpkY);
         speakerObj.transform.position.x = spkPos.x;
         speakerObj.transform.position.y = spkPos.y;
-        const txtPos = toLocal(w / 2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
+        const txtPos = toLocal(baseX2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
         textObj.transform.position.x = txtPos.x;
         textObj.transform.position.y = txtPos.y;
         if (d2._lines && d2._lines.length > 0 && (d2._lines !== _prevLines || d2._subIndex !== _prevSubIndex)) {
@@ -1069,7 +1073,7 @@
   }
 
   // src/modules/choice.ts
-  var DEFAULT_CHOICE = {
+  var DEFAULT_CHOICE_STYLE = {
     bg: {
       color: "rgba(0,0,0,0.6)"
     },
@@ -1093,18 +1097,20 @@
       // 기본 호버 텍스트 색상 (약간 노란빛)
     }
   };
-  var DEFAULT_LAYOUT2 = {
+  var DEFAULT_CHOICE_LAYOUT = {
     gap: 12,
-    paddingX: 64,
-    paddingY: 24
+    buttonPaddingLeft: 32,
+    buttonPaddingRight: 32,
+    buttonPaddingTop: 12,
+    buttonPaddingBottom: 12
   };
   var choiceModule = define2({
-    bg: void 0,
-    button: void 0,
-    buttonHover: void 0,
-    text: void 0,
-    textHover: void 0,
-    layout: void 0
+    bg: DEFAULT_CHOICE_STYLE.bg,
+    button: DEFAULT_CHOICE_STYLE.button,
+    buttonHover: DEFAULT_CHOICE_STYLE.buttonHover,
+    text: DEFAULT_CHOICE_STYLE.text,
+    textHover: DEFAULT_CHOICE_STYLE.textHover,
+    layout: DEFAULT_CHOICE_LAYOUT
   });
   choiceModule.defineView((data, ctx) => {
     const cfg = { ...data };
@@ -1112,7 +1118,7 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const defaultBgStyle = cfg.bg ?? DEFAULT_CHOICE.bg;
+    const defaultBgStyle = cfg.bg ?? DEFAULT_CHOICE_STYLE.bg;
     const bgObj = ctx.world.createRectangle({
       style: {
         ...defaultBgStyle,
@@ -1151,25 +1157,26 @@
       _onChoices: (choices, onSelect) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
-        const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
-        const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
-        const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE.text;
-        const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
-        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {} };
+        const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE_STYLE.button;
+        const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE_STYLE.buttonHover;
+        const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE_STYLE.text;
+        const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE_STYLE.textHover;
+        const layoutCfg = { ...DEFAULT_CHOICE_LAYOUT, ...cfg.layout ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
-        const paddingY = layoutCfg.paddingY / 2;
+        const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom;
+        const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight;
         const resolvedMinW = defaultBtnStyle.minWidth ?? 260;
         const resolvedMaxW = defaultBtnStyle.maxWidth ?? Infinity;
         const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
-          const rawW = defaultBtnStyle.width ?? estimatedTextW + layoutCfg.paddingX;
+          const rawW = defaultBtnStyle.width ?? estimatedTextW + BTN_PAD_X_SUM;
           const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW));
-          const textAvailW = btnW - layoutCfg.paddingX;
+          const textAvailW = btnW - BTN_PAD_X_SUM;
           const lineCount = textAvailW > 0 ? Math.ceil(estimatedTextW / textAvailW) : 1;
-          const btnH = fSize * lineH * lineCount + paddingY * 2;
+          const btnH = fSize * lineH * lineCount + BTN_PAD_Y_SUM;
           return { w: btnW, h: btnH, lines: lineCount };
         });
         const totalHeight = dims.reduce((acc, d2, i) => acc + d2.h + (i > 0 ? gap : 0), 0);
@@ -1194,7 +1201,7 @@
           const textStyle = {
             ...defaultTextStyle,
             // 너비 제한 시 텍스트가 btnW 내에서 래핑되도록 width 지정
-            width: btnW - layoutCfg.paddingX,
+            width: btnW - BTN_PAD_X_SUM,
             textAlign: defaultTextStyle.textAlign ?? "center",
             zIndex: defaultTextStyle.zIndex ?? 502,
             pointerEvents: false
@@ -3021,7 +3028,7 @@
   var audio_default = audioModule;
 
   // src/modules/dialogBox.ts
-  var DEFAULT_DIALOG = {
+  var DEFAULT_DIALOG_BOX_STYLE = {
     overlay: { color: "rgba(0,0,0,0.45)" },
     panel: {
       color: "rgba(255,255,255,0.12)",
@@ -3077,26 +3084,30 @@
     },
     buttonTextHover: { color: "#ffffff" }
   };
-  var DEFAULT_LAYOUT3 = {
-    paddingX: 28,
-    paddingY: 28,
+  var DEFAULT_DIALOG_BOX_LAYOUT = {
+    panelPaddingLeft: 28,
+    panelPaddingRight: 28,
+    panelPaddingTop: 28,
+    panelPaddingBottom: 28,
     titleContentGap: 12,
     contentButtonGap: 30,
     buttonRowGap: 10,
     buttonColumnGap: 8,
-    buttonPaddingX: 48,
-    buttonPaddingY: 20
+    buttonPaddingLeft: 24,
+    buttonPaddingRight: 24,
+    buttonPaddingTop: 10,
+    buttonPaddingBottom: 10
   };
   var dialogBoxModule = define2({
-    overlay: void 0,
-    panel: void 0,
-    titleStyle: void 0,
-    contentStyle: void 0,
-    button: void 0,
-    buttonHover: void 0,
-    buttonText: void 0,
-    buttonTextHover: void 0,
-    layout: void 0,
+    overlay: DEFAULT_DIALOG_BOX_STYLE.overlay,
+    panel: DEFAULT_DIALOG_BOX_STYLE.panel,
+    titleStyle: DEFAULT_DIALOG_BOX_STYLE.titleStyle,
+    contentStyle: DEFAULT_DIALOG_BOX_STYLE.contentStyle,
+    button: DEFAULT_DIALOG_BOX_STYLE.button,
+    buttonHover: DEFAULT_DIALOG_BOX_STYLE.buttonHover,
+    buttonText: DEFAULT_DIALOG_BOX_STYLE.buttonText,
+    buttonTextHover: DEFAULT_DIALOG_BOX_STYLE.buttonTextHover,
+    layout: DEFAULT_DIALOG_BOX_LAYOUT,
     _title: "",
     _content: "",
     _buttons: [],
@@ -3110,7 +3121,7 @@
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
     const mergeStyle = (def, override) => ({ ...def, ...override ?? {} });
-    const overlayCfg = data.overlay ?? DEFAULT_DIALOG.overlay;
+    const overlayCfg = data.overlay ?? DEFAULT_DIALOG_BOX_STYLE.overlay;
     const overlayObj = ctx.world.createRectangle({
       style: {
         ...overlayCfg,
@@ -3126,7 +3137,7 @@
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
-    const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel;
+    const panelCfgInit = data.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel;
     const _initMinW = panelCfgInit.minWidth ?? 400;
     const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
     const _initW = panelCfgInit.width ?? 480;
@@ -3167,13 +3178,13 @@
     const _render = (title, content, buttons, resolve, duration, persist, cfg) => {
       _currentResolve = resolve;
       _currentPersist = persist;
-      const btnCfg = cfg.button ?? DEFAULT_DIALOG.button;
-      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG.buttonHover;
-      const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG.buttonText;
-      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG.buttonTextHover;
-      const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle;
-      const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle;
-      const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel;
+      const btnCfg = cfg.button ?? DEFAULT_DIALOG_BOX_STYLE.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG_BOX_STYLE.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG_BOX_STYLE.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG_BOX_STYLE.buttonTextHover;
+      const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG_BOX_STYLE.titleStyle;
+      const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG_BOX_STYLE.contentStyle;
+      const panelCfg = cfg.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel;
       const _minW = panelCfg.minWidth ?? 400;
       const _maxW = panelCfg.maxWidth ?? Infinity;
       const _w = panelCfg.width ?? 480;
@@ -3181,25 +3192,28 @@
       panelObj.style.width = panelCfg.width ?? PANEL_W;
       if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
       if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
-      if (panelCfg.height !== void 0) panelObj.style.height = panelCfg.height;
       _currentPanelW = PANEL_W;
       const titleFontSize = titleCfgR.fontSize ?? 22;
       const contentFontSize = contentCfgR.fontSize ?? 18;
       const btnFontSize = btnTxtCfg.fontSize ?? 16;
-      const layoutCfg = { ...DEFAULT_LAYOUT3, ...cfg.layout ?? {} };
-      const PADDING_X = layoutCfg.paddingX;
-      const PADDING_Y = layoutCfg.paddingY;
+      const layoutCfg = { ...DEFAULT_DIALOG_BOX_LAYOUT, ...cfg.layout ?? {} };
+      const PANEL_PAD_L = layoutCfg.panelPaddingLeft;
+      const PANEL_PAD_R = layoutCfg.panelPaddingRight;
+      const PANEL_PAD_T = layoutCfg.panelPaddingTop;
+      const PANEL_PAD_B = layoutCfg.panelPaddingBottom;
       const BTN_H_GAP = layoutCfg.buttonColumnGap;
       const GAP = title && content ? layoutCfg.titleContentGap : 0;
       const CONTENT_BTN_GAP = layoutCfg.contentButtonGap;
       const TITLE_H = title ? titleFontSize * 1.6 : 0;
       const CONTENT_H = content ? contentFontSize * 2.4 : 0;
-      const BTN_H = btnFontSize * 1.2 + layoutCfg.buttonPaddingY;
+      const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom;
+      const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight;
+      const BTN_H = btnFontSize * 1.2 + BTN_PAD_Y_SUM;
       const BTN_ROW_GAP = layoutCfg.buttonRowGap;
-      const AVAILABLE_W = PANEL_W - PADDING_X * 2;
+      const AVAILABLE_W = PANEL_W - PANEL_PAD_L - PANEL_PAD_R;
       const btnWidths = buttons.map((buttonDef) => {
         const estimatedW = buttonDef.text.length * btnFontSize * 0.8;
-        const rawW = btnCfg.width ?? estimatedW + layoutCfg.buttonPaddingX;
+        const rawW = btnCfg.width ?? estimatedW + BTN_PAD_X_SUM;
         const minW = btnCfg.minWidth ?? 100;
         const maxW = btnCfg.maxWidth ?? 400;
         return Math.max(minW, Math.min(rawW, maxW));
@@ -3218,33 +3232,40 @@
         }
       });
       if (currentRow.indices.length > 0) rows.push(currentRow);
-      const TOTAL_BTN_H = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP;
-      const PANEL_H = PADDING_Y + TITLE_H + GAP + CONTENT_H + CONTENT_BTN_GAP + TOTAL_BTN_H + PADDING_Y;
-      panelObj.style.height = PANEL_H;
+      const buttonsH = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP;
+      const contentsTotalH = TITLE_H + GAP + CONTENT_H + (buttons.length > 0 ? CONTENT_BTN_GAP : 0) + buttonsH;
+      const PANEL_H = PANEL_PAD_T + contentsTotalH + PANEL_PAD_B;
+      if (panelCfg.height === void 0) {
+        panelObj.style.height = PANEL_H;
+      }
       _currentPanelH = PANEL_H;
       _clearDynamic();
-      const titleLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H / 2;
-      const titleObj = ctx.world.createText({
-        attribute: { text: title },
-        style: { ...titleCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
-        transform: { position: { x: 0, y: titleLocalY, z: 0 } }
-      });
-      panelObj.addChild(titleObj);
-      ctx.renderer.track(titleObj);
-      _dynamicObjs.push(titleObj);
-      const contentLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H / 2;
-      const contentObj = ctx.world.createText({
-        attribute: { text: content },
-        style: { ...contentCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
-        transform: { position: { x: 0, y: contentLocalY, z: 0 } }
-      });
-      panelObj.addChild(contentObj);
-      ctx.renderer.track(contentObj);
-      _dynamicObjs.push(contentObj);
-      const btnBaseLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H - CONTENT_BTN_GAP - BTN_H / 2;
+      let currentY = PANEL_H / 2 - PANEL_PAD_T;
+      if (title) {
+        const tObj = ctx.world.createText({
+          attribute: { text: title },
+          style: mergeStyle(titleCfgR, { width: AVAILABLE_W, height: TITLE_H }),
+          transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - TITLE_H / 2, z: 0 } }
+        });
+        panelObj.addChild(tObj);
+        ctx.renderer.track(tObj);
+        _dynamicObjs.push(tObj);
+        currentY -= TITLE_H + GAP;
+      }
+      if (content) {
+        const cObj = ctx.world.createText({
+          attribute: { text: content },
+          style: mergeStyle(contentCfgR, { width: AVAILABLE_W, height: CONTENT_H }),
+          transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - CONTENT_H / 2, z: 0 } }
+        });
+        panelObj.addChild(cObj);
+        ctx.renderer.track(cObj);
+        _dynamicObjs.push(cObj);
+        currentY -= CONTENT_H + CONTENT_BTN_GAP;
+      }
       rows.forEach((row, rowIdx) => {
-        const rowLocalY = btnBaseLocalY - rowIdx * (BTN_H + BTN_ROW_GAP);
-        let xOffset = -row.totalWidth / 2;
+        const rowLocalY = currentY - BTN_H / 2;
+        let xOffset = -(row.totalWidth + (row.indices.length - 1) * BTN_H_GAP) / 2 + (PANEL_PAD_L - PANEL_PAD_R) / 2;
         row.indices.forEach((i) => {
           const bw = btnWidths[i];
           const btnLocalX = xOffset + bw / 2;
@@ -3363,7 +3384,7 @@
   var dialogBox_default = dialogBoxModule;
 
   // src/modules/input.ts
-  var DEFAULT_INPUT = {
+  var DEFAULT_INPUT_STYLE = {
     overlay: { color: "rgba(0,0,0,0.5)" },
     panel: {
       color: "rgba(20,20,40,0.92)",
@@ -3410,26 +3431,30 @@
     },
     buttonTextHover: { color: "#ffffff" }
   };
-  var DEFAULT_LAYOUT4 = {
-    paddingX: 32,
-    paddingY: 24,
+  var DEFAULT_INPUT_LAYOUT = {
+    panelPaddingLeft: 32,
+    panelPaddingRight: 32,
+    panelPaddingTop: 24,
+    panelPaddingBottom: 24,
     labelInputGap: 12,
     inputButtonGap: 20,
     buttonGap: 8,
-    buttonPaddingX: 40,
-    buttonPaddingY: 16
+    buttonPaddingLeft: 20,
+    buttonPaddingRight: 20,
+    buttonPaddingTop: 8,
+    buttonPaddingBottom: 8
   };
   var inputModule = define2({
-    overlay: void 0,
-    panel: void 0,
-    labelStyle: void 0,
-    inputTextStyle: void 0,
-    cursorStyle: void 0,
-    button: void 0,
-    buttonHover: void 0,
-    buttonText: void 0,
-    buttonTextHover: void 0,
-    layout: void 0,
+    overlay: DEFAULT_INPUT_STYLE.overlay,
+    panel: DEFAULT_INPUT_STYLE.panel,
+    labelStyle: DEFAULT_INPUT_STYLE.labelStyle,
+    inputTextStyle: DEFAULT_INPUT_STYLE.inputTextStyle,
+    cursorStyle: DEFAULT_INPUT_STYLE.cursorStyle,
+    button: DEFAULT_INPUT_STYLE.button,
+    buttonHover: DEFAULT_INPUT_STYLE.buttonHover,
+    buttonText: DEFAULT_INPUT_STYLE.buttonText,
+    buttonTextHover: DEFAULT_INPUT_STYLE.buttonTextHover,
+    layout: DEFAULT_INPUT_LAYOUT,
     _value: "",
     _label: "",
     _multiline: false,
@@ -3494,7 +3519,7 @@
       }
       _isActive = false;
     };
-    const overlayCfg = data.overlay ?? DEFAULT_INPUT.overlay;
+    const overlayCfg = data.overlay ?? DEFAULT_INPUT_STYLE.overlay;
     const overlayObj = ctx.world.createRectangle({
       style: {
         ...overlayCfg,
@@ -3510,7 +3535,7 @@
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
-    const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel;
+    const panelCfgInit = data.panel ?? DEFAULT_INPUT_STYLE.panel;
     const _initMinW = panelCfgInit.minWidth ?? 420;
     const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
     const _initW = panelCfgInit.width ?? 420;
@@ -3568,15 +3593,15 @@
     const _render = (label, multiline, buttons, resolve, cfg) => {
       _currentResolve = resolve;
       _clearDynamic();
-      const layoutCfg = { ...DEFAULT_LAYOUT4, ...cfg.layout ?? {} };
-      const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT.labelStyle;
-      const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT.inputTextStyle;
-      const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT.cursorStyle;
-      const btnCfg = cfg.button ?? DEFAULT_INPUT.button;
-      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT.buttonHover;
-      const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT.buttonText;
-      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover;
-      const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel;
+      const layoutCfg = { ...DEFAULT_INPUT_LAYOUT, ...cfg.layout ?? {} };
+      const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT_STYLE.labelStyle;
+      const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT_STYLE.inputTextStyle;
+      const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT_STYLE.cursorStyle;
+      const btnCfg = cfg.button ?? DEFAULT_INPUT_STYLE.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT_STYLE.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT_STYLE.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT_STYLE.buttonTextHover;
+      const panelCfg = cfg.panel ?? DEFAULT_INPUT_STYLE.panel;
       const _minW = panelCfg.minWidth ?? 420;
       const _maxW = panelCfg.maxWidth ?? Infinity;
       const _w = panelCfg.width ?? 420;
@@ -3584,33 +3609,41 @@
       panelObj.style.width = panelCfg.width ?? PANEL_W;
       if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
       if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
-      const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg;
-      const AVAILABLE_W = PANEL_W - paddingX * 2;
+      const PADDING_L = layoutCfg.panelPaddingLeft;
+      const PADDING_R = layoutCfg.panelPaddingRight;
+      const PADDING_T = layoutCfg.panelPaddingTop;
+      const PADDING_B = layoutCfg.panelPaddingBottom;
+      const LBL_INP_GAP = layoutCfg.labelInputGap;
+      const INP_BTN_GAP = layoutCfg.inputButtonGap;
+      const BTN_GAP = layoutCfg.buttonGap;
+      const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom;
+      const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight;
+      const AVAILABLE_W = PANEL_W - PADDING_L - PADDING_R;
       const LABEL_FS = labelCfgR.fontSize ?? 16;
       const INPUT_FS = inputTxtCfg.fontSize ?? 22;
       const BTN_FS = btnTxtCfg.fontSize ?? 15;
       const LABEL_H = label ? LABEL_FS * 1.6 : 0;
       const INPUT_H = multiline ? INPUT_FS * 1.5 * 4 : INPUT_FS * 1.8;
-      const BTN_H = BTN_FS * 1.2 + buttonPaddingY;
+      const BTN_H = BTN_FS * 1.2 + BTN_PAD_Y_SUM;
       const btnWidths = buttons.map((btn) => {
         const estimated = btn.text.length * BTN_FS * 0.9;
-        return Math.max(100, estimated + buttonPaddingX);
+        return Math.max(100, estimated + BTN_PAD_X_SUM);
       });
-      const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? buttonGap : 0), 0);
-      const PANEL_H = paddingY + LABEL_H + (label ? labelInputGap : 0) + INPUT_H + inputButtonGap + BTN_H + paddingY;
+      const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? BTN_GAP : 0), 0);
+      const PANEL_H = PADDING_T + LABEL_H + (label ? LBL_INP_GAP : 0) + INPUT_H + INP_BTN_GAP + BTN_H + PADDING_B;
       panelObj.style.height = PANEL_H;
-      let cursorY = PANEL_H / 2 - paddingY;
+      let cursorY = PANEL_H / 2 - PADDING_T;
       if (label) {
         cursorY -= LABEL_H / 2;
         const labelObj = ctx.world.createText({
           attribute: { text: label },
           style: { ...labelCfgR, width: AVAILABLE_W, zIndex: Z_INDEX.DIALOG_BOX + 2, pointerEvents: false },
-          transform: { position: { x: 0, y: cursorY, z: 0 } }
+          transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
         });
         panelObj.addChild(labelObj);
         ctx.renderer.track(labelObj);
         _dynamicObjs.push(labelObj);
-        cursorY -= LABEL_H / 2 + labelInputGap;
+        cursorY -= LABEL_H / 2 + LBL_INP_GAP;
       }
       cursorY -= INPUT_H / 2;
       const inputBgObj = ctx.world.createRectangle({
@@ -3624,7 +3657,7 @@
           zIndex: Z_INDEX.DIALOG_BOX + 2,
           pointerEvents: true
         },
-        transform: { position: { x: 0, y: cursorY, z: 0 } }
+        transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
       });
       inputBgObj.on("click", () => {
         if (_hiddenEl && _isActive) {
@@ -3655,13 +3688,13 @@
       inputBgObj.addChild(_textObj);
       ctx.renderer.track(_textObj);
       _dynamicObjs.push(_textObj);
-      cursorY -= INPUT_H / 2 + inputButtonGap;
+      cursorY -= INPUT_H / 2 + INP_BTN_GAP;
       cursorY -= BTN_H / 2;
-      let btnX = -totalBtnW / 2;
+      let btnX = -totalBtnW / 2 + (PADDING_L - PADDING_R) / 2;
       buttons.forEach((btn, i) => {
         const bw = btnWidths[i];
         const btnLocalX = btnX + bw / 2;
-        btnX += bw + buttonGap;
+        btnX += bw + BTN_GAP;
         const btnStyleDef = {
           ...btnCfg,
           ...btn.style ?? {},
@@ -18183,6 +18216,10 @@ ${addLineNumbers(fragment)}`);
         textShadowOffsetY: 2,
         textShadowBlur: 0,
         textShadowColor: "rgb(0,0,0)"
+      },
+      layout: {
+        ...DEFAULT_DIALOGUE_LAYOUT,
+        panelPaddingBottom: 0
       }
     },
     "choice": {
@@ -18200,19 +18237,44 @@ ${addLineNumbers(fragment)}`);
       },
       text: {
         color: "rgb(255,255,255)",
+        fontSize: 28,
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif"
       },
       textHover: {
         color: "#fff0b3",
         textShadowBlur: 6,
         textShadowColor: "rgba(255,255,255,0.8)"
+      },
+      layout: {
+        ...DEFAULT_CHOICE_LAYOUT,
+        buttonPaddingBottom: 24,
+        buttonPaddingTop: 24,
+        gap: 24
       }
     },
     "dialogBox": {
       panel: {
-        minWidth: 960,
-        maxWidth: 960,
-        color: "rgba(255,0,0,0.75)"
+        ...DEFAULT_DIALOG_BOX_STYLE.panel,
+        minWidth: 720,
+        maxWidth: 720
+      },
+      titleStyle: {
+        ...DEFAULT_DIALOG_BOX_STYLE.titleStyle,
+        fontSize: DEFAULT_DIALOG_BOX_STYLE.titleStyle.fontSize * 1.6
+      },
+      contentStyle: {
+        ...DEFAULT_DIALOG_BOX_STYLE.contentStyle,
+        fontSize: DEFAULT_DIALOG_BOX_STYLE.contentStyle.fontSize * 1.6
+      },
+      buttonText: {
+        ...DEFAULT_DIALOG_BOX_STYLE.buttonText,
+        fontSize: DEFAULT_DIALOG_BOX_STYLE.buttonText.fontSize * 1.6
+      },
+      layout: {
+        panelPaddingTop: 60,
+        panelPaddingBottom: 60,
+        contentButtonGap: 45,
+        buttonColumnGap: 12
       }
     }
   });

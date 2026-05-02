@@ -88,8 +88,8 @@ export type { DialogBoxSchema } from './modules/dialogBox'
 export type { InputSchema, InputHook, InputLayout, InputButton } from './modules/input'
 
 // ─── 내장 모듈 ───────────────────────────────────────────────
-export { default as dialogueModule } from './modules/dialogue'
-export { default as choiceModule } from './modules/choice'
+export { default as dialogueModule, DEFAULT_DIALOGUE_BG, DEFAULT_DIALOGUE_SPEAKER, DEFAULT_DIALOGUE_TEXT, DEFAULT_DIALOGUE_LAYOUT } from './modules/dialogue'
+export { default as choiceModule, DEFAULT_CHOICE_STYLE, DEFAULT_CHOICE_LAYOUT } from './modules/choice'
 export { default as backgroundModule } from './modules/background'
 export { default as characterModule, characterFocusModule, characterHighlightModule } from './modules/character'
 export { default as moodModule } from './modules/mood'
@@ -102,8 +102,8 @@ export { default as varModule } from './modules/var'
 export { default as labelModule } from './modules/label'
 export { default as uiModule } from './modules/ui'
 export { default as controlModule } from './modules/control'
-export { default as dialogBoxModule } from './modules/dialogBox'
-export { default as inputModule } from './modules/input'
+export { default as dialogBoxModule, DEFAULT_DIALOG_BOX_STYLE, DEFAULT_DIALOG_BOX_LAYOUT } from './modules/dialogBox'
+export { default as inputModule, DEFAULT_INPUT_STYLE, DEFAULT_INPUT_LAYOUT } from './modules/input'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'

@@ -26,16 +26,25 @@ export interface DialogueHook {
  */
 export interface DialogueLayout {
   /**
-   * 화자명·대사 텍스트의 좌우 여백 비율(0–1).
-   * 텍스트 오브젝트 너비 = canvasWidth * (1 - paddingX * 2).
-   * @default 0.05
+   * 패널 내부 좌측 여백(px).
+   * @default 48
    */
-  paddingX?: number
+  panelPaddingLeft?: number
+  /**
+   * 패널 내부 우측 여백(px).
+   * @default 48
+   */
+  panelPaddingRight?: number
   /**
    * 대화창 상단(패널 안쪽 위)에서 화자명 상단까지의 거리(px).
    * @default 24
    */
-  paddingTop?: number
+  panelPaddingTop?: number
+  /**
+   * 대화창 하단 패딩(px).
+   * @default 24
+   */
+  panelPaddingBottom?: number
   /**
    * 화자명과 대사 텍스트 사이 간격(px).
    * @default 8
@@ -68,26 +77,28 @@ export interface DialogueSchema {
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_BG: Partial<Style> = {
+export const DEFAULT_DIALOGUE_BG: Partial<Style> = {
   color: 'rgba(0,0,0,0.82)',
 }
 
-const DEFAULT_SPEAKER: Partial<Style> = {
+export const DEFAULT_DIALOGUE_SPEAKER: Partial<Style> = {
   fontSize: 18, fontWeight: 'bold', color: '#ffe066',
   fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
   textAlign: 'left',
 }
 
-const DEFAULT_TEXT: Partial<Style> = {
+export const DEFAULT_DIALOGUE_TEXT: Partial<Style> = {
   fontSize: 20, color: '#ffffff', lineHeight: 1.6,
   fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
   textAlign: 'left',
   textShadowBlur: 1, textShadowColor: '#000000', textShadowOffsetX: 1, textShadowOffsetY: 1,
 }
 
-const DEFAULT_LAYOUT: Required<DialogueLayout> = {
-  paddingX: 0.05,
-  paddingTop: 24,
+export const DEFAULT_DIALOGUE_LAYOUT: Required<DialogueLayout> = {
+  panelPaddingLeft: 48,
+  panelPaddingRight: 48,
+  panelPaddingTop: 24,
+  panelPaddingBottom: 24,
   speakerTextGap: 8,
 }
 
@@ -141,10 +152,10 @@ export interface DialogueCmd<TConfig = any> {
  */
 const dialogueModule = define<DialogueCmd<any>, DialogueSchema, DialogueHook>({
   style: undefined,
-  bg: undefined,
-  speaker: undefined,
-  text: undefined,
-  layout: undefined,
+  bg: DEFAULT_DIALOGUE_BG,
+  speaker: DEFAULT_DIALOGUE_SPEAKER,
+  text: DEFAULT_DIALOGUE_TEXT,
+  layout: DEFAULT_DIALOGUE_LAYOUT,
   _subIndex: 0,
   _lines: [],
   _speakerKey: undefined,
@@ -162,16 +173,17 @@ dialogueModule.defineView((data, ctx) => {
       : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   // 스타일 병합
-  const bgCfg = (data.style ?? data.bg ?? DEFAULT_BG) as Style
-  const spkCfg = (data.speaker ?? DEFAULT_SPEAKER) as Style
-  const txtCfg = (data.text ?? DEFAULT_TEXT) as Style
+  const bgCfg = (data.style ?? data.bg ?? DEFAULT_DIALOGUE_BG) as Style
+  const spkCfg = (data.speaker ?? DEFAULT_DIALOGUE_SPEAKER) as Style
+  const txtCfg = (data.text ?? DEFAULT_DIALOGUE_TEXT) as Style
 
   // 레이아웃 병합
-  const layoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(data.layout ?? {}) }
+  const layoutCfg: Required<DialogueLayout> = { ...DEFAULT_DIALOGUE_LAYOUT, ...(data.layout ?? {}) }
 
   const BOX_H = typeof bgCfg.height === 'number' ? bgCfg.height : h * 0.28
   const BOX_CY = h - BOX_H / 2
-  const TEXT_W = w * (1 - layoutCfg.paddingX * 2)
+  const TEXT_W = w - layoutCfg.panelPaddingLeft - layoutCfg.panelPaddingRight
+  const baseX = w / 2 + (layoutCfg.panelPaddingLeft - layoutCfg.panelPaddingRight) / 2
 
   // 대화창 배경
   const bgObj = ctx.world.createRectangle({
@@ -190,7 +202,7 @@ dialogueModule.defineView((data, ctx) => {
   ctx.renderer.track(bgObj)
 
   // 화자 이름창
-  const spkY = h - BOX_H + layoutCfg.paddingTop
+  const spkY = h - BOX_H + layoutCfg.panelPaddingTop
   const speakerObj = ctx.world.createText({
     attribute: { text: '' },
     style: {
@@ -201,7 +213,7 @@ dialogueModule.defineView((data, ctx) => {
       display: 'none',
       pointerEvents: false,
     },
-    transform: { position: toLocal(w / 2, spkY) },
+    transform: { position: toLocal(baseX, spkY) },
   })
   ctx.world.camera?.addChild(speakerObj)
   ctx.renderer.track(speakerObj)
@@ -218,7 +230,7 @@ dialogueModule.defineView((data, ctx) => {
       display: 'none',
       pointerEvents: false,
     },
-    transform: { position: toLocal(w / 2, spkY + spkH + layoutCfg.speakerTextGap) },
+    transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) },
   })
   ctx.world.camera?.addChild(textObj)
   ctx.renderer.track(textObj)
@@ -325,11 +337,11 @@ dialogueModule.defineView((data, ctx) => {
      */
     onUpdate: (d: DialogueSchema) => {
       // 스타일 갱신
-      const newBgCfg = (d.style ?? d.bg ?? DEFAULT_BG) as Style
-      const newSpkCfg = (d.speaker ?? DEFAULT_SPEAKER) as Style
-      const newTxtCfg = (d.text ?? DEFAULT_TEXT) as Style
-      const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_LAYOUT, ...(d.layout ?? {}) }
-      const newTextW = w * (1 - newLayoutCfg.paddingX * 2)
+      const newBgCfg = (d.style ?? d.bg ?? DEFAULT_DIALOGUE_BG) as Style
+      const newSpkCfg = (d.speaker ?? DEFAULT_DIALOGUE_SPEAKER) as Style
+      const newTxtCfg = (d.text ?? DEFAULT_DIALOGUE_TEXT) as Style
+      const newLayoutCfg: Required<DialogueLayout> = { ...DEFAULT_DIALOGUE_LAYOUT, ...(d.layout ?? {}) }
+      const newTextW = w - newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight
 
       Object.assign(bgObj.style, newBgCfg)
       Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW })
@@ -338,19 +350,20 @@ dialogueModule.defineView((data, ctx) => {
       // 동적 레이아웃 위치 갱신
       const newBoxH = typeof newBgCfg.height === 'number' ? newBgCfg.height : h * 0.28
       const newBoxCY = h - newBoxH / 2
-      const newSpkY = h - newBoxH + newLayoutCfg.paddingTop
+      const newSpkY = h - newBoxH + newLayoutCfg.panelPaddingTop
       const newSpkH = (newSpkCfg.fontSize ?? 18) * 1.5
+      const baseX = w / 2 + (newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight) / 2
 
       bgObj.style.height = newBoxH
       const bgPos = toLocal(w / 2, newBoxCY)
       bgObj.transform.position.x = bgPos.x
       bgObj.transform.position.y = bgPos.y
 
-      const spkPos = toLocal(w / 2, newSpkY)
+      const spkPos = toLocal(baseX, newSpkY)
       speakerObj.transform.position.x = spkPos.x
       speakerObj.transform.position.y = spkPos.y
 
-      const txtPos = toLocal(w / 2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap)
+      const txtPos = toLocal(baseX, newSpkY + newSpkH + newLayoutCfg.speakerTextGap)
       textObj.transform.position.x = txtPos.x
       textObj.transform.position.y = txtPos.y
 

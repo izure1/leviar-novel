@@ -22,8 +22,14 @@
 
 | 속성 | 타입 | 기본값 | 설명 |
 | :--- | :--- | :---: | :--- |
-| `paddingX` | `number` | `32` | 패널 내부 좌우 여백(px). |
-| `paddingY` | `number` | `24` | 패널 내부 상하 여백(px). |
+| `panelPaddingLeft` | `number` | `32` | 패널 내부 좌측 여백(px). |
+| `panelPaddingRight` | `number` | `32` | 패널 내부 우측 여백(px). |
+| `panelPaddingTop` | `number` | `24` | 패널 내부 상단 여백(px). |
+| `panelPaddingBottom` | `number` | `24` | 패널 내부 하단 여백(px). |
+| `buttonPaddingLeft` | `number` | `20` | 버튼 내부 좌측 패딩(px). |
+| `buttonPaddingRight` | `number` | `20` | 버튼 내부 우측 패딩(px). |
+| `buttonPaddingTop` | `number` | `8` | 버튼 내부 상단 패딩(px). |
+| `buttonPaddingBottom` | `number` | `8` | 버튼 내부 하단 패딩(px). |
 | `labelInputGap` | `number` | `12` | 레이블과 입력창 사이의 간격(px). |
 | `inputButtonGap` | `number` | `20` | 입력창과 버튼들 사이의 수직 간격(px). |
 | `buttonGap` | `number` | `8` | 버튼과 버튼 사이의 가로 간격(px). |

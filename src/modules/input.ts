@@ -11,15 +11,25 @@ import { Z_INDEX } from '../constants/render'
  */
 export interface InputLayout {
   /**
-   * 패널 내부 좌우 패딩 (px).
+   * 패널 내부 좌측 패딩 (px).
    * @default 32
    */
-  paddingX?: number
+  panelPaddingLeft?: number
   /**
-   * 패널 내부 상하 패딩 (px).
+   * 패널 내부 우측 패딩 (px).
+   * @default 32
+   */
+  panelPaddingRight?: number
+  /**
+   * 패널 내부 상단 패딩 (px).
    * @default 24
    */
-  paddingY?: number
+  panelPaddingTop?: number
+  /**
+   * 패널 내부 하단 패딩 (px).
+   * @default 24
+   */
+  panelPaddingBottom?: number
   /**
    * 레이블과 입력 텍스트 사이 간격 (px).
    * @default 12
@@ -36,15 +46,25 @@ export interface InputLayout {
    */
   buttonGap?: number
   /**
-   * 버튼 내부 좌우 패딩 합산 (px).
-   * @default 40
+   * 버튼 내부 좌측 패딩 (px).
+   * @default 20
    */
-  buttonPaddingX?: number
+  buttonPaddingLeft?: number
   /**
-   * 버튼 내부 상하 패딩 합산 (px).
-   * @default 16
+   * 버튼 내부 우측 패딩 (px).
+   * @default 20
    */
-  buttonPaddingY?: number
+  buttonPaddingRight?: number
+  /**
+   * 버튼 내부 상단 패딩 (px).
+   * @default 8
+   */
+  buttonPaddingTop?: number
+  /**
+   * 버튼 내부 하단 패딩 (px).
+   * @default 8
+   */
+  buttonPaddingBottom?: number
 }
 
 // ─── InputButton ─────────────────────────────────────────────
@@ -112,7 +132,7 @@ export interface InputSchema {
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_INPUT: Required<Pick<
+export const DEFAULT_INPUT_STYLE: Required<Pick<
   InputSchema,
   'overlay' | 'panel' | 'labelStyle' | 'inputTextStyle' | 'cursorStyle' | 'button' | 'buttonHover' | 'buttonText' | 'buttonTextHover'
 >> = {
@@ -163,14 +183,18 @@ const DEFAULT_INPUT: Required<Pick<
   buttonTextHover: { color: '#ffffff' },
 }
 
-const DEFAULT_LAYOUT: Required<InputLayout> = {
-  paddingX: 32,
-  paddingY: 24,
+export const DEFAULT_INPUT_LAYOUT: Required<InputLayout> = {
+  panelPaddingLeft: 32,
+  panelPaddingRight: 32,
+  panelPaddingTop: 24,
+  panelPaddingBottom: 24,
   labelInputGap: 12,
   inputButtonGap: 20,
   buttonGap: 8,
-  buttonPaddingX: 40,
-  buttonPaddingY: 16,
+  buttonPaddingLeft: 20,
+  buttonPaddingRight: 20,
+  buttonPaddingTop: 8,
+  buttonPaddingBottom: 8,
 }
 
 // ─── InputCmd ─────────────────────────────────────────────────
@@ -233,16 +257,16 @@ export interface InputHook {
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
 const inputModule = define<InputCmd<any, any>, InputSchema, InputHook>({
-  overlay: undefined,
-  panel: undefined,
-  labelStyle: undefined,
-  inputTextStyle: undefined,
-  cursorStyle: undefined,
-  button: undefined,
-  buttonHover: undefined,
-  buttonText: undefined,
-  buttonTextHover: undefined,
-  layout: undefined,
+  overlay: DEFAULT_INPUT_STYLE.overlay,
+  panel: DEFAULT_INPUT_STYLE.panel,
+  labelStyle: DEFAULT_INPUT_STYLE.labelStyle,
+  inputTextStyle: DEFAULT_INPUT_STYLE.inputTextStyle,
+  cursorStyle: DEFAULT_INPUT_STYLE.cursorStyle,
+  button: DEFAULT_INPUT_STYLE.button,
+  buttonHover: DEFAULT_INPUT_STYLE.buttonHover,
+  buttonText: DEFAULT_INPUT_STYLE.buttonText,
+  buttonTextHover: DEFAULT_INPUT_STYLE.buttonTextHover,
+  layout: DEFAULT_INPUT_LAYOUT,
   _value: '',
   _label: '',
   _multiline: false,
@@ -326,7 +350,7 @@ inputModule.defineView((data, ctx) => {
 
   // ─── 오버레이·패널 생성 ───────────────────────────────────
 
-  const overlayCfg = data.overlay ?? DEFAULT_INPUT.overlay
+  const overlayCfg = data.overlay ?? DEFAULT_INPUT_STYLE.overlay
   const overlayObj = ctx.world.createRectangle({
     style: {
       ...overlayCfg,
@@ -343,7 +367,7 @@ inputModule.defineView((data, ctx) => {
   ctx.renderer.track(overlayObj)
   overlayObj.fadeOut(0).stop()
 
-  const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel
+  const panelCfgInit = data.panel ?? DEFAULT_INPUT_STYLE.panel
   const _initMinW = (panelCfgInit.minWidth as number) ?? 420
   const _initMaxW = (panelCfgInit.maxWidth as number) ?? Infinity
   const _initW = (panelCfgInit.width as number) ?? 420
@@ -429,16 +453,16 @@ inputModule.defineView((data, ctx) => {
     _currentResolve = resolve
     _clearDynamic()
 
-    const layoutCfg: Required<InputLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}) }
-    const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT.labelStyle
-    const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT.inputTextStyle
-    const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT.cursorStyle
-    const btnCfg = cfg.button ?? DEFAULT_INPUT.button
-    const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT.buttonHover
-    const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT.buttonText
-    const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover
+    const layoutCfg: Required<InputLayout> = { ...DEFAULT_INPUT_LAYOUT, ...(cfg.layout ?? {}) }
+    const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT_STYLE.labelStyle
+    const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT_STYLE.inputTextStyle
+    const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT_STYLE.cursorStyle
+    const btnCfg = cfg.button ?? DEFAULT_INPUT_STYLE.button
+    const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT_STYLE.buttonHover
+    const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT_STYLE.buttonText
+    const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT_STYLE.buttonTextHover
 
-    const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel
+    const panelCfg = cfg.panel ?? DEFAULT_INPUT_STYLE.panel
     const _minW = (panelCfg.minWidth as number) ?? 420
     const _maxW = (panelCfg.maxWidth as number) ?? Infinity
     const _w = (panelCfg.width as number) ?? 420
@@ -448,8 +472,16 @@ inputModule.defineView((data, ctx) => {
     if (panelCfg.minWidth !== undefined) panelObj.style.minWidth = panelCfg.minWidth
     if (panelCfg.maxWidth !== undefined) panelObj.style.maxWidth = panelCfg.maxWidth
 
-    const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg
-    const AVAILABLE_W = PANEL_W - paddingX * 2
+    const PADDING_L = layoutCfg.panelPaddingLeft
+    const PADDING_R = layoutCfg.panelPaddingRight
+    const PADDING_T = layoutCfg.panelPaddingTop
+    const PADDING_B = layoutCfg.panelPaddingBottom
+    const LBL_INP_GAP = layoutCfg.labelInputGap
+    const INP_BTN_GAP = layoutCfg.inputButtonGap
+    const BTN_GAP = layoutCfg.buttonGap
+    const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom
+    const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight
+    const AVAILABLE_W = PANEL_W - PADDING_L - PADDING_R
 
     const LABEL_FS = (labelCfgR.fontSize as number) ?? 16
     const INPUT_FS = (inputTxtCfg.fontSize as number) ?? 22
@@ -457,27 +489,27 @@ inputModule.defineView((data, ctx) => {
 
     const LABEL_H = label ? LABEL_FS * 1.6 : 0
     const INPUT_H = multiline ? INPUT_FS * 1.5 * 4 : INPUT_FS * 1.8   // 멀티라인=4줄 높이
-    const BTN_H = BTN_FS * 1.2 + buttonPaddingY
+    const BTN_H = BTN_FS * 1.2 + BTN_PAD_Y_SUM
 
     // 버튼 너비 계산
     const btnWidths = buttons.map(btn => {
       const estimated = btn.text.length * BTN_FS * 0.9
-      return Math.max(100, estimated + buttonPaddingX)
+      return Math.max(100, estimated + BTN_PAD_X_SUM)
     })
-    const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? buttonGap : 0), 0)
+    const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? BTN_GAP : 0), 0)
 
-    const PANEL_H = paddingY
+    const PANEL_H = PADDING_T
       + LABEL_H
-      + (label ? labelInputGap : 0)
+      + (label ? LBL_INP_GAP : 0)
       + INPUT_H
-      + inputButtonGap
+      + INP_BTN_GAP
       + BTN_H
-      + paddingY
+      + PADDING_B
 
     panelObj.style.height = PANEL_H
 
     // panel-local 좌표: y 위=+, 아래=-, 원점=패널 중심
-    let cursorY = PANEL_H / 2 - paddingY
+    let cursorY = PANEL_H / 2 - PADDING_T
 
     // ─── 레이블 ────────────────────────────────────────────
     if (label) {
@@ -485,12 +517,12 @@ inputModule.defineView((data, ctx) => {
       const labelObj = ctx.world.createText({
         attribute: { text: label },
         style: { ...labelCfgR, width: AVAILABLE_W, zIndex: Z_INDEX.DIALOG_BOX + 2, pointerEvents: false },
-        transform: { position: { x: 0, y: cursorY, z: 0 } },
+        transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } },
       })
       panelObj.addChild(labelObj)
       ctx.renderer.track(labelObj)
       _dynamicObjs.push(labelObj)
-      cursorY -= LABEL_H / 2 + labelInputGap
+      cursorY -= LABEL_H / 2 + LBL_INP_GAP
     }
 
     // ─── 입력 텍스트 박스 배경 ─────────────────────────────
@@ -506,7 +538,7 @@ inputModule.defineView((data, ctx) => {
         zIndex: Z_INDEX.DIALOG_BOX + 2,
         pointerEvents: true,
       },
-      transform: { position: { x: 0, y: cursorY, z: 0 } },
+      transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } },
     })
     // 입력 영역 클릭 시 포커스 복귀
     inputBgObj.on('click', () => {
@@ -541,19 +573,19 @@ inputModule.defineView((data, ctx) => {
     ctx.renderer.track(_textObj)
     _dynamicObjs.push(_textObj)
 
-    // 커서는 _textObj 텍스트 끝에 '|'를 덩붙여 자동 추적
+    // 커서는 _textObj 텍스트 끝에 '|'를 덧붙여 자동 추적
     // (별도 cursorObj 불필요)
 
-    cursorY -= INPUT_H / 2 + inputButtonGap
+    cursorY -= INPUT_H / 2 + INP_BTN_GAP
 
     // ─── 버튼 ─────────────────────────────────────────────
     cursorY -= BTN_H / 2
-    let btnX = -totalBtnW / 2
+    let btnX = -totalBtnW / 2 + (PADDING_L - PADDING_R) / 2
 
     buttons.forEach((btn, i) => {
       const bw = btnWidths[i]
       const btnLocalX = btnX + bw / 2
-      btnX += bw + buttonGap
+      btnX += bw + BTN_GAP
 
       const btnStyleDef: Partial<Style> = {
         ...btnCfg,

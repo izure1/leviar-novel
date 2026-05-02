@@ -12,17 +12,25 @@ import { Z_INDEX } from '../constants/render'
  */
 export interface DialogBoxLayout {
   /**
-   * 패널 내부 좌우(수평) 패딩 (px).
-   * title/content/button 영역의 좌우 여백 및 버튼 가용 너비(PANEL_W - paddingX*2)에 사용.
+   * 패널 내부 좌측(수평) 패딩 (px).
    * @default 28
    */
-  paddingX?: number
+  panelPaddingLeft?: number
   /**
-   * 패널 내부 상하(수직) 패딩 (px).
-   * 패널 총 높이 = paddingY + 콘텐츠 + paddingY로 계산.
+   * 패널 내부 우측(수평) 패딩 (px).
    * @default 28
    */
-  paddingY?: number
+  panelPaddingRight?: number
+  /**
+   * 패널 내부 상단(수직) 패딩 (px).
+   * @default 28
+   */
+  panelPaddingTop?: number
+  /**
+   * 패널 내부 하단(수직) 패딩 (px).
+   * @default 28
+   */
+  panelPaddingBottom?: number
   /**
    * title과 content 사이 간격 (px). title/content 모두 있을 때만 적용.
    * @default 12
@@ -44,17 +52,25 @@ export interface DialogBoxLayout {
    */
   buttonColumnGap?: number
   /**
-   * 버튼 내부 좌우 패딩 합산 (px). 버튼 너비 추정 시 사용.
-   * (estimatedTextWidth + buttonPaddingX)로 자동 계산되며, `button.width`를 직접 지정하면 무시.
-   * @default 48
+   * 버튼 내부 좌측 패딩 (px). 버튼 너비 추정 시 사용.
+   * @default 24
    */
-  buttonPaddingX?: number
+  buttonPaddingLeft?: number
   /**
-   * 버튼 내부 상하 패딩 합산 (px). 버튼 높이 계산 시 사용.
-   * (btnFontSize * 1.2 + buttonPaddingY)
-   * @default 20
+   * 버튼 내부 우측 패딩 (px). 버튼 너비 추정 시 사용.
+   * @default 24
    */
-  buttonPaddingY?: number
+  buttonPaddingRight?: number
+  /**
+   * 버튼 내부 상단 패딩 (px). 버튼 높이 계산 시 사용.
+   * @default 10
+   */
+  buttonPaddingTop?: number
+  /**
+   * 버튼 내부 하단 패딩 (px). 버튼 높이 계산 시 사용.
+   * @default 10
+   */
+  buttonPaddingBottom?: number
 }
 
 /**
@@ -92,7 +108,7 @@ export interface DialogBoxSchema {
 
 // ─── 기본값 ──────────────────────────────────────────────────
 
-const DEFAULT_DIALOG: Required<Pick<
+export const DEFAULT_DIALOG_BOX_STYLE: Required<Pick<
   DialogBoxSchema,
   'overlay' | 'panel' | 'titleStyle' | 'contentStyle' | 'button' | 'buttonHover' | 'buttonText' | 'buttonTextHover'
 >> = {
@@ -207,27 +223,31 @@ export interface DialogBoxHook {
 
 // ─── 레이아웃 기본값 ─────────────────────────────────────────
 
-const DEFAULT_LAYOUT: Required<DialogBoxLayout> = {
-  paddingX: 28,
-  paddingY: 28,
+export const DEFAULT_DIALOG_BOX_LAYOUT: Required<DialogBoxLayout> = {
+  panelPaddingLeft: 28,
+  panelPaddingRight: 28,
+  panelPaddingTop: 28,
+  panelPaddingBottom: 28,
   titleContentGap: 12,
   contentButtonGap: 30,
   buttonRowGap: 10,
   buttonColumnGap: 8,
-  buttonPaddingX: 48,
-  buttonPaddingY: 20,
+  buttonPaddingLeft: 24,
+  buttonPaddingRight: 24,
+  buttonPaddingTop: 10,
+  buttonPaddingBottom: 10,
 }
 
 const dialogBoxModule = define<DialogBoxCmd<any, any>, DialogBoxSchema, DialogBoxHook>({
-  overlay: undefined,
-  panel: undefined,
-  titleStyle: undefined,
-  contentStyle: undefined,
-  button: undefined,
-  buttonHover: undefined,
-  buttonText: undefined,
-  buttonTextHover: undefined,
-  layout: undefined,
+  overlay: DEFAULT_DIALOG_BOX_STYLE.overlay,
+  panel: DEFAULT_DIALOG_BOX_STYLE.panel,
+  titleStyle: DEFAULT_DIALOG_BOX_STYLE.titleStyle,
+  contentStyle: DEFAULT_DIALOG_BOX_STYLE.contentStyle,
+  button: DEFAULT_DIALOG_BOX_STYLE.button,
+  buttonHover: DEFAULT_DIALOG_BOX_STYLE.buttonHover,
+  buttonText: DEFAULT_DIALOG_BOX_STYLE.buttonText,
+  buttonTextHover: DEFAULT_DIALOG_BOX_STYLE.buttonTextHover,
+  layout: DEFAULT_DIALOG_BOX_LAYOUT,
   _title: '',
   _content: '',
   _buttons: [],
@@ -252,7 +272,7 @@ dialogBoxModule.defineView((data, ctx) => {
   // ─── overlayObj: camera 직접 자식 ─────────────────────────
   // display:'none' → cascade로 자손 전체 숨김 (v1.0.6+)
   // fadeIn/fadeOut 하나로 전체 제어
-  const overlayCfg = data.overlay ?? DEFAULT_DIALOG.overlay
+  const overlayCfg = data.overlay ?? DEFAULT_DIALOG_BOX_STYLE.overlay
   const overlayObj = ctx.world.createRectangle({
     style: {
       ...overlayCfg,
@@ -272,7 +292,7 @@ dialogBoxModule.defineView((data, ctx) => {
   overlayObj.fadeOut(0).stop()
 
   // ─── panelObj: overlayObj 자식 ────────────────────────────
-  const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel
+  const panelCfgInit = data.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel
   // 초기 PANEL_W: _render 시 갱신되므로 임시값으로 초기화
   const _initMinW = (panelCfgInit.minWidth as number) ?? 400
   const _initMaxW = (panelCfgInit.maxWidth as number) ?? Infinity
@@ -340,15 +360,15 @@ dialogBoxModule.defineView((data, ctx) => {
     _currentResolve = resolve
     _currentPersist = persist
 
-    const btnCfg = cfg.button ?? DEFAULT_DIALOG.button
-    const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG.buttonHover
-    const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG.buttonText
-    const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG.buttonTextHover
-    const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle
-    const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle
+    const btnCfg = cfg.button ?? DEFAULT_DIALOG_BOX_STYLE.button
+    const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG_BOX_STYLE.buttonHover
+    const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG_BOX_STYLE.buttonText
+    const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG_BOX_STYLE.buttonTextHover
+    const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG_BOX_STYLE.titleStyle
+    const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG_BOX_STYLE.contentStyle
 
     // ─── 패널 너비: _render마다 cfg 기반으로 재계산 ─────────
-    const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel
+    const panelCfg = cfg.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel
     const _minW = (panelCfg.minWidth as number) ?? 400
     const _maxW = (panelCfg.maxWidth as number) ?? Infinity
     const _w = (panelCfg.width as number) ?? 480
@@ -356,7 +376,6 @@ dialogBoxModule.defineView((data, ctx) => {
     panelObj.style.width = panelCfg.width ?? PANEL_W
     if (panelCfg.minWidth !== undefined) panelObj.style.minWidth = panelCfg.minWidth
     if (panelCfg.maxWidth !== undefined) panelObj.style.maxWidth = panelCfg.maxWidth
-    if (panelCfg.height !== undefined) panelObj.style.height = panelCfg.height
     _currentPanelW = PANEL_W
 
     const titleFontSize = (titleCfgR.fontSize as number) ?? 22
@@ -364,29 +383,32 @@ dialogBoxModule.defineView((data, ctx) => {
     const btnFontSize = (btnTxtCfg.fontSize as number) ?? 16
 
     // ─── 레이아웃 간격 (schema.layout > DEFAULT_LAYOUT) ─────
-    const layoutCfg: Required<DialogBoxLayout> = { ...DEFAULT_LAYOUT, ...(cfg.layout ?? {}) }
-    const PADDING_X = layoutCfg.paddingX
-    const PADDING_Y = layoutCfg.paddingY
+    const layoutCfg: Required<DialogBoxLayout> = { ...DEFAULT_DIALOG_BOX_LAYOUT, ...(cfg.layout ?? {}) }
+    const PANEL_PAD_L = layoutCfg.panelPaddingLeft
+    const PANEL_PAD_R = layoutCfg.panelPaddingRight
+    const PANEL_PAD_T = layoutCfg.panelPaddingTop
+    const PANEL_PAD_B = layoutCfg.panelPaddingBottom
     const BTN_H_GAP = layoutCfg.buttonColumnGap
     const GAP = title && content ? layoutCfg.titleContentGap : 0
     const CONTENT_BTN_GAP = layoutCfg.contentButtonGap
     const TITLE_H = title ? titleFontSize * 1.6 : 0
     const CONTENT_H = content ? contentFontSize * 2.4 : 0
-    const BTN_H = btnFontSize * 1.2 + layoutCfg.buttonPaddingY
+    const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom
+    const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight
+    const BTN_H = btnFontSize * 1.2 + BTN_PAD_Y_SUM
     const BTN_ROW_GAP = layoutCfg.buttonRowGap
-    const AVAILABLE_W = PANEL_W - PADDING_X * 2
+    const AVAILABLE_W = PANEL_W - PANEL_PAD_L - PANEL_PAD_R
 
     // ─── 버튼 너비 계산 ───────────────────────────────────────
     const btnWidths = buttons.map(buttonDef => {
       const estimatedW = buttonDef.text.length * btnFontSize * 0.8
-      const rawW = (btnCfg.width as number) ?? (estimatedW + layoutCfg.buttonPaddingX)
+      const rawW = (btnCfg.width as number) ?? (estimatedW + BTN_PAD_X_SUM)
       const minW = (btnCfg.minWidth as number) ?? 100
       const maxW = (btnCfg.maxWidth as number) ?? 400
       return Math.max(minW, Math.min(rawW, maxW))
     })
 
     // ─── greedy 행 분배 ───────────────────────────────────────
-    // 버튼 너비 합 + BTN_H_GAP이 AVAILABLE_W 초과 시 다음 행
     type BtnRow = { indices: number[]; totalWidth: number }
     const rows: BtnRow[] = []
     let currentRow: BtnRow = { indices: [], totalWidth: 0 }
@@ -406,44 +428,50 @@ dialogBoxModule.defineView((data, ctx) => {
     })
     if (currentRow.indices.length > 0) rows.push(currentRow)
 
-    const TOTAL_BTN_H = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP
-    const PANEL_H = PADDING_Y + TITLE_H + GAP + CONTENT_H + CONTENT_BTN_GAP + TOTAL_BTN_H + PADDING_Y
-
-    panelObj.style.height = PANEL_H
+    // ─── 전체 패널 높이 ───────────────────────────────────────
+    const buttonsH = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP
+    const contentsTotalH = TITLE_H + GAP + CONTENT_H + (buttons.length > 0 ? CONTENT_BTN_GAP : 0) + buttonsH
+    const PANEL_H = PANEL_PAD_T + contentsTotalH + PANEL_PAD_B
+    if (panelCfg.height === undefined) {
+      panelObj.style.height = PANEL_H
+    }
     _currentPanelH = PANEL_H
 
     _clearDynamic()
 
-    // title (panel-local, 위=+)
-    const titleLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H / 2
-    const titleObj = ctx.world.createText({
-      attribute: { text: title },
-      style: { ...titleCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
-      transform: { position: { x: 0, y: titleLocalY, z: 0 } },
-    })
-    panelObj.addChild(titleObj)
-    ctx.renderer.track(titleObj)
-    _dynamicObjs.push(titleObj)
+    // ─── 자식 요소 배치 (y축 위가 양수) ────────────────────────
+    let currentY = PANEL_H / 2 - PANEL_PAD_T
 
-    // content
-    const contentLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H / 2
-    const contentObj = ctx.world.createText({
-      attribute: { text: content },
-      style: { ...contentCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
-      transform: { position: { x: 0, y: contentLocalY, z: 0 } },
-    })
-    panelObj.addChild(contentObj)
-    ctx.renderer.track(contentObj)
-    _dynamicObjs.push(contentObj)
+    // 1. 타이틀
+    if (title) {
+      const tObj = ctx.world.createText({
+        attribute: { text: title },
+        style: mergeStyle(titleCfgR, { width: AVAILABLE_W, height: TITLE_H }),
+        transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - TITLE_H / 2, z: 0 } },
+      })
+      panelObj.addChild(tObj)
+      ctx.renderer.track(tObj)
+      _dynamicObjs.push(tObj)
+      currentY -= (TITLE_H + GAP)
+    }
 
-    // ─── 버튼 배치 ────────────────────────────────────────────
-    // 행 시작 y: content 아래 30px + BTN_H/2 (첫 행 center)
-    const btnBaseLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H - CONTENT_BTN_GAP - BTN_H / 2
+    // 2. 컨텐츠
+    if (content) {
+      const cObj = ctx.world.createText({
+        attribute: { text: content },
+        style: mergeStyle(contentCfgR, { width: AVAILABLE_W, height: CONTENT_H }),
+        transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - CONTENT_H / 2, z: 0 } },
+      })
+      panelObj.addChild(cObj)
+      ctx.renderer.track(cObj)
+      _dynamicObjs.push(cObj)
+      currentY -= (CONTENT_H + CONTENT_BTN_GAP)
+    }
 
+    // 3. 버튼 배치
     rows.forEach((row, rowIdx) => {
-      const rowLocalY = btnBaseLocalY - rowIdx * (BTN_H + BTN_ROW_GAP)
-      // 행을 패널 중앙 정렬: 시작 x = -totalWidth/2
-      let xOffset = -row.totalWidth / 2
+      const rowLocalY = currentY - BTN_H / 2
+      let xOffset = - (row.totalWidth + (row.indices.length - 1) * BTN_H_GAP) / 2 + (PANEL_PAD_L - PANEL_PAD_R) / 2
 
       row.indices.forEach(i => {
         const bw = btnWidths[i]

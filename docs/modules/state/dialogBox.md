@@ -22,8 +22,14 @@
 
 | 속성 | 타입 | 기본값 | 설명 |
 | :--- | :--- | :---: | :--- |
-| `paddingX` | `number` | `28` | 패널 내부 좌우 여백(px). |
-| `paddingY` | `number` | `28` | 패널 내부 상하 여백(px). |
+| `panelPaddingLeft` | `number` | `28` | 패널 내부 좌측 여백(px). |
+| `panelPaddingRight` | `number` | `28` | 패널 내부 우측 여백(px). |
+| `panelPaddingTop` | `number` | `28` | 패널 내부 상단 여백(px). |
+| `panelPaddingBottom` | `number` | `28` | 패널 내부 하단 여백(px). |
+| `buttonPaddingLeft` | `number` | `24` | 버튼 내부 좌측 패딩(px). |
+| `buttonPaddingRight` | `number` | `24` | 버튼 내부 우측 패딩(px). |
+| `buttonPaddingTop` | `number` | `10` | 버튼 내부 상단 패딩(px). |
+| `buttonPaddingBottom` | `number` | `10` | 버튼 내부 하단 패딩(px). |
 | `titleContentGap` | `number` | `12` | 제목과 본문 사이 간격(px). |
 | `contentButtonGap` | `number` | `30` | 본문과 버튼 영역 사이 간격(px). |
 | `buttonRowGap` | `number` | `10` | 버튼 행 사이의 수직 간격(px). |
