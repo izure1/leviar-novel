@@ -787,7 +787,7 @@
         return module;
       },
       defineView(builder) {
-        _viewBuilderFn = (mergedData, ctx) => {
+        _viewBuilderFn = (ctx, mergedData) => {
           for (const key of Object.keys(data)) {
             delete data[key];
           }
@@ -796,9 +796,9 @@
           if (_moduleKey) {
             ctx.state.set(_moduleKey, { ...data });
           }
-          const entry = builder(data, ctx);
-          _onUpdate = (d2) => entry.onUpdate?.(d2);
-          entry.onUpdate?.(data);
+          const entry = builder(ctx, data, setState);
+          _onUpdate = (d2) => entry.onUpdate?.(ctx, d2, setState);
+          entry.onUpdate?.(ctx, data, setState);
           return entry;
         };
         return module;
@@ -830,17 +830,17 @@
   };
 
   // src/modules/dialogue.ts
-  var DEFAULT_BG = {
+  var DEFAULT_DIALOGUE_BG = {
     color: "rgba(0,0,0,0.82)"
   };
-  var DEFAULT_SPEAKER = {
+  var DEFAULT_DIALOGUE_SPEAKER = {
     fontSize: 18,
     fontWeight: "bold",
     color: "#ffe066",
     fontFamily: '"Noto Sans KR","Malgun Gothic",sans-serif',
     textAlign: "left"
   };
-  var DEFAULT_TEXT = {
+  var DEFAULT_DIALOGUE_TEXT = {
     fontSize: 20,
     color: "#ffffff",
     lineHeight: 1.6,
@@ -851,9 +851,11 @@
     textShadowOffsetX: 1,
     textShadowOffsetY: 1
   };
-  var DEFAULT_LAYOUT = {
-    paddingX: 0.05,
-    paddingTop: 24,
+  var DEFAULT_DIALOGUE_LAYOUT = {
+    panelPaddingLeft: 48,
+    panelPaddingRight: 48,
+    panelPaddingTop: 24,
+    panelPaddingBottom: 24,
     speakerTextGap: 8
   };
   function resolveSpeaker(speakerKey, charDefs) {
@@ -862,27 +864,28 @@
   }
   var dialogueModule = define2({
     style: void 0,
-    bg: void 0,
-    speaker: void 0,
-    text: void 0,
-    layout: void 0,
+    bg: DEFAULT_DIALOGUE_BG,
+    speaker: DEFAULT_DIALOGUE_SPEAKER,
+    text: DEFAULT_DIALOGUE_TEXT,
+    layout: DEFAULT_DIALOGUE_LAYOUT,
     _subIndex: 0,
     _lines: [],
     _speakerKey: void 0,
     _speed: void 0
   });
-  dialogueModule.defineView((data, ctx) => {
+  dialogueModule.defineView((ctx, data, setState) => {
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const bgCfg = data.style ?? data.bg ?? DEFAULT_BG;
-    const spkCfg = data.speaker ?? DEFAULT_SPEAKER;
-    const txtCfg = data.text ?? DEFAULT_TEXT;
-    const layoutCfg = { ...DEFAULT_LAYOUT, ...data.layout ?? {} };
+    const bgCfg = data.style ?? data.bg ?? DEFAULT_DIALOGUE_BG;
+    const spkCfg = data.speaker ?? DEFAULT_DIALOGUE_SPEAKER;
+    const txtCfg = data.text ?? DEFAULT_DIALOGUE_TEXT;
+    const layoutCfg = { ...DEFAULT_DIALOGUE_LAYOUT, ...data.layout ?? {} };
     const BOX_H = typeof bgCfg.height === "number" ? bgCfg.height : h * 0.28;
     const BOX_CY = h - BOX_H / 2;
-    const TEXT_W = w * (1 - layoutCfg.paddingX * 2);
+    const TEXT_W = w - layoutCfg.panelPaddingLeft - layoutCfg.panelPaddingRight;
+    const baseX = w / 2 + (layoutCfg.panelPaddingLeft - layoutCfg.panelPaddingRight) / 2;
     const bgObj = ctx.world.createRectangle({
       style: {
         ...bgCfg,
@@ -897,7 +900,7 @@
     });
     ctx.world.camera?.addChild(bgObj);
     ctx.renderer.track(bgObj);
-    const spkY = h - BOX_H + layoutCfg.paddingTop;
+    const spkY = h - BOX_H + layoutCfg.panelPaddingTop;
     const speakerObj = ctx.world.createText({
       attribute: { text: "" },
       style: {
@@ -908,7 +911,7 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(w / 2, spkY) }
+      transform: { position: toLocal(baseX, spkY) }
     });
     ctx.world.camera?.addChild(speakerObj);
     ctx.renderer.track(speakerObj);
@@ -923,7 +926,7 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(w / 2, spkY + spkH + layoutCfg.speakerTextGap) }
+      transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) }
     });
     ctx.world.camera?.addChild(textObj);
     ctx.renderer.track(textObj);
@@ -1007,35 +1010,36 @@
       /**
        * setState를 통해 data가 변경될 때 엔진이 자동으로 호출합니다.
        */
-      onUpdate: (d2) => {
-        const newBgCfg = d2.style ?? d2.bg ?? DEFAULT_BG;
-        const newSpkCfg = d2.speaker ?? DEFAULT_SPEAKER;
-        const newTxtCfg = d2.text ?? DEFAULT_TEXT;
-        const newLayoutCfg = { ...DEFAULT_LAYOUT, ...d2.layout ?? {} };
-        const newTextW = w * (1 - newLayoutCfg.paddingX * 2);
+      onUpdate: (_ctx, state, _setState) => {
+        const newBgCfg = state.style ?? state.bg ?? DEFAULT_DIALOGUE_BG;
+        const newSpkCfg = state.speaker ?? DEFAULT_DIALOGUE_SPEAKER;
+        const newTxtCfg = state.text ?? DEFAULT_DIALOGUE_TEXT;
+        const newLayoutCfg = { ...DEFAULT_DIALOGUE_LAYOUT, ...state.layout ?? {} };
+        const newTextW = w - newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight;
         Object.assign(bgObj.style, newBgCfg);
         Object.assign(speakerObj.style, { ...newSpkCfg, width: newSpkCfg.width ?? newTextW });
         Object.assign(textObj.style, { ...newTxtCfg, width: newTxtCfg.width ?? newTextW });
         const newBoxH = typeof newBgCfg.height === "number" ? newBgCfg.height : h * 0.28;
         const newBoxCY = h - newBoxH / 2;
-        const newSpkY = h - newBoxH + newLayoutCfg.paddingTop;
+        const newSpkY = h - newBoxH + newLayoutCfg.panelPaddingTop;
         const newSpkH = (newSpkCfg.fontSize ?? 18) * 1.5;
+        const baseX2 = w / 2 + (newLayoutCfg.panelPaddingLeft - newLayoutCfg.panelPaddingRight) / 2;
         bgObj.style.height = newBoxH;
         const bgPos = toLocal(w / 2, newBoxCY);
         bgObj.transform.position.x = bgPos.x;
         bgObj.transform.position.y = bgPos.y;
-        const spkPos = toLocal(w / 2, newSpkY);
+        const spkPos = toLocal(baseX2, newSpkY);
         speakerObj.transform.position.x = spkPos.x;
         speakerObj.transform.position.y = spkPos.y;
-        const txtPos = toLocal(w / 2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
+        const txtPos = toLocal(baseX2, newSpkY + newSpkH + newLayoutCfg.speakerTextGap);
         textObj.transform.position.x = txtPos.x;
         textObj.transform.position.y = txtPos.y;
-        if (d2._lines && d2._lines.length > 0 && (d2._lines !== _prevLines || d2._subIndex !== _prevSubIndex)) {
-          _prevLines = d2._lines;
-          _prevSubIndex = d2._subIndex ?? 0;
-          const txt = d2._lines[d2._subIndex ?? 0];
-          const spkName = resolveSpeaker(d2._speakerKey, charDefs);
-          _renderText(spkName, txt, d2._speed);
+        if (state._lines && state._lines.length > 0 && (state._lines !== _prevLines || state._subIndex !== _prevSubIndex)) {
+          _prevLines = state._lines;
+          _prevSubIndex = state._subIndex ?? 0;
+          const txt = state._lines[state._subIndex ?? 0];
+          const spkName = resolveSpeaker(state._speakerKey, charDefs);
+          _renderText(spkName, txt, state._speed);
         }
       }
     };
@@ -1069,7 +1073,7 @@
   }
 
   // src/modules/choice.ts
-  var DEFAULT_CHOICE = {
+  var DEFAULT_CHOICE_STYLE = {
     bg: {
       color: "rgba(0,0,0,0.6)"
     },
@@ -1093,26 +1097,28 @@
       // 기본 호버 텍스트 색상 (약간 노란빛)
     }
   };
-  var DEFAULT_LAYOUT2 = {
+  var DEFAULT_CHOICE_LAYOUT = {
     gap: 12,
-    paddingX: 64,
-    paddingY: 24
+    buttonPaddingLeft: 32,
+    buttonPaddingRight: 32,
+    buttonPaddingTop: 12,
+    buttonPaddingBottom: 12
   };
   var choiceModule = define2({
-    bg: void 0,
-    button: void 0,
-    buttonHover: void 0,
-    text: void 0,
-    textHover: void 0,
-    layout: void 0
+    bg: DEFAULT_CHOICE_STYLE.bg,
+    button: DEFAULT_CHOICE_STYLE.button,
+    buttonHover: DEFAULT_CHOICE_STYLE.buttonHover,
+    text: DEFAULT_CHOICE_STYLE.text,
+    textHover: DEFAULT_CHOICE_STYLE.textHover,
+    layout: DEFAULT_CHOICE_LAYOUT
   });
-  choiceModule.defineView((data, ctx) => {
+  choiceModule.defineView((ctx, data, setState) => {
     const cfg = { ...data };
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const defaultBgStyle = cfg.bg ?? DEFAULT_CHOICE.bg;
+    const defaultBgStyle = cfg.bg ?? DEFAULT_CHOICE_STYLE.bg;
     const bgObj = ctx.world.createRectangle({
       style: {
         ...defaultBgStyle,
@@ -1151,25 +1157,26 @@
       _onChoices: (choices, onSelect) => {
         bgObj.fadeIn(200, "easeOut");
         _clearButtons();
-        const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE.button;
-        const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE.buttonHover;
-        const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE.text;
-        const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE.textHover;
-        const layoutCfg = { ...DEFAULT_LAYOUT2, ...cfg.layout ?? {} };
+        const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE_STYLE.button;
+        const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE_STYLE.buttonHover;
+        const defaultTextStyle = cfg.text ?? DEFAULT_CHOICE_STYLE.text;
+        const defaultTextHoverStyle = cfg.textHover ?? DEFAULT_CHOICE_STYLE.textHover;
+        const layoutCfg = { ...DEFAULT_CHOICE_LAYOUT, ...cfg.layout ?? {} };
         const fSize = defaultTextStyle.fontSize ?? 18;
         const lineH = defaultTextStyle.lineHeight ?? 1.5;
         const gap = layoutCfg.gap;
-        const paddingY = layoutCfg.paddingY / 2;
+        const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom;
+        const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight;
         const resolvedMinW = defaultBtnStyle.minWidth ?? 260;
         const resolvedMaxW = defaultBtnStyle.maxWidth ?? Infinity;
         const dims = choices.map((choice) => {
           const textStr = String(choice.text);
           const estimatedTextW = textStr.length * fSize * 0.8;
-          const rawW = defaultBtnStyle.width ?? estimatedTextW + layoutCfg.paddingX;
+          const rawW = defaultBtnStyle.width ?? estimatedTextW + BTN_PAD_X_SUM;
           const btnW = Math.min(resolvedMaxW, Math.max(resolvedMinW, rawW));
-          const textAvailW = btnW - layoutCfg.paddingX;
+          const textAvailW = btnW - BTN_PAD_X_SUM;
           const lineCount = textAvailW > 0 ? Math.ceil(estimatedTextW / textAvailW) : 1;
-          const btnH = fSize * lineH * lineCount + paddingY * 2;
+          const btnH = fSize * lineH * lineCount + BTN_PAD_Y_SUM;
           return { w: btnW, h: btnH, lines: lineCount };
         });
         const totalHeight = dims.reduce((acc, d2, i) => acc + d2.h + (i > 0 ? gap : 0), 0);
@@ -1194,7 +1201,7 @@
           const textStyle = {
             ...defaultTextStyle,
             // 너비 제한 시 텍스트가 btnW 내에서 래핑되도록 width 지정
-            width: btnW - layoutCfg.paddingX,
+            width: btnW - BTN_PAD_X_SUM,
             textAlign: defaultTextStyle.textAlign ?? "center",
             zIndex: defaultTextStyle.zIndex ?? 502,
             pointerEvents: false
@@ -1230,8 +1237,8 @@
           _btnObjs.push(btnObj);
         });
       },
-      onUpdate: (d2) => {
-        Object.assign(cfg, d2);
+      onUpdate: (_ctx, state, _setState) => {
+        Object.assign(cfg, state);
       }
     };
   });
@@ -1294,7 +1301,7 @@
     _parallax: true,
     _isVideo: false
   });
-  backgroundModule.defineView((data, ctx) => {
+  backgroundModule.defineView((ctx, data, setState) => {
     let _bgObj = null;
     let _bgParallax = null;
     const _createBg = (key, fit, parallax, isVideo, opacity = 1) => {
@@ -1370,15 +1377,15 @@
       hide: (dur = 300) => {
         _bgObj?.fadeOut?.(dur, "easeIn");
       },
-      onUpdate: (d2) => {
-        if (!d2._key) return;
+      onUpdate: (_ctx, state, _setState) => {
+        if (!state._key) return;
         const bgDefs = ctx.renderer.config.backgrounds;
-        const def = bgDefs[d2._key];
+        const def = bgDefs[state._key];
         if (!def) return;
-        const src = def.src ?? d2._key;
+        const src = def.src ?? state._key;
         const useParallax = def.parallax ?? true;
-        const dur = ctx.renderer.dur(d2._lastDuration);
-        ctx.renderer.state.set("backgroundKey", d2._key);
+        const dur = ctx.renderer.dur(state._lastDuration);
+        ctx.renderer.state.set("backgroundKey", state._key);
         if (_bgObj) {
           const sameParallax = _bgParallax === useParallax;
           if (sameParallax) {
@@ -1395,7 +1402,7 @@
           _bgObj = null;
         }
         _bgParallax = useParallax;
-        _bgObj = _createBg(d2._key, d2._fit, useParallax, d2._isVideo, dur > 0 ? 0 : 1);
+        _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, dur > 0 ? 0 : 1);
         if (dur > 0 && _bgObj) {
           ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
         }
@@ -1578,7 +1585,7 @@
   var characterModule = define2({
     _characters: {}
   });
-  characterModule.defineView((data, ctx) => {
+  characterModule.defineView((ctx, data, setState) => {
     const _charObjs = {};
     const _showCharacter = (name, position, imageKey, duration, immediate = false) => {
       const charDefs = ctx.renderer.config.characters;
@@ -1649,7 +1656,7 @@
       },
       // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
-      onUpdate: (d2) => {
+      onUpdate: (_ctx, d2, _setState) => {
         const dur = d2._lastDuration;
         const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
@@ -1725,7 +1732,7 @@
     ];
   }
   var characterFocusModule = define2({ _unused: void 0 });
-  characterFocusModule.defineView((_data, _ctx) => ({
+  characterFocusModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -1759,7 +1766,7 @@
     return true;
   });
   var characterHighlightModule = define2({ _unused: void 0 });
-  characterHighlightModule.defineView((_data, _ctx) => ({
+  characterHighlightModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -1769,7 +1776,7 @@
     return true;
   });
   var characterEffectModule = define2({ _unused: void 0 });
-  characterEffectModule.defineView((_data, _ctx) => ({
+  characterEffectModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -1815,7 +1822,7 @@
     _flickers: {},
     _lastDuration: 800
   });
-  moodModule.defineView((data, ctx) => {
+  moodModule.defineView((ctx, data, setState) => {
     const _moodObjs = {};
     const _addMoodObj = (mood, intensity, duration, immediate = false) => {
       if (mood === "none") {
@@ -1893,17 +1900,17 @@
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
-      onUpdate: (d2) => {
-        const dur = d2._lastDuration ?? 800;
-        const newMoods = new Set(Object.keys(d2._activeMoods));
+      onUpdate: (_ctx, state, _setState) => {
+        const dur = state._lastDuration ?? 800;
+        const newMoods = new Set(Object.keys(state._activeMoods));
         for (const mood of Object.keys(_moodObjs)) {
           if (!newMoods.has(mood)) {
             _removeMoodObj(mood, dur);
           }
         }
-        for (const [mood, intensity] of Object.entries(d2._activeMoods)) {
+        for (const [mood, intensity] of Object.entries(state._activeMoods)) {
           _addMoodObj(mood, intensity, dur);
-          const preset = d2._flickers?.[mood];
+          const preset = state._flickers?.[mood];
           const obj = _moodObjs[mood];
           if (preset && obj) {
             const currentState = ctx.renderer.state.get("_flickerState");
@@ -2023,7 +2030,7 @@
   var effectModule = define2({
     _activeEffects: {}
   });
-  effectModule.defineView((data, ctx) => {
+  effectModule.defineView((ctx, data, setState) => {
     const _effectObjs = {};
     const _addEffect = (type, rate, srcKey, immediate = false) => {
       const configEffect = ctx.renderer.config.effects?.[type];
@@ -2089,12 +2096,12 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      onUpdate: (d2) => {
-        const newTypes = new Set(Object.keys(d2._activeEffects));
+      onUpdate: (_ctx, state, _setState) => {
+        const newTypes = new Set(Object.keys(state._activeEffects));
         for (const type of Object.keys(_effectObjs)) {
           if (!newTypes.has(type)) _removeEffect(type, 600);
         }
-        for (const [type, info] of Object.entries(d2._activeEffects)) {
+        for (const [type, info] of Object.entries(state._activeEffects)) {
           if (!_effectObjs[type]) {
             _addEffect(type, info.rate, info.srcKey);
           }
@@ -2131,7 +2138,7 @@
     }
     return false;
   }
-  function buildOverlayView(data, ctx) {
+  function buildOverlayView(ctx, data, setState) {
     const _overlayObjs = {};
     const _overlayEntries = {};
     const _resolvePresetPos = (y) => {
@@ -2275,13 +2282,13 @@
         }
       },
       getObj: (name) => _overlayObjs[name],
-      onUpdate: (d2) => {
-        const dur = d2._lastDuration;
-        const newKeys = new Set(Object.keys(d2._overlays));
+      onUpdate: (_ctx, state, _setState) => {
+        const dur = state._lastDuration;
+        const newKeys = new Set(Object.keys(state._overlays));
         for (const key of Object.keys(_overlayObjs)) {
           if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600);
         }
-        for (const [key, entry] of Object.entries(d2._overlays)) {
+        for (const [key, entry] of Object.entries(state._overlays)) {
           const prev = _overlayEntries[key];
           if (!_overlayObjs[key]) {
             _addOverlay(entry, false, dur);
@@ -2342,7 +2349,7 @@
     return true;
   });
   var overlayEffectModule = define2({ _unused: void 0 });
-  overlayEffectModule.defineView((_data, _ctx) => ({
+  overlayEffectModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -2389,7 +2396,7 @@
     _isCovered: false,
     _coveredColor: "rgba(0,0,0,1)"
   });
-  screenFadeModule.defineView((data, ctx) => {
+  screenFadeModule.defineView((ctx, data, setState) => {
     let rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) {
       const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
@@ -2424,7 +2431,7 @@
       },
       hide: () => {
       },
-      onUpdate: () => {
+      onUpdate: (_ctx, _state, _setState) => {
       }
     };
   });
@@ -2459,7 +2466,7 @@
     return true;
   });
   var screenFlashModule = define2({ _lastPreset: "white" });
-  screenFlashModule.defineView((_data, ctx) => {
+  screenFlashModule.defineView((ctx, _data, setState) => {
     let rect = ctx.renderer.state.get("_flashObj");
     if (!rect) {
       const w = ctx.renderer.world.canvas?.width ?? ctx.renderer.width;
@@ -2485,7 +2492,7 @@
       },
       hide: () => {
       },
-      onUpdate: () => {
+      onUpdate: (_ctx, _state, _setState) => {
       }
     };
   });
@@ -2516,7 +2523,7 @@
     _lastPreset: "left",
     _lastFadePreset: "black"
   });
-  screenWipeModule.defineView((_data, _ctx) => ({
+  screenWipeModule.defineView((_ctx, _data, _setState) => ({
     show: () => {
     },
     hide: () => {
@@ -2654,7 +2661,7 @@
     playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, "_activeCamEffectStop");
   }
   var cameraZoomModule = define2({ _lastPreset: "reset" });
-  cameraZoomModule.defineView((_data, _ctx) => ({ show: () => {
+  cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2664,7 +2671,7 @@
     return true;
   });
   var cameraPanModule = define2({ _lastPreset: "center" });
-  cameraPanModule.defineView((_data, _ctx) => ({ show: () => {
+  cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2674,7 +2681,7 @@
     return true;
   });
   var cameraEffectModule = define2({ _lastPreset: "shake" });
-  cameraEffectModule.defineView((_data, _ctx) => ({ show: () => {
+  cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2685,7 +2692,7 @@
 
   // src/modules/condition.ts
   var conditionModule = define2({});
-  conditionModule.defineView((_data, _ctx) => ({ show: () => {
+  conditionModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   conditionModule.defineCommand(function* (cmd, ctx) {
@@ -2715,7 +2722,7 @@
 
   // src/modules/var.ts
   var varModule = define2({});
-  varModule.defineView((_data, _ctx) => ({ show: () => {
+  varModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   varModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2732,7 +2739,7 @@
 
   // src/modules/label.ts
   var labelModule = define2({});
-  labelModule.defineView((_data, _ctx) => ({ show: () => {
+  labelModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   labelModule.defineCommand(function* (_cmd, _ctx, state, setState) {
@@ -2742,7 +2749,7 @@
 
   // src/modules/ui.ts
   var uiModule = define2({});
-  uiModule.defineView((_data, _ctx) => ({ show: () => {
+  uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   uiModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2757,7 +2764,7 @@
 
   // src/modules/control.ts
   var controlModule = define2({ expireAt: 0 });
-  controlModule.defineView((_data, _ctx) => ({ show: () => {
+  controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } }));
   controlModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2822,7 +2829,7 @@
   var pool = /* @__PURE__ */ new Map();
   var fading = /* @__PURE__ */ new Set();
   var audioModule = define2({ _tracks: {} });
-  audioModule.defineView((data, ctx) => {
+  audioModule.defineView((ctx, data, setState) => {
     const audioMap = ctx.renderer.config.audios;
     for (const [name, audio] of pool.entries()) {
       if (!data._tracks[name]) {
@@ -2877,7 +2884,7 @@
       },
       hide: () => {
       },
-      onUpdate: () => {
+      onUpdate: (_ctx, _state, _setState) => {
       }
     };
   });
@@ -3021,7 +3028,7 @@
   var audio_default = audioModule;
 
   // src/modules/dialogBox.ts
-  var DEFAULT_DIALOG = {
+  var DEFAULT_DIALOG_BOX_STYLE = {
     overlay: { color: "rgba(0,0,0,0.45)" },
     panel: {
       color: "rgba(255,255,255,0.12)",
@@ -3077,26 +3084,30 @@
     },
     buttonTextHover: { color: "#ffffff" }
   };
-  var DEFAULT_LAYOUT3 = {
-    paddingX: 28,
-    paddingY: 28,
+  var DEFAULT_DIALOG_BOX_LAYOUT = {
+    panelPaddingLeft: 28,
+    panelPaddingRight: 28,
+    panelPaddingTop: 28,
+    panelPaddingBottom: 28,
     titleContentGap: 12,
     contentButtonGap: 30,
     buttonRowGap: 10,
     buttonColumnGap: 8,
-    buttonPaddingX: 48,
-    buttonPaddingY: 20
+    buttonPaddingLeft: 24,
+    buttonPaddingRight: 24,
+    buttonPaddingTop: 10,
+    buttonPaddingBottom: 10
   };
   var dialogBoxModule = define2({
-    overlay: void 0,
-    panel: void 0,
-    titleStyle: void 0,
-    contentStyle: void 0,
-    button: void 0,
-    buttonHover: void 0,
-    buttonText: void 0,
-    buttonTextHover: void 0,
-    layout: void 0,
+    overlay: DEFAULT_DIALOG_BOX_STYLE.overlay,
+    panel: DEFAULT_DIALOG_BOX_STYLE.panel,
+    titleStyle: DEFAULT_DIALOG_BOX_STYLE.titleStyle,
+    contentStyle: DEFAULT_DIALOG_BOX_STYLE.contentStyle,
+    button: DEFAULT_DIALOG_BOX_STYLE.button,
+    buttonHover: DEFAULT_DIALOG_BOX_STYLE.buttonHover,
+    buttonText: DEFAULT_DIALOG_BOX_STYLE.buttonText,
+    buttonTextHover: DEFAULT_DIALOG_BOX_STYLE.buttonTextHover,
+    layout: DEFAULT_DIALOG_BOX_LAYOUT,
     _title: "",
     _content: "",
     _buttons: [],
@@ -3104,13 +3115,13 @@
     _duration: 200,
     _persist: false
   });
-  dialogBoxModule.defineView((data, ctx) => {
+  dialogBoxModule.defineView((ctx, data, setState) => {
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (cx, cy) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - w / 2, y: -(cy - h / 2), z: cam?.attribute?.focalLength ?? 100 };
     const mergeStyle = (def, override) => ({ ...def, ...override ?? {} });
-    const overlayCfg = data.overlay ?? DEFAULT_DIALOG.overlay;
+    const overlayCfg = data.overlay ?? DEFAULT_DIALOG_BOX_STYLE.overlay;
     const overlayObj = ctx.world.createRectangle({
       style: {
         ...overlayCfg,
@@ -3126,7 +3137,7 @@
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
-    const panelCfgInit = data.panel ?? DEFAULT_DIALOG.panel;
+    const panelCfgInit = data.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel;
     const _initMinW = panelCfgInit.minWidth ?? 400;
     const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
     const _initW = panelCfgInit.width ?? 480;
@@ -3167,13 +3178,13 @@
     const _render = (title, content, buttons, resolve, duration, persist, cfg) => {
       _currentResolve = resolve;
       _currentPersist = persist;
-      const btnCfg = cfg.button ?? DEFAULT_DIALOG.button;
-      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG.buttonHover;
-      const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG.buttonText;
-      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG.buttonTextHover;
-      const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG.titleStyle;
-      const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG.contentStyle;
-      const panelCfg = cfg.panel ?? DEFAULT_DIALOG.panel;
+      const btnCfg = cfg.button ?? DEFAULT_DIALOG_BOX_STYLE.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_DIALOG_BOX_STYLE.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_DIALOG_BOX_STYLE.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_DIALOG_BOX_STYLE.buttonTextHover;
+      const titleCfgR = cfg.titleStyle ?? DEFAULT_DIALOG_BOX_STYLE.titleStyle;
+      const contentCfgR = cfg.contentStyle ?? DEFAULT_DIALOG_BOX_STYLE.contentStyle;
+      const panelCfg = cfg.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel;
       const _minW = panelCfg.minWidth ?? 400;
       const _maxW = panelCfg.maxWidth ?? Infinity;
       const _w = panelCfg.width ?? 480;
@@ -3181,25 +3192,28 @@
       panelObj.style.width = panelCfg.width ?? PANEL_W;
       if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
       if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
-      if (panelCfg.height !== void 0) panelObj.style.height = panelCfg.height;
       _currentPanelW = PANEL_W;
       const titleFontSize = titleCfgR.fontSize ?? 22;
       const contentFontSize = contentCfgR.fontSize ?? 18;
       const btnFontSize = btnTxtCfg.fontSize ?? 16;
-      const layoutCfg = { ...DEFAULT_LAYOUT3, ...cfg.layout ?? {} };
-      const PADDING_X = layoutCfg.paddingX;
-      const PADDING_Y = layoutCfg.paddingY;
+      const layoutCfg = { ...DEFAULT_DIALOG_BOX_LAYOUT, ...cfg.layout ?? {} };
+      const PANEL_PAD_L = layoutCfg.panelPaddingLeft;
+      const PANEL_PAD_R = layoutCfg.panelPaddingRight;
+      const PANEL_PAD_T = layoutCfg.panelPaddingTop;
+      const PANEL_PAD_B = layoutCfg.panelPaddingBottom;
       const BTN_H_GAP = layoutCfg.buttonColumnGap;
       const GAP = title && content ? layoutCfg.titleContentGap : 0;
       const CONTENT_BTN_GAP = layoutCfg.contentButtonGap;
       const TITLE_H = title ? titleFontSize * 1.6 : 0;
       const CONTENT_H = content ? contentFontSize * 2.4 : 0;
-      const BTN_H = btnFontSize * 1.2 + layoutCfg.buttonPaddingY;
+      const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom;
+      const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight;
+      const BTN_H = btnFontSize * 1.2 + BTN_PAD_Y_SUM;
       const BTN_ROW_GAP = layoutCfg.buttonRowGap;
-      const AVAILABLE_W = PANEL_W - PADDING_X * 2;
+      const AVAILABLE_W = PANEL_W - PANEL_PAD_L - PANEL_PAD_R;
       const btnWidths = buttons.map((buttonDef) => {
         const estimatedW = buttonDef.text.length * btnFontSize * 0.8;
-        const rawW = btnCfg.width ?? estimatedW + layoutCfg.buttonPaddingX;
+        const rawW = btnCfg.width ?? estimatedW + BTN_PAD_X_SUM;
         const minW = btnCfg.minWidth ?? 100;
         const maxW = btnCfg.maxWidth ?? 400;
         return Math.max(minW, Math.min(rawW, maxW));
@@ -3218,33 +3232,40 @@
         }
       });
       if (currentRow.indices.length > 0) rows.push(currentRow);
-      const TOTAL_BTN_H = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP;
-      const PANEL_H = PADDING_Y + TITLE_H + GAP + CONTENT_H + CONTENT_BTN_GAP + TOTAL_BTN_H + PADDING_Y;
-      panelObj.style.height = PANEL_H;
+      const buttonsH = rows.length * BTN_H + Math.max(0, rows.length - 1) * BTN_ROW_GAP;
+      const contentsTotalH = TITLE_H + GAP + CONTENT_H + (buttons.length > 0 ? CONTENT_BTN_GAP : 0) + buttonsH;
+      const PANEL_H = PANEL_PAD_T + contentsTotalH + PANEL_PAD_B;
+      if (panelCfg.height === void 0) {
+        panelObj.style.height = PANEL_H;
+      }
       _currentPanelH = PANEL_H;
       _clearDynamic();
-      const titleLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H / 2;
-      const titleObj = ctx.world.createText({
-        attribute: { text: title },
-        style: { ...titleCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
-        transform: { position: { x: 0, y: titleLocalY, z: 0 } }
-      });
-      panelObj.addChild(titleObj);
-      ctx.renderer.track(titleObj);
-      _dynamicObjs.push(titleObj);
-      const contentLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H / 2;
-      const contentObj = ctx.world.createText({
-        attribute: { text: content },
-        style: { ...contentCfgR, width: PANEL_W - PADDING_X * 2, zIndex: 602, pointerEvents: false },
-        transform: { position: { x: 0, y: contentLocalY, z: 0 } }
-      });
-      panelObj.addChild(contentObj);
-      ctx.renderer.track(contentObj);
-      _dynamicObjs.push(contentObj);
-      const btnBaseLocalY = PANEL_H / 2 - PADDING_Y - TITLE_H - GAP - CONTENT_H - CONTENT_BTN_GAP - BTN_H / 2;
+      let currentY = PANEL_H / 2 - PANEL_PAD_T;
+      if (title) {
+        const tObj = ctx.world.createText({
+          attribute: { text: title },
+          style: mergeStyle(titleCfgR, { width: AVAILABLE_W, height: TITLE_H }),
+          transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - TITLE_H / 2, z: 0 } }
+        });
+        panelObj.addChild(tObj);
+        ctx.renderer.track(tObj);
+        _dynamicObjs.push(tObj);
+        currentY -= TITLE_H + GAP;
+      }
+      if (content) {
+        const cObj = ctx.world.createText({
+          attribute: { text: content },
+          style: mergeStyle(contentCfgR, { width: AVAILABLE_W, height: CONTENT_H }),
+          transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - CONTENT_H / 2, z: 0 } }
+        });
+        panelObj.addChild(cObj);
+        ctx.renderer.track(cObj);
+        _dynamicObjs.push(cObj);
+        currentY -= CONTENT_H + CONTENT_BTN_GAP;
+      }
       rows.forEach((row, rowIdx) => {
-        const rowLocalY = btnBaseLocalY - rowIdx * (BTN_H + BTN_ROW_GAP);
-        let xOffset = -row.totalWidth / 2;
+        const rowLocalY = currentY - BTN_H / 2;
+        let xOffset = -(row.totalWidth + (row.indices.length - 1) * BTN_H_GAP) / 2 + (PANEL_PAD_L - PANEL_PAD_R) / 2;
         row.indices.forEach((i) => {
           const bw = btnWidths[i];
           const btnLocalX = xOffset + bw / 2;
@@ -3304,9 +3325,17 @@
       },
       // ─── 입력 역할 선언 ────────────────────────────────
       hideGroups: ["dialogue"],
-      onUpdate: (d2) => {
-        if (d2._resolve && d2._buttons.length > 0) {
-          _render(d2._title, d2._content, d2._buttons, d2._resolve, d2._duration, d2._persist, d2);
+      onUpdate: (_ctx, state, _setState) => {
+        if (state._resolve && state._buttons.length > 0) {
+          _render(
+            state._title,
+            state._content,
+            state._buttons,
+            state._resolve,
+            state._duration,
+            state._persist,
+            state
+          );
         }
       }
     };
@@ -3363,7 +3392,7 @@
   var dialogBox_default = dialogBoxModule;
 
   // src/modules/input.ts
-  var DEFAULT_INPUT = {
+  var DEFAULT_INPUT_STYLE = {
     overlay: { color: "rgba(0,0,0,0.5)" },
     panel: {
       color: "rgba(20,20,40,0.92)",
@@ -3410,33 +3439,37 @@
     },
     buttonTextHover: { color: "#ffffff" }
   };
-  var DEFAULT_LAYOUT4 = {
-    paddingX: 32,
-    paddingY: 24,
+  var DEFAULT_INPUT_LAYOUT = {
+    panelPaddingLeft: 32,
+    panelPaddingRight: 32,
+    panelPaddingTop: 24,
+    panelPaddingBottom: 24,
     labelInputGap: 12,
     inputButtonGap: 20,
     buttonGap: 8,
-    buttonPaddingX: 40,
-    buttonPaddingY: 16
+    buttonPaddingLeft: 20,
+    buttonPaddingRight: 20,
+    buttonPaddingTop: 8,
+    buttonPaddingBottom: 8
   };
   var inputModule = define2({
-    overlay: void 0,
-    panel: void 0,
-    labelStyle: void 0,
-    inputTextStyle: void 0,
-    cursorStyle: void 0,
-    button: void 0,
-    buttonHover: void 0,
-    buttonText: void 0,
-    buttonTextHover: void 0,
-    layout: void 0,
+    overlay: DEFAULT_INPUT_STYLE.overlay,
+    panel: DEFAULT_INPUT_STYLE.panel,
+    labelStyle: DEFAULT_INPUT_STYLE.labelStyle,
+    inputTextStyle: DEFAULT_INPUT_STYLE.inputTextStyle,
+    cursorStyle: DEFAULT_INPUT_STYLE.cursorStyle,
+    button: DEFAULT_INPUT_STYLE.button,
+    buttonHover: DEFAULT_INPUT_STYLE.buttonHover,
+    buttonText: DEFAULT_INPUT_STYLE.buttonText,
+    buttonTextHover: DEFAULT_INPUT_STYLE.buttonTextHover,
+    layout: DEFAULT_INPUT_LAYOUT,
     _value: "",
     _label: "",
     _multiline: false,
     _buttons: [],
     _resolve: null
   });
-  inputModule.defineView((data, ctx) => {
+  inputModule.defineView((ctx, data, setState) => {
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
@@ -3494,7 +3527,7 @@
       }
       _isActive = false;
     };
-    const overlayCfg = data.overlay ?? DEFAULT_INPUT.overlay;
+    const overlayCfg = data.overlay ?? DEFAULT_INPUT_STYLE.overlay;
     const overlayObj = ctx.world.createRectangle({
       style: {
         ...overlayCfg,
@@ -3510,7 +3543,7 @@
     ctx.world.camera?.addChild(overlayObj);
     ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
-    const panelCfgInit = data.panel ?? DEFAULT_INPUT.panel;
+    const panelCfgInit = data.panel ?? DEFAULT_INPUT_STYLE.panel;
     const _initMinW = panelCfgInit.minWidth ?? 420;
     const _initMaxW = panelCfgInit.maxWidth ?? Infinity;
     const _initW = panelCfgInit.width ?? 420;
@@ -3568,15 +3601,15 @@
     const _render = (label, multiline, buttons, resolve, cfg) => {
       _currentResolve = resolve;
       _clearDynamic();
-      const layoutCfg = { ...DEFAULT_LAYOUT4, ...cfg.layout ?? {} };
-      const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT.labelStyle;
-      const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT.inputTextStyle;
-      const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT.cursorStyle;
-      const btnCfg = cfg.button ?? DEFAULT_INPUT.button;
-      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT.buttonHover;
-      const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT.buttonText;
-      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT.buttonTextHover;
-      const panelCfg = cfg.panel ?? DEFAULT_INPUT.panel;
+      const layoutCfg = { ...DEFAULT_INPUT_LAYOUT, ...cfg.layout ?? {} };
+      const labelCfgR = cfg.labelStyle ?? DEFAULT_INPUT_STYLE.labelStyle;
+      const inputTxtCfg = cfg.inputTextStyle ?? DEFAULT_INPUT_STYLE.inputTextStyle;
+      const cursorCfg = cfg.cursorStyle ?? DEFAULT_INPUT_STYLE.cursorStyle;
+      const btnCfg = cfg.button ?? DEFAULT_INPUT_STYLE.button;
+      const btnHoverCfg = cfg.buttonHover ?? DEFAULT_INPUT_STYLE.buttonHover;
+      const btnTxtCfg = cfg.buttonText ?? DEFAULT_INPUT_STYLE.buttonText;
+      const btnTxtHoverCfg = cfg.buttonTextHover ?? DEFAULT_INPUT_STYLE.buttonTextHover;
+      const panelCfg = cfg.panel ?? DEFAULT_INPUT_STYLE.panel;
       const _minW = panelCfg.minWidth ?? 420;
       const _maxW = panelCfg.maxWidth ?? Infinity;
       const _w = panelCfg.width ?? 420;
@@ -3584,33 +3617,41 @@
       panelObj.style.width = panelCfg.width ?? PANEL_W;
       if (panelCfg.minWidth !== void 0) panelObj.style.minWidth = panelCfg.minWidth;
       if (panelCfg.maxWidth !== void 0) panelObj.style.maxWidth = panelCfg.maxWidth;
-      const { paddingX, paddingY, labelInputGap, inputButtonGap, buttonGap, buttonPaddingX, buttonPaddingY } = layoutCfg;
-      const AVAILABLE_W = PANEL_W - paddingX * 2;
+      const PADDING_L = layoutCfg.panelPaddingLeft;
+      const PADDING_R = layoutCfg.panelPaddingRight;
+      const PADDING_T = layoutCfg.panelPaddingTop;
+      const PADDING_B = layoutCfg.panelPaddingBottom;
+      const LBL_INP_GAP = layoutCfg.labelInputGap;
+      const INP_BTN_GAP = layoutCfg.inputButtonGap;
+      const BTN_GAP = layoutCfg.buttonGap;
+      const BTN_PAD_Y_SUM = layoutCfg.buttonPaddingTop + layoutCfg.buttonPaddingBottom;
+      const BTN_PAD_X_SUM = layoutCfg.buttonPaddingLeft + layoutCfg.buttonPaddingRight;
+      const AVAILABLE_W = PANEL_W - PADDING_L - PADDING_R;
       const LABEL_FS = labelCfgR.fontSize ?? 16;
       const INPUT_FS = inputTxtCfg.fontSize ?? 22;
       const BTN_FS = btnTxtCfg.fontSize ?? 15;
       const LABEL_H = label ? LABEL_FS * 1.6 : 0;
       const INPUT_H = multiline ? INPUT_FS * 1.5 * 4 : INPUT_FS * 1.8;
-      const BTN_H = BTN_FS * 1.2 + buttonPaddingY;
+      const BTN_H = BTN_FS * 1.2 + BTN_PAD_Y_SUM;
       const btnWidths = buttons.map((btn) => {
         const estimated = btn.text.length * BTN_FS * 0.9;
-        return Math.max(100, estimated + buttonPaddingX);
+        return Math.max(100, estimated + BTN_PAD_X_SUM);
       });
-      const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? buttonGap : 0), 0);
-      const PANEL_H = paddingY + LABEL_H + (label ? labelInputGap : 0) + INPUT_H + inputButtonGap + BTN_H + paddingY;
+      const totalBtnW = btnWidths.reduce((acc, bw, i) => acc + bw + (i > 0 ? BTN_GAP : 0), 0);
+      const PANEL_H = PADDING_T + LABEL_H + (label ? LBL_INP_GAP : 0) + INPUT_H + INP_BTN_GAP + BTN_H + PADDING_B;
       panelObj.style.height = PANEL_H;
-      let cursorY = PANEL_H / 2 - paddingY;
+      let cursorY = PANEL_H / 2 - PADDING_T;
       if (label) {
         cursorY -= LABEL_H / 2;
         const labelObj = ctx.world.createText({
           attribute: { text: label },
           style: { ...labelCfgR, width: AVAILABLE_W, zIndex: Z_INDEX.DIALOG_BOX + 2, pointerEvents: false },
-          transform: { position: { x: 0, y: cursorY, z: 0 } }
+          transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
         });
         panelObj.addChild(labelObj);
         ctx.renderer.track(labelObj);
         _dynamicObjs.push(labelObj);
-        cursorY -= LABEL_H / 2 + labelInputGap;
+        cursorY -= LABEL_H / 2 + LBL_INP_GAP;
       }
       cursorY -= INPUT_H / 2;
       const inputBgObj = ctx.world.createRectangle({
@@ -3624,7 +3665,7 @@
           zIndex: Z_INDEX.DIALOG_BOX + 2,
           pointerEvents: true
         },
-        transform: { position: { x: 0, y: cursorY, z: 0 } }
+        transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
       });
       inputBgObj.on("click", () => {
         if (_hiddenEl && _isActive) {
@@ -3655,13 +3696,13 @@
       inputBgObj.addChild(_textObj);
       ctx.renderer.track(_textObj);
       _dynamicObjs.push(_textObj);
-      cursorY -= INPUT_H / 2 + inputButtonGap;
+      cursorY -= INPUT_H / 2 + INP_BTN_GAP;
       cursorY -= BTN_H / 2;
-      let btnX = -totalBtnW / 2;
+      let btnX = -totalBtnW / 2 + (PADDING_L - PADDING_R) / 2;
       buttons.forEach((btn, i) => {
         const bw = btnWidths[i];
         const btnLocalX = btnX + bw / 2;
-        btnX += bw + buttonGap;
+        btnX += bw + BTN_GAP;
         const btnStyleDef = {
           ...btnCfg,
           ...btn.style ?? {},
@@ -3779,12 +3820,12 @@
         _destroyHiddenInput();
         _clearDynamic();
       },
-      onUpdate: (d2) => {
-        if (!d2._resolve || d2._buttons.length === 0) return;
+      onUpdate: (_ctx, state, _setState) => {
+        if (!state._resolve || state._buttons.length === 0) return;
         if (_hiddenEl) {
-          _currentResolve = d2._resolve;
+          _currentResolve = state._resolve;
         } else {
-          _render(d2._label, d2._multiline, d2._buttons, d2._resolve, d2);
+          _render(state._label, state._multiline, state._buttons, state._resolve, state);
         }
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
@@ -14623,6 +14664,19 @@ ${addLineNumbers(fragment)}`);
     }
     return spans;
   }
+  function parseMargin2(value) {
+    const zero = { top: 0, right: 0, bottom: 0, left: 0 };
+    if (value == null) return zero;
+    if (typeof value === "number") {
+      return { top: value, right: value, bottom: value, left: value };
+    }
+    const tokens = value.trim().split(/\s+/).map((t) => parseFloat(t) || 0);
+    if (tokens.length === 0) return zero;
+    if (tokens.length === 1) return { top: tokens[0], right: tokens[0], bottom: tokens[0], left: tokens[0] };
+    if (tokens.length === 2) return { top: tokens[0], right: tokens[1], bottom: tokens[0], left: tokens[1] };
+    if (tokens.length === 3) return { top: tokens[0], right: tokens[1], bottom: tokens[2], left: tokens[1] };
+    return { top: tokens[0], right: tokens[1], bottom: tokens[2], left: tokens[3] };
+  }
   function parseBorderRadius(value, w, h, bw = 0) {
     if (value == null) return [0, 0, 0, 0];
     let tl = 0, tr = 0, br = 0, bl = 0;
@@ -14852,6 +14906,9 @@ ${addLineNumbers(fragment)}`);
     _width = 0;
     _height = 0;
     _lastFocalLength = -1;
+    _debugCamZ = 0;
+    /** 디버그 모드: 활성화 시 각 오브젝트의 렌더 경계(outline)와 margin을 별도 레이어로 시각화합니다. */
+    debugMode = false;
     constructor(canvas) {
       const N = this._batchMaxSize;
       this._batchMat0 = new Float32Array(N * 4);
@@ -14993,6 +15050,9 @@ ${addLineNumbers(fragment)}`);
           uRadius: { value: 0 },
           uSize: { value: [1, 1] },
           uBorderRadius: { value: [0, 0, 0, 0] },
+          uIsBorder: { value: 0 },
+          uInnerSize: { value: [0, 0] },
+          uInnerBorderRadius: { value: [0, 0, 0, 0] },
           uModelMatrix: { value: new Float32Array(16) },
           uViewMatrix: { value: new Float32Array(16) },
           uProjectionMatrix: { value: new Float32Array(16) }
@@ -15135,6 +15195,7 @@ ${addLineNumbers(fragment)}`);
       const camRotY = activeCamera.transform.rotation.y || 0;
       const camRotZ = activeCamera.transform.rotation.z || 0;
       const camZ = activeCamera.transform.position.z;
+      this._debugCamZ = camZ;
       this._buildViewMatrix(activeCamera);
       const rotChanged = camRotX !== this._lastCamRotX || camRotY !== this._lastCamRotY || camRotZ !== this._lastCamRotZ;
       const countChanged = objects.size !== this._lastObjCount;
@@ -15236,6 +15297,91 @@ ${addLineNumbers(fragment)}`);
           break;
         default:
           break;
+      }
+      if (this.debugMode && w > 0 && h > 0) {
+        this._activeObj = obj;
+        this._activeRenderW = w;
+        this._activeRenderH = h;
+        this._drawDebugOverlay(obj, w, h);
+      }
+    }
+    // ─── 디버그 오버레이 ─────────────────────────────────────────────────────
+    /**
+     * 디버그 모드에서 각 오브젝트의 실제 렌더 경계와 margin을 시각화합니다.
+     * 기존 style을 일절 덮어쓰지 않고, 프레임 맨 마지막에 별도 레이어로 그립니다.
+     *
+     * - outline: 청록색(#00e5ff) 1px 테두리 → 오브젝트의 실제 width × height 경계
+     * - margin: 반투명 주황색(#ff9800, 30%) → style.margin 범위를 오브젝트 외측에 표시
+     */
+    _drawDebugOverlay(obj, w, h) {
+      this._flushBatch();
+      this._setBlendMode("source-over");
+      const DEBUG_OUTLINE_COLOR = "#00ff00";
+      const DEBUG_OUTLINE_PIXELS = 1;
+      const DEBUG_MARGIN_COLOR = "rgba(255, 152, 0, 0.3)";
+      const mArr = obj.__worldMatrix;
+      const objDepth = Math.max(-mArr[14] - this._debugCamZ, 0.1);
+      const focalLength = Math.max(this._lastFocalLength, 1);
+      const ow = DEBUG_OUTLINE_PIXELS * objDepth / focalLength;
+      const outerW = w + ow * 2;
+      const outerH = h + ow * 2;
+      const prog = this.colorProgram;
+      prog.uniforms["uColor"].value = parseCSSColor(DEBUG_OUTLINE_COLOR);
+      prog.uniforms["uOpacity"].value = 1;
+      prog.uniforms["uSize"].value = [outerW, outerH];
+      prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uIsBorder"].value = 1;
+      prog.uniforms["uInnerSize"].value = [w, h];
+      prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, outerW, outerH, 0, w, h);
+      prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+      this.colorMesh.draw({ camera: this.camera });
+      const margin = parseMargin2(obj.style.margin);
+      const hasMargin = margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0;
+      if (!hasMargin) return;
+      const [mr, mg, mb, ma] = parseCSSColor(DEBUG_MARGIN_COLOR);
+      prog.uniforms["uColor"].value = [mr, mg, mb, ma];
+      prog.uniforms["uOpacity"].value = 1;
+      prog.uniforms["uIsBorder"].value = 0;
+      prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uInnerSize"].value = [0, 0];
+      prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+      const drawMarginStrip = (mw, mh, offsetX, offsetY) => {
+        const obj2 = this._activeObj;
+        const pivot = obj2.transform.pivot;
+        this._modelMat.copy(obj2.__worldMatrix);
+        this._tmpVec[0] = (0.5 - pivot.x) * w;
+        this._tmpVec[1] = -(0.5 - pivot.y) * h;
+        this._tmpVec[2] = 0;
+        this._modelMat.translate(this._tmpVec);
+        this._tmpVec[0] = offsetX;
+        this._tmpVec[1] = offsetY;
+        this._tmpVec[2] = 0;
+        this._modelMat.translate(this._tmpVec);
+        this._tmpVec[0] = mw;
+        this._tmpVec[1] = mh;
+        this._tmpVec[2] = 1;
+        this._modelMat.scale(this._tmpVec);
+        prog.uniforms["uSize"].value = [mw, mh];
+        prog.uniforms["uModelMatrix"].value = this._modelMat;
+        prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+        this.colorMesh.draw({ camera: this.camera });
+      };
+      if (margin.top > 0) {
+        const mw = w + margin.left + margin.right;
+        const mh = margin.top;
+        drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, (h + mh) / 2);
+      }
+      if (margin.bottom > 0) {
+        const mw = w + margin.left + margin.right;
+        const mh = margin.bottom;
+        drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, -(h + mh) / 2);
+      }
+      if (margin.left > 0) {
+        drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0);
+      }
+      if (margin.right > 0) {
+        drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0);
       }
     }
     // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────
@@ -16655,6 +16801,20 @@ ${addLineNumbers(fragment)}`);
       this._activeCamera = camera;
     }
     /**
+     * 디버그 모드 활성화 여부를 반환합니다.
+     */
+    get debugMode() {
+      return this.renderer.debugMode;
+    }
+    /**
+     * 디버그 모드를 활성화하거나 비활성화합니다.
+     * 활성화 시 각 오브젝트의 실제 렌더 경계(outline)와 margin 영역이
+     * 기존 스타일을 건드리지 않고 별도 레이어로 시각화됩니다.
+     */
+    set debugMode(value) {
+      this.renderer.debugMode = value;
+    }
+    /**
      * CSS querySelector와 유사한 방식으로 오브젝트를 선택합니다.
      * 지원 셀렉터: `.className`, `#id`, `[attribute=value]`
      */
@@ -17236,7 +17396,7 @@ ${addLineNumbers(fragment)}`);
         if (typeof module.__viewBuilder !== "function") continue;
         const initialData = initial[moduleKey];
         const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {});
-        const entry = module.__viewBuilder(mergedData, ctx);
+        const entry = module.__viewBuilder(ctx, mergedData);
         uiRegistry.set(moduleKey, entry);
       }
     }
@@ -17556,26 +17716,28 @@ ${addLineNumbers(fragment)}`);
     _onFullscreenChange;
     constructor(config, option) {
       this._config = config;
-      const canvas = option.canvas;
-      this.container = document.createElement("div");
-      this.container.className = "fumika-container";
+      const container = option.element;
+      this.container = container;
+      this.container.classList.add("fumika-container");
       this.container.style.position = "relative";
-      this.container.style.width = "100%";
-      this.container.style.height = "100%";
       this.container.style.overflow = "hidden";
-      if (canvas.parentElement) {
-        canvas.parentElement.insertBefore(this.container, canvas);
-      }
+      const canvas = document.createElement("canvas");
       this.container.appendChild(canvas);
-      canvas.style.display = "block";
+      const width = config.width ?? container.clientWidth ?? 1920;
+      const height = config.height ?? container.clientHeight ?? 1080;
+      this._option = {
+        element: container,
+        canvas,
+        width,
+        height
+      };
+      canvas.width = width;
+      canvas.height = height;
+      this._world = new World({ canvas });
       canvas.style.width = "100%";
       canvas.style.height = "100%";
-      this._option = {
-        canvas,
-        width: config.width ?? canvas.width,
-        height: config.height ?? canvas.height
-      };
-      this._world = new World({ canvas });
+      canvas.style.display = "block";
+      canvas.style.objectFit = "contain";
       this._renderer = new Renderer3(this._world, config, {
         width: this._option.width,
         height: this._option.height
@@ -17588,8 +17750,8 @@ ${addLineNumbers(fragment)}`);
         scene.name = name;
         this._scenes.set(name, scene);
       }
-      this._onFullscreenChange = () => this._handleFullscreenChange();
-      document.addEventListener("fullscreenchange", this._onFullscreenChange);
+      this._onFullscreenChange = () => {
+      };
     }
     /**
      * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
@@ -17843,7 +18005,7 @@ ${addLineNumbers(fragment)}`);
       for (const [name, module] of this._modules) {
         if (!module.__viewBuilder) continue;
         const savedState = this._stateStore.get(name) ?? {};
-        const entry = module.__viewBuilder(savedState, ctx);
+        const entry = module.__viewBuilder(ctx, savedState);
         this._uiRegistry.set(name, entry);
       }
     }
@@ -17960,41 +18122,19 @@ ${addLineNumbers(fragment)}`);
         await this.requestFullscreen();
       }
     }
-    /**
-     * fullscreenchange 이벤트 핸들러.
-     * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
-     * 컨테이너를 중앙 정렬 flex 뷰로 설정합니다.
-     * 전체화면 해제 시 원래 스타일로 복원합니다.
+    // ─── 디버그 모드 ─────────────────────────────────────────────
+    /** 
+     * 현재 렌더링 엔진(Leviar)의 디버그 모드 활성화 여부를 가져옵니다. 
+     * 디버그 모드일 경우 UI의 레이아웃 영역이 화면에 표시됩니다.
      */
-    _handleFullscreenChange() {
-      const canvas = this._option.canvas;
-      const container = this.container;
-      if (this.isFullscreen) {
-        const sw = screen.width;
-        const sh = screen.height;
-        const ratio = canvas.width / canvas.height;
-        let dispW, dispH;
-        if (sw / sh > ratio) {
-          dispH = sh;
-          dispW = dispH * ratio;
-        } else {
-          dispW = sw;
-          dispH = dispW / ratio;
-        }
-        canvas.style.width = `${dispW}px`;
-        canvas.style.height = `${dispH}px`;
-        container.style.display = "flex";
-        container.style.alignItems = "center";
-        container.style.justifyContent = "center";
-        container.style.backgroundColor = "#000";
-      } else {
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        container.style.display = "block";
-        container.style.alignItems = "";
-        container.style.justifyContent = "";
-        container.style.backgroundColor = "";
-      }
+    get debugMode() {
+      return this._world.debugMode ?? false;
+    }
+    /** 
+     * 렌더링 엔진(Leviar)의 디버그 모드를 설정합니다. 
+     */
+    set debugMode(value) {
+      this._world.debugMode = value;
     }
     // ─── rebuild용 SceneContext stub ────────────────────────────
     _makeRebuildCtx() {
@@ -18066,7 +18206,7 @@ ${addLineNumbers(fragment)}`);
     images: {
       normal: {
         src: "girl_normal",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 },
@@ -18075,7 +18215,7 @@ ${addLineNumbers(fragment)}`);
       },
       smile: {
         src: "girl_smile",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
@@ -18083,7 +18223,7 @@ ${addLineNumbers(fragment)}`);
       },
       angry: {
         src: "girl_angry",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
@@ -18091,7 +18231,7 @@ ${addLineNumbers(fragment)}`);
       },
       embarrassed: {
         src: "girl_embarrassed",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
@@ -18104,25 +18244,29 @@ ${addLineNumbers(fragment)}`);
   var testModule = define2();
   testModule.onBoot(async (world) => {
     console.log("booting...");
-  }).defineView((_data, _ctx) => ({ show: () => {
+  }).defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } })).defineCommand(function* (cmd, ctx) {
     cmd.$callback(Date.now());
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
-  var forModule = define2({ start: 0, end: 0, acc: 1 });
-  forModule.defineView(() => ({ show: () => {
-  }, hide: () => {
-  } })).defineCommand(function* (cmd, ctx, state) {
-    for (let i = cmd.start; i < cmd.end; i += cmd.acc ?? 1) {
-      yield* ctx.execute({ type: "dialogue", text: () => `dialog ${i}` });
+  var debugModule = define2({ on: false });
+  debugModule.defineView((_ctx, _state, _setState) => ({
+    show: () => {
+    },
+    hide: () => {
+    },
+    onUpdate: (ctx, state, setState) => {
+      ctx.world.debugMode = state.on;
     }
+  })).defineCommand(function* (cmd, ctx, state, setState) {
+    setState({ on: !state.on });
     return true;
   });
   var novel_config_default = defineNovelConfig({
-    width: 800,
-    height: 450,
+    width: 1280,
+    height: 720,
     variables: {
       likeability: 0,
       metHeroine: false,
@@ -18132,7 +18276,7 @@ ${addLineNumbers(fragment)}`);
     },
     modules: {
       "test-cmd": testModule,
-      "for": forModule
+      "debug": debugModule
     },
     scenes: [
       "scene-start",
@@ -18190,39 +18334,46 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
+    "debug": {
+      on: false
+    },
     "dialogue": {
       bg: {
         gradientType: "linear",
         gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%",
-        height: 168
+        height: 270
       },
       speaker: {
-        fontSize: 27,
+        fontSize: 44,
         fontWeight: "bold",
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
         color: "#daacffff",
         // borderWidth: 2,
         // borderColor: 'rgb(255,255,255)',
+        textShadowOffsetX: 3,
+        textShadowOffsetY: 3,
+        textShadowBlur: 0,
+        textShadowColor: "rgb(0,0,0)"
+      },
+      text: {
+        fontSize: 28,
+        fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+        color: "#f0f0f0",
+        lineHeight: 1.65,
         textShadowOffsetX: 2,
         textShadowOffsetY: 2,
         textShadowBlur: 0,
         textShadowColor: "rgb(0,0,0)"
       },
-      text: {
-        fontSize: 18,
-        fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-        color: "#f0f0f0",
-        lineHeight: 1.65,
-        textShadowOffsetX: 1,
-        textShadowOffsetY: 1,
-        textShadowBlur: 0,
-        textShadowColor: "rgb(0,0,0)"
+      layout: {
+        ...DEFAULT_DIALOGUE_LAYOUT,
+        panelPaddingBottom: 0
       }
     },
     "choice": {
       button: {
-        minWidth: 600,
-        maxWidth: 600,
+        minWidth: 960,
+        maxWidth: 960,
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
@@ -18234,13 +18385,72 @@ ${addLineNumbers(fragment)}`);
       },
       text: {
         color: "rgb(255,255,255)",
+        fontSize: 28,
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif"
       },
       textHover: {
         color: "#fff0b3",
-        // ?��?�??�버 ?�스???�시
-        textShadowBlur: 4,
+        textShadowBlur: 6,
         textShadowColor: "rgba(255,255,255,0.8)"
+      },
+      layout: {
+        ...DEFAULT_CHOICE_LAYOUT,
+        buttonPaddingBottom: 24,
+        buttonPaddingTop: 24,
+        gap: 24
+      }
+    },
+    "dialogBox": {
+      panel: {
+        ...DEFAULT_DIALOG_BOX_STYLE.panel,
+        minWidth: 720,
+        maxWidth: 720
+      },
+      titleStyle: {
+        ...DEFAULT_DIALOG_BOX_STYLE.titleStyle,
+        fontSize: DEFAULT_DIALOG_BOX_STYLE.titleStyle.fontSize * 1.6
+      },
+      contentStyle: {
+        ...DEFAULT_DIALOG_BOX_STYLE.contentStyle,
+        fontSize: DEFAULT_DIALOG_BOX_STYLE.contentStyle.fontSize * 1.6
+      },
+      buttonText: {
+        ...DEFAULT_DIALOG_BOX_STYLE.buttonText,
+        fontSize: DEFAULT_DIALOG_BOX_STYLE.buttonText.fontSize * 1.6
+      },
+      layout: {
+        panelPaddingTop: 60,
+        panelPaddingBottom: 60,
+        contentButtonGap: 45,
+        buttonColumnGap: 12
+      }
+    },
+    "input": {
+      panel: {
+        ...DEFAULT_INPUT_STYLE.panel,
+        minWidth: 720,
+        maxWidth: 720,
+        minHeight: 240,
+        maxHeight: 240
+      },
+      labelStyle: {
+        ...DEFAULT_INPUT_STYLE.labelStyle,
+        fontSize: DEFAULT_INPUT_STYLE.labelStyle.fontSize * 1.6
+      },
+      inputTextStyle: {
+        ...DEFAULT_INPUT_STYLE.inputTextStyle,
+        fontSize: DEFAULT_INPUT_STYLE.inputTextStyle.fontSize * 1.6
+      },
+      buttonText: {
+        ...DEFAULT_INPUT_STYLE.buttonText,
+        fontSize: DEFAULT_INPUT_STYLE.buttonText.fontSize * 1.6
+      },
+      layout: {
+        ...DEFAULT_INPUT_LAYOUT,
+        inputPaddingTop: 60,
+        inputPaddingBottom: 60,
+        contentButtonGap: 45,
+        buttonColumnGap: 12
       }
     }
   });
@@ -19700,7 +19910,7 @@ ${addLineNumbers(fragment)}`);
     setTimeout(() => el.classList.remove("show"), 2200);
   }
   async function main() {
-    const canvas = document.getElementById("canvas");
+    const element = document.getElementById("wrapper");
     const player = new U();
     const engine = new z({
       analyzer: new R(),
@@ -19758,7 +19968,7 @@ ${addLineNumbers(fragment)}`);
       })
     });
     const novel = new Novel(novel_config_default, {
-      canvas,
+      element,
       scenes: {
         "scene-start": scene_start_default,
         "scene-game": scene_game_default,

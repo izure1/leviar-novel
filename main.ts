@@ -62,7 +62,7 @@ function showToast(msg: string, type: 'success' | 'error' | 'info' = 'success'):
 // =============================================================
 
 async function main() {
-  const canvas = document.getElementById('canvas') as HTMLCanvasElement
+  const element = document.getElementById('wrapper') as HTMLDivElement
 
   const player = new WebPlayer()
   const engine = new AnimaleseEngine({
@@ -86,7 +86,7 @@ async function main() {
   })
 
   const novel = new Novel(config, {
-    canvas,
+    element,
     scenes: {
       'scene-start': sceneStart,
       'scene-game': sceneGame,
