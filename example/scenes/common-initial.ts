@@ -80,6 +80,8 @@ export const commonInitial = defineInitial(config)({
       ...DEFAULT_DIALOG_BOX_STYLE.panel,
       minWidth: 720,
       maxWidth: 720,
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255, 0.5)',
     },
     titleStyle: {
       ...DEFAULT_DIALOG_BOX_STYLE.titleStyle,

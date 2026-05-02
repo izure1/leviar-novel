@@ -18310,6 +18310,7 @@ ${addLineNumbers(fragment)}`);
       girl_smile: "./assets/girl_smile.png",
       girl_embarrassed: "./assets/girl_embarrassed.png",
       girl_angry: "./assets/girl_angry.png",
+      img_card_heroine: "./assets/img_card_hero.png",
       // 파티클
       dust: "./assets/particle_dust.png",
       rain: "./assets/particle_rain.png",
@@ -18404,7 +18405,9 @@ ${addLineNumbers(fragment)}`);
       panel: {
         ...DEFAULT_DIALOG_BOX_STYLE.panel,
         minWidth: 720,
-        maxWidth: 720
+        maxWidth: 720,
+        borderWidth: 2,
+        borderColor: "rgba(255,255,255, 0.5)"
       },
       titleStyle: {
         ...DEFAULT_DIALOG_BOX_STYLE.titleStyle,
@@ -18733,17 +18736,49 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: [
         "\uADF8\uB140\uB294 \uC7A0\uC2DC \uB098\uB97C \uCCD0\uB2E4\uBCF4\uC558\uACE0",
-        "\uC7A0\uC2DC \uD6C4 \uC5B4\uB9AC\uB465\uC808\uD55C \uD45C\uC815\uC73C\uB85C \uB9D0\uD588\uB2E4."
+        "\uC7A0\uC2DC \uD6C4 \uC774\uC0C1\uD55C \uD45C\uC815\uC73C\uB85C \uBB3C\uC5B4\uBCF4\uC558\uB2E4."
       ]
     },
     {
       type: "dialogue",
       speaker: "fumika",
-      text: "\uBB50... \uC54C \uBC14 \uC544\uB2C8\uC9C0\uB9CC \uC774\uB984\uC774 \uB098\uB791 \uAC19\uB124."
+      text: "\uC7A5\uB09C\uCE58\uB294\uAC8C \uC544\uB2C8\uACE0?"
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uC544\uBB34\uB798\uB3C4 \uC774\uB984\uC774 \uAC19\uC73C\uB2C8 \uC758\uC2EC\uC2A4\uB7EC\uC6B4 \uB208\uCD08\uB9AC\uB97C \uAC70\uB458 \uC218 \uC5C6\uB2E4.",
+        "\uB098\uB294 \uD559\uC0DD\uC99D\uC744 \uAEBC\uB0B4 \uBCF4\uC5EC\uC8FC\uC5C8\uB2E4."
+      ]
+    },
+    {
+      type: "overlay-image",
+      action: "show",
+      name: "id_card",
+      src: "img_card_heroine"
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uB0B4 \uD559\uC0DD\uC99D\uC744 \uBCF4\uACE0 \uC5B4\uB9AC\uB465\uC808\uD55C \uD45C\uC815\uC744 \uC9C0\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uC9C4\uC9DC \uC774\uB984\uC774 \uB098\uB791 \uAC19\uB124."
     },
     {
       type: "dialogue",
       text: "\uD655\uC2E4\uD788 \uC2E0\uAE30\uD55C \uC6B0\uC5F0\uC774\uB2E4."
+    },
+    {
+      type: "overlay-effect",
+      name: "id_card",
+      preset: "fall"
+    },
+    {
+      type: "overlay-image",
+      action: "hide",
+      name: "id_card"
     },
     { type: "condition", if: () => true, goto: "choice-game" },
     // ─── 분기: 게임 ───

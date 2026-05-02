@@ -72,7 +72,7 @@
 
 *   [`dialogBox`](./modules/dialogBox.md): 시스템 알림 및 확인 대화상자
 *   [`input`](./modules/input.md): 사용자 텍스트 입력 수집
-*   `ui`: 특정 모듈 UI의 표시/숨김 제어 (준비 중)
+*   [`ui`](./modules/ui.md): 특정 모듈 UI의 표시/숨김 제어
 
 ---
 

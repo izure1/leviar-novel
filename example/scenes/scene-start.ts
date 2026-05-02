@@ -284,17 +284,49 @@ export default defineScene({
     type: 'dialogue',
     text: [
       '그녀는 잠시 나를 쳐다보았고',
-      '잠시 후 어리둥절한 표정으로 말했다.'
+      '잠시 후 이상한 표정으로 물어보았다.'
     ]
   },
   {
     type: 'dialogue',
     speaker: 'fumika',
-    text: '뭐... 알 바 아니지만 이름이 나랑 같네.'
+    text: '장난치는게 아니고?'
+  },
+  {
+    type: 'dialogue',
+    text: [
+      '아무래도 이름이 같으니 의심스러운 눈초리를 거둘 수 없다.',
+      '나는 학생증을 꺼내 보여주었다.'
+    ]
+  },
+  {
+    type: 'overlay-image',
+    action: 'show',
+    name: 'id_card',
+    src: 'img_card_heroine',
+  },
+  {
+    type: 'dialogue',
+    text: '그녀는 내 학생증을 보고 어리둥절한 표정을 지었다.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '진짜 이름이 나랑 같네.'
   },
   {
     type: 'dialogue',
     text: '확실히 신기한 우연이다.'
+  },
+  {
+    type: 'overlay-effect',
+    name: 'id_card',
+    preset: 'fall'
+  },
+  {
+    type: 'overlay-image',
+    action: 'hide',
+    name: 'id_card',
   },
   { type: 'condition', if: () => true, goto: 'choice-game' },
 
