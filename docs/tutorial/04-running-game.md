@@ -15,8 +15,8 @@ import sceneIntro from './scenes/scene-intro'
 
 const init = async () => {
   const novel = new Novel(config, {
-    // 1. 렌더링할 캔버스 지정
-    canvas: document.getElementById('game-canvas') as HTMLCanvasElement,
+    // 1. 엔진이 마운트될 엘리먼트 지정 (캔버스는 이 내부에 자동 생성됨)
+    element: document.getElementById('game-container') as HTMLElement,
     // 2. 사용할 씬들을 맵 형태로 전달
     scenes: {
       'scene-intro': sceneIntro,
@@ -45,7 +45,7 @@ init()
 
 이 두 함수는 반드시 `await`를 사용하여 완료될 때까지 기다려야 하며, 그 후에 `novel.start()`를 호출해야 정상적으로 화면이 나타납니다.
 
-엔진은 지정된 캔버스를 `fumika-container`라는 새로운 `<div>` 엘리먼트로 감쌉니다. 이는 대사창 같은 HTML UI 요소들을 캔버스 위에 정확한 위치에 띄우기 위함입니다. 스타일링이 필요하다면 이 컨테이너의 클래스를 활용할 수 있습니다.
+엔진은 지정된 `element`에 `fumika-container`라는 클래스를 추가하고, 그 내부에 렌더링을 위한 `<canvas>` 엘리먼트를 자동으로 생성합니다. 이는 대사창 같은 HTML UI 요소들을 캔버스 위에 정확한 위치에 띄우기 위함입니다. 스타일링이 필요하다면 이 엘리먼트의 클래스를 활용할 수 있습니다.
 
 ---
 

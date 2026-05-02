@@ -238,8 +238,8 @@ export type { NovelModule, NovelModuleMeta } from '../define/defineCmdUI'
  * ```
  */
 export interface NovelOption {
-  /** 렌더링에 사용할 대상 캔버스(Canvas) HTML 엘리먼트입니다. */
-  canvas: HTMLCanvasElement
+  /** 엔진을 마운트할 대상 HTML 엘리먼트입니다. 캔버스와 UI가 이 엘리먼트 내부에 생성됩니다. */
+  element: HTMLElement
 }
 
 // =============================================================

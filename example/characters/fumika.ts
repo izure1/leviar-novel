@@ -5,7 +5,7 @@ export default defineCharacter({
   images: {
     normal: {
       src: 'girl_normal',
-      width: 350,
+      width: 560,
       points: {
         face: { x: 0.5, y: 0.18 },
         chest: { x: 0.5, y: 0.45 },
@@ -14,7 +14,7 @@ export default defineCharacter({
     },
     smile: {
       src: 'girl_smile',
-      width: 350,
+      width: 560,
       points: {
         face: { x: 0.5, y: 0.18 },
         chest: { x: 0.5, y: 0.45 },
@@ -22,7 +22,7 @@ export default defineCharacter({
     },
     angry: {
       src: 'girl_angry',
-      width: 350,
+      width: 560,
       points: {
         face: { x: 0.5, y: 0.18 },
         chest: { x: 0.5, y: 0.45 },
@@ -30,7 +30,7 @@ export default defineCharacter({
     },
     embarrassed: {
       src: 'girl_embarrassed',
-      width: 350,
+      width: 560,
       points: {
         face: { x: 0.5, y: 0.18 },
         chest: { x: 0.5, y: 0.45 },

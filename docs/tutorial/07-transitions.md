@@ -43,7 +43,7 @@ import sceneIntro from './scenes/scene-intro'
 import sceneHome from './scenes/scene-home' // 추가
 
 const novel = new Novel(config, {
-  canvas: ...,
+  element: ...,
   scenes: {
     'scene-intro': sceneIntro,
     'scene-home': sceneHome, // 추가

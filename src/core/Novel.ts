@@ -104,7 +104,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   readonly container: HTMLDivElement
 
   private readonly _config: TConfig
-  private readonly _option: { canvas: HTMLCanvasElement; width: number; height: number }
+  private readonly _option: { element: HTMLElement; canvas: HTMLCanvasElement; width: number; height: number }
   private readonly _world: World
   private readonly _renderer: Renderer
   private readonly _scenes: Map<string, AnySceneDef> = new Map()
@@ -153,33 +153,42 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   ) {
     this._config = config
 
-    const canvas = option.canvas
+    const container = option.element
+    this.container = container as HTMLDivElement
 
-    // 동적 래퍼 생성 및 캔버스 Reparenting
-    this.container = document.createElement('div')
-    this.container.className = 'fumika-container'
+    // 래퍼 스타일 초기화
+    this.container.classList.add('fumika-container')
     this.container.style.position = 'relative'
-    this.container.style.width = '100%'
-    this.container.style.height = '100%'
     this.container.style.overflow = 'hidden'
 
-    if (canvas.parentElement) {
-      canvas.parentElement.insertBefore(this.container, canvas)
-    }
+    // 캔버스 동적 생성
+    const canvas = document.createElement('canvas')
     this.container.appendChild(canvas)
 
-    // 캔버스 스타일 초기화 (컨테이너에 꽉 차도록)
-    canvas.style.display = 'block'
-    canvas.style.width = '100%'
-    canvas.style.height = '100%'
+    // 기본 해상도 결정
+    const width = config.width ?? container.clientWidth ?? 1920
+    const height = config.height ?? container.clientHeight ?? 1080
+
 
     this._option = {
+      element: container,
       canvas,
-      width: config.width ?? canvas.width,
-      height: config.height ?? canvas.height,
+      width,
+      height,
     }
 
+    canvas.width = width
+    canvas.height = height
+
     this._world = new World({ canvas })
+
+    // World 객체 생성 시 내부적으로 캔버스의 인라인 스타일(width/height)에
+    // 픽셀 고정값을 부여하는 것을 방지하고 항상 부모 요소를 꽉 채우도록 100%로 강제합니다.
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    canvas.style.display = 'block'
+    canvas.style.objectFit = 'contain'
+
     this._renderer = new Renderer(this._world, config, {
       width: this._option.width,
       height: this._option.height,
@@ -200,9 +209,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       this._scenes.set(name, scene)
     }
 
-    // 전체화면 전환 시 canvas 스케일 조정
-    this._onFullscreenChange = () => this._handleFullscreenChange()
-    document.addEventListener('fullscreenchange', this._onFullscreenChange)
+    // 전체화면 전환 시 canvas 스케일 조정 (기존 로직 주석 처리)
+    this._onFullscreenChange = () => { /* this._handleFullscreenChange() */ }
   }
 
   /**
@@ -633,50 +641,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       await this.exitFullscreen()
     } else {
       await this.requestFullscreen()
-    }
-  }
-
-  /**
-   * fullscreenchange 이벤트 핸들러.
-   * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
-   * 컨테이너를 중앙 정렬 flex 뷰로 설정합니다.
-   * 전체화면 해제 시 원래 스타일로 복원합니다.
-   */
-  private _handleFullscreenChange(): void {
-    const canvas = this._option.canvas
-    const container = this.container
-
-    if (this.isFullscreen) {
-      // screen 기준으로 canvas를 letter-box 방식으로 스케일
-      const sw = screen.width
-      const sh = screen.height
-      const ratio = canvas.width / canvas.height
-      let dispW: number, dispH: number
-      if (sw / sh > ratio) {
-        // 화면이 더 넓음 → 높이 기준
-        dispH = sh
-        dispW = dispH * ratio
-      } else {
-        // 화면이 더 좁음 → 너비 기준
-        dispW = sw
-        dispH = dispW / ratio
-      }
-      canvas.style.width = `${dispW}px`
-      canvas.style.height = `${dispH}px`
-
-      container.style.display = 'flex'
-      container.style.alignItems = 'center'
-      container.style.justifyContent = 'center'
-      container.style.backgroundColor = '#000'
-    } else {
-      // 전체화면 해제 → 스타일 복원
-      canvas.style.width = '100%'
-      canvas.style.height = '100%'
-
-      container.style.display = 'block'
-      container.style.alignItems = ''
-      container.style.justifyContent = ''
-      container.style.backgroundColor = ''
     }
   }
 

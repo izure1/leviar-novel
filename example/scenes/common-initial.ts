@@ -6,35 +6,35 @@ export const commonInitial = defineInitial(config)({
     bg: {
       gradientType: 'linear',
       gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%',
-      height: 168,
+      height: 270,
     },
     speaker: {
-      fontSize: 27,
+      fontSize: 44,
       fontWeight: 'bold',
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
       color: '#daacffff',
       // borderWidth: 2,
       // borderColor: 'rgb(255,255,255)',
-      textShadowOffsetX: 2,
-      textShadowOffsetY: 2,
+      textShadowOffsetX: 3,
+      textShadowOffsetY: 3,
       textShadowBlur: 0,
       textShadowColor: 'rgb(0,0,0)',
     },
     text: {
-      fontSize: 18,
+      fontSize: 28,
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
       color: '#f0f0f0',
       lineHeight: 1.65,
-      textShadowOffsetX: 1,
-      textShadowOffsetY: 1,
+      textShadowOffsetX: 2,
+      textShadowOffsetY: 2,
       textShadowBlur: 0,
       textShadowColor: 'rgb(0,0,0)',
     },
   },
   'choice': {
     button: {
-      minWidth: 600,
-      maxWidth: 600,
+      minWidth: 960,
+      maxWidth: 960,
       color: undefined,
       borderWidth: undefined,
       borderColor: undefined,
@@ -49,9 +49,16 @@ export const commonInitial = defineInitial(config)({
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
     },
     textHover: {
-      color: '#fff0b3', // ?��?�??�버 ?�스???�시
-      textShadowBlur: 4,
+      color: '#fff0b3',
+      textShadowBlur: 6,
       textShadowColor: 'rgba(255,255,255,0.8)',
     }
   },
+  'dialogBox': {
+    panel: {
+      minWidth: 960,
+      maxWidth: 960,
+      color: 'rgba(255,0,0,0.75)',
+    }
+  }
 })

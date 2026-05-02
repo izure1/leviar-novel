@@ -69,7 +69,7 @@ import sceneIntro from "./scenes/scene-intro";
 
 const init = async () => {
   const novel = new Novel(config, {
-    canvas: document.getElementById("canvas") as HTMLCanvasElement,
+    element: document.getElementById("game-container") as HTMLElement,
     scenes: { "scene-intro": sceneIntro },
   });
 

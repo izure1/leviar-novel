@@ -17556,26 +17556,28 @@ ${addLineNumbers(fragment)}`);
     _onFullscreenChange;
     constructor(config, option) {
       this._config = config;
-      const canvas = option.canvas;
-      this.container = document.createElement("div");
-      this.container.className = "fumika-container";
+      const container = option.element;
+      this.container = container;
+      this.container.classList.add("fumika-container");
       this.container.style.position = "relative";
-      this.container.style.width = "100%";
-      this.container.style.height = "100%";
       this.container.style.overflow = "hidden";
-      if (canvas.parentElement) {
-        canvas.parentElement.insertBefore(this.container, canvas);
-      }
+      const canvas = document.createElement("canvas");
       this.container.appendChild(canvas);
-      canvas.style.display = "block";
+      const width = config.width ?? container.clientWidth ?? 1920;
+      const height = config.height ?? container.clientHeight ?? 1080;
+      this._option = {
+        element: container,
+        canvas,
+        width,
+        height
+      };
+      canvas.width = width;
+      canvas.height = height;
+      this._world = new World({ canvas });
       canvas.style.width = "100%";
       canvas.style.height = "100%";
-      this._option = {
-        canvas,
-        width: config.width ?? canvas.width,
-        height: config.height ?? canvas.height
-      };
-      this._world = new World({ canvas });
+      canvas.style.display = "block";
+      canvas.style.objectFit = "contain";
       this._renderer = new Renderer3(this._world, config, {
         width: this._option.width,
         height: this._option.height
@@ -17588,8 +17590,8 @@ ${addLineNumbers(fragment)}`);
         scene.name = name;
         this._scenes.set(name, scene);
       }
-      this._onFullscreenChange = () => this._handleFullscreenChange();
-      document.addEventListener("fullscreenchange", this._onFullscreenChange);
+      this._onFullscreenChange = () => {
+      };
     }
     /**
      * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
@@ -17960,42 +17962,6 @@ ${addLineNumbers(fragment)}`);
         await this.requestFullscreen();
       }
     }
-    /**
-     * fullscreenchange 이벤트 핸들러.
-     * 전체화면 진입 시 canvas를 화면 비율에 맞게 스케일링하고,
-     * 컨테이너를 중앙 정렬 flex 뷰로 설정합니다.
-     * 전체화면 해제 시 원래 스타일로 복원합니다.
-     */
-    _handleFullscreenChange() {
-      const canvas = this._option.canvas;
-      const container = this.container;
-      if (this.isFullscreen) {
-        const sw = screen.width;
-        const sh = screen.height;
-        const ratio = canvas.width / canvas.height;
-        let dispW, dispH;
-        if (sw / sh > ratio) {
-          dispH = sh;
-          dispW = dispH * ratio;
-        } else {
-          dispW = sw;
-          dispH = dispW / ratio;
-        }
-        canvas.style.width = `${dispW}px`;
-        canvas.style.height = `${dispH}px`;
-        container.style.display = "flex";
-        container.style.alignItems = "center";
-        container.style.justifyContent = "center";
-        container.style.backgroundColor = "#000";
-      } else {
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        container.style.display = "block";
-        container.style.alignItems = "";
-        container.style.justifyContent = "";
-        container.style.backgroundColor = "";
-      }
-    }
     // ─── rebuild용 SceneContext stub ────────────────────────────
     _makeRebuildCtx() {
       const noop = () => {
@@ -18066,7 +18032,7 @@ ${addLineNumbers(fragment)}`);
     images: {
       normal: {
         src: "girl_normal",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 },
@@ -18075,7 +18041,7 @@ ${addLineNumbers(fragment)}`);
       },
       smile: {
         src: "girl_smile",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
@@ -18083,7 +18049,7 @@ ${addLineNumbers(fragment)}`);
       },
       angry: {
         src: "girl_angry",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
@@ -18091,7 +18057,7 @@ ${addLineNumbers(fragment)}`);
       },
       embarrassed: {
         src: "girl_embarrassed",
-        width: 350,
+        width: 560,
         points: {
           face: { x: 0.5, y: 0.18 },
           chest: { x: 0.5, y: 0.45 }
@@ -18121,8 +18087,8 @@ ${addLineNumbers(fragment)}`);
     return true;
   });
   var novel_config_default = defineNovelConfig({
-    width: 800,
-    height: 450,
+    width: 1280,
+    height: 720,
     variables: {
       likeability: 0,
       metHeroine: false,
@@ -18194,35 +18160,35 @@ ${addLineNumbers(fragment)}`);
       bg: {
         gradientType: "linear",
         gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%",
-        height: 168
+        height: 270
       },
       speaker: {
-        fontSize: 27,
+        fontSize: 44,
         fontWeight: "bold",
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
         color: "#daacffff",
         // borderWidth: 2,
         // borderColor: 'rgb(255,255,255)',
-        textShadowOffsetX: 2,
-        textShadowOffsetY: 2,
+        textShadowOffsetX: 3,
+        textShadowOffsetY: 3,
         textShadowBlur: 0,
         textShadowColor: "rgb(0,0,0)"
       },
       text: {
-        fontSize: 18,
+        fontSize: 28,
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
         color: "#f0f0f0",
         lineHeight: 1.65,
-        textShadowOffsetX: 1,
-        textShadowOffsetY: 1,
+        textShadowOffsetX: 2,
+        textShadowOffsetY: 2,
         textShadowBlur: 0,
         textShadowColor: "rgb(0,0,0)"
       }
     },
     "choice": {
       button: {
-        minWidth: 600,
-        maxWidth: 600,
+        minWidth: 960,
+        maxWidth: 960,
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
@@ -18238,9 +18204,15 @@ ${addLineNumbers(fragment)}`);
       },
       textHover: {
         color: "#fff0b3",
-        // ?��?�??�버 ?�스???�시
-        textShadowBlur: 4,
+        textShadowBlur: 6,
         textShadowColor: "rgba(255,255,255,0.8)"
+      }
+    },
+    "dialogBox": {
+      panel: {
+        minWidth: 960,
+        maxWidth: 960,
+        color: "rgba(255,0,0,0.75)"
       }
     }
   });
@@ -19700,7 +19672,7 @@ ${addLineNumbers(fragment)}`);
     setTimeout(() => el.classList.remove("show"), 2200);
   }
   async function main() {
-    const canvas = document.getElementById("canvas");
+    const element = document.getElementById("wrapper");
     const player = new U();
     const engine = new z({
       analyzer: new R(),
@@ -19758,7 +19730,7 @@ ${addLineNumbers(fragment)}`);
       })
     });
     const novel = new Novel(novel_config_default, {
-      canvas,
+      element,
       scenes: {
         "scene-start": scene_start_default,
         "scene-game": scene_game_default,

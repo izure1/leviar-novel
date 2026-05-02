@@ -18,8 +18,8 @@
 
 | 속성 | 타입 | 기본값 | 설명 |
 | :--- | :--- | :--- | :--- |
-| `width` | `number` | `canvas.width` | 게임 화면의 논리적 가로 너비 (px) |
-| `height` | `number` | `canvas.height` | 게임 화면의 논리적 세로 높이 (px) |
+| `width` | `number` | `element.clientWidth` | 게임 화면의 논리적 가로 너비 (px) |
+| `height` | `number` | `element.clientHeight` | 게임 화면의 논리적 세로 높이 (px) |
 
 ```ts
 // 16:9 해상도 설정 예시
