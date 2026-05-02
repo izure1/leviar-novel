@@ -60,6 +60,21 @@ interface AudioStopCmd {
 /** audio 커맨드 유니온 타입 */
 export type AudioCmd<TConfig = any> = AudioPlayCmd<TConfig> | AudioPauseCmd | AudioStopCmd
 
+// ─── AudioHook 타입 ──────────────────────────────────────────────
+
+export interface AudioEventPayload {
+  name: string
+  src: string
+}
+
+export interface AudioHook {
+  'audio:play': (cmd: AudioPlayCmd<any>) => AudioPlayCmd<any>
+  'audio:pause': (cmd: AudioPauseCmd) => AudioPauseCmd
+  'audio:stop': (cmd: AudioStopCmd) => AudioStopCmd
+  'audio:end': (payload: AudioEventPayload) => AudioEventPayload
+  'audio:repeat': (payload: AudioEventPayload) => AudioEventPayload
+}
+
 // ─── 스키마 ──────────────────────────────────────────────────
 
 /** name별 오디오 재생 상태 스냅샷 */
@@ -90,6 +105,8 @@ export interface AudioSchema {
 interface NovelAudioElement extends HTMLAudioElement {
   __srcKey?: string
   __fadeId?: number
+  __startSec?: number
+  __endSec?: number
 }
 
 let fadeCounter = 0
@@ -169,7 +186,7 @@ const fading = new Set<NovelAudioElement>()
  * - pause: 일시정지
  * - stop: 정지 및 제거
  */
-const audioModule = define<AudioCmd<any>, AudioSchema>({ _tracks: {} })
+const audioModule = define<AudioCmd<any>, AudioSchema, AudioHook>({ _tracks: {} })
 
 audioModule.defineView((ctx, data, setState) => {
   const audioMap = (ctx.renderer.config as any).audios as Record<string, string> | undefined
@@ -266,6 +283,8 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (existing && existingSrc === (playCmd.src as string)) {
       existing.playbackRate = speed
       existing.loop = repeat
+      existing.__startSec = startSec
+      existing.__endSec = endSec
 
       // 일시정지 상태였다면 다시 재생 시작
       if (existing.paused) {
@@ -276,6 +295,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
 
       // volume은 duration에 걸쳐 부드럽게 변경
       fadeVolume(existing, targetVolume, duration)
+      audioModule.hooker.trigger('audio:play', playCmd, (val) => val)
 
       const newTracks = { ...state._tracks }
       newTracks[playCmd.name] = {
@@ -307,16 +327,43 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     audio.loop = repeat
     audio.currentTime = startSec
 
-    // end 시간 제한 처리
-    if (endSec > 0) {
-      audio.addEventListener('timeupdate', () => {
-        if (audio.currentTime >= endSec) {
-          audio.pause()
-          audio.currentTime = startSec
-          if (repeat) audio.play()
+    audio.__startSec = startSec
+    audio.__endSec = endSec
+
+    let lastTime = startSec
+    audio.addEventListener('timeupdate', () => {
+      const currentRepeat = audio.loop
+      const currentEndSec = audio.__endSec ?? 0
+      const currentStartSec = audio.__startSec ?? 0
+
+      // 자연 루프 감지 (loop=true 이고 endSec이 없을 때 시간이 과거로 돌아가면 루프)
+      if (currentRepeat && currentEndSec === 0) {
+        if (audio.currentTime < lastTime - 0.5) {
+          audioModule.hooker.trigger('audio:repeat', { name: playCmd.name, src: audio.__srcKey! }, (val) => val)
         }
-      })
-    }
+      }
+      lastTime = audio.currentTime
+
+      // 구간 반복/종료 감지
+      if (currentEndSec > 0 && audio.currentTime >= currentEndSec) {
+        audio.pause()
+        audio.currentTime = currentStartSec
+        if (currentRepeat) {
+          audioModule.hooker.trigger('audio:repeat', { name: playCmd.name, src: audio.__srcKey! }, (val) => val)
+          audio.play().catch(() => {})
+        } else {
+          audioModule.hooker.trigger('audio:end', { name: playCmd.name, src: audio.__srcKey! }, (val) => val)
+        }
+      }
+    })
+
+    audio.addEventListener('ended', () => {
+      const currentRepeat = audio.loop
+      const currentEndSec = audio.__endSec ?? 0
+      if (!currentRepeat && currentEndSec === 0) {
+        audioModule.hooker.trigger('audio:end', { name: playCmd.name, src: audio.__srcKey! }, (val) => val)
+      }
+    })
 
     pool.set(playCmd.name, audio)
     audio.play().catch((e) => {
@@ -327,6 +374,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (duration > 0) {
       fadeVolume(audio, targetVolume, duration)
     }
+    audioModule.hooker.trigger('audio:play', playCmd, (val) => val)
 
     // 상태 저장
     const newPlayTracks = { ...state._tracks }
@@ -365,6 +413,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
         }
         setState({ _tracks: newPauseTracks })
 
+        audioModule.hooker.trigger('audio:pause', pauseCmd, (val) => val)
         ctx.callbacks.advance()
       })
 
@@ -379,6 +428,8 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
         newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true }
       }
       setState({ _tracks: newPauseTracks })
+
+      audioModule.hooker.trigger('audio:pause', pauseCmd, (val) => val)
     }
 
     return true
@@ -403,6 +454,7 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
         delete newStopTracks[stopCmd.name]
         setState({ _tracks: newStopTracks })
 
+        audioModule.hooker.trigger('audio:stop', stopCmd, (val) => val)
         ctx.callbacks.advance()
       })
 
@@ -416,6 +468,8 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
       const newStopTracks = { ...state._tracks }
       delete newStopTracks[stopCmd.name]
       setState({ _tracks: newStopTracks })
+
+      audioModule.hooker.trigger('audio:stop', stopCmd, (val) => val)
     }
 
     return true

@@ -2908,12 +2908,15 @@
       if (existing && existingSrc === playCmd.src) {
         existing.playbackRate = speed;
         existing.loop = repeat;
+        existing.__startSec = startSec;
+        existing.__endSec = endSec;
         if (existing.paused) {
           existing.play().catch((e) => {
             console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328: "${String(playCmd.src)}"`, e);
           });
         }
         fadeVolume(existing, targetVolume, duration);
+        audioModule.hooker.trigger("audio:play", playCmd, (val) => val);
         const newTracks = { ...state._tracks };
         newTracks[playCmd.name] = {
           ...newTracks[playCmd.name],
@@ -2936,15 +2939,38 @@
       audio.playbackRate = speed;
       audio.loop = repeat;
       audio.currentTime = startSec;
-      if (endSec > 0) {
-        audio.addEventListener("timeupdate", () => {
-          if (audio.currentTime >= endSec) {
-            audio.pause();
-            audio.currentTime = startSec;
-            if (repeat) audio.play();
+      audio.__startSec = startSec;
+      audio.__endSec = endSec;
+      let lastTime = startSec;
+      audio.addEventListener("timeupdate", () => {
+        const currentRepeat = audio.loop;
+        const currentEndSec = audio.__endSec ?? 0;
+        const currentStartSec = audio.__startSec ?? 0;
+        if (currentRepeat && currentEndSec === 0) {
+          if (audio.currentTime < lastTime - 0.5) {
+            audioModule.hooker.trigger("audio:repeat", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
           }
-        });
-      }
+        }
+        lastTime = audio.currentTime;
+        if (currentEndSec > 0 && audio.currentTime >= currentEndSec) {
+          audio.pause();
+          audio.currentTime = currentStartSec;
+          if (currentRepeat) {
+            audioModule.hooker.trigger("audio:repeat", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
+            audio.play().catch(() => {
+            });
+          } else {
+            audioModule.hooker.trigger("audio:end", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
+          }
+        }
+      });
+      audio.addEventListener("ended", () => {
+        const currentRepeat = audio.loop;
+        const currentEndSec = audio.__endSec ?? 0;
+        if (!currentRepeat && currentEndSec === 0) {
+          audioModule.hooker.trigger("audio:end", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
+        }
+      });
       pool.set(playCmd.name, audio);
       audio.play().catch((e) => {
         console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328: "${String(playCmd.src)}"`, e);
@@ -2952,6 +2978,7 @@
       if (duration > 0) {
         fadeVolume(audio, targetVolume, duration);
       }
+      audioModule.hooker.trigger("audio:play", playCmd, (val) => val);
       const newPlayTracks = { ...state._tracks };
       newPlayTracks[playCmd.name] = {
         src: playCmd.src,
@@ -2980,6 +3007,7 @@
             newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
           }
           setState({ _tracks: newPauseTracks });
+          audioModule.hooker.trigger("audio:pause", pauseCmd, (val) => val);
           ctx.callbacks.advance();
         });
         yield false;
@@ -2992,6 +3020,7 @@
           newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
         }
         setState({ _tracks: newPauseTracks });
+        audioModule.hooker.trigger("audio:pause", pauseCmd, (val) => val);
       }
       return true;
     }
@@ -3009,6 +3038,7 @@
           const newStopTracks = { ...state._tracks };
           delete newStopTracks[stopCmd.name];
           setState({ _tracks: newStopTracks });
+          audioModule.hooker.trigger("audio:stop", stopCmd, (val) => val);
           ctx.callbacks.advance();
         });
         yield false;
@@ -3020,6 +3050,7 @@
         const newStopTracks = { ...state._tracks };
         delete newStopTracks[stopCmd.name];
         setState({ _tracks: newStopTracks });
+        audioModule.hooker.trigger("audio:stop", stopCmd, (val) => val);
       }
       return true;
     }
