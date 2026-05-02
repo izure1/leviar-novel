@@ -79,6 +79,7 @@ export default defineNovelConfig({
     girl_smile: './assets/girl_smile.png',
     girl_embarrassed: './assets/girl_embarrassed.png',
     girl_angry: './assets/girl_angry.png',
+    img_card_heroine: './assets/img_card_hero.png',
     // 파티클
     dust: './assets/particle_dust.png',
     rain: './assets/particle_rain.png',
