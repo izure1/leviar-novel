@@ -15,6 +15,7 @@ import sceneFood from './scenes/scene-food'
 import sceneStream from './scenes/scene-stream'
 import sceneOutside from './scenes/scene-outside'
 import sceneBug from './scenes/scene-bug'
+import sceneSub from './scenes/scene-sub'
 import sceneEnding from './scenes/scene-ending'
 
 // =============================================================
@@ -94,6 +95,7 @@ async function main() {
       'scene-stream': sceneStream,
       'scene-outside': sceneOutside,
       'scene-bug': sceneBug,
+      'scene-sub': sceneSub,
       'scene-ending': sceneEnding,
     },
   })

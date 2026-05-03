@@ -6,7 +6,7 @@ export default defineScene({
   config,
   variables: {
     _isAnnoyed: false,
-    _test: 0,
+    _inputRepeatCount: 0,
   },
   initial: commonInitial,
   next: {
@@ -254,6 +254,9 @@ export default defineScene({
       '내 이름은...'
     ]
   },
+
+  // 입력
+  { type: 'label', name: 'input-username' },
   {
     type: 'input',
     to: 'username',
@@ -271,14 +274,60 @@ export default defineScene({
       '나는 그녀에게 대답했다.',
     ]
   },
+
+  // 빈 이름일 때 반복 분기로
+  {
+    type: 'condition',
+    if: ({ username }) => username.replaceAll(' ', '') === '',
+    goto: 'empty-name'
+  },
+
+  // 이름이 후미카가 아닐 경우 공통 분기로
+  {
+    type: 'condition',
+    if: ({ username }) => username !== '후미카',
+    goto: 'choice-game'
+  },
+
+  // 이름이 후미카일 경우 특수 분기로
   {
     type: 'condition',
     if: ({ username }) => username === '후미카',
-    'goto': 'same-name',
-    'else-goto': 'choice-game'
+    'goto': 'same-name'
   },
 
-  // ─── 분기: 이름 ───
+  // ─── 분기: 빈 이름 ───
+  { type: 'label', name: 'empty-name' },
+  { type: 'var', name: '_inputRepeatCount', value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+  {
+    type: 'dialogue',
+    text: '후미카의 표정이 썩어들어간다.'
+  },
+  {
+    type: 'condition',
+    if: ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
+    goto: 'escape'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: [
+      '이름이 공백인 건, "둘이 합쳐서 『  』" 뭐 그런 드립을 치려는거야?',
+      '한참 지난 애니메이션드립인건 알지?',
+      '아니면.. 입력하는 법을 모르는 거야?',
+    ]
+  },
+  {
+    type: 'dialogue',
+    text: [
+      '입력하는 법을 모르냐니, 대체 무슨 소리를 하는걸까?',
+      '게임인 줄 아나보네.',
+      '아무튼 이름을 입력해야 한다.'
+    ]
+  },
+  { type: 'condition', if: () => true, goto: 'input-username' },
+
+  // ─── 분기: 이름이 후미카일 경우 ───
   { type: 'label', name: 'same-name' },
   {
     type: 'dialogue',
@@ -330,7 +379,7 @@ export default defineScene({
   },
   { type: 'condition', if: () => true, goto: 'choice-game' },
 
-  // ─── 분기: 게임 ───
+  // ─── 공통 분기: 전화 수신 ───
   { type: 'label', name: 'choice-game' },
   {
     type: 'dialogue',
@@ -344,19 +393,53 @@ export default defineScene({
   },
   {
     type: 'dialogue',
-    text: '아니, 방금 전까지 버그 때문에 화내지 않았나?'
+    text: '방금 전까지 버그 때문에 화내지 않았나?'
   },
   {
     type: 'dialogue',
-    text: '그녀는 대답도 듣지 않고 노트북을 쾅 닫았다.'
+    text: '내가 어이없다는 표정을 짓고 있을 때, 갑자기 경쾌한 벨소리가 울렸다.'
+  },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 300 },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '어? 잠깐만. 지금 몇 시야?'
   },
   {
     type: 'dialogue',
-    text: '그리고 가방에서 몬스터 에너지 드링크를 꺼내 원샷을 때렸다.'
+    text: '후미카는 허겁지겁 스마트폰을 꺼내 들었다.'
   },
   {
     type: 'dialogue',
-    text: '이것이 나와 후미카의 끔찍한 첫 만남이었다.'
+    speaker: 'fumika',
+    text: '미친, 벌써 성적 공지 떴을 시간이잖아. 나 잠깐 폰 좀 볼게. 절대 말 걸지 마.'
+  },
+  { type: 'scene', call: 'scene-sub', preserve: true, restore: true },
+  {
+    type: 'dialogue',
+    text: '잠시 후, 스마트폰을 내려놓는 그녀의 눈동자에는 초점이 없었다.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '미안... 나 오늘 좀 혼자 있고 싶어.'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '교수님... 분명히 출석 다 채우고 과제도 냈는데 어떻게 C+을...'
+  },
+  {
+    type: 'dialogue',
+    text: '그녀는 대답도 듣지 않고 노트북을 조용히 닫았다.'
+  },
+  {
+    type: 'dialogue',
+    text: '그리고 가방에서 몬스터 에너지 드링크를 꺼내 원샷을 때린 후, 터덜터덜 카페를 나섰다.'
+  },
+  {
+    type: 'dialogue',
+    text: '이것이 나와 후미카의 안타까운 첫 만남이었다.'
   },
   { type: 'screen-wipe', dir: 'out', preset: 'left', duration: 3000, disable: true },
 ])

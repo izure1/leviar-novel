@@ -2859,111 +2859,27 @@
   var control_default = controlModule;
 
   // src/modules/audio.ts
-  var fadeCounter = 0;
-  function fadeVolume(audio, targetVolume, duration, stopOnEnd = false) {
-    return new Promise((resolve) => {
-      fadeCounter++;
-      const currentFadeId = fadeCounter;
-      audio.__fadeId = currentFadeId;
-      const cleanup = () => {
-        if (stopOnEnd) {
-          audio.pause();
-          audio.src = "";
-        }
-        fading.delete(audio);
-      };
-      if (duration <= 0) {
-        audio.volume = Math.max(0, Math.min(targetVolume, 1));
-        if (audio.__fadeId === currentFadeId) audio.__fadeId = void 0;
-        cleanup();
-        resolve();
-        return;
-      }
-      const startVolume = audio.volume;
-      const startTime = Date.now();
-      const timer = setInterval(() => {
-        if (audio.__fadeId !== currentFadeId) {
-          clearInterval(timer);
-          fading.delete(audio);
-          return;
-        }
-        const elapsed = Date.now() - startTime;
-        const t = Math.min(elapsed / duration, 1);
-        audio.volume = Math.max(0, Math.min(startVolume + (targetVolume - startVolume) * t, 1));
-        if (t >= 1) {
-          clearInterval(timer);
-          audio.volume = Math.max(0, Math.min(targetVolume, 1));
-          if (audio.__fadeId === currentFadeId) audio.__fadeId = void 0;
-          cleanup();
-          resolve();
-        }
-      }, 16);
-    });
-  }
-  var pool = /* @__PURE__ */ new Map();
-  var fading = /* @__PURE__ */ new Set();
   var audioModule = define2({ _tracks: {} });
-  audioModule.defineView((ctx, data, setState) => {
+  audioModule.defineView((ctx, data) => {
     const audioMap = ctx.renderer.config.audios;
-    for (const [name, audio] of pool.entries()) {
-      if (!data._tracks[name]) {
-        if (fading.has(audio)) continue;
-        fading.add(audio);
-        fadeVolume(audio, 0, 1e3, true).catch(() => {
-        });
-        pool.delete(name);
-      }
-    }
-    for (const [name, track] of Object.entries(data._tracks)) {
-      const url = audioMap?.[track.src];
-      if (!url) continue;
-      let audio = pool.get(name);
-      if (!audio) {
-        audio = new Audio(url);
-        audio.__srcKey = track.src;
-        audio.volume = track.volume;
-        audio.playbackRate = track.speed;
-        audio.loop = track.repeat;
-        audio.currentTime = track.start;
-        pool.set(name, audio);
-        if (!track.paused) {
-          audio.play().catch((e) => console.warn(`[audio] \uBCF5\uC6D0 \uC7AC\uC0DD \uC2E4\uD328:`, e));
-        }
-      } else if (audio.__srcKey !== track.src) {
-        audio.pause();
-        audio.src = url;
-        audio.__srcKey = track.src;
-        audio.volume = track.volume;
-        audio.playbackRate = track.speed;
-        audio.loop = track.repeat;
-        audio.currentTime = track.start;
-        if (!track.paused) {
-          audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328:`, e));
-        }
-      } else {
-        if (audio.__fadeId === void 0) {
-          audio.volume = track.volume;
-        }
-        audio.playbackRate = track.speed;
-        audio.loop = track.repeat;
-        if (track.paused) {
-          audio.pause();
-        } else if (audio.paused) {
-          audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328:`, e));
-        }
-      }
+    const audioManager = ctx.novel.audio;
+    if (audioManager && audioMap) {
+      audioManager.restoreFromTracks(data._tracks, audioMap);
     }
     return {
       show: () => {
       },
       hide: () => {
       },
-      onUpdate: (_ctx, _state, _setState) => {
+      onUpdate: (_ctx, state, _setState) => {
+        if (!audioManager || !audioMap) return;
+        audioManager.restoreFromTracks(state._tracks, audioMap);
       }
     };
   });
   audioModule.defineCommand(function* (cmd, ctx, state, setState) {
     const audioMap = ctx.renderer.config.audios;
+    const audioManager = ctx.novel.audio;
     if (cmd.action === "play") {
       const playCmd = cmd;
       const url = audioMap?.[playCmd.src];
@@ -2977,154 +2893,75 @@
       const startSec = playCmd.start ?? 0;
       const endSec = playCmd.end ?? 0;
       const duration = playCmd.duration ?? 0;
-      const existing = pool.get(playCmd.name);
-      const existingSrc = existing ? state._tracks[playCmd.name]?.src : void 0;
-      if (existing && existingSrc === playCmd.src) {
-        existing.playbackRate = speed;
-        existing.loop = repeat;
-        existing.__startSec = startSec;
-        existing.__endSec = endSec;
-        if (existing.paused) {
-          existing.play().catch((e) => {
-            console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328: "${String(playCmd.src)}"`, e);
-          });
-        }
-        fadeVolume(existing, targetVolume, duration);
-        audioModule.hooker.trigger("audio:play", playCmd, (val) => val);
-        const newTracks = { ...state._tracks };
-        newTracks[playCmd.name] = {
-          ...newTracks[playCmd.name],
-          volume: targetVolume,
-          speed,
-          repeat,
-          paused: false
-        };
-        setState({ _tracks: newTracks });
-        return true;
-      }
-      if (existing) {
-        const old = existing;
-        fading.add(old);
-        fadeVolume(old, 0, duration, true);
-      }
-      const audio = new Audio(url);
-      audio.__srcKey = playCmd.src;
-      audio.volume = duration > 0 ? 0 : targetVolume;
-      audio.playbackRate = speed;
-      audio.loop = repeat;
-      audio.currentTime = startSec;
-      audio.__startSec = startSec;
-      audio.__endSec = endSec;
-      let lastTime = startSec;
-      audio.addEventListener("timeupdate", () => {
-        const currentRepeat = audio.loop;
-        const currentEndSec = audio.__endSec ?? 0;
-        const currentStartSec = audio.__startSec ?? 0;
-        if (currentRepeat && currentEndSec === 0) {
-          if (audio.currentTime < lastTime - 0.5) {
-            audioModule.hooker.trigger("audio:repeat", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
-          }
-        }
-        lastTime = audio.currentTime;
-        if (currentEndSec > 0 && audio.currentTime >= currentEndSec) {
-          audio.pause();
-          audio.currentTime = currentStartSec;
-          if (currentRepeat) {
-            audioModule.hooker.trigger("audio:repeat", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
-            audio.play().catch(() => {
-            });
-          } else {
-            audioModule.hooker.trigger("audio:end", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
-          }
-        }
-      });
-      audio.addEventListener("ended", () => {
-        const currentRepeat = audio.loop;
-        const currentEndSec = audio.__endSec ?? 0;
-        if (!currentRepeat && currentEndSec === 0) {
-          audioModule.hooker.trigger("audio:end", { name: playCmd.name, src: audio.__srcKey }, (val) => val);
-        }
-      });
-      pool.set(playCmd.name, audio);
-      audio.play().catch((e) => {
-        console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328: "${String(playCmd.src)}"`, e);
-      });
-      if (duration > 0) {
-        fadeVolume(audio, targetVolume, duration);
-      }
-      audioModule.hooker.trigger("audio:play", playCmd, (val) => val);
-      const newPlayTracks = { ...state._tracks };
-      newPlayTracks[playCmd.name] = {
+      const currentSrc = audioManager?.getSrcKeys().get(playCmd.name);
+      audioManager?.play(playCmd.name, url, {
         src: playCmd.src,
         volume: targetVolume,
         speed,
         repeat,
-        start: startSec,
-        end: endSec,
-        paused: false
-      };
-      setState({ _tracks: newPlayTracks });
+        startSec,
+        endSec,
+        duration
+      }, currentSrc, playCmd);
+      const newTracks = { ...state._tracks };
+      const existing = newTracks[playCmd.name];
+      if (existing && currentSrc === playCmd.src) {
+        newTracks[playCmd.name] = { ...existing, volume: targetVolume, speed, repeat, paused: false };
+      } else {
+        newTracks[playCmd.name] = {
+          src: playCmd.src,
+          volume: targetVolume,
+          speed,
+          repeat,
+          start: startSec,
+          end: endSec,
+          paused: false
+        };
+      }
+      setState({ _tracks: newTracks });
       return true;
     }
     if (cmd.action === "pause") {
       const pauseCmd = cmd;
-      const audio = pool.get(pauseCmd.name);
-      if (!audio) return true;
       const duration = pauseCmd.duration ?? 0;
+      const track = state._tracks[pauseCmd.name];
+      const trackVolume = track?.volume ?? 1;
       if (duration > 0) {
-        fadeVolume(audio, 0, duration).then(() => {
-          audio.pause();
-          const track = state._tracks[pauseCmd.name];
-          if (track) audio.volume = track.volume;
-          const newPauseTracks = { ...state._tracks };
-          if (newPauseTracks[pauseCmd.name]) {
-            newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
+        audioManager?.pause(pauseCmd.name, trackVolume, pauseCmd, duration).then(() => {
+          const newTracks = { ...state._tracks };
+          if (newTracks[pauseCmd.name]) {
+            newTracks[pauseCmd.name] = { ...newTracks[pauseCmd.name], paused: true };
           }
-          setState({ _tracks: newPauseTracks });
-          audioModule.hooker.trigger("audio:pause", pauseCmd, (val) => val);
+          setState({ _tracks: newTracks });
           ctx.callbacks.advance();
         });
         yield false;
       } else {
-        audio.pause();
-        const track = state._tracks[pauseCmd.name];
-        if (track) audio.volume = track.volume;
-        const newPauseTracks = { ...state._tracks };
-        if (newPauseTracks[pauseCmd.name]) {
-          newPauseTracks[pauseCmd.name] = { ...newPauseTracks[pauseCmd.name], paused: true };
+        audioManager?.pause(pauseCmd.name, trackVolume, pauseCmd, 0);
+        const newTracks = { ...state._tracks };
+        if (newTracks[pauseCmd.name]) {
+          newTracks[pauseCmd.name] = { ...newTracks[pauseCmd.name], paused: true };
         }
-        setState({ _tracks: newPauseTracks });
-        audioModule.hooker.trigger("audio:pause", pauseCmd, (val) => val);
+        setState({ _tracks: newTracks });
       }
       return true;
     }
     if (cmd.action === "stop") {
       const stopCmd = cmd;
-      const audio = pool.get(stopCmd.name);
-      if (!audio) return true;
       const duration = stopCmd.duration ?? 0;
       if (duration > 0) {
-        fadeVolume(audio, 0, duration).then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.src = "";
-          pool.delete(stopCmd.name);
-          const newStopTracks = { ...state._tracks };
-          delete newStopTracks[stopCmd.name];
-          setState({ _tracks: newStopTracks });
-          audioModule.hooker.trigger("audio:stop", stopCmd, (val) => val);
+        audioManager?.stop(stopCmd.name, stopCmd, duration).then(() => {
+          const newTracks = { ...state._tracks };
+          delete newTracks[stopCmd.name];
+          setState({ _tracks: newTracks });
           ctx.callbacks.advance();
         });
         yield false;
       } else {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.src = "";
-        pool.delete(stopCmd.name);
-        const newStopTracks = { ...state._tracks };
-        delete newStopTracks[stopCmd.name];
-        setState({ _tracks: newStopTracks });
-        audioModule.hooker.trigger("audio:stop", stopCmd, (val) => val);
+        audioManager?.stop(stopCmd.name, stopCmd, 0);
+        const newTracks = { ...state._tracks };
+        delete newTracks[stopCmd.name];
+        setState({ _tracks: newTracks });
       }
       return true;
     }
@@ -17622,6 +17459,307 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
+  // src/core/AudioManager.ts
+  var _fadeCounter = 0;
+  function fadeVolume(audio, targetVolume, duration, stopOnEnd = false) {
+    return new Promise((resolve) => {
+      _fadeCounter++;
+      const currentFadeId = _fadeCounter;
+      audio.__fadeId = currentFadeId;
+      const cleanup = () => {
+        if (stopOnEnd) {
+          audio.pause();
+          audio.src = "";
+        }
+        resolve();
+      };
+      if (duration <= 0) {
+        audio.volume = Math.max(0, Math.min(targetVolume, 1));
+        if (audio.__fadeId === currentFadeId) audio.__fadeId = void 0;
+        cleanup();
+        return;
+      }
+      const startVolume = audio.volume;
+      const startTime = Date.now();
+      const timer = setInterval(() => {
+        if (audio.__fadeId !== currentFadeId) {
+          clearInterval(timer);
+          return;
+        }
+        const elapsed = Date.now() - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        audio.volume = Math.max(0, Math.min(startVolume + (targetVolume - startVolume) * t, 1));
+        if (t >= 1) {
+          clearInterval(timer);
+          audio.volume = Math.max(0, Math.min(targetVolume, 1));
+          if (audio.__fadeId === currentFadeId) audio.__fadeId = void 0;
+          cleanup();
+        }
+      }, 16);
+    });
+  }
+  var AudioManager = class {
+    /** name → 현재 재생 중인 HTMLAudioElement */
+    _pool = /* @__PURE__ */ new Map();
+    /**
+     * 페이드아웃 중인 엘리먼트 보호 셋.
+     * pool에서 제거되었지만 페이드아웃이 끝나기 전까지 강제 종료되지 않도록 보호합니다.
+     */
+    _fading = /* @__PURE__ */ new Set();
+    _hooker;
+    constructor(hooker) {
+      this._hooker = hooker;
+    }
+    // ─── 재생 ───────────────────────────────────────────────────
+    /**
+     * 오디오를 재생합니다.
+     * - 같은 name + 같은 src: 기존 재생 유지, 설정값만 업데이트
+     * - 다른 src (또는 없음): 기존 크로스페이드 아웃 후 새 오디오 생성
+     */
+    play(name, url, opts, currentSrc, playCmd) {
+      const existing = this._pool.get(name);
+      const existingSrc = existing ? currentSrc : void 0;
+      if (existing && existingSrc === opts.src) {
+        existing.playbackRate = opts.speed;
+        existing.loop = opts.repeat;
+        existing.__startSec = opts.startSec;
+        existing.__endSec = opts.endSec;
+        if (existing.paused) {
+          existing.play().catch((e) => {
+            console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328: "${opts.src}"`, e);
+          });
+        }
+        fadeVolume(existing, opts.volume, opts.duration);
+        this._hooker.trigger("audio:play", playCmd, (val) => val);
+        return;
+      }
+      if (existing) {
+        this._fading.add(existing);
+        fadeVolume(existing, 0, opts.duration, true).then(() => {
+          this._fading.delete(existing);
+        });
+      }
+      const audio = new Audio(url);
+      audio.__srcKey = opts.src;
+      audio.volume = opts.duration > 0 ? 0 : opts.volume;
+      audio.playbackRate = opts.speed;
+      audio.loop = opts.repeat;
+      audio.currentTime = opts.startSec;
+      audio.__startSec = opts.startSec;
+      audio.__endSec = opts.endSec;
+      this._attachEvents(audio, name);
+      this._pool.set(name, audio);
+      audio.play().catch((e) => {
+        console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328: "${opts.src}"`, e);
+      });
+      if (opts.duration > 0) {
+        fadeVolume(audio, opts.volume, opts.duration);
+      }
+      this._hooker.trigger("audio:play", playCmd, (val) => val);
+    }
+    // ─── 일시정지 ───────────────────────────────────────────────
+    /**
+     * 오디오를 일시정지합니다.
+     * duration이 있으면 페이드아웃 후 정지하고 Promise가 resolve됩니다.
+     */
+    pause(name, trackVolume, pauseCmd, duration) {
+      const audio = this._pool.get(name);
+      if (!audio) return Promise.resolve();
+      if (duration > 0) {
+        return fadeVolume(audio, 0, duration).then(() => {
+          audio.pause();
+          audio.volume = trackVolume;
+          this._hooker.trigger("audio:pause", pauseCmd, (val) => val);
+        });
+      }
+      audio.pause();
+      audio.volume = trackVolume;
+      this._hooker.trigger("audio:pause", pauseCmd, (val) => val);
+      return Promise.resolve();
+    }
+    // ─── 정지 ───────────────────────────────────────────────────
+    /**
+     * 오디오를 정지하고 풀에서 제거합니다.
+     * duration이 있으면 페이드아웃 후 정지합니다.
+     */
+    stop(name, stopCmd, duration) {
+      const audio = this._pool.get(name);
+      if (!audio) return Promise.resolve();
+      this._pool.delete(name);
+      if (duration > 0) {
+        this._fading.add(audio);
+        return fadeVolume(audio, 0, duration, true).then(() => {
+          this._fading.delete(audio);
+          this._hooker.trigger("audio:stop", stopCmd, (val) => val);
+        });
+      }
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = "";
+      this._hooker.trigger("audio:stop", stopCmd, (val) => val);
+      return Promise.resolve();
+    }
+    // ─── 전체 정지 ───────────────────────────────────────────────
+    /** 재생 중인 모든 오디오를 페이드아웃 후 정지합니다. */
+    stopAll(duration = 0) {
+      for (const [name, audio] of this._pool.entries()) {
+        this._fading.add(audio);
+        fadeVolume(audio, 0, duration, true).then(() => {
+          this._fading.delete(audio);
+        });
+        this._pool.delete(name);
+      }
+    }
+    // ─── 위치 동기화 ─────────────────────────────────────────────
+    /**
+     * 재생 중인 각 audio의 currentTime을 tracks[name].start에 직접 반영합니다.
+     * Novel._callScene()이 storeSnapshot 캡처 직전에 호출합니다.
+     */
+    syncPositions(tracks) {
+      for (const [name, audio] of this._pool.entries()) {
+        const track = tracks[name];
+        if (track && !audio.paused) {
+          track.start = audio.currentTime;
+        }
+      }
+    }
+    // ─── 상태 복원 ───────────────────────────────────────────────
+    /**
+     * 세이브 데이터 또는 씬 상태로부터 오디오 풀을 재구성합니다.
+     * defineView 또는 loadSave 후에 호출됩니다.
+     *
+     * @param tracks  - name → AudioTrack 스냅샷
+     * @param audioMap - config.audios (key → url)
+     */
+    restoreFromTracks(tracks, audioMap) {
+      for (const [name, audio] of this._pool.entries()) {
+        if (!tracks[name]) {
+          if (this._fading.has(audio)) continue;
+          this._fading.add(audio);
+          fadeVolume(audio, 0, 1e3, true).then(() => {
+            this._fading.delete(audio);
+          });
+          this._pool.delete(name);
+        }
+      }
+      for (const [name, track] of Object.entries(tracks)) {
+        const url = audioMap[track.src];
+        if (!url) continue;
+        let audio = this._pool.get(name);
+        if (!audio) {
+          audio = new Audio(url);
+          audio.__srcKey = track.src;
+          audio.volume = track.volume;
+          audio.playbackRate = track.speed;
+          audio.loop = track.repeat;
+          audio.currentTime = track.start;
+          audio.__startSec = track.start;
+          audio.__endSec = track.end;
+          this._attachEvents(audio, name);
+          this._pool.set(name, audio);
+          if (!track.paused) {
+            audio.play().catch((e) => console.warn(`[audio] \uBCF5\uC6D0 \uC7AC\uC0DD \uC2E4\uD328:`, e));
+          }
+        } else if (audio.__srcKey !== track.src) {
+          audio.pause();
+          audio.src = url;
+          audio.__srcKey = track.src;
+          audio.volume = track.volume;
+          audio.playbackRate = track.speed;
+          audio.loop = track.repeat;
+          audio.currentTime = track.start;
+          audio.__startSec = track.start;
+          audio.__endSec = track.end;
+          this._attachEvents(audio, name);
+          if (!track.paused) {
+            audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC2E4\uD328:`, e));
+          }
+        } else {
+          if (audio.__fadeId === void 0) {
+            audio.volume = track.volume;
+          }
+          audio.playbackRate = track.speed;
+          audio.loop = track.repeat;
+          audio.__startSec = track.start;
+          audio.__endSec = track.end;
+          if (track.paused) {
+            audio.pause();
+          } else if (audio.paused) {
+            audio.play().catch((e) => console.warn(`[audio] \uC7AC\uC0DD \uC7AC\uAC1C \uC2E4\uD328:`, e));
+          }
+        }
+      }
+    }
+    // ─── pool 조회 ───────────────────────────────────────────────
+    /** 특정 name의 재생 중인 엘리먼트를 반환합니다. */
+    getAudio(name) {
+      return this._pool.get(name);
+    }
+    /** 현재 pool에 있는 name → srcKey 맵을 반환합니다. */
+    getSrcKeys() {
+      const result = /* @__PURE__ */ new Map();
+      for (const [name, audio] of this._pool.entries()) {
+        result.set(name, audio.__srcKey);
+      }
+      return result;
+    }
+    // ─── 내부 이벤트 바인딩 ──────────────────────────────────────
+    _attachEvents(audio, name) {
+      let lastTime = audio.__startSec ?? 0;
+      audio.addEventListener("timeupdate", () => {
+        const currentRepeat = audio.loop;
+        const currentEndSec = audio.__endSec ?? 0;
+        const currentStartSec = audio.__startSec ?? 0;
+        if (currentRepeat && currentEndSec === 0) {
+          if (audio.currentTime < lastTime - 0.5) {
+            this._hooker.trigger(
+              "audio:repeat",
+              { name, src: audio.__srcKey },
+              (val) => val
+            );
+          }
+        }
+        lastTime = audio.currentTime;
+        if (currentEndSec > 0 && audio.currentTime >= currentEndSec) {
+          audio.pause();
+          audio.currentTime = currentStartSec;
+          if (currentRepeat) {
+            this._hooker.trigger(
+              "audio:repeat",
+              { name, src: audio.__srcKey },
+              (val) => val
+            );
+            audio.play().catch(() => {
+            });
+          } else {
+            this._hooker.trigger(
+              "audio:end",
+              { name, src: audio.__srcKey },
+              (val) => val
+            );
+          }
+        }
+      });
+      audio.addEventListener("ended", () => {
+        const currentRepeat = audio.loop;
+        const currentEndSec = audio.__endSec ?? 0;
+        if (!currentRepeat && currentEndSec === 0) {
+          this._hooker.trigger(
+            "audio:end",
+            { name, src: audio.__srcKey },
+            (val) => val
+          );
+        }
+      });
+    }
+  };
+
+  // src/modules/scene.ts
+  function* sceneCallHandler(params, ctx) {
+    ctx.scene.callScene(params.call, params.preserve, params.restore);
+    return false;
+  }
+
   // src/core/Scene.ts
   var BUILTIN_HANDLERS = {
     "dialogue": (p, c) => dialogue_default.__handler(p, c),
@@ -17645,7 +17783,8 @@ ${addLineNumbers(fragment)}`);
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
     "control": (p, c) => control_default.__handler(p, c),
-    "audio": (p, c) => audio_default.__handler(p, c)
+    "audio": (p, c) => audio_default.__handler(p, c),
+    "scene": (p, c) => sceneCallHandler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -17700,11 +17839,11 @@ ${addLineNumbers(fragment)}`);
       });
     }
     /** 씬 실행 시작 */
-    start(preserve = false) {
+    start(options) {
       this.cursor = 0;
       this.textSubIndex = 0;
-      if (!preserve) {
-        this._runInitial();
+      if (!options?.skipInitial) {
+        this._runInitial(options?.preservedState);
       }
       this._executeNext();
     }
@@ -17712,7 +17851,14 @@ ${addLineNumbers(fragment)}`);
      * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
      * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
      */
-    _runInitial() {
+    /**
+     * 모듈 View를 초기화합니다.
+     *
+     * @param preservedState - 이어받을 stateStore (preserve=true 서브씬 호출 시).
+     *   - 값이 있으면: preserved 상태를 그대로 사용하고 씬 initial은 **무시**.
+     *   - 값이 없으면: schema 기본값 → 씬 initial 순으로 병합.
+     */
+    _runInitial(preservedState) {
       const initial = this.definition.initial || {};
       const r = this.renderer;
       const modules = r.config.modules;
@@ -17760,6 +17906,17 @@ ${addLineNumbers(fragment)}`);
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
+          },
+          callScene: (name, preserve, restore) => {
+            this._ended = true;
+            this.callbacks.callScene(
+              name,
+              this.cursor + 1,
+              { ...this.localVars },
+              this.textSubIndex,
+              preserve ?? false,
+              restore ?? false
+            );
           }
         },
         execute: (cmd) => this._executeCmd(cmd)
@@ -17767,7 +17924,8 @@ ${addLineNumbers(fragment)}`);
       for (const [moduleKey, module] of Object.entries(modules)) {
         if (typeof module.__viewBuilder !== "function") continue;
         const initialData = initial[moduleKey];
-        const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {});
+        const preserved = preservedState?.get(moduleKey);
+        const mergedData = preserved !== void 0 ? Object.assign({}, module.__schemaDefault, preserved) : Object.assign({}, module.__schemaDefault, initialData ?? {});
         const entry = module.__viewBuilder(ctx, mergedData);
         uiRegistry.set(moduleKey, entry);
       }
@@ -17912,6 +18070,17 @@ ${addLineNumbers(fragment)}`);
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
+          },
+          callScene: (name, preserve, restore) => {
+            this._ended = true;
+            this.callbacks.callScene(
+              name,
+              this.cursor + 1,
+              { ...this.localVars },
+              this.textSubIndex,
+              preserve ?? false,
+              restore ?? false
+            );
           }
         },
         execute: (cmd2) => this._executeCmd(cmd2)
@@ -18053,6 +18222,8 @@ ${addLineNumbers(fragment)}`);
     _option;
     _world;
     _renderer;
+    /** Novel 인스턴스 내 오디오 관리 클래스 */
+    audio;
     _scenes = /* @__PURE__ */ new Map();
     /** State — 씬 전환 후에도 유지, 세이브/로드 대상 */
     _stateStore = /* @__PURE__ */ new Map();
@@ -18082,6 +18253,14 @@ ${addLineNumbers(fragment)}`);
     _currentSceneDef = null;
     _inputMode = "block";
     _isSkipping = false;
+    /** scene call 콜 스택 */
+    _callStack = [];
+    /**
+     * 콜백 세대 카운터.
+     * _buildCallbacks() 호출 시마다 증가하여 advance() 콜백이
+     * 자신이 속한 씬에서만 발화되도록 보장합니다.
+     */
+    _sceneGeneration = 0;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
     /** fullscreenchange 핸들러 참조 (정리용) */
@@ -18114,6 +18293,7 @@ ${addLineNumbers(fragment)}`);
         width: this._option.width,
         height: this._option.height
       });
+      this.audio = new AudioManager(audio_default.hooker);
       this.variables = { ...config.variables };
       this._collectModules(config.modules);
       this.hooker = this._createHookerProxy();
@@ -18237,6 +18417,7 @@ ${addLineNumbers(fragment)}`);
           this._renderer.restoreState(prevState);
         }
         this._uiRegistry.clear();
+        this.audio.stopAll(0);
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18244,7 +18425,7 @@ ${addLineNumbers(fragment)}`);
       this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
-      scene.start(preserve);
+      scene.start(preserve ? { skipInitial: true } : void 0);
       this._syncUIState();
     }
     /** 씬 전환 시 모든 UI 엔트리의 onCleanup() 호출 */
@@ -18322,7 +18503,14 @@ ${addLineNumbers(fragment)}`);
         globalVars: { ...this.variables },
         localVars: this._currentScene.getLocalVars(),
         rendererState: this._renderer.captureState(),
-        states: Object.fromEntries(this._stateStore)
+        states: Object.fromEntries(this._stateStore),
+        callStack: this._callStack.map((frame) => ({
+          ...frame,
+          localVars: { ...frame.localVars },
+          storeSnapshot: { ...frame.storeSnapshot },
+          preserve: frame.preserve,
+          restore: frame.restore
+        }))
       };
       return this._novelHooker.trigger(
         "novel:save",
@@ -18347,6 +18535,7 @@ ${addLineNumbers(fragment)}`);
       this._currentSceneDef?.hooks?._unregister(this);
       this._cleanupUI();
       this.stopSkip();
+      this.audio.stopAll(0);
       Object.assign(this.variables, resolvedData.globalVars);
       this._stateStore.clear();
       for (const [k2, v2] of Object.entries(resolvedData.states ?? {})) {
@@ -18355,6 +18544,16 @@ ${addLineNumbers(fragment)}`);
       this._uiRegistry.clear();
       this._renderer.clear();
       this._renderer.restoreState(resolvedData.rendererState);
+      this._callStack.length = 0;
+      for (const frame of resolvedData.callStack) {
+        this._callStack.push({
+          ...frame,
+          localVars: { ...frame.localVars },
+          storeSnapshot: { ...frame.storeSnapshot },
+          preserve: frame.preserve ?? false,
+          restore: frame.restore ?? false
+        });
+      }
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18382,6 +18581,7 @@ ${addLineNumbers(fragment)}`);
     }
     // ─── 콜백 팩토리 ─────────────────────────────────────────────
     _buildCallbacks() {
+      const gen = ++this._sceneGeneration;
       return {
         getNovel: () => this,
         getGlobalVars: () => ({ ...this.variables }),
@@ -18390,6 +18590,9 @@ ${addLineNumbers(fragment)}`);
         },
         loadScene: (target) => {
           this.loadScene(target);
+        },
+        callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore) => {
+          this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore);
         },
         captureRenderer: () => this._renderer.captureState(),
         isSkipping: () => this._isSkipping,
@@ -18402,6 +18605,7 @@ ${addLineNumbers(fragment)}`);
           this._syncUIState();
         },
         advance: () => {
+          if (this._sceneGeneration !== gen) return;
           const scene = this._currentScene;
           if (scene instanceof DialogueScene && scene.isWaitingInput) {
             scene.advance();
@@ -18441,6 +18645,10 @@ ${addLineNumbers(fragment)}`);
             this.loadScene(next);
             return;
           }
+          if (this._callStack.length > 0) {
+            this._resumeCallerScene();
+            return;
+          }
         }
         return;
       }
@@ -18453,6 +18661,96 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
+    }
+    /**
+     * scene call 시 콜 스택에 호출자 프레임을 push하고 서브씬을 로드합니다.
+     *
+     * - preserve=false: 기존 동작 — 렌더러/stateStore 초기화 후 서브씬 시작
+     * - preserve=true: 렌더러/stateStore 유지, uiRegistry만 재빌드(preserved state + initial 병합)
+     */
+    _callScene(name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore) {
+      const audioState = this._stateStore.get("audio");
+      if (audioState) {
+        this.audio.syncPositions(audioState._tracks);
+      }
+      this._callStack.push({
+        sceneName: this._currentSceneDef.name,
+        cursor: callerCursor,
+        localVars: { ...callerLocalVars },
+        textSubIndex: callerTextSubIndex,
+        rendererState: this._renderer.captureState(),
+        storeSnapshot: Object.fromEntries(this._stateStore),
+        preserve,
+        restore
+      });
+      if (preserve) {
+        this._loadPreserveSubScene(name);
+      } else {
+        this.loadScene(name);
+      }
+    }
+    /**
+     * preserve=true 서브씬 시작.
+     * 렌더러·stateStore·uiRegistry를 모두 유지한 채 서브씬의 스크립트만 시작합니다.
+     * _cleanupUI / _uiRegistry.clear / _runInitial을 호출하지 않아
+     * 월드 오브젝트의 중복 생성을 방지합니다.
+     * restore 시에는 _renderer.clear() + restoreState()가 서브씬 추가분을 포함해
+     * 전부 정리하고 caller 상태를 복원합니다.
+     */
+    _loadPreserveSubScene(name) {
+      const def = this._scenes.get(name);
+      if (!def) {
+        console.error(`[fumika] \uC52C '${name}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
+        return;
+      }
+      this._currentSceneDef?.hooks?._unregister(this);
+      const callbacks = this._buildCallbacks();
+      const scene = new DialogueScene(this._renderer, callbacks, def);
+      this._currentScene = scene;
+      this._currentSceneDef = def;
+      this._inputMode = "block";
+      def.hooks?._register(this);
+      scene.start({ skipInitial: true });
+      this._syncUIState();
+    }
+    /**
+     * 콜 스택에서 프레임을 pop하여 호출자 씬 환경을 복원합니다.
+     *
+     * - frame.preserve=false OR frame.restore=true: 렌더러·stateStore·UI 완전 복원 (기존 동작)
+     * - frame.preserve=true AND frame.restore=false: 커서·localVars만 복원, 화면/오디오는 서브씬 상태 이어감
+     */
+    _resumeCallerScene() {
+      const frame = this._callStack.pop();
+      const def = this._scenes.get(frame.sceneName);
+      if (!def) {
+        console.error(`[fumika] callStack \uBCF5\uC6D0 \uC2E4\uD328: \uC52C '${frame.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        return;
+      }
+      const needsFullRestore = !frame.preserve || frame.restore;
+      this._currentSceneDef?.hooks?._unregister(this);
+      this._cleanupUI();
+      this.stopSkip();
+      if (needsFullRestore) {
+        this._renderer.clear();
+        this._renderer.restoreState(frame.rendererState);
+        this._stateStore.clear();
+        for (const [k2, v2] of Object.entries(frame.storeSnapshot)) {
+          this._stateStore.set(k2, v2);
+        }
+        this._uiRegistry.clear();
+        this._rebuildModuleViews();
+      } else {
+        this._uiRegistry.clear();
+        this._rebuildModuleViews();
+      }
+      const callbacks = this._buildCallbacks();
+      const scene = new DialogueScene(this._renderer, callbacks, def);
+      scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
+      this._currentScene = scene;
+      this._currentSceneDef = def;
+      this._inputMode = "block";
+      def.hooks?._register(this);
+      this._syncUIState();
     }
     /**
      * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
@@ -18524,6 +18822,7 @@ ${addLineNumbers(fragment)}`);
           getGlobalVars: () => ({}),
           setGlobalVar: noop,
           loadScene: noop,
+          callScene: noop,
           captureRenderer: () => this._renderer.captureState(),
           isSkipping: () => true,
           disableInput: noop,
@@ -18556,7 +18855,9 @@ ${addLineNumbers(fragment)}`);
           setGlobalVar: noop,
           setLocalVar: noop,
           loadScene: noop,
-          end: noop
+          end: noop,
+          callScene: noop
+          // rebuild ctx에서는 callScene 호출 없음
         },
         execute: function* () {
           return false;
@@ -18638,6 +18939,7 @@ ${addLineNumbers(fragment)}`);
       "scene-stream",
       "scene-outside",
       "scene-bug",
+      "scene-sub",
       "scene-ending"
     ],
     characters: {
@@ -18818,7 +19120,7 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     variables: {
       _isAnnoyed: false,
-      _test: 0
+      _inputRepeatCount: 0
     },
     initial: commonInitial,
     next: {
@@ -19062,6 +19364,8 @@ ${addLineNumbers(fragment)}`);
         "\uB0B4 \uC774\uB984\uC740..."
       ]
     },
+    // 입력
+    { type: "label", name: "input-username" },
     {
       type: "input",
       to: "username",
@@ -19079,13 +19383,55 @@ ${addLineNumbers(fragment)}`);
         "\uB098\uB294 \uADF8\uB140\uC5D0\uAC8C \uB300\uB2F5\uD588\uB2E4."
       ]
     },
+    // 빈 이름일 때 반복 분기로
+    {
+      type: "condition",
+      if: ({ username }) => username.replaceAll(" ", "") === "",
+      goto: "empty-name"
+    },
+    // 이름이 후미카가 아닐 경우 공통 분기로
+    {
+      type: "condition",
+      if: ({ username }) => username !== "\uD6C4\uBBF8\uCE74",
+      goto: "choice-game"
+    },
+    // 이름이 후미카일 경우 특수 분기로
     {
       type: "condition",
       if: ({ username }) => username === "\uD6C4\uBBF8\uCE74",
-      "goto": "same-name",
-      "else-goto": "choice-game"
+      "goto": "same-name"
     },
-    // ─── 분기: 이름 ───
+    // ─── 분기: 빈 이름 ───
+    { type: "label", name: "empty-name" },
+    { type: "var", name: "_inputRepeatCount", value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+    {
+      type: "dialogue",
+      text: "\uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC369\uC5B4\uB4E4\uC5B4\uAC04\uB2E4."
+    },
+    {
+      type: "condition",
+      if: ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
+      goto: "escape"
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: [
+        '\uC774\uB984\uC774 \uACF5\uBC31\uC778 \uAC74, "\uB458\uC774 \uD569\uCCD0\uC11C \u300E  \u300F" \uBB50 \uADF8\uB7F0 \uB4DC\uB9BD\uC744 \uCE58\uB824\uB294\uAC70\uC57C?',
+        "\uD55C\uCC38 \uC9C0\uB09C \uC560\uB2C8\uBA54\uC774\uC158\uB4DC\uB9BD\uC778\uAC74 \uC54C\uC9C0?",
+        "\uC544\uB2C8\uBA74.. \uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB294 \uAC70\uC57C?"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB0D0\uB2C8, \uB300\uCCB4 \uBB34\uC2A8 \uC18C\uB9AC\uB97C \uD558\uB294\uAC78\uAE4C?",
+        "\uAC8C\uC784\uC778 \uC904 \uC544\uB098\uBCF4\uB124.",
+        "\uC544\uBB34\uD2BC \uC774\uB984\uC744 \uC785\uB825\uD574\uC57C \uD55C\uB2E4."
+      ]
+    },
+    { type: "condition", if: () => true, goto: "input-username" },
+    // ─── 분기: 이름이 후미카일 경우 ───
     { type: "label", name: "same-name" },
     {
       type: "dialogue",
@@ -19136,7 +19482,7 @@ ${addLineNumbers(fragment)}`);
       name: "id_card"
     },
     { type: "condition", if: () => true, goto: "choice-game" },
-    // ─── 분기: 게임 ───
+    // ─── 공통 분기: 전화 수신 ───
     { type: "label", name: "choice-game" },
     {
       type: "dialogue",
@@ -19150,19 +19496,53 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "dialogue",
-      text: "\uC544\uB2C8, \uBC29\uAE08 \uC804\uAE4C\uC9C0 \uBC84\uADF8 \uB54C\uBB38\uC5D0 \uD654\uB0B4\uC9C0 \uC54A\uC558\uB098?"
+      text: "\uBC29\uAE08 \uC804\uAE4C\uC9C0 \uBC84\uADF8 \uB54C\uBB38\uC5D0 \uD654\uB0B4\uC9C0 \uC54A\uC558\uB098?"
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uB300\uB2F5\uB3C4 \uB4E3\uC9C0 \uC54A\uACE0 \uB178\uD2B8\uBD81\uC744 \uCF85 \uB2EB\uC558\uB2E4."
+      text: "\uB0B4\uAC00 \uC5B4\uC774\uC5C6\uB2E4\uB294 \uD45C\uC815\uC744 \uC9D3\uACE0 \uC788\uC744 \uB54C, \uAC11\uC790\uAE30 \uACBD\uCF8C\uD55C \uBCA8\uC18C\uB9AC\uAC00 \uC6B8\uB838\uB2E4."
+    },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uC5B4? \uC7A0\uAE50\uB9CC. \uC9C0\uAE08 \uBA87 \uC2DC\uC57C?"
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB9AC\uACE0 \uAC00\uBC29\uC5D0\uC11C \uBAAC\uC2A4\uD130 \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uC744 \uB54C\uB838\uB2E4."
+      text: "\uD6C4\uBBF8\uCE74\uB294 \uD5C8\uAC81\uC9C0\uAC81 \uC2A4\uB9C8\uD2B8\uD3F0\uC744 \uAEBC\uB0B4 \uB4E4\uC5C8\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uC774\uAC83\uC774 \uB098\uC640 \uD6C4\uBBF8\uCE74\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
+      speaker: "fumika",
+      text: "\uBBF8\uCE5C, \uBC8C\uC368 \uC131\uC801 \uACF5\uC9C0 \uB5B4\uC744 \uC2DC\uAC04\uC774\uC796\uC544. \uB098 \uC7A0\uAE50 \uD3F0 \uC880 \uBCFC\uAC8C. \uC808\uB300 \uB9D0 \uAC78\uC9C0 \uB9C8."
+    },
+    { type: "scene", call: "scene-sub", preserve: true, restore: true },
+    {
+      type: "dialogue",
+      text: "\uC7A0\uC2DC \uD6C4, \uC2A4\uB9C8\uD2B8\uD3F0\uC744 \uB0B4\uB824\uB193\uB294 \uADF8\uB140\uC758 \uB208\uB3D9\uC790\uC5D0\uB294 \uCD08\uC810\uC774 \uC5C6\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uBBF8\uC548... \uB098 \uC624\uB298 \uC880 \uD63C\uC790 \uC788\uACE0 \uC2F6\uC5B4."
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uAD50\uC218\uB2D8... \uBD84\uBA85\uD788 \uCD9C\uC11D \uB2E4 \uCC44\uC6B0\uACE0 \uACFC\uC81C\uB3C4 \uB0C8\uB294\uB370 \uC5B4\uB5BB\uAC8C C+\uC744..."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uB300\uB2F5\uB3C4 \uB4E3\uC9C0 \uC54A\uACE0 \uB178\uD2B8\uBD81\uC744 \uC870\uC6A9\uD788 \uB2EB\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB9AC\uACE0 \uAC00\uBC29\uC5D0\uC11C \uBAAC\uC2A4\uD130 \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uC744 \uB54C\uB9B0 \uD6C4, \uD130\uB35C\uD130\uB35C \uCE74\uD398\uB97C \uB098\uC130\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uC774\uAC83\uC774 \uB098\uC640 \uD6C4\uBBF8\uCE74\uC758 \uC548\uD0C0\uAE4C\uC6B4 \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
     },
     { type: "screen-wipe", dir: "out", preset: "left", duration: 3e3, disable: true }
   ]);
@@ -20149,6 +20529,32 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
 
+  // example/scenes/scene-sub.ts
+  var scene_sub_default = defineScene({
+    config: novel_config_default,
+    variables: {},
+    initial: {
+      dialogue: {
+        bg: { color: "rgba(0, 0, 50, 0.8)" }
+        // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
+      }
+    }
+  })([
+    { type: "screen-fade", dir: "out", preset: "black", duration: 300 },
+    { type: "audio", action: "pause", name: "bgm", duration: 500 },
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uC228\uC744 \uC8FD\uC778 \uCC44 \uD559\uAD50 \uD3EC\uD138 \uC0AC\uC774\uD2B8\uC5D0 \uC811\uC18D\uD588\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "\uC81C\uBC1C... \uC804\uACF5 \uD544\uC218 \uC81C\uBC1C..." },
+    { type: "camera-effect", preset: "shake", duration: 150 },
+    { type: "dialogue", text: "\uB85C\uB529 \uCC3D\uC774 \uBE59\uAE00\uBE59\uAE00 \uB3CC \uB54C\uB9C8\uB2E4 \uADF8\uB140\uC758 \uB2E4\uB9AC\uB3C4 \uCD08\uC870\uD558\uAC8C \uB5A8\uB838\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "...\uC5B4?" },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
+    { type: "dialogue", speaker: "fumika", text: "\uB0B4\uAC00... C+?" },
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uC758 \uC601\uD63C\uC774 \uBE60\uC838\uB098\uAC00\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB9AC\uB294 \uB4EF\uD588\uB2E4." },
+    { type: "dialogue", text: "\uC2A4\uB9C8\uD2B8\uD3F0 \uD654\uBA74\uC774 \uAEBC\uC9C0\uBA70, \uADF8\uB140\uC758 \uC5B4\uAE68\uB3C4 \uD568\uAED8 \uCD95 \uCC98\uC84C\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "\uB0B4 \uC7A5\uD559\uAE08\uC774..." },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 500, disable: true }
+  ]);
+
   // example/scenes/scene-ending.ts
   var scene_ending_default = defineScene({
     config: novel_config_default,
@@ -20379,6 +20785,7 @@ ${addLineNumbers(fragment)}`);
         "scene-stream": scene_stream_default,
         "scene-outside": scene_outside_default,
         "scene-bug": scene_bug_default,
+        "scene-sub": scene_sub_default,
         "scene-ending": scene_ending_default
       }
     });
