@@ -383,8 +383,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       }
       // UI 레지스트리 초기화 (새 씬에서 view 빌더가 재등록)
       this._uiRegistry.clear()
-      // audioModule이 config.modules에 없어도 씬 전환 시 오디오 즉시 정지
-      this.audio.stopAll(0)
     }
     // preserve=true 시: 추적 오브젝트, state 맵 모두 유지
 

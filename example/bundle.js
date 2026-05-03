@@ -18417,7 +18417,6 @@ ${addLineNumbers(fragment)}`);
           this._renderer.restoreState(prevState);
         }
         this._uiRegistry.clear();
-        this.audio.stopAll(0);
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
