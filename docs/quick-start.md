@@ -39,8 +39,11 @@ export default defineNovelConfig({
   characters: {
     heroine: {
       name: '아리스',
-      images: {
-        normal: { src: 'aris_normal', width: 400 }
+      bases: {
+        normal: { src: 'aris_base', width: 400, points: { face: { x: 0.5, y: 0.2 } } }
+      },
+      emotions: {
+        normal: { face: 'aris_face_normal' }
       }
     }
   },
@@ -59,7 +62,7 @@ import config from '../novel.config'
 
 export default defineScene({ config })([
   { type: 'background', name: 'room' },
-  { type: 'character', name: 'heroine', action: 'show' },
+  { type: 'character', name: 'heroine', action: 'show', image: 'normal:normal' },
   { type: 'dialogue', speaker: 'heroine', text: '안녕! Fumika의 세계에 온 걸 환영해.' },
   { type: 'dialogue', text: '이 코드를 복사했다면 이미 게임을 만들 준비가 된 거야.' }
 ])

@@ -74,33 +74,39 @@ scenes: ['prologue', 'chapter1', 'ending_good', 'ending_bad']
 
 ## 5. 캐릭터 정의 (Characters)
 
-게임에 등장하는 인물들의 이름과 이미지 세트를 정의합니다. `speaker`로 지정될 때 표시될 이름과 `character` 커맨드에서 사용할 표정 이미지들을 매핑합니다.
+게임에 등장하는 인물들의 이름과 이미지 세트를 정의합니다. `speaker`로 지정될 때 표시될 이름과 `character` 커맨드에서 사용할 이미지(신체+표정)를 매핑합니다.
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
 | `name` | `string` | 대사창 등에 표시될 캐릭터의 실제 이름 |
-| `images` | `Record<string, CharImageDef>` | 표정 키와 이미지 정보의 매핑 |
+| `bases` | `Record<string, CharBaseDef>` | 신체 이미지와 기준 좌표 정보 |
+| `emotions` | `Record<string, Record<string, string>>` | 신체 좌표에 결합할 표정 이미지 매핑 |
 
-#### CharImageDef 상세
+#### CharBaseDef (bases) 상세
 *   **`src`**: `config.assets`에 정의된 에셋 키
-*   **`width` / `height`**: 기본 렌더링 크기
-*   **`points`**: 캐릭터의 특정 부위(머리, 가슴 등)에 대한 좌표 정보 (`character-focus`에서 사용)
+*   **`width`**: 화면에 표시될 기본 너비
+*   **`naturalWidth`**: (권장) 원본 이미지의 실제 너비. 파트 이미지의 스케일을 정확히 계산하는 데 사용됩니다.
+*   **`points`**: 캐릭터의 특정 부위(얼굴 등) 좌표 정보. `emotions`의 키와 일치해야 합니다.
 
 ```ts
 characters: {
   heroine: {
     name: '아리스',
-    images: {
+    bases: {
       normal: { 
-        src: 'aris_normal', 
-        width: 400,
-        // 카메라 포커싱을 위한 주요 포인트 지정 (상대 좌표 0.0 ~ 1.0)
+        src: 'aris_base_normal', 
+        width: 560,
+        naturalWidth: 1120,
+        // 감정 파트가 결합될 포인트 (상대 좌표 0.0 ~ 1.0)
         points: {
           face: { x: 0.5, y: 0.2 },  // 얼굴 위치
-          hand: { x: 0.3, y: 0.6 }   // 손 위치 (아이템 강조 등)
+          hand: { x: 0.3, y: 0.6 }   // 손 위치
         }
-      },
-      smile: { src: 'aris_smile', width: 400 }
+      }
+    },
+    emotions: {
+      normal: { face: 'aris_face_normal' },
+      smile: { face: 'aris_face_smile' }
     }
   }
 }
@@ -313,7 +319,7 @@ fallback: [
   // 2. 모든 캐릭터에 공통 적용 (기본 등장 속도 및 이미지) - 낮은 우선순위
   { 
     type: 'character', 
-    defaults: { duration: 500, image: 'normal' } 
+    defaults: { duration: 500, image: 'normal:normal' } 
   },
 
   // 3. 대사 모듈의 기본 텍스트 출력 속도
@@ -338,7 +344,7 @@ fallback: [
   name: 'heroine', 
   duration: 200,     // 1번 규칙이 2번의 500ms를 덮어씀 (더 위에 정의됨)
   position: 'center', // 1번 규칙에서 주입
-  image: 'normal'    // 2번 규칙에서 상속 (1번에 해당 필드가 없으므로 유지)
+  image: 'normal:normal'    // 2번 규칙에서 상속 (1번에 해당 필드가 없으므로 유지)
 }
 ```
 

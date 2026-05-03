@@ -6,7 +6,7 @@
 
 `defineCharacter`는 캐릭터의 정보(이름, 이미지, 포인트 좌표 등)를 정의할 때 사용하는 헬퍼 함수입니다. 
 
-**커링(Currying)** 방식을 사용하여 캐릭터의 메타 정보와 세부 리소스를 분리하여 정의하며, 신체(`bases`)와 표정(`emotions`) 파트를 독립적으로 구성하여 리소스 재사용성을 극대화하고 강력한 타입 추론을 제공합니다.
+캐릭터의 메타 정보와 세부 리소스를 단일 객체로 정의하며, 신체(`bases`)와 표정(`emotions`) 파트를 독립적으로 구성하여 리소스 재사용성을 극대화하고 강력한 타입 추론을 제공합니다.
 
 ### 주요 이점
 * **모듈화**: 캐릭터별로 독립된 파일을 생성하여 유지보수가 용이해집니다.
@@ -71,15 +71,14 @@ export default defineNovelConfig({
 
 ## 3. 속성 상세 참조 (Property Reference)
 
-### 3.1. 메타 정보 (Meta)
-`defineCharacter(meta)`의 첫 번째 인자입니다.
+### 3.1. 정의 상세 (Definition)
+`defineCharacter`에 전달되는 객체의 주요 속성들입니다.
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
 | `name` | `string` | 캐릭터의 실명 또는 표시 이름입니다. (대사창 등에 표시) |
-
-### 3.2. 정의 상세 (Definition)
-두 번째 호출 인자 `(def)`에 들어가는 객체입니다.
+| `bases` | `Record<string, CharBaseDef>` | 캐릭터의 기본 신체 구조를 정의합니다. |
+| `emotions` | `Record<string, Record<string, string>>` | 신체 좌표에 결합할 표정 이미지 매핑입니다. |
 
 #### `bases` (신체/기본 이미지)
 캐릭터의 기본 신체 구조를 정의합니다.

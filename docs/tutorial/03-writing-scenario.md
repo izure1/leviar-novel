@@ -6,34 +6,37 @@
 
 ## 캐릭터 정의: 배우의 외형 설정하기
 
-단순한 이미지를 넘어, 게임 내에서 '배우' 역할을 할 캐릭터를 정의합니다.
+단순한 이미지를 넘어, 게임 내에서 '배우' 역할을 할 캐릭터를 정의합니다. 신체(`bases`)와 표정(`emotions`) 파트를 분리하여 정의함으로써 다양한 조합을 효율적으로 관리할 수 있습니다.
 
 ```ts
 // novel.config.ts의 characters 필드에 추가
 characters: {
   heroine: {
     name: '아리스', // 대사창에 표시될 이름
-    images: {
-      // 'normal'은 이미지의 '상태 이름'입니다.
+    bases: {
+      // 캐릭터의 기본 신체 이미지입니다.
       normal: { 
-        src: 'aris_normal', 
-        width: 400,
-        // 캐릭터의 특정 부위(얼굴 등)를 정의합니다.
+        src: 'aris_base_normal', 
+        width: 560,
+        // 감정 파트가 배치될 좌표(points)를 정의합니다.
         points: {
-          face: { x: 0.5, y: 0.2 } // 얼굴이 이미지의 어디쯤 있는지 지정 (0 ~ 1 사이의 값. 좌측상단이 x:0, y:0 입니다.)
+          face: { x: 0.5, y: 0.2 } 
         }
       }
+    },
+    emotions: {
+      // 정의된 포인트(face)에 올라갈 표정 이미지들을 조합합니다.
+      normal: { face: 'aris_face_normal' },
+      smile:  { face: 'aris_face_smile' }
     }
   }
 }
 ```
 
-### 💡 왜 `normal`과 같은 이름(Key)을 쓰나요?
-비주얼 노벨의 캐릭터는 상황에 따라 다양한 표정을 짓습니다. 
+### 💡 이미지 키는 어떻게 사용하나요?
+캐릭터의 이미지는 **`신체:표정`** 형식을 조합하여 호출합니다.
 
-**예를 들어**, 평소에는 `normal` 이미지를 보여주다가, 기쁜 장면에서는 `smile`, 슬픈 장면에서는 `sad` 이미지를 보여줘야 합니다. 만약 이미지 파일 경로를 시나리오에서 직접 사용한다면 매번 복잡한 파일명을 기억해야 하지만, 이렇게 이름을 붙여두면 나중에 시나리오에서 단순히 **`image: 'smile'`**이라고 적는 것만으로 캐릭터의 표정을 바꿀 수 있습니다. 
-
-즉, **복잡한 파일 경로 대신 사람이 이해하기 쉬운 단어로 캐릭터의 상태를 관리하기 위함**입니다.
+**예를 들어**, `normal` 신체에 `smile` 표정을 보여주고 싶다면 시나리오에서 **`image: 'normal:smile'`**이라고 적으면 됩니다. 이렇게 이름을 붙여두면 복잡한 파일 경로를 기억할 필요 없이, 사람이 이해하기 쉬운 단어 조합만으로 캐릭터의 상태를 자유롭게 바꿀 수 있습니다.
 
 ## 첫 번째 시나리오 (`defineScene`) 작성
 
@@ -48,7 +51,7 @@ export default defineScene({ config })([
   { type: 'background', name: 'school' },
   
   // 2. 캐릭터를 화면에 등장시킵니다.
-  { type: 'character', name: 'heroine', action: 'show' },
+  { type: 'character', name: 'heroine', action: 'show', image: 'normal:normal' },
   
   // 3. 대사를 출력합니다.
   { type: 'dialogue', speaker: 'heroine', text: '안녕! Fumika의 세계에 온 걸 환영해.' },
