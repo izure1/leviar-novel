@@ -180,8 +180,9 @@ export class DialogueScene {
   /**
    * 모듈 View를 초기화합니다.
    *
-   * @param preservedState - 이어받을 stateStore (preserve 서브씬 호출 시). 없으면 fresh 초기화.
-   *   mergedData 순서: schema 기본값 → preserved state → 씬 initial
+   * @param preservedState - 이어받을 stateStore (preserve=true 서브씬 호출 시).
+   *   - 값이 있으면: preserved 상태를 그대로 사용하고 씬 initial은 **무시**.
+   *   - 값이 없으면: schema 기본값 → 씬 initial 순으로 병합.
    */
   private _runInitial(preservedState?: Map<string, any>): void {
     const initial = this.definition.initial || {}
@@ -246,8 +247,12 @@ export class DialogueScene {
       if (typeof module.__viewBuilder !== 'function') continue
       const initialData = initial[moduleKey]
       // schema 기본값 → preserved state (있으면) → 씬 initial 순으로 병합
-      const preserved = preservedState?.get(moduleKey) ?? {}
-      const mergedData = Object.assign({}, module.__schemaDefault, preserved, initialData ?? {})
+      // preserve=true(preservedState 존재) 시: 서브씬 initial을 무시하고 preserved 상태를 그대로 사용.
+      // preserve=false(preservedState 없음) 시: schema 기본값 → initial 순 병합.
+      const preserved = preservedState?.get(moduleKey)
+      const mergedData = preserved !== undefined
+        ? Object.assign({}, module.__schemaDefault, preserved)
+        : Object.assign({}, module.__schemaDefault, initialData ?? {})
       const entry = module.__viewBuilder(ctx, mergedData)
       uiRegistry.set(moduleKey, entry)
     }

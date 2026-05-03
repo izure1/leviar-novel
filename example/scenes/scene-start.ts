@@ -381,7 +381,9 @@ export default defineScene({
 
   // ─── 공통 분기: 게임 ───
   { type: 'label', name: 'choice-game' },
-  { type: 'scene', call: 'scene-sub' },
+  { type: 'dialogue', text: '잠시 서브씬 호출 테스트를 진행합니다.\n(preserve: true, restore: true)' },
+  { type: 'scene', call: 'scene-sub', preserve: true, restore: true },
+  { type: 'dialogue', text: '서브씬에서 복귀했습니다.\n(대화창 배경, 배경 이미지, BGM이 원래대로 복원되었습니다)' },
   {
     type: 'dialogue',
     speaker: 'fumika',

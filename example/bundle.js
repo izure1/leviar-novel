@@ -17854,8 +17854,9 @@ ${addLineNumbers(fragment)}`);
     /**
      * 모듈 View를 초기화합니다.
      *
-     * @param preservedState - 이어받을 stateStore (preserve 서브씬 호출 시). 없으면 fresh 초기화.
-     *   mergedData 순서: schema 기본값 → preserved state → 씬 initial
+     * @param preservedState - 이어받을 stateStore (preserve=true 서브씬 호출 시).
+     *   - 값이 있으면: preserved 상태를 그대로 사용하고 씬 initial은 **무시**.
+     *   - 값이 없으면: schema 기본값 → 씬 initial 순으로 병합.
      */
     _runInitial(preservedState) {
       const initial = this.definition.initial || {};
@@ -17923,8 +17924,8 @@ ${addLineNumbers(fragment)}`);
       for (const [moduleKey, module] of Object.entries(modules)) {
         if (typeof module.__viewBuilder !== "function") continue;
         const initialData = initial[moduleKey];
-        const preserved = preservedState?.get(moduleKey) ?? {};
-        const mergedData = Object.assign({}, module.__schemaDefault, preserved, initialData ?? {});
+        const preserved = preservedState?.get(moduleKey);
+        const mergedData = preserved !== void 0 ? Object.assign({}, module.__schemaDefault, preserved) : Object.assign({}, module.__schemaDefault, initialData ?? {});
         const entry = module.__viewBuilder(ctx, mergedData);
         uiRegistry.set(moduleKey, entry);
       }
@@ -19481,7 +19482,9 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "choice-game" },
     // ─── 공통 분기: 게임 ───
     { type: "label", name: "choice-game" },
-    { type: "scene", call: "scene-sub" },
+    { type: "dialogue", text: "\uC7A0\uC2DC \uC11C\uBE0C\uC52C \uD638\uCD9C \uD14C\uC2A4\uD2B8\uB97C \uC9C4\uD589\uD569\uB2C8\uB2E4.\n(preserve: true, restore: true)" },
+    { type: "scene", call: "scene-sub", preserve: true, restore: true },
+    { type: "dialogue", text: "\uC11C\uBE0C\uC52C\uC5D0\uC11C \uBCF5\uADC0\uD588\uC2B5\uB2C8\uB2E4.\n(\uB300\uD654\uCC3D \uBC30\uACBD, \uBC30\uACBD \uC774\uBBF8\uC9C0, BGM\uC774 \uC6D0\uB798\uB300\uB85C \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4)" },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20496,17 +20499,24 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-sub.ts
   var scene_sub_default = defineScene({
     config: novel_config_default,
-    variables: {}
+    variables: {},
+    // 서브씬의 initial: preserve=true일 때 호출자 씬의 상태(preservedState) 위에 덮어씌워집니다.
+    initial: {
+      dialogue: {
+        bg: { color: "rgba(50, 0, 0, 0.8)" }
+        // 서브씬 진입 시 대화창 배경색을 붉은색으로 변경
+      }
+    }
   })([
     { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC9C4\uC785 \u2500\u2500\u2500" },
+    { type: "dialogue", text: "\uD604\uC7AC preserve: true \uB85C \uC11C\uBE0C\uC52C\uC5D0 \uC9C4\uC785\uD588\uC2B5\uB2C8\uB2E4.\n\uC11C\uBE0C\uC52C\uC758 initial \uC124\uC815\uC73C\uB85C \uC778\uD574 \uB300\uD654\uCC3D \uBC30\uACBD\uC774 \uBD89\uC740\uC0C9\uC73C\uB85C \uB36E\uC5B4\uC50C\uC6CC\uC84C\uC2B5\uB2C8\uB2E4." },
     { type: "character", action: "show", name: "fumika", image: "normal:angry", position: "right", duration: 500 },
     { type: "dialogue", speaker: "fumika", text: "\uC7A0\uAE50, \uB098 \uD734\uB300\uD3F0 \uC880 \uBCFC\uAC8C." },
     { type: "audio", action: "pause", name: "bgm", duration: 500 },
-    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uD734\uB300\uD3F0\uC744 \uAEBC\uB0B4 \uBB34\uC5B8\uAC00\uB97C \uD655\uC778\uD588\uB2E4." },
+    { type: "background", name: "room", duration: 500 },
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uD734\uB300\uD3F0\uC744 \uAEBC\uB0B4 \uBB34\uC5B8\uAC00\uB97C \uD655\uC778\uD588\uB2E4.\n(\uC11C\uBE0C\uC52C \uB0B4\uC5D0\uC11C \uBC30\uACBD\uC774 \uBC14\uB00C\uACE0 BGM\uC774 \uC77C\uC2DC\uC815\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4)" },
     { type: "dialogue", speaker: "fumika", text: "\uC544... \uB610 \uBE4C\uB4DC \uC2E4\uD328\uD588\uC5B4." },
-    { type: "audio", action: "play", name: "bgm", src: "am223", duration: 500 },
-    { type: "character", action: "show", name: "fumika", position: "center", duration: 500 },
-    { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC885\uB8CC, \uBCF5\uADC0\uD569\uB2C8\uB2E4 \u2500\u2500\u2500" }
+    { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC885\uB8CC, \uBCF5\uADC0\uD569\uB2C8\uB2E4 \u2500\u2500\u2500\n(restore: true \uC774\uBBC0\uB85C \uD638\uCD9C\uC790\uC758 \uC6D0\uB798 \uB80C\uB354\uB9C1, \uC624\uB514\uC624, \uC0C1\uD0DC\uB85C \uC644\uC804 \uBCF5\uC6D0\uB429\uB2C8\uB2E4)" }
   ]);
 
   // example/scenes/scene-ending.ts
