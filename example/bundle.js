@@ -19482,11 +19482,8 @@ ${addLineNumbers(fragment)}`);
       name: "id_card"
     },
     { type: "condition", if: () => true, goto: "choice-game" },
-    // ─── 공통 분기: 게임 ───
+    // ─── 공통 분기: 전화 수신 ───
     { type: "label", name: "choice-game" },
-    { type: "dialogue", text: "\uC7A0\uC2DC \uC11C\uBE0C\uC52C \uD638\uCD9C \uD14C\uC2A4\uD2B8\uB97C \uC9C4\uD589\uD569\uB2C8\uB2E4.\n(preserve: true, restore: true)" },
-    { type: "scene", call: "scene-sub", preserve: true, restore: true },
-    { type: "dialogue", text: "\uC11C\uBE0C\uC52C\uC5D0\uC11C \uBCF5\uADC0\uD588\uC2B5\uB2C8\uB2E4.\n(\uB300\uD654\uCC3D \uBC30\uACBD, \uBC30\uACBD \uC774\uBBF8\uC9C0, BGM\uC774 \uC6D0\uB798\uB300\uB85C \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4)" },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19499,19 +19496,53 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "dialogue",
-      text: "\uC544\uB2C8, \uBC29\uAE08 \uC804\uAE4C\uC9C0 \uBC84\uADF8 \uB54C\uBB38\uC5D0 \uD654\uB0B4\uC9C0 \uC54A\uC558\uB098?"
+      text: "\uBC29\uAE08 \uC804\uAE4C\uC9C0 \uBC84\uADF8 \uB54C\uBB38\uC5D0 \uD654\uB0B4\uC9C0 \uC54A\uC558\uB098?"
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uB300\uB2F5\uB3C4 \uB4E3\uC9C0 \uC54A\uACE0 \uB178\uD2B8\uBD81\uC744 \uCF85 \uB2EB\uC558\uB2E4."
+      text: "\uB0B4\uAC00 \uC5B4\uC774\uC5C6\uB2E4\uB294 \uD45C\uC815\uC744 \uC9D3\uACE0 \uC788\uC744 \uB54C, \uAC11\uC790\uAE30 \uACBD\uCF8C\uD55C \uBCA8\uC18C\uB9AC\uAC00 \uC6B8\uB838\uB2E4."
+    },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uC5B4? \uC7A0\uAE50\uB9CC. \uC9C0\uAE08 \uBA87 \uC2DC\uC57C?"
     },
     {
       type: "dialogue",
-      text: "\uADF8\uB9AC\uACE0 \uAC00\uBC29\uC5D0\uC11C \uBAAC\uC2A4\uD130 \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uC744 \uB54C\uB838\uB2E4."
+      text: "\uD6C4\uBBF8\uCE74\uB294 \uD5C8\uAC81\uC9C0\uAC81 \uC2A4\uB9C8\uD2B8\uD3F0\uC744 \uAEBC\uB0B4 \uB4E4\uC5C8\uB2E4."
     },
     {
       type: "dialogue",
-      text: "\uC774\uAC83\uC774 \uB098\uC640 \uD6C4\uBBF8\uCE74\uC758 \uB054\uCC0D\uD55C \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
+      speaker: "fumika",
+      text: "\uBBF8\uCE5C, \uBC8C\uC368 \uC131\uC801 \uACF5\uC9C0 \uB5B4\uC744 \uC2DC\uAC04\uC774\uC796\uC544. \uB098 \uC7A0\uAE50 \uD3F0 \uC880 \uBCFC\uAC8C. \uC808\uB300 \uB9D0 \uAC78\uC9C0 \uB9C8."
+    },
+    { type: "scene", call: "scene-sub", preserve: true, restore: true },
+    {
+      type: "dialogue",
+      text: "\uC7A0\uC2DC \uD6C4, \uC2A4\uB9C8\uD2B8\uD3F0\uC744 \uB0B4\uB824\uB193\uB294 \uADF8\uB140\uC758 \uB208\uB3D9\uC790\uC5D0\uB294 \uCD08\uC810\uC774 \uC5C6\uC5C8\uB2E4."
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uBBF8\uC548... \uB098 \uC624\uB298 \uC880 \uD63C\uC790 \uC788\uACE0 \uC2F6\uC5B4."
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: "\uAD50\uC218\uB2D8... \uBD84\uBA85\uD788 \uCD9C\uC11D \uB2E4 \uCC44\uC6B0\uACE0 \uACFC\uC81C\uB3C4 \uB0C8\uB294\uB370 \uC5B4\uB5BB\uAC8C C+\uC744..."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB140\uB294 \uB300\uB2F5\uB3C4 \uB4E3\uC9C0 \uC54A\uACE0 \uB178\uD2B8\uBD81\uC744 \uC870\uC6A9\uD788 \uB2EB\uC558\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uADF8\uB9AC\uACE0 \uAC00\uBC29\uC5D0\uC11C \uBAAC\uC2A4\uD130 \uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C\uB97C \uAEBC\uB0B4 \uC6D0\uC0F7\uC744 \uB54C\uB9B0 \uD6C4, \uD130\uB35C\uD130\uB35C \uCE74\uD398\uB97C \uB098\uC130\uB2E4."
+    },
+    {
+      type: "dialogue",
+      text: "\uC774\uAC83\uC774 \uB098\uC640 \uD6C4\uBBF8\uCE74\uC758 \uC548\uD0C0\uAE4C\uC6B4 \uCCAB \uB9CC\uB0A8\uC774\uC5C8\uB2E4."
     },
     { type: "screen-wipe", dir: "out", preset: "left", duration: 3e3, disable: true }
   ]);
@@ -20502,23 +20533,26 @@ ${addLineNumbers(fragment)}`);
   var scene_sub_default = defineScene({
     config: novel_config_default,
     variables: {},
-    // 서브씬의 initial: preserve=true일 때 호출자 씬의 상태(preservedState) 위에 덮어씌워집니다.
     initial: {
       dialogue: {
-        bg: { color: "rgba(50, 0, 0, 0.8)" }
-        // 서브씬 진입 시 대화창 배경색을 붉은색으로 변경
+        bg: { color: "rgba(0, 0, 50, 0.8)" }
+        // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
       }
     }
   })([
-    { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC9C4\uC785 \u2500\u2500\u2500" },
-    { type: "dialogue", text: "\uD604\uC7AC preserve: true \uB85C \uC11C\uBE0C\uC52C\uC5D0 \uC9C4\uC785\uD588\uC2B5\uB2C8\uB2E4.\n\uC11C\uBE0C\uC52C\uC758 initial \uC124\uC815\uC73C\uB85C \uC778\uD574 \uB300\uD654\uCC3D \uBC30\uACBD\uC774 \uBD89\uC740\uC0C9\uC73C\uB85C \uB36E\uC5B4\uC50C\uC6CC\uC84C\uC2B5\uB2C8\uB2E4." },
-    { type: "character", action: "show", name: "fumika", image: "normal:angry", position: "right", duration: 500 },
-    { type: "dialogue", speaker: "fumika", text: "\uC7A0\uAE50, \uB098 \uD734\uB300\uD3F0 \uC880 \uBCFC\uAC8C." },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 300 },
     { type: "audio", action: "pause", name: "bgm", duration: 500 },
-    { type: "background", name: "room", duration: 500 },
-    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uD734\uB300\uD3F0\uC744 \uAEBC\uB0B4 \uBB34\uC5B8\uAC00\uB97C \uD655\uC778\uD588\uB2E4.\n(\uC11C\uBE0C\uC52C \uB0B4\uC5D0\uC11C \uBC30\uACBD\uC774 \uBC14\uB00C\uACE0 BGM\uC774 \uC77C\uC2DC\uC815\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4)" },
-    { type: "dialogue", speaker: "fumika", text: "\uC544... \uB610 \uBE4C\uB4DC \uC2E4\uD328\uD588\uC5B4." },
-    { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC885\uB8CC, \uBCF5\uADC0\uD569\uB2C8\uB2E4 \u2500\u2500\u2500\n(restore: true \uC774\uBBC0\uB85C \uD638\uCD9C\uC790\uC758 \uC6D0\uB798 \uB80C\uB354\uB9C1, \uC624\uB514\uC624, \uC0C1\uD0DC\uB85C \uC644\uC804 \uBCF5\uC6D0\uB429\uB2C8\uB2E4)" }
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uC228\uC744 \uC8FD\uC778 \uCC44 \uD559\uAD50 \uD3EC\uD138 \uC0AC\uC774\uD2B8\uC5D0 \uC811\uC18D\uD588\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "\uC81C\uBC1C... \uC804\uACF5 \uD544\uC218 \uC81C\uBC1C..." },
+    { type: "camera-effect", preset: "shake", duration: 150 },
+    { type: "dialogue", text: "\uB85C\uB529 \uCC3D\uC774 \uBE59\uAE00\uBE59\uAE00 \uB3CC \uB54C\uB9C8\uB2E4 \uADF8\uB140\uC758 \uB2E4\uB9AC\uB3C4 \uCD08\uC870\uD558\uAC8C \uB5A8\uB838\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "...\uC5B4?" },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
+    { type: "dialogue", speaker: "fumika", text: "\uB0B4\uAC00... C+?" },
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uC758 \uC601\uD63C\uC774 \uBE60\uC838\uB098\uAC00\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB9AC\uB294 \uB4EF\uD588\uB2E4." },
+    { type: "dialogue", text: "\uC2A4\uB9C8\uD2B8\uD3F0 \uD654\uBA74\uC774 \uAEBC\uC9C0\uBA70, \uADF8\uB140\uC758 \uC5B4\uAE68\uB3C4 \uD568\uAED8 \uCD95 \uCC98\uC84C\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "\uB0B4 \uC7A5\uD559\uAE08\uC774..." },
+    { type: "screen-fade", dir: "out", preset: "black", duration: 500, disable: true }
   ]);
 
   // example/scenes/scene-ending.ts
