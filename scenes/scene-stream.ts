@@ -8,6 +8,19 @@ export default defineScene({
   next: 'scene-outside',
 })([
   {
+    type: 'mood',
+    mood: 'night',
+    action: 'remove',
+    duration: 3000,
+  },
+  {
+    type: 'mood',
+    mood: 'dawn',
+    action: 'add',
+    duration: 3000,
+    disable: true,
+  },
+  {
     type: 'dialogue',
     text: [
       '어둑한 침실 문틈 사이로 불빛이 새어 나오고 있었다.',
