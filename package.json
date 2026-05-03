@@ -1,6 +1,6 @@
 {
   "name": "fumika",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A powerful and flexible modular visual novel engine based on web technologies.",
   "license": "MIT",
   "author": "izure <admin@izure.org>",
@@ -47,6 +47,6 @@
   },
   "dependencies": {
     "hookall": "^2.2.0",
-    "leviar": "^1.0.9"
+    "leviar": "^1.0.10"
   }
 }

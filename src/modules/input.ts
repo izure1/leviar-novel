@@ -384,7 +384,6 @@ inputModule.defineView((ctx, data, setState) => {
   })
   overlayObj.addChild(panelObj)
   ctx.renderer.track(panelObj)
-  panelObj.on('click', () => { /* 패널 클릭 시 overlay dismiss 차단 */ })
 
   // ─── 동적 자식 오브젝트 목록 ─────────────────────────────
 
@@ -541,7 +540,7 @@ inputModule.defineView((ctx, data, setState) => {
       transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } },
     })
     // 입력 영역 클릭 시 포커스 복귀
-    inputBgObj.on('click', () => {
+    inputBgObj.on('click', (e: MouseEvent) => {
       if (_hiddenEl && _isActive) {
         _hiddenEl.focus({ preventScroll: true })
         const len = _hiddenEl.value.length
@@ -624,7 +623,7 @@ inputModule.defineView((ctx, data, setState) => {
         btnObj.animate({ style: normalBtnProps as any }, 150)
         txtObj.animate({ style: normalTxtProps as any }, 150)
       })
-      btnObj.on('click', () => {
+      btnObj.on('click', (e: MouseEvent) => {
         if (_currentResolve && _hiddenEl) {
           _currentResolve(_hiddenEl.value, i)
         }

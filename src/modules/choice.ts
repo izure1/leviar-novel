@@ -291,7 +291,9 @@ choiceModule.defineView((ctx, data, setState) => {
           btnObj.animate({ style: normalStyleProps as any }, 150)
           txtObj.animate({ style: normalTextProps as any }, 150)
         })
-        btnObj.on('click', () => {
+        btnObj.on('click', (e: MouseEvent) => {
+          e.stopPropagation()
+          e.stopImmediatePropagation()
           onSelect(i)
         })
 

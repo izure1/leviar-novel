@@ -1227,7 +1227,9 @@
             btnObj.animate({ style: normalStyleProps }, 150);
             txtObj.animate({ style: normalTextProps }, 150);
           });
-          btnObj.on("click", () => {
+          btnObj.on("click", (e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             onSelect(i);
           });
           btnObj.addChild(txtObj);
@@ -1800,20 +1802,20 @@
 
   // src/modules/mood.ts
   var MOOD_PRESETS = {
-    day: { color: "rgba(255,230,180,0.1)", vignette: "transparent 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
-    night: { color: "rgba(10,15,60,0.5)", vignette: "transparent 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
-    dawn: { color: "rgba(25,35,70,0.4)", vignette: "transparent 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
-    sunset: { color: "rgba(255,120,50,0.25)", vignette: "transparent 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
+    day: { color: "rgba(255,230,180,0.1)", vignette: "rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
+    night: { color: "rgba(10,15,60,0.5)", vignette: "rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
+    dawn: { color: "rgba(25,35,70,0.4)", vignette: "rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
+    sunset: { color: "rgba(255,120,50,0.25)", vignette: "rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
     foggy: { color: "rgba(200,210,220,0.4)", vignette: "rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%", blendMode: "screen" },
-    sepia: { color: "rgba(160,110,50,0.3)", vignette: "transparent 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
-    cold: { color: "rgba(80,130,220,0.25)", vignette: "transparent 50%, rgba(20,40,100,0.4) 100%", blendMode: "hard-light" },
-    noir: { color: "rgba(0,0,0,0.1)", vignette: "transparent 50%, rgba(0,0,0,0.6) 100%", blendMode: "luminosity" },
-    horror: { color: "rgba(150,0,0,0.3)", vignette: "transparent 40%, rgba(0,0,0,0.7) 100%", blendMode: "multiply" },
-    flashback: { color: "rgba(200,200,200,0.2)", vignette: "transparent 60%, rgba(255,255,255,0.5) 100%", blendMode: "screen" },
-    dream: { color: "rgba(180,150,255,0.2)", vignette: "transparent 60%, rgba(255,200,255,0.4) 100%", blendMode: "screen" },
-    danger: { color: "rgba(255,0,0,0.1)", vignette: "transparent 50%, rgba(200,0,0,0.5) 100%", blendMode: "color-burn" },
-    none: { color: "transparent" },
-    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)", blendMode: "screen", defaultIntensity: 0.6 },
+    sepia: { color: "rgba(160,110,50,0.3)", vignette: "rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
+    cold: { color: "rgba(80,130,220,0.25)", vignette: "rgba(0,0,0,0) 50%, rgba(20,40,100,0.4) 100%", blendMode: "hard-light" },
+    noir: { color: "rgba(0,0,0,0.1)", vignette: "rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%", blendMode: "luminosity" },
+    horror: { color: "rgba(150,0,0,0.3)", vignette: "rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%", blendMode: "multiply" },
+    flashback: { color: "rgba(200,200,200,0.2)", vignette: "rgba(0,0,0,0) 60%, rgba(255,255,255,0.5) 100%", blendMode: "screen" },
+    dream: { color: "rgba(180,150,255,0.2)", vignette: "rgba(0,0,0,0) 60%, rgba(255,200,255,0.4) 100%", blendMode: "screen" },
+    danger: { color: "rgba(255,0,0,0.1)", vignette: "rgba(0,0,0,0) 50%, rgba(200,0,0,0.5) 100%", blendMode: "color-burn" },
+    none: { color: "rgba(0,0,0,0)" },
+    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,rgba(0,0,0,0) 70%)", blendMode: "screen", defaultIntensity: 0.6 },
     ambient: { color: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
     warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
   };
@@ -2548,7 +2550,7 @@
     else if (cfg.x === 1) gradDir = 270;
     else if (cfg.y === -1) gradDir = 180;
     else if (cfg.y === 1) gradDir = 0;
-    let colorTransparent = "transparent";
+    let colorTransparent = "rgba(0,0,0,0)";
     if (color.startsWith("rgba(")) {
       colorTransparent = color.replace(/[\d.]+\)$/, "0)");
     }
@@ -3185,8 +3187,6 @@
     });
     overlayObj.addChild(panelObj);
     ctx.renderer.track(panelObj);
-    panelObj.on("click", () => {
-    });
     let _dynamicObjs = [];
     const _clearDynamic = () => {
       _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
@@ -3197,6 +3197,9 @@
     let _currentPanelW = INIT_PANEL_W;
     let _currentPanelH = 0;
     overlayObj.on("click", (e) => {
+      console.log(1);
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       if (!_currentPersist && _currentResolve) {
         const canvasRect = ctx.renderer._world?._canvas?.getBoundingClientRect?.() || { left: 0, top: 0, width: w, height: h };
         const mouseX = e.clientX - canvasRect.left - canvasRect.width / 2;
@@ -3331,7 +3334,10 @@
             btnObj.animate({ style: normalBtnProps }, 150);
             txtObj.animate({ style: normalTxtProps }, 150);
           });
-          btnObj.on("click", () => {
+          btnObj.on("click", (e) => {
+            console.log(2);
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             resolve(i);
           });
           btnObj.addChild(txtObj);
@@ -3590,8 +3596,6 @@
     });
     overlayObj.addChild(panelObj);
     ctx.renderer.track(panelObj);
-    panelObj.on("click", () => {
-    });
     let _dynamicObjs = [];
     const _clearDynamic = () => {
       _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
@@ -3698,7 +3702,7 @@
         },
         transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
       });
-      inputBgObj.on("click", () => {
+      inputBgObj.on("click", (e) => {
         if (_hiddenEl && _isActive) {
           _hiddenEl.focus({ preventScroll: true });
           const len = _hiddenEl.value.length;
@@ -3768,7 +3772,7 @@
           btnObj.animate({ style: normalBtnProps }, 150);
           txtObj.animate({ style: normalTxtProps }, 150);
         });
-        btnObj.on("click", () => {
+        btnObj.on("click", (e) => {
           if (_currentResolve && _hiddenEl) {
             _currentResolve(_hiddenEl.value, i);
           }
@@ -14624,6 +14628,131 @@ ${addLineNumbers(fragment)}`);
   }
 `
   );
+  var gradientVertex = (
+    /* glsl */
+    `
+  attribute vec2 position;
+  attribute vec2 uv;
+  uniform mat4 uModelMatrix;
+  uniform mat4 uViewMatrix;
+  uniform mat4 uProjectionMatrix;
+  varying vec2 vUV;
+
+  void main() {
+    vUV = uv;
+    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
+  }
+`
+  );
+  var gradientFragment = (
+    /* glsl */
+    `
+  precision highp float;
+
+  #define PI 3.14159265358979323846
+
+  uniform int   uStopCount;
+  uniform vec4  uStopColors0;
+  uniform vec4  uStopColors1;
+  uniform vec4  uStopColors2;
+  uniform vec4  uStopColors3;
+  uniform vec4  uStopColors4;
+  uniform vec4  uStopColors5;
+  uniform vec4  uStopColors6;
+  uniform vec4  uStopColors7;
+  uniform float uStopOffset0;
+  uniform float uStopOffset1;
+  uniform float uStopOffset2;
+  uniform float uStopOffset3;
+  uniform float uStopOffset4;
+  uniform float uStopOffset5;
+  uniform float uStopOffset6;
+  uniform float uStopOffset7;
+  uniform float uDirection;
+  uniform int   uType;
+
+  uniform vec2  uSize;
+  uniform vec4  uBorderRadius;
+  uniform float uIsEllipse;
+  uniform float uOpacity;
+
+  varying vec2 vUV;
+
+  float sdRoundedBox(vec2 p, vec2 b, vec4 r) {
+    float rx = (p.x > 0.0)
+      ? ((p.y > 0.0) ? r.y : r.z)
+      : ((p.y > 0.0) ? r.x : r.w);
+    vec2 q = abs(p) - b + rx;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - rx;
+  }
+
+  vec4 getColor(int i) {
+    if (i == 0) return uStopColors0;
+    if (i == 1) return uStopColors1;
+    if (i == 2) return uStopColors2;
+    if (i == 3) return uStopColors3;
+    if (i == 4) return uStopColors4;
+    if (i == 5) return uStopColors5;
+    if (i == 6) return uStopColors6;
+    return uStopColors7;
+  }
+
+  float getOffset(int i) {
+    if (i == 0) return uStopOffset0;
+    if (i == 1) return uStopOffset1;
+    if (i == 2) return uStopOffset2;
+    if (i == 3) return uStopOffset3;
+    if (i == 4) return uStopOffset4;
+    if (i == 5) return uStopOffset5;
+    if (i == 6) return uStopOffset6;
+    return uStopOffset7;
+  }
+
+  vec4 evalStops(float t) {
+    if (t <= uStopOffset0) return uStopColors0;
+    vec4 result = uStopColors0;
+    for (int i = 0; i < 7; i++) {
+      int next = i + 1;
+      if (next >= uStopCount) break;
+      float s0 = getOffset(i);
+      float s1 = getOffset(next);
+      if (t >= s0 && t <= s1) {
+        float localT = (s1 > s0) ? (t - s0) / (s1 - s0) : 0.0;
+        result = mix(getColor(i), getColor(next), localT);
+        break;
+      }
+      result = getColor(next);
+    }
+    return result;
+  }
+
+  void main() {
+    vec2 p = (vUV - 0.5) * uSize;
+
+    if (uIsEllipse > 0.5) {
+      vec2 pN = vUV * 2.0 - 1.0;
+      if (dot(pN, pN) > 1.0) discard;
+    } else {
+      float d = sdRoundedBox(p, uSize * 0.5, uBorderRadius);
+      if (d > 0.0) discard;
+    }
+
+    float t;
+    if (uType == 1) {
+      vec2 pNorm = vUV * 2.0 - 1.0;
+      t = clamp(length(pNorm), 0.0, 1.0);
+    } else {
+      float rad = (uDirection - 90.0) * PI / 180.0;
+      vec2 dir = vec2(cos(rad), -sin(rad));
+      t = clamp(dot(vUV - 0.5, dir) + 0.5, 0.0, 1.0);
+    }
+
+    vec4 color = evalStops(t);
+    float a = color.a * uOpacity;
+    gl_FragColor = vec4(color.rgb * a, a);
+  }
+`
+  );
   function parseAttrs(attrStr) {
     const style = {};
     const re = /(\w+)=["']([^"']*)["']/g;
@@ -14855,6 +14984,7 @@ ${addLineNumbers(fragment)}`);
     shadowProgram;
     alphaOutlineProgram;
     alphaShadowProgram;
+    gradientProgram;
     // Placeholder 색상 Program (에러 표시)
     placeholderProgram;
     // 공유 메쉬 (매 프레임 객체 생성 방지)
@@ -14865,6 +14995,7 @@ ${addLineNumbers(fragment)}`);
     shadowMesh;
     alphaOutlineMesh;
     alphaShadowMesh;
+    gradientMesh;
     // 상태 보존용 렌더 변수 (Model/View 매트릭스 계산용)
     _modelMat = new Mat4();
     _viewMat = new Mat4();
@@ -14874,8 +15005,7 @@ ${addLineNumbers(fragment)}`);
     _activeRenderH = 0;
     // 오브젝트별 Mesh 캐시
     meshCache = /* @__PURE__ */ new Map();
-    // 그라디언트 텍스처 캐시 (gradient 키 → Texture)
-    _gradientTextureCache = /* @__PURE__ */ new Map();
+    // gradient 렌더링은 WebGL 셰이더로 전환되어 텍스처 캐시 없음
     // 텍스트 텍스처 캐시 (id → TextTextureEntry)
     textCache = /* @__PURE__ */ new Map();
     // 텍스트 내용 기반 공유 캐시 (contentKey → TextTextureEntry)
@@ -14938,9 +15068,33 @@ ${addLineNumbers(fragment)}`);
     _height = 0;
     _lastFocalLength = -1;
     _debugCamZ = 0;
-    /** 디버그 모드: 활성화 시 각 오브젝트의 렌더 경계(outline)와 margin을 별도 레이어로 시각화합니다. */
-    debugMode = false;
+    _canvas;
+    // ─── 디버그 상태 ─────────────────────────────────────────────────────────
+    _debugMode = false;
+    debugHoveredIds = /* @__PURE__ */ new Set();
+    debugClickedIds = /* @__PURE__ */ new Map();
+    debugRipples = [];
+    _debugOverlayCanvas = null;
+    _debugOverlayCtx = null;
+    _fpsPrevTime = 0;
+    _fpsFrameCount = 0;
+    _fpsValue = 0;
+    get debugMode() {
+      return this._debugMode;
+    }
+    set debugMode(value) {
+      this._debugMode = value;
+      if (value) {
+        this._setupDebugOverlay();
+      } else {
+        this._teardownDebugOverlay();
+        this.debugHoveredIds.clear();
+        this.debugClickedIds.clear();
+        this.debugRipples.length = 0;
+      }
+    }
     constructor(canvas) {
+      this._canvas = canvas;
       const N = this._batchMaxSize;
       this._batchMat0 = new Float32Array(N * 4);
       this._batchMat1 = new Float32Array(N * 4);
@@ -14989,6 +15143,10 @@ ${addLineNumbers(fragment)}`);
       this._width = w;
       this._height = h;
       this._lastFocalLength = -1;
+      if (this._debugOverlayCanvas) {
+        this._debugOverlayCanvas.width = w;
+        this._debugOverlayCanvas.height = h;
+      }
     }
     // ─── 프로그램 초기화 ─────────────────────────────────────────────────────
     _initPrograms() {
@@ -15167,6 +15325,100 @@ ${addLineNumbers(fragment)}`);
       this.shadowMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.shadowProgram });
       this.alphaOutlineMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.alphaOutlineProgram });
       this.alphaShadowMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.alphaShadowProgram });
+      this.gradientProgram = new Program(gl, {
+        vertex: gradientVertex,
+        fragment: gradientFragment,
+        uniforms: {
+          uStopCount: { value: 0 },
+          uStopColors0: { value: [0, 0, 0, 1] },
+          uStopColors1: { value: [0, 0, 0, 1] },
+          uStopColors2: { value: [0, 0, 0, 1] },
+          uStopColors3: { value: [0, 0, 0, 1] },
+          uStopColors4: { value: [0, 0, 0, 1] },
+          uStopColors5: { value: [0, 0, 0, 1] },
+          uStopColors6: { value: [0, 0, 0, 1] },
+          uStopColors7: { value: [0, 0, 0, 1] },
+          uStopOffset0: { value: 0 },
+          uStopOffset1: { value: 1 },
+          uStopOffset2: { value: 1 },
+          uStopOffset3: { value: 1 },
+          uStopOffset4: { value: 1 },
+          uStopOffset5: { value: 1 },
+          uStopOffset6: { value: 1 },
+          uStopOffset7: { value: 1 },
+          uDirection: { value: 0 },
+          uType: { value: 0 },
+          uSize: { value: [1, 1] },
+          uBorderRadius: { value: [0, 0, 0, 0] },
+          uIsEllipse: { value: 0 },
+          uOpacity: { value: 1 },
+          uModelMatrix: { value: new Float32Array(16) },
+          uViewMatrix: { value: new Float32Array(16) },
+          uProjectionMatrix: { value: new Float32Array(16) }
+        },
+        transparent: true,
+        depthTest: false,
+        depthWrite: false
+      });
+      this.gradientMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.gradientProgram });
+    }
+    // ─── 디버그 overlay 헬퍼 ──────────────────────────────────────────────────
+    _setupDebugOverlay() {
+      if (this._debugOverlayCanvas) return;
+      const overlay = document.createElement("canvas");
+      overlay.width = this._width;
+      overlay.height = this._height;
+      overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;object-fit:contain;";
+      const parent = this._canvas.parentElement;
+      if (parent) {
+        if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+        parent.appendChild(overlay);
+      } else {
+        this._canvas.insertAdjacentElement("afterend", overlay);
+      }
+      this._debugOverlayCanvas = overlay;
+      this._debugOverlayCtx = overlay.getContext("2d");
+    }
+    _teardownDebugOverlay() {
+      this._debugOverlayCanvas?.remove();
+      this._debugOverlayCanvas = null;
+      this._debugOverlayCtx = null;
+    }
+    _renderDebugOverlay(timestamp) {
+      if (!this._debugMode || !this._debugOverlayCtx || !this._debugOverlayCanvas) return;
+      const ctx = this._debugOverlayCtx;
+      const cw = this._debugOverlayCanvas.width;
+      const ch = this._debugOverlayCanvas.height;
+      ctx.clearRect(0, 0, cw, ch);
+      this._fpsFrameCount++;
+      if (timestamp - this._fpsPrevTime >= 1e3) {
+        this._fpsValue = this._fpsFrameCount;
+        this._fpsFrameCount = 0;
+        this._fpsPrevTime = timestamp;
+      }
+      ctx.save();
+      ctx.font = "bold 14px monospace";
+      ctx.fillStyle = "#00ff88";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.fillText(`FPS: ${this._fpsValue}`, cw - 10, 10);
+      ctx.restore();
+      const RIPPLE_DURATION = 600;
+      this.debugRipples = this.debugRipples.filter((r) => {
+        const elapsed = timestamp - r.time;
+        return elapsed >= 0 && elapsed < RIPPLE_DURATION;
+      });
+      for (const r of this.debugRipples) {
+        const t = (timestamp - r.time) / RIPPLE_DURATION;
+        const alpha = (1 - t) * 0.9;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, Math.max(0, t) * 50, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 220, 0, ${alpha})`;
+        ctx.lineWidth = 2.5 * (1 - t * 0.5);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
     render(objects, assets = {}, timestamp = 0, activeCamera = null) {
@@ -15209,6 +15461,7 @@ ${addLineNumbers(fragment)}`);
         });
         this._drawText(this._noCameraText, 0, 0, 1, timestamp);
         this._flushBatch();
+        this._renderDebugOverlay(timestamp);
         return;
       }
       const focalLength = activeCamera.attribute.focalLength ?? 100;
@@ -15288,6 +15541,7 @@ ${addLineNumbers(fragment)}`);
         this._drawObject(obj, assets, timestamp);
       }
       this._flushBatch();
+      this._renderDebugOverlay(timestamp);
     }
     // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
     _drawObject(obj, assets, timestamp) {
@@ -15333,7 +15587,7 @@ ${addLineNumbers(fragment)}`);
         this._activeObj = obj;
         this._activeRenderW = w;
         this._activeRenderH = h;
-        this._drawDebugOverlay(obj, w, h);
+        this._drawDebugOverlay(obj, w, h, timestamp);
       }
     }
     // ─── 디버그 오버레이 ─────────────────────────────────────────────────────
@@ -15341,23 +15595,29 @@ ${addLineNumbers(fragment)}`);
      * 디버그 모드에서 각 오브젝트의 실제 렌더 경계와 margin을 시각화합니다.
      * 기존 style을 일절 덮어쓰지 않고, 프레임 맨 마지막에 별도 레이어로 그립니다.
      *
-     * - outline: 청록색(#00e5ff) 1px 테두리 → 오브젝트의 실제 width × height 경계
-     * - margin: 반투명 주황색(#ff9800, 30%) → style.margin 범위를 오브젝트 외측에 표시
+     * - outline: 기본(#00ff88, 초록), hover(#ffee00, 노랑), depth가 깊을수록 파랑 계열로 변화
+     * - margin: 반투명 주황색(#ff9800, 30%)
+     * - click: 클릭 직후 0.5초 동안 반투명 오렌지 fill로 fade-out
      */
-    _drawDebugOverlay(obj, w, h) {
+    _drawDebugOverlay(obj, w, h, timestamp) {
       this._flushBatch();
       this._setBlendMode("source-over");
-      const DEBUG_OUTLINE_COLOR = "#00ff00";
-      const DEBUG_OUTLINE_PIXELS = 1;
-      const DEBUG_MARGIN_COLOR = "rgba(255, 152, 0, 0.3)";
       const mArr = obj.__worldMatrix;
       const objDepth = Math.max(-mArr[14] - this._debugCamZ, 0.1);
       const focalLength = Math.max(this._lastFocalLength, 1);
-      const ow = DEBUG_OUTLINE_PIXELS * objDepth / focalLength;
+      const ow = objDepth / focalLength;
       const outerW = w + ow * 2;
       const outerH = h + ow * 2;
+      const isHovered = this.debugHoveredIds.has(obj.attribute.id);
+      let outlineColor;
+      if (isHovered) {
+        outlineColor = [1, 0.93, 0, 1];
+      } else {
+        const t = Math.min((objDepth - 1) / 2e3, 1);
+        outlineColor = [0, (1 - t) * 1 + t * 0.33, (1 - t) * 0.53 + t * 1, 1];
+      }
       const prog = this.colorProgram;
-      prog.uniforms["uColor"].value = parseCSSColor(DEBUG_OUTLINE_COLOR);
+      prog.uniforms["uColor"].value = outlineColor;
       prog.uniforms["uOpacity"].value = 1;
       prog.uniforms["uSize"].value = [outerW, outerH];
       prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
@@ -15367,20 +15627,36 @@ ${addLineNumbers(fragment)}`);
       prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, outerW, outerH, 0, w, h);
       prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
       this.colorMesh.draw({ camera: this.camera });
+      const clickedTime = this.debugClickedIds.get(obj.attribute.id);
+      if (clickedTime !== void 0) {
+        const elapsed = timestamp - clickedTime;
+        const CLICK_DURATION = 500;
+        if (elapsed < CLICK_DURATION) {
+          const alpha = (1 - elapsed / CLICK_DURATION) * 0.4;
+          prog.uniforms["uColor"].value = [1, 0.55, 0, alpha];
+          prog.uniforms["uOpacity"].value = 1;
+          prog.uniforms["uSize"].value = [w, h];
+          prog.uniforms["uIsBorder"].value = 0;
+          prog.uniforms["uInnerSize"].value = [0, 0];
+          prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, w, h);
+          prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+          this.colorMesh.draw({ camera: this.camera });
+        } else {
+          this.debugClickedIds.delete(obj.attribute.id);
+        }
+      }
       const margin = parseMargin2(obj.style.margin);
       const hasMargin = margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0;
       if (!hasMargin) return;
-      const [mr, mg, mb, ma] = parseCSSColor(DEBUG_MARGIN_COLOR);
-      prog.uniforms["uColor"].value = [mr, mg, mb, ma];
+      prog.uniforms["uColor"].value = parseCSSColor("rgba(255, 152, 0, 0.3)");
       prog.uniforms["uOpacity"].value = 1;
       prog.uniforms["uIsBorder"].value = 0;
       prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
       prog.uniforms["uInnerSize"].value = [0, 0];
       prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
       const drawMarginStrip = (mw, mh, offsetX, offsetY) => {
-        const obj2 = this._activeObj;
-        const pivot = obj2.transform.pivot;
-        this._modelMat.copy(obj2.__worldMatrix);
+        const pivot = this._activeObj.transform.pivot;
+        this._modelMat.copy(this._activeObj.__worldMatrix);
         this._tmpVec[0] = (0.5 - pivot.x) * w;
         this._tmpVec[1] = -(0.5 - pivot.y) * h;
         this._tmpVec[2] = 0;
@@ -15398,22 +15674,10 @@ ${addLineNumbers(fragment)}`);
         prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
         this.colorMesh.draw({ camera: this.camera });
       };
-      if (margin.top > 0) {
-        const mw = w + margin.left + margin.right;
-        const mh = margin.top;
-        drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, (h + mh) / 2);
-      }
-      if (margin.bottom > 0) {
-        const mw = w + margin.left + margin.right;
-        const mh = margin.bottom;
-        drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, -(h + mh) / 2);
-      }
-      if (margin.left > 0) {
-        drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0);
-      }
-      if (margin.right > 0) {
-        drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0);
-      }
+      if (margin.top > 0) drawMarginStrip(w + margin.left + margin.right, margin.top, (-margin.left + margin.right) / 2, (h + margin.top) / 2);
+      if (margin.bottom > 0) drawMarginStrip(w + margin.left + margin.right, margin.bottom, (-margin.left + margin.right) / 2, -(h + margin.bottom) / 2);
+      if (margin.left > 0) drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0);
+      if (margin.right > 0) drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0);
     }
     // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────
     /**
@@ -15769,9 +16033,9 @@ ${addLineNumbers(fragment)}`);
       prog.uniforms["uImageScale"].value = [drawW / expandedW, drawH / expandedH];
       prog.uniforms["uTexelStep"].value = [1 / drawW, 1 / drawH];
       prog.uniforms["uBorderWidth"].value = borderWidth;
-      prog.uniforms["uBorderColor"].value = parseCSSColor(style.borderColor ?? "transparent");
+      prog.uniforms["uBorderColor"].value = parseCSSColor(style.borderColor ?? "rgba(0,0,0,0)");
       prog.uniforms["uOutlineWidth"].value = outlineWidth;
-      prog.uniforms["uOutlineColor"].value = parseCSSColor(style.outlineColor ?? "transparent");
+      prog.uniforms["uOutlineColor"].value = parseCSSColor(style.outlineColor ?? "rgba(0,0,0,0)");
       prog.uniforms["uUVOffset"].value = uvOffset;
       prog.uniforms["uUVScale"].value = uvScale;
       prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, expandedW, expandedH, 0, drawW, drawH);
@@ -15812,8 +16076,7 @@ ${addLineNumbers(fragment)}`);
         this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h, baseRadius);
       }
       if (style.gradient && w > 0 && h > 0) {
-        const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? "linear", false, baseRadius);
-        if (tex) this._drawTextureMesh(tex, x, y, w, h, targetOpacity);
+        this._drawGradient(style.gradient, style.gradientType ?? "linear", x, y, w, h, targetOpacity, false, baseRadius);
       }
     }
     // ─── Ellipse ────────────────────────────────────────────────────────────
@@ -15853,8 +16116,7 @@ ${addLineNumbers(fragment)}`);
         drawEllipse(w, h, style.color, false);
       }
       if (style.gradient && w > 0 && h > 0) {
-        const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? "linear", true);
-        if (tex) this._drawTextureMesh(tex, x, y, w, h, obj.__worldOpacity);
+        this._drawGradient(style.gradient, style.gradientType ?? "linear", x, y, w, h, obj.__worldOpacity, true, null);
       }
     }
     // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -16438,79 +16700,39 @@ ${addLineNumbers(fragment)}`);
         );
       }
     }
-    // ─── Gradient Texture ────────────────────────────────────────────────────
+    // ─── Gradient (WebGL Shader) ────────────────────────────────────────────────
     /**
-     * gradient stops 문자열로부터 Offscreen Canvas 텍스처를 생성합니다.
-     * @param ellipseClip true이면 ellipse SDF 원형 클리핑을 Canvas 내에서 적용합니다.
+     * WebGL 셰이더로 gradient를 직접 렌더링합니다.
+     * Canvas 텍스처 생성·캐싱 없이 uniform만 설정하여 즉시 draw합니다.
+     * 애니메이션 시 매 프레임 Canvas/Texture 재생성이 없어 GPU 메모리 누수가 없습니다.
      */
-    _makeGradientTexture(w, h, gradient, type, ellipseClip, borderRadius = null) {
-      const radiusKey = borderRadius ? borderRadius.join(",") : "";
-      const cacheKey = `${Math.round(w)}|${Math.round(h)}|${gradient}|${type}|${ellipseClip}|${radiusKey}`;
-      let tex = this._gradientTextureCache.get(cacheKey);
-      if (tex) return tex;
+    _drawGradient(gradient, type, x, y, w, h, opacity, isEllipse, borderRadius) {
       const { direction, stops } = parseGradientStops(gradient);
-      if (stops.length === 0) return null;
-      const pw = Math.max(1, Math.round(w));
-      const ph = Math.max(1, Math.round(h));
-      const canvas = document.createElement("canvas");
-      canvas.width = pw;
-      canvas.height = ph;
-      const ctx = canvas.getContext("2d");
-      if (ellipseClip) {
-        ctx.beginPath();
-        ctx.ellipse(pw / 2, ph / 2, pw / 2, ph / 2, 0, 0, Math.PI * 2);
-        ctx.clip();
-      } else if (borderRadius && borderRadius.some((r) => r > 0)) {
-        ctx.beginPath();
-        if (typeof ctx.roundRect === "function") {
-          ;
-          ctx.roundRect(0, 0, pw, ph, borderRadius);
-        } else {
-          const [tl, tr, br, bl] = borderRadius;
-          ctx.moveTo(tl, 0);
-          ctx.lineTo(pw - tr, 0);
-          ctx.quadraticCurveTo(pw, 0, pw, tr);
-          ctx.lineTo(pw, ph - br);
-          ctx.quadraticCurveTo(pw, ph, pw - br, ph);
-          ctx.lineTo(bl, ph);
-          ctx.quadraticCurveTo(0, ph, 0, ph - bl);
-          ctx.lineTo(0, tl);
-          ctx.quadraticCurveTo(0, 0, tl, 0);
-        }
-        ctx.clip();
+      if (stops.length === 0) return;
+      this._flushBatch();
+      this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
+      const MAX_STOPS = 8;
+      const count = Math.min(stops.length, MAX_STOPS);
+      const colorNames = ["uStopColors0", "uStopColors1", "uStopColors2", "uStopColors3", "uStopColors4", "uStopColors5", "uStopColors6", "uStopColors7"];
+      const offsetNames = ["uStopOffset0", "uStopOffset1", "uStopOffset2", "uStopOffset3", "uStopOffset4", "uStopOffset5", "uStopOffset6", "uStopOffset7"];
+      const prog = this.gradientProgram;
+      prog.uniforms["uStopCount"].value = count;
+      for (let i = 0; i < MAX_STOPS; i++) {
+        const src = i < count ? stops[i] : stops[count - 1];
+        const [r, g, b, a] = parseCSSColor(src.color);
+        prog.uniforms[colorNames[i]].value = [r, g, b, a];
+        prog.uniforms[offsetNames[i]].value = i < count ? src.offset : 1;
       }
-      if (type === "circular") {
-        ctx.save();
-        const cx = pw / 2;
-        const cy = ph / 2;
-        ctx.translate(cx, cy);
-        ctx.scale(pw / 2, ph / 2);
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-        for (const stop of stops) {
-          grad.addColorStop(stop.offset, stop.color);
-        }
-        ctx.fillStyle = grad;
-        ctx.fillRect(-1, -1, 2, 2);
-        ctx.restore();
-      } else {
-        const rad = (direction - 90) * Math.PI / 180;
-        const cx = pw / 2;
-        const cy = ph / 2;
-        const halfLen = (Math.abs(pw * Math.cos(rad)) + Math.abs(ph * Math.sin(rad))) / 2;
-        const x0 = cx - Math.cos(rad) * halfLen;
-        const y0 = cy - Math.sin(rad) * halfLen;
-        const x1 = cx + Math.cos(rad) * halfLen;
-        const y1 = cy + Math.sin(rad) * halfLen;
-        const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-        for (const stop of stops) {
-          grad.addColorStop(stop.offset, stop.color);
-        }
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, pw, ph);
-      }
-      tex = new Texture(this.gl, { image: canvas, generateMipmaps: false });
-      this._gradientTextureCache.set(cacheKey, tex);
-      return tex;
+      prog.uniforms["uDirection"].value = direction;
+      prog.uniforms["uType"].value = type === "circular" ? 1 : 0;
+      prog.uniforms["uSize"].value = [w, h];
+      prog.uniforms["uBorderRadius"].value = borderRadius ?? [0, 0, 0, 0];
+      prog.uniforms["uIsEllipse"].value = isEllipse ? 1 : 0;
+      prog.uniforms["uOpacity"].value = opacity;
+      prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, w, h);
+      prog.uniforms["uViewMatrix"].value = this._viewMat;
+      prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+      this.gradientMesh.draw({ camera: this.camera });
     }
     // ─── Placeholder ────────────────────────────────────────────────────────
     _drawPlaceholder(x, y, w, h) {
@@ -16613,17 +16835,70 @@ ${addLineNumbers(fragment)}`);
       return canvas;
     }
     // ─── 마우스 이벤트 ────────────────────────────────
+    /**
+     * 캔버스상의 정확한 내부 마우스 좌표를 계산합니다. (object-fit: contain 보정 포함)
+     */
+    _getCanvasMousePos(e) {
+      const canvas = this._canvas;
+      const rect = canvas.getBoundingClientRect();
+      let cssWidth = rect.width;
+      let cssHeight = rect.height;
+      let offsetX = 0;
+      let offsetY = 0;
+      const objectFit = getComputedStyle(canvas).objectFit;
+      if (objectFit === "contain") {
+        const cssRatio = cssWidth / cssHeight;
+        const canvasRatio = canvas.width / canvas.height;
+        if (cssRatio > canvasRatio) {
+          cssWidth = cssHeight * canvasRatio;
+          offsetX = (rect.width - cssWidth) / 2;
+        } else if (cssRatio < canvasRatio) {
+          cssHeight = cssWidth / canvasRatio;
+          offsetY = (rect.height - cssHeight) / 2;
+        }
+      }
+      const scaleX = canvas.width / cssWidth;
+      const scaleY = canvas.height / cssHeight;
+      return {
+        x: (e.clientX - rect.left - offsetX) * scaleX,
+        y: (e.clientY - rect.top - offsetY) * scaleY
+      };
+    }
     _setupMouseEvents(canvas) {
       const dispatch = (eventName, e) => {
         const wrapped = wrapMouseEvent(e);
         const hits = this._getHitObjects(wrapped);
+        if (this.debugMode && eventName === "click") {
+          if (hits.length > 0) {
+            console.log("[Leviar Debug] Clicked:", hits[0]);
+            if (hits.length > 1) {
+              console.log("[Leviar Debug] All hit objects:", hits);
+            }
+            const now = performance.now();
+            for (const obj of hits) {
+              this.renderer.debugClickedIds.set(obj.attribute.id, now);
+            }
+          } else {
+            console.log("[Leviar Debug] Click: no object hit");
+          }
+        }
         for (const obj of hits) {
           obj.emit(eventName, wrapped);
           if (wrapped._propagationStopped) return;
         }
         this.emit(eventName, hits[0], wrapped);
       };
-      canvas.addEventListener("click", (e) => dispatch("click", e));
+      canvas.addEventListener("click", (e) => {
+        if (this.debugMode) {
+          const pos = this._getCanvasMousePos(e);
+          this.renderer.debugRipples.push({
+            x: pos.x,
+            y: pos.y,
+            time: performance.now()
+          });
+        }
+        dispatch("click", e);
+      });
       canvas.addEventListener("dblclick", (e) => dispatch("dblclick", e));
       canvas.addEventListener("contextmenu", (e) => {
         if (this.disableContextMenu) {
@@ -16637,6 +16912,9 @@ ${addLineNumbers(fragment)}`);
         const wrapped = wrapMouseEvent(e);
         const hits = this._getHitObjects(wrapped);
         const hitIds = new Set(hits.map((o) => o.attribute.id));
+        if (this.debugMode) {
+          this.renderer.debugHoveredIds = hitIds;
+        }
         for (const obj of hits) {
           if (!this._mouseOver.has(obj.attribute.id)) {
             this._mouseOver.add(obj.attribute.id);
@@ -16675,11 +16953,9 @@ ${addLineNumbers(fragment)}`);
     _getHitObjects(e) {
       const canvas = this._canvas;
       if (!canvas) return [];
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const mouseX = (e.clientX - rect.left) * scaleX - canvas.width / 2;
-      const mouseY = -((e.clientY - rect.top) * scaleY - canvas.height / 2);
+      const pos = this._getCanvasMousePos(e);
+      const mouseX = pos.x - canvas.width / 2;
+      const mouseY = -(pos.y - canvas.height / 2);
       let camX = 0, camY = 0, camZ = 0;
       let camRotX = 0, camRotY = 0, camRotZ = 0;
       const activeCam = this.camera;
@@ -16707,7 +16983,7 @@ ${addLineNumbers(fragment)}`);
         }
         return inside;
       };
-      const objectsData = Array.from(this.objects).filter((obj) => obj.attribute.type !== "camera" && obj.style.display !== "none" && obj.style.pointerEvents).map((obj) => {
+      const objectsData = Array.from(this.objects).filter((obj) => obj.attribute.type !== "camera" && obj.__worldDisplay !== "none" && obj.__worldOpacity > 0 && obj.style.pointerEvents).map((obj) => {
         const mat = obj.__worldMatrix;
         const wx = mat[12], wy = mat[13], wz = -mat[14];
         let dx = wx - camX;
@@ -18367,7 +18643,7 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
     "debug": {
-      on: false
+      on: true
     },
     "dialogue": {
       bg: {
@@ -19162,6 +19438,19 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     next: "scene-outside"
   })([
+    {
+      type: "mood",
+      mood: "night",
+      action: "remove",
+      duration: 3e3
+    },
+    {
+      type: "mood",
+      mood: "dawn",
+      action: "add",
+      duration: 3e3,
+      disable: true
+    },
     {
       type: "dialogue",
       text: [

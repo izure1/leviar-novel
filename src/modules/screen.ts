@@ -277,7 +277,7 @@ screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
   else if (cfg.y === -1) gradDir = 180
   else if (cfg.y === 1) gradDir = 0
 
-  let colorTransparent = 'transparent'
+  let colorTransparent = 'rgba(0,0,0,0)'
   if (color.startsWith('rgba(')) {
     colorTransparent = color.replace(/[\d.]+\)$/, '0)')
   }

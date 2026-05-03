@@ -312,9 +312,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
   overlayObj.addChild(panelObj)
   ctx.renderer.track(panelObj)
 
-  // panel 클릭 시 overlay로 이벤트가 전파되지 않도록 차단
-  panelObj.on('click', () => { /* stop propagation */ })
-
   // ─── 동적 자식 (매 _render마다 panelObj 자식으로 새로 생성) ─
   // - animate() 없이 생성 위치 = 최종 위치 → fadeIn 충돌 없음
   // - overlay cascade로 자동 숨김/표시
@@ -332,7 +329,11 @@ dialogBoxModule.defineView((ctx, data, setState) => {
   let _currentPanelW = INIT_PANEL_W
   let _currentPanelH = 0
 
-  overlayObj.on('click', (e: any) => {
+  overlayObj.on('click', (e: MouseEvent) => {
+    console.log(1)
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+
     if (!_currentPersist && _currentResolve) {
       // panel 영역 클릭이면 dismiss 차단
       // canvas 중앙기준 마우스 좌표 vs panel 반폭관 비교
@@ -513,7 +514,12 @@ dialogBoxModule.defineView((ctx, data, setState) => {
           btnObj.animate({ style: normalBtnProps as any }, 150)
           txtObj.animate({ style: normalTxtProps as any }, 150)
         })
-        btnObj.on('click', () => { resolve(i) })
+        btnObj.on('click', (e: MouseEvent) => {
+          console.log(2)
+          e.stopPropagation()
+          e.stopImmediatePropagation()
+          resolve(i)
+        })
 
         btnObj.addChild(txtObj)
         panelObj.addChild(btnObj)
@@ -603,6 +609,8 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
         }
       }
     }
+    // 모듈의 역할이 끝났음을 명시적으로 선언하고 씬을 진행시킵니다.
+    // (클릭 이벤트 버블링은 상단의 e.stopPropagation()으로 방어합니다)
     ctx.callbacks.advance()
   }
 
