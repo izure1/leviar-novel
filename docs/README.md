@@ -17,7 +17,7 @@
 | **🏁 입문 (Get Started)** | 엔진 설치, 환경 설정 및 첫 번째 게임 루프 구동 방법 | [Tutorial](./tutorial/01-installation.md) / [Quick Start](./quick-start.md) |
 | **💡 핵심 개념 (Concepts)** | 엔진의 설계 철학, 변수 시스템, 씬의 생명 주기 및 디버깅 등 | [Architecture](./concepts/overview.md) / [Scenes](./concepts/scenes.md) / [Variables](./concepts/variables.md) / [Debug](./concepts/debug-mode.md) |
 | **⚙️ 설정 및 정의 (Defines)** | 프로젝트 전역 설정 및 캐릭터, 배경 등의 리소스 정의 방법 | [Configuration](./config.md) / [defineCharacter](./defines/defineCharacter.md) / [defineInitial](./defines/defineInitial.md) |
-| **📜 명령어 (Commands)** | 시나리오 작성을 위한 모든 내장 명령어 상세 레퍼런스 | [Command List](./commands.md) / [Dialogue](./modules/dialogue.md) / [Choices](./modules/choices.md) |
+| **📜 명령어 (Commands)** | 시나리오 작성을 위한 모든 내장 명령어 상세 레퍼런스 | [Command List](./commands.md) / [Dialogue](./modules/dialogue.md) / [Scene](./modules/scene.md) |
 | **🧩 확장 (Extensions)** | 커스텀 모듈 제작 및 엔진 내부 이벤트를 제어하는 방법 | [Custom Module](./modules.md) / [Hooks 시스템](./concepts/hooks.md) |
 
 ---
@@ -41,7 +41,7 @@
 *   **기본**: [Dialogue (대사)](./modules/dialogue.md) / [Choices (선택지)](./modules/choices.md) / [Input (사용자 입력)](./modules/input.md)
 *   **연출**: [Camera (카메라)](./modules/camera.md) / [Effect (파티클)](./modules/effect.md) / [Mood (분위기)](./modules/mood.md)
 *   **오브젝트**: [Character (캐릭터)](./modules/character.md) / [Background (배경)](./modules/background.md)
-*   **시스템**: [Audio (사운드)](./modules/audio.md) / [Screen (화면 효과)](./modules/screen.md) / [Overlay (UI 오버레이)](./modules/overlay.md)
+*   **시스템**: [Audio (사운드)](./modules/audio.md) / [Screen (화면 효과)](./modules/screen.md) / [Overlay (UI 오버레이)](./modules/overlay.md) / [Scene (서브씬 호출)](./modules/scene.md)
 
 ### 4. 고급 사용자용 (For Developers)
 *   **[Custom Module Guide](./modules.md)**: `define()`을 사용한 신규 모듈 제작 가이드.
