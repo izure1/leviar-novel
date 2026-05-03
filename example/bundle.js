@@ -18417,6 +18417,7 @@ ${addLineNumbers(fragment)}`);
           this._renderer.restoreState(prevState);
         }
         this._uiRegistry.clear();
+        this.audio.stopAll(0);
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18534,6 +18535,7 @@ ${addLineNumbers(fragment)}`);
       this._currentSceneDef?.hooks?._unregister(this);
       this._cleanupUI();
       this.stopSkip();
+      this.audio.stopAll(0);
       Object.assign(this.variables, resolvedData.globalVars);
       this._stateStore.clear();
       for (const [k2, v2] of Object.entries(resolvedData.states ?? {})) {
