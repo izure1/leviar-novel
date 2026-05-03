@@ -6,7 +6,7 @@ export default defineScene({
   config,
   variables: {
     _isAnnoyed: false,
-    _test: 0,
+    _inputRepeatCount: 0,
   },
   initial: commonInitial,
   next: {
@@ -254,6 +254,9 @@ export default defineScene({
       '내 이름은...'
     ]
   },
+
+  // 입력
+  { type: 'label', name: 'input-username' },
   {
     type: 'input',
     to: 'username',
@@ -271,14 +274,60 @@ export default defineScene({
       '나는 그녀에게 대답했다.',
     ]
   },
+
+  // 빈 이름일 때 반복 분기로
+  {
+    type: 'condition',
+    if: ({ username }) => username.replaceAll(' ', '') === '',
+    goto: 'empty-name'
+  },
+
+  // 이름이 후미카가 아닐 경우 공통 분기로
+  {
+    type: 'condition',
+    if: ({ username }) => username !== '후미카',
+    goto: 'choice-game'
+  },
+
+  // 이름이 후미카일 경우 특수 분기로
   {
     type: 'condition',
     if: ({ username }) => username === '후미카',
-    'goto': 'same-name',
-    'else-goto': 'choice-game'
+    'goto': 'same-name'
   },
 
-  // ─── 분기: 이름 ───
+  // ─── 분기: 빈 이름 ───
+  { type: 'label', name: 'empty-name' },
+  { type: 'var', name: '_inputRepeatCount', value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+  {
+    type: 'dialogue',
+    text: '후미카의 표정이 썩어들어간다.'
+  },
+  {
+    type: 'condition',
+    if: ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
+    goto: 'escape'
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: [
+      '이름이 공백인 건, "둘이 합쳐서 『  』" 뭐 그런 드립을 치려는거야?',
+      '한참 지난 애니메이션드립인건 알지?',
+      '아니면.. 입력하는 법을 모르는 거야?',
+    ]
+  },
+  {
+    type: 'dialogue',
+    text: [
+      '입력하는 법을 모르냐니, 대체 무슨 소리를 하는걸까?',
+      '게임인 줄 아나보네.',
+      '아무튼 이름을 입력해야 한다.'
+    ]
+  },
+  { type: 'condition', if: () => true, goto: 'input-username' },
+
+  // ─── 분기: 이름이 후미카일 경우 ───
   { type: 'label', name: 'same-name' },
   {
     type: 'dialogue',
@@ -330,7 +379,7 @@ export default defineScene({
   },
   { type: 'condition', if: () => true, goto: 'choice-game' },
 
-  // ─── 분기: 게임 ───
+  // ─── 공통 분기: 게임 ───
   { type: 'label', name: 'choice-game' },
   {
     type: 'dialogue',

@@ -18818,7 +18818,7 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     variables: {
       _isAnnoyed: false,
-      _test: 0
+      _inputRepeatCount: 0
     },
     initial: commonInitial,
     next: {
@@ -19062,6 +19062,8 @@ ${addLineNumbers(fragment)}`);
         "\uB0B4 \uC774\uB984\uC740..."
       ]
     },
+    // 입력
+    { type: "label", name: "input-username" },
     {
       type: "input",
       to: "username",
@@ -19079,13 +19081,55 @@ ${addLineNumbers(fragment)}`);
         "\uB098\uB294 \uADF8\uB140\uC5D0\uAC8C \uB300\uB2F5\uD588\uB2E4."
       ]
     },
+    // 빈 이름일 때 반복 분기로
+    {
+      type: "condition",
+      if: ({ username }) => username.replaceAll(" ", "") === "",
+      goto: "empty-name"
+    },
+    // 이름이 후미카가 아닐 경우 공통 분기로
+    {
+      type: "condition",
+      if: ({ username }) => username !== "\uD6C4\uBBF8\uCE74",
+      goto: "choice-game"
+    },
+    // 이름이 후미카일 경우 특수 분기로
     {
       type: "condition",
       if: ({ username }) => username === "\uD6C4\uBBF8\uCE74",
-      "goto": "same-name",
-      "else-goto": "choice-game"
+      "goto": "same-name"
     },
-    // ─── 분기: 이름 ───
+    // ─── 분기: 빈 이름 ───
+    { type: "label", name: "empty-name" },
+    { type: "var", name: "_inputRepeatCount", value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+    {
+      type: "dialogue",
+      text: "\uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC369\uC5B4\uB4E4\uC5B4\uAC04\uB2E4."
+    },
+    {
+      type: "condition",
+      if: ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
+      goto: "escape"
+    },
+    {
+      type: "dialogue",
+      speaker: "fumika",
+      text: [
+        '\uC774\uB984\uC774 \uACF5\uBC31\uC778 \uAC74, "\uB458\uC774 \uD569\uCCD0\uC11C \u300E  \u300F" \uBB50 \uADF8\uB7F0 \uB4DC\uB9BD\uC744 \uCE58\uB824\uB294\uAC70\uC57C?',
+        "\uD55C\uCC38 \uC9C0\uB09C \uC560\uB2C8\uBA54\uC774\uC158\uB4DC\uB9BD\uC778\uAC74 \uC54C\uC9C0?",
+        "\uC544\uB2C8\uBA74.. \uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB294 \uAC70\uC57C?"
+      ]
+    },
+    {
+      type: "dialogue",
+      text: [
+        "\uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB0D0\uB2C8, \uB300\uCCB4 \uBB34\uC2A8 \uC18C\uB9AC\uB97C \uD558\uB294\uAC78\uAE4C?",
+        "\uAC8C\uC784\uC778 \uC904 \uC544\uB098\uBCF4\uB124.",
+        "\uC544\uBB34\uD2BC \uC774\uB984\uC744 \uC785\uB825\uD574\uC57C \uD55C\uB2E4."
+      ]
+    },
+    { type: "condition", if: () => true, goto: "input-username" },
+    // ─── 분기: 이름이 후미카일 경우 ───
     { type: "label", name: "same-name" },
     {
       type: "dialogue",
@@ -19136,7 +19180,7 @@ ${addLineNumbers(fragment)}`);
       name: "id_card"
     },
     { type: "condition", if: () => true, goto: "choice-game" },
-    // ─── 분기: 게임 ───
+    // ─── 공통 분기: 게임 ───
     { type: "label", name: "choice-game" },
     {
       type: "dialogue",
