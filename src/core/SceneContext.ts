@@ -35,6 +35,11 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
     loadScene: (target: string | { scene: string; preserve: boolean }) => void
     /** 현재 씬의 진행을 즉시 종료 */
     end: () => void
+    /**
+     * 지정된 씬을 서브루틴으로 호출합니다.
+     * 서브씬이 완전히 종료(nextScene 없음)되면 현재 위치로 복귀합니다.
+     */
+    callScene: (name: string) => void
   }
   /**
    * 씬 전환에도 유지되는 cmd 상태 저장소.

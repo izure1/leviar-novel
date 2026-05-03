@@ -107,6 +107,6 @@ export { default as inputModule, DEFAULT_INPUT_STYLE, DEFAULT_INPUT_LAYOUT } fro
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'
-export type { SaveData, NovelHook, AllModuleHooksOf } from './core/Novel'
+export type { SaveData, CallStackFrame, NovelHook, AllModuleHooksOf } from './core/Novel'
 export { Renderer } from './core/Renderer'
 export type { RendererOption, RendererState, CameraState } from './core/Renderer'

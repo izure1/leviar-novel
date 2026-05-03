@@ -18,6 +18,7 @@ import { screenFadeModule, screenFlashModule, screenWipeModule } from '../module
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
+import { sceneCallHandler } from '../modules/scene'
 import type { NovelModule } from '../define/defineCmdUI'
 
 // 내장 모듈 핸들러 테이블
@@ -44,6 +45,7 @@ const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generato
   'ui': (p, c) => uiModule.__handler!(p, c),
   'control': (p, c) => controlModule.__handler!(p, c),
   'audio': (p, c) => audioModule.__handler!(p, c),
+  'scene': (p, c) => sceneCallHandler(p, c),
 }
 
 // =============================================================
@@ -63,6 +65,8 @@ export interface SceneCallbacks {
   setGlobalVar(name: string, value: any): void
   /** 지정된 이름의 새로운 씬을 로드하고 현재 씬을 종료합니다. */
   loadScene(target: string | { scene: string; preserve: boolean }): void
+  /** 지정된 씬을 서브루틴으로 호출합니다 (콜 스택 push 후 loadScene). */
+  callScene(name: string, callerCursor: number, callerLocalVars: Record<string, any>, callerTextSubIndex: number): void
   /** 세이브 저장을 위해 현재 렌더러 상태를 캡처하여 반환합니다. */
   captureRenderer(): RendererState
   /** 현재 스킵 모드 활성화 여부를 반환합니다. */
@@ -216,6 +220,10 @@ export class DialogueScene {
         end: () => {
           this._ended = true
           this.callbacks.syncUIState()
+        },
+        callScene: (name: string) => {
+          this._ended = true
+          this.callbacks.callScene(name, this.cursor + 1, { ...this.localVars }, this.textSubIndex)
         }
       },
       execute: (cmd) => this._executeCmd(cmd as any),
@@ -387,6 +395,10 @@ export class DialogueScene {
         end: () => {
           this._ended = true
           this.callbacks.syncUIState()
+        },
+        callScene: (name: string) => {
+          this._ended = true
+          this.callbacks.callScene(name, this.cursor + 1, { ...this.localVars }, this.textSubIndex)
         }
       },
       execute: (cmd) => this._executeCmd(cmd as any),

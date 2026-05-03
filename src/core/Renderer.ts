@@ -314,6 +314,7 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       getGlobalVars: () => ({}),
       setGlobalVar: noop as any,
       loadScene: noop as any,
+      callScene: noop as any,
       captureRenderer: () => renderer.captureState(),
       isSkipping: () => true,
       disableInput: noop as any,
@@ -343,6 +344,7 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       setLocalVar: noop as any,
       loadScene: noop as any,
       end: noop,
+      callScene: noop as any,
     },
     execute: function* () { return false },
   }

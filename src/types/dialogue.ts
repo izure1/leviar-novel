@@ -33,13 +33,14 @@ import type { ControlCmd } from '../modules/control'
 import type { AudioCmd } from '../modules/audio'
 import type { DialogBoxCmd } from '../modules/dialogBox'
 import type { InputCmd } from '../modules/input'
+import type { SceneCallCmd } from '../modules/scene'
 
 // 재수출
 export type {
   DialogueCmd, ChoiceCmd, ConditionCmd, VarCmd, LabelCmd, BackgroundCmd,
   MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
-  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd
+  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd, SceneCallCmd
 }
 
 // ─── 스텝 공통 필드 ──────────────────────────────────────────
@@ -83,6 +84,7 @@ type BuiltinCmdMap<TConfig, TVars, TLocalVars> = {
   'audio': AudioCmd<TConfig>
   'dialogBox': DialogBoxCmd<TConfig>
   'input': InputCmd<TConfig, TLocalVars>
+  'scene': SceneCallCmd
 }
 
 // ─── 유니온 생성 ─────────────────────────────────────────────

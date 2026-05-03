@@ -43,6 +43,30 @@ export interface SaveData {
    * 'background' → { key, fit } 등
    */
   states: Record<string, any>
+  /**
+   * scene call 콜 스택.
+   * 서브씬 호출 도중 세이브 시 호출자 씬 체인이 여기에 저장됩니다.
+   */
+  callStack: CallStackFrame[]
+}
+
+/**
+ * scene call 호출자 씬의 스냅샷.
+ * 서브씬 종료 시 이 프레임으로 호출자 환경을 완전 복원합니다.
+ */
+export interface CallStackFrame {
+  /** 호출자 씬 이름 */
+  sceneName: string
+  /** 재개할 커서 위치 (call 커맨드 다음 인덱스) */
+  cursor: number
+  /** 호출자 지역 변수 스냅샷 */
+  localVars: Record<string, any>
+  /** 서브텍스트 인덱스 */
+  textSubIndex: number
+  /** 호출 시점의 렌더러 상태 스냅샷 */
+  rendererState: RendererState
+  /** 호출 시점의 stateStore 스냅샷 */
+  storeSnapshot: Record<string, any>
 }
 
 // ─── NovelHook 타입 ──────────────────────────────────────────
@@ -142,6 +166,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   private _currentSceneDef: AnySceneDef | null = null
   private _inputMode: InputMode = 'block'
   private _isSkipping: boolean = false
+  /** scene call 콜 스택 */
+  private readonly _callStack: CallStackFrame[] = []
   /** 사용자 입력 무시 만료 시간 (ms) */
   private _inputDisabledUntil: number = 0
   /** fullscreenchange 핸들러 참조 (정리용) */
@@ -440,6 +466,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       localVars: this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
       states: Object.fromEntries(this._stateStore),
+      callStack: this._callStack.map(frame => ({ ...frame, localVars: { ...frame.localVars }, storeSnapshot: { ...frame.storeSnapshot } })),
     }
 
     return this._novelHooker.trigger(
@@ -485,6 +512,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._renderer.clear()
     this._renderer.restoreState(resolvedData.rendererState)
 
+    // callStack 복원
+    this._callStack.length = 0
+    for (const frame of resolvedData.callStack) {
+      this._callStack.push({ ...frame, localVars: { ...frame.localVars }, storeSnapshot: { ...frame.storeSnapshot } })
+    }
 
     // 모듈 View 재생성 (state에서 스키마 읽어 빌더 실행)
     this._rebuildModuleViews()
@@ -531,6 +563,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getGlobalVars: () => ({ ...this.variables as object }),
       setGlobalVar: (name, value) => { (this.variables as any)[name] = value },
       loadScene: (target) => { this.loadScene(target) },
+      callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex) => {
+        this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex)
+      },
       captureRenderer: () => this._renderer.captureState(),
       isSkipping: () => this._isSkipping,
       disableInput: (duration) => { this._inputDisabledUntil = Date.now() + duration },
@@ -581,6 +616,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
         const next = (this._currentSceneDef as SceneDefinition<any, any, any, any, any>).nextScene
         if (next) { this.loadScene(next); return }
+        // nextScene 없음 — 콜 스택 확인
+        if (this._callStack.length > 0) {
+          this._resumeCallerScene()
+          return
+        }
       }
       return
     }
@@ -597,6 +637,71 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'
+  }
+
+  /**
+   * scene call 시 콜 스택에 호출자 프레임을 push하고 서브씬을 로드합니다.
+   */
+  private _callScene(
+    name: string,
+    callerCursor: number,
+    callerLocalVars: Record<string, any>,
+    callerTextSubIndex: number
+  ): void {
+    this._callStack.push({
+      sceneName: this._currentSceneDef!.name as string,
+      cursor: callerCursor,
+      localVars: { ...callerLocalVars },
+      textSubIndex: callerTextSubIndex,
+      rendererState: this._renderer.captureState(),
+      storeSnapshot: Object.fromEntries(this._stateStore),
+    })
+    this.loadScene(name)
+  }
+
+  /**
+   * 콜 스택에서 프레임을 pop하여 호출자 씬 환경을 완전 복원합니다.
+   * loadSave()와 동일한 방식으로 렌더러, stateStore, UI를 복원합니다.
+   */
+  private _resumeCallerScene(): void {
+    const frame = this._callStack.pop()!
+    const def = this._scenes.get(frame.sceneName)
+    if (!def) {
+      console.error(`[fumika] callStack 복원 실패: 씬 '${frame.sceneName}'을 찾을 수 없습니다.`)
+      return
+    }
+
+    // 현재 씬 훅 해제, UI 정리
+    this._currentSceneDef?.hooks?._unregister(this)
+    this._cleanupUI()
+    this.stopSkip()
+
+    // 렌더러 복원
+    this._renderer.clear()
+    this._renderer.restoreState(frame.rendererState)
+
+    // stateStore 복원
+    this._stateStore.clear()
+    for (const [k, v] of Object.entries(frame.storeSnapshot)) {
+      this._stateStore.set(k, v)
+    }
+
+    // UI 재생성 (저장된 state 기반)
+    this._uiRegistry.clear()
+    this._rebuildModuleViews()
+
+    // 호출자 씬 복원
+    const callbacks = this._buildCallbacks()
+    const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
+    scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex)
+
+    this._currentScene = scene
+    this._currentSceneDef = def
+    this._inputMode = 'block'
+
+    def.hooks?._register(this)
+
+    this._syncUIState()
   }
 
   /**
@@ -678,6 +783,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         getGlobalVars: () => ({}),
         setGlobalVar: noop as any,
         loadScene: noop as any,
+        callScene: noop as any,
         captureRenderer: () => this._renderer.captureState(),
         isSkipping: () => true,
         disableInput: noop as any,
@@ -707,6 +813,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         setLocalVar: noop as any,
         loadScene: noop as any,
         end: noop,
+        callScene: noop as any,
       },
       execute: function* () { return false },
     }

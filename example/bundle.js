@@ -17622,6 +17622,12 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
+  // src/modules/scene.ts
+  function* sceneCallHandler(params, ctx) {
+    ctx.scene.callScene(params.call);
+    return false;
+  }
+
   // src/core/Scene.ts
   var BUILTIN_HANDLERS = {
     "dialogue": (p, c) => dialogue_default.__handler(p, c),
@@ -17645,7 +17651,8 @@ ${addLineNumbers(fragment)}`);
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
     "control": (p, c) => control_default.__handler(p, c),
-    "audio": (p, c) => audio_default.__handler(p, c)
+    "audio": (p, c) => audio_default.__handler(p, c),
+    "scene": (p, c) => sceneCallHandler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -17760,6 +17767,10 @@ ${addLineNumbers(fragment)}`);
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
+          },
+          callScene: (name) => {
+            this._ended = true;
+            this.callbacks.callScene(name, this.cursor + 1, { ...this.localVars }, this.textSubIndex);
           }
         },
         execute: (cmd) => this._executeCmd(cmd)
@@ -17912,6 +17923,10 @@ ${addLineNumbers(fragment)}`);
           end: () => {
             this._ended = true;
             this.callbacks.syncUIState();
+          },
+          callScene: (name) => {
+            this._ended = true;
+            this.callbacks.callScene(name, this.cursor + 1, { ...this.localVars }, this.textSubIndex);
           }
         },
         execute: (cmd2) => this._executeCmd(cmd2)
@@ -18082,6 +18097,8 @@ ${addLineNumbers(fragment)}`);
     _currentSceneDef = null;
     _inputMode = "block";
     _isSkipping = false;
+    /** scene call 콜 스택 */
+    _callStack = [];
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
     /** fullscreenchange 핸들러 참조 (정리용) */
@@ -18322,7 +18339,8 @@ ${addLineNumbers(fragment)}`);
         globalVars: { ...this.variables },
         localVars: this._currentScene.getLocalVars(),
         rendererState: this._renderer.captureState(),
-        states: Object.fromEntries(this._stateStore)
+        states: Object.fromEntries(this._stateStore),
+        callStack: this._callStack.map((frame) => ({ ...frame, localVars: { ...frame.localVars }, storeSnapshot: { ...frame.storeSnapshot } }))
       };
       return this._novelHooker.trigger(
         "novel:save",
@@ -18355,6 +18373,10 @@ ${addLineNumbers(fragment)}`);
       this._uiRegistry.clear();
       this._renderer.clear();
       this._renderer.restoreState(resolvedData.rendererState);
+      this._callStack.length = 0;
+      for (const frame of resolvedData.callStack) {
+        this._callStack.push({ ...frame, localVars: { ...frame.localVars }, storeSnapshot: { ...frame.storeSnapshot } });
+      }
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18390,6 +18412,9 @@ ${addLineNumbers(fragment)}`);
         },
         loadScene: (target) => {
           this.loadScene(target);
+        },
+        callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex) => {
+          this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex);
         },
         captureRenderer: () => this._renderer.captureState(),
         isSkipping: () => this._isSkipping,
@@ -18441,6 +18466,10 @@ ${addLineNumbers(fragment)}`);
             this.loadScene(next);
             return;
           }
+          if (this._callStack.length > 0) {
+            this._resumeCallerScene();
+            return;
+          }
         }
         return;
       }
@@ -18453,6 +18482,51 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
+    }
+    /**
+     * scene call 시 콜 스택에 호출자 프레임을 push하고 서브씬을 로드합니다.
+     */
+    _callScene(name, callerCursor, callerLocalVars, callerTextSubIndex) {
+      this._callStack.push({
+        sceneName: this._currentSceneDef.name,
+        cursor: callerCursor,
+        localVars: { ...callerLocalVars },
+        textSubIndex: callerTextSubIndex,
+        rendererState: this._renderer.captureState(),
+        storeSnapshot: Object.fromEntries(this._stateStore)
+      });
+      this.loadScene(name);
+    }
+    /**
+     * 콜 스택에서 프레임을 pop하여 호출자 씬 환경을 완전 복원합니다.
+     * loadSave()와 동일한 방식으로 렌더러, stateStore, UI를 복원합니다.
+     */
+    _resumeCallerScene() {
+      const frame = this._callStack.pop();
+      const def = this._scenes.get(frame.sceneName);
+      if (!def) {
+        console.error(`[fumika] callStack \uBCF5\uC6D0 \uC2E4\uD328: \uC52C '${frame.sceneName}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        return;
+      }
+      this._currentSceneDef?.hooks?._unregister(this);
+      this._cleanupUI();
+      this.stopSkip();
+      this._renderer.clear();
+      this._renderer.restoreState(frame.rendererState);
+      this._stateStore.clear();
+      for (const [k2, v2] of Object.entries(frame.storeSnapshot)) {
+        this._stateStore.set(k2, v2);
+      }
+      this._uiRegistry.clear();
+      this._rebuildModuleViews();
+      const callbacks = this._buildCallbacks();
+      const scene = new DialogueScene(this._renderer, callbacks, def);
+      scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
+      this._currentScene = scene;
+      this._currentSceneDef = def;
+      this._inputMode = "block";
+      def.hooks?._register(this);
+      this._syncUIState();
     }
     /**
      * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
@@ -18524,6 +18598,7 @@ ${addLineNumbers(fragment)}`);
           getGlobalVars: () => ({}),
           setGlobalVar: noop,
           loadScene: noop,
+          callScene: noop,
           captureRenderer: () => this._renderer.captureState(),
           isSkipping: () => true,
           disableInput: noop,
@@ -18556,7 +18631,8 @@ ${addLineNumbers(fragment)}`);
           setGlobalVar: noop,
           setLocalVar: noop,
           loadScene: noop,
-          end: noop
+          end: noop,
+          callScene: noop
         },
         execute: function* () {
           return false;
