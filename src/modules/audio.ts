@@ -181,6 +181,12 @@ const pool = new Map<string, NovelAudioElement>()
 const fading = new Set<NovelAudioElement>()
 
 /**
+ * define() 내부 data 싱글톤 참조 — syncAudioPositions()에서 직접 변이에 사용.
+ * defineView 최초 호출 시 주입됩니다.
+ */
+let _dataRef: AudioSchema | null = null
+
+/**
  * 오디오 모듈.
  * - play: `config.audios`에 등록된 키로 오디오 재생
  * - pause: 일시정지
@@ -189,6 +195,7 @@ const fading = new Set<NovelAudioElement>()
 const audioModule = define<AudioCmd<any>, AudioSchema, AudioHook>({ _tracks: {} })
 
 audioModule.defineView((ctx, data, setState) => {
+  _dataRef = data as AudioSchema  // 싱글톤 참조 캡처
   const audioMap = (ctx.renderer.config as any).audios as Record<string, string> | undefined
 
   // 1. 삭제된 트랙 정리 (페이드아웃 중인 audio는 건드리지 않음)
@@ -479,3 +486,19 @@ audioModule.defineCommand(function* (cmd, ctx, state, setState) {
 })
 
 export default audioModule
+
+/**
+ * pool에서 재생 중인 각 audio의 currentTime을 data._tracks[name].start에 직접 반영합니다.
+ * _data._tracks와 _stateStore['audio']._tracks는 동일 참조이므로
+ * 직접 변이만으로 다음 스냅샷에 반영됩니다.
+ * Novel._callScene()이 storeSnapshot 캡처 직전에 호출합니다.
+ */
+export function syncAudioPositions(): void {
+  if (!_dataRef) return
+  for (const [name, audio] of pool.entries()) {
+    const track = _dataRef._tracks[name]
+    if (track && !audio.paused) {
+      track.start = audio.currentTime
+    }
+  }
+}

@@ -2902,8 +2902,10 @@
   }
   var pool = /* @__PURE__ */ new Map();
   var fading = /* @__PURE__ */ new Set();
+  var _dataRef = null;
   var audioModule = define2({ _tracks: {} });
   audioModule.defineView((ctx, data, setState) => {
+    _dataRef = data;
     const audioMap = ctx.renderer.config.audios;
     for (const [name, audio] of pool.entries()) {
       if (!data._tracks[name]) {
@@ -3131,6 +3133,15 @@
     return true;
   });
   var audio_default = audioModule;
+  function syncAudioPositions() {
+    if (!_dataRef) return;
+    for (const [name, audio] of pool.entries()) {
+      const track = _dataRef._tracks[name];
+      if (track && !audio.paused) {
+        track.start = audio.currentTime;
+      }
+    }
+  }
 
   // src/modules/dialogBox.ts
   var DEFAULT_DIALOG_BOX_STYLE = {
@@ -18099,6 +18110,12 @@ ${addLineNumbers(fragment)}`);
     _isSkipping = false;
     /** scene call 콜 스택 */
     _callStack = [];
+    /**
+     * 콜백 세대 카운터.
+     * _buildCallbacks() 호출 시마다 증가하여 advance() 콜백이
+     * 자신이 속한 씬에서만 발화되도록 보장합니다.
+     */
+    _sceneGeneration = 0;
     /** 사용자 입력 무시 만료 시간 (ms) */
     _inputDisabledUntil = 0;
     /** fullscreenchange 핸들러 참조 (정리용) */
@@ -18404,6 +18421,7 @@ ${addLineNumbers(fragment)}`);
     }
     // ─── 콜백 팩토리 ─────────────────────────────────────────────
     _buildCallbacks() {
+      const gen = ++this._sceneGeneration;
       return {
         getNovel: () => this,
         getGlobalVars: () => ({ ...this.variables }),
@@ -18427,6 +18445,7 @@ ${addLineNumbers(fragment)}`);
           this._syncUIState();
         },
         advance: () => {
+          if (this._sceneGeneration !== gen) return;
           const scene = this._currentScene;
           if (scene instanceof DialogueScene && scene.isWaitingInput) {
             scene.advance();
@@ -18487,6 +18506,7 @@ ${addLineNumbers(fragment)}`);
      * scene call 시 콜 스택에 호출자 프레임을 push하고 서브씬을 로드합니다.
      */
     _callScene(name, callerCursor, callerLocalVars, callerTextSubIndex) {
+      syncAudioPositions();
       this._callStack.push({
         sceneName: this._currentSceneDef.name,
         cursor: callerCursor,
@@ -18714,6 +18734,7 @@ ${addLineNumbers(fragment)}`);
       "scene-stream",
       "scene-outside",
       "scene-bug",
+      "scene-sub",
       "scene-ending"
     ],
     characters: {
@@ -19258,6 +19279,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "choice-game" },
     // ─── 공통 분기: 게임 ───
     { type: "label", name: "choice-game" },
+    { type: "scene", call: "scene-sub" },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20269,6 +20291,22 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
 
+  // example/scenes/scene-sub.ts
+  var scene_sub_default = defineScene({
+    config: novel_config_default,
+    variables: {}
+  })([
+    { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC9C4\uC785 \u2500\u2500\u2500" },
+    { type: "character", action: "show", name: "fumika", image: "normal:angry", position: "right", duration: 500 },
+    { type: "dialogue", speaker: "fumika", text: "\uC7A0\uAE50, \uB098 \uD734\uB300\uD3F0 \uC880 \uBCFC\uAC8C." },
+    { type: "audio", action: "pause", name: "bgm", duration: 500 },
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uD734\uB300\uD3F0\uC744 \uAEBC\uB0B4 \uBB34\uC5B8\uAC00\uB97C \uD655\uC778\uD588\uB2E4." },
+    { type: "dialogue", speaker: "fumika", text: "\uC544... \uB610 \uBE4C\uB4DC \uC2E4\uD328\uD588\uC5B4." },
+    { type: "audio", action: "play", name: "bgm", src: "am223", duration: 500 },
+    { type: "character", action: "show", name: "fumika", position: "center", duration: 500 },
+    { type: "dialogue", text: "\u2500\u2500\u2500 \uC11C\uBE0C\uC52C \uC885\uB8CC, \uBCF5\uADC0\uD569\uB2C8\uB2E4 \u2500\u2500\u2500" }
+  ]);
+
   // example/scenes/scene-ending.ts
   var scene_ending_default = defineScene({
     config: novel_config_default,
@@ -20499,6 +20537,7 @@ ${addLineNumbers(fragment)}`);
         "scene-stream": scene_stream_default,
         "scene-outside": scene_outside_default,
         "scene-bug": scene_bug_default,
+        "scene-sub": scene_sub_default,
         "scene-ending": scene_ending_default
       }
     });

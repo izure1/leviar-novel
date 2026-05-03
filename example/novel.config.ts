@@ -54,6 +54,7 @@ export default defineNovelConfig({
     'scene-stream',
     'scene-outside',
     'scene-bug',
+    'scene-sub',
     'scene-ending',
   ],
   characters: {

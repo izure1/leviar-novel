@@ -381,6 +381,7 @@ export default defineScene({
 
   // ─── 공통 분기: 게임 ───
   { type: 'label', name: 'choice-game' },
+  { type: 'scene', call: 'scene-sub' },
   {
     type: 'dialogue',
     speaker: 'fumika',

@@ -15,6 +15,7 @@ import type { SceneContext } from './SceneContext'
 import type { NovelModule, DefaultHook } from '../define/defineCmdUI'
 import type { IHookallSync } from 'hookall'
 import { useHookallSync } from 'hookall'
+import { syncAudioPositions } from '../modules/audio'
 
 // =============================================================
 // 내부 타입
@@ -168,6 +169,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   private _isSkipping: boolean = false
   /** scene call 콜 스택 */
   private readonly _callStack: CallStackFrame[] = []
+  /**
+   * 콜백 세대 카운터.
+   * _buildCallbacks() 호출 시마다 증가하여 advance() 콜백이
+   * 자신이 속한 씬에서만 발화되도록 보장합니다.
+   */
+  private _sceneGeneration: number = 0
   /** 사용자 입력 무시 만료 시간 (ms) */
   private _inputDisabledUntil: number = 0
   /** fullscreenchange 핸들러 참조 (정리용) */
@@ -558,6 +565,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   // ─── 콜백 팩토리 ─────────────────────────────────────────────
 
   private _buildCallbacks(): SceneCallbacks {
+    const gen = ++this._sceneGeneration
     return {
       getNovel: () => this as any,
       getGlobalVars: () => ({ ...this.variables as object }),
@@ -573,6 +581,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getUIRegistry: () => this._uiRegistry,
       syncUIState: () => { this._syncUIState() },
       advance: () => {
+        // gen이 현재 _sceneGeneration과 일치하지 않으면 stale 콜백 — 실행 거부
+        if (this._sceneGeneration !== gen) return
         const scene = this._currentScene
         if (scene instanceof DialogueScene && scene.isWaitingInput) {
           scene.advance()
@@ -648,6 +658,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     callerLocalVars: Record<string, any>,
     callerTextSubIndex: number
   ): void {
+    // 재생 중인 오디오의 현재 위치를 data._tracks.start에 동기화하여 스냅샷에 남깁니다.
+    syncAudioPositions()
     this._callStack.push({
       sceneName: this._currentSceneDef!.name as string,
       cursor: callerCursor,
