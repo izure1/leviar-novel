@@ -60,7 +60,7 @@ export default defineScene({
 
   // ─── 치킨 ───
   { type: 'label', name: 'chicken' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -75,7 +75,7 @@ export default defineScene({
     text: '그게 무슨 끔찍한 혼종인가.'
   },
   { type: 'dialogue', text: '"마라에 로제에 크림치즈...? 위장 테러 아냐?"' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -86,7 +86,7 @@ export default defineScene({
 
   // ─── 매운거 ───
   { type: 'label', name: 'spicy' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',

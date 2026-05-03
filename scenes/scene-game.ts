@@ -29,7 +29,7 @@ export default defineScene({
     type: 'dialogue',
     text: '화면 속에서는 정체불명의 몬스터가 기괴한 폴리곤을 흩뿌리며 춤을 추고 있다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', position: 'center', focus: 'face', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -48,7 +48,7 @@ export default defineScene({
     type: 'dialogue',
     text: '그게 무슨 미친 조작법인가 싶지만, 화면 속 캐릭터는 정말로 공중부양을 시작했다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -104,7 +104,7 @@ export default defineScene({
     text: '팩트를 꽂아넣자, 후미카의 표정이 실시간으로 썩어 들어갔다.'
   },
   { type: 'camera-effect', preset: 'shake', duration: 300 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -127,7 +127,7 @@ export default defineScene({
 
   // ─── 게임 플레이 ───
   { type: 'label', name: 'play-game' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 500 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 500 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -151,7 +151,7 @@ export default defineScene({
     type: 'dialogue',
     text: '내 캐릭터가 갑자기 T포즈를 취하더니 하늘로 솟구치기 시작했다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',

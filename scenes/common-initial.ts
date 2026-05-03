@@ -10,7 +10,7 @@ import {
 
 export const commonInitial = defineInitial(config)({
   'debug': {
-    on: true
+    on: false
   },
   'dialogue': {
     bg: {
