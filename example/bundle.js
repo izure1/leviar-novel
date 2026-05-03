@@ -18643,7 +18643,7 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
     "debug": {
-      on: true
+      on: false
     },
     "dialogue": {
       bg: {
@@ -20367,6 +20367,7 @@ ${addLineNumbers(fragment)}`);
     const btnSave = document.getElementById("btn-save");
     const btnLoad = document.getElementById("btn-load");
     const btnFullscreen = document.getElementById("btn-fullscreen");
+    const btnDebug = document.getElementById("btn-debug");
     btnSkip.addEventListener("click", (e) => {
       e.stopPropagation();
       if (novel.isSkipping) {
@@ -20427,6 +20428,17 @@ ${addLineNumbers(fragment)}`);
       } else {
         btnFullscreen.textContent = "\u{1F532} Fullscreen";
         btnFullscreen.classList.remove("active");
+      }
+    });
+    btnDebug.addEventListener("click", (e) => {
+      e.stopPropagation();
+      novel.debugMode = !novel.debugMode;
+      if (novel.debugMode) {
+        btnDebug.classList.add("active");
+        showToast("\u{1F41B} \uB514\uBC84\uADF8 \uBAA8\uB4DC \uCF1C\uC9D0", "info");
+      } else {
+        btnDebug.classList.remove("active");
+        showToast("\u{1F41B} \uB514\uBC84\uADF8 \uBAA8\uB4DC \uAEBC\uC9D0", "info");
       }
     });
     window.addEventListener("click", () => {

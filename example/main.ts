@@ -144,6 +144,7 @@ async function main() {
   const btnSave = document.getElementById('btn-save') as HTMLButtonElement
   const btnLoad = document.getElementById('btn-load') as HTMLButtonElement
   const btnFullscreen = document.getElementById('btn-fullscreen') as HTMLButtonElement
+  const btnDebug = document.getElementById('btn-debug') as HTMLButtonElement
 
   // Skip 버튼 — 토글 방식
   btnSkip.addEventListener('click', (e) => {
@@ -216,6 +217,19 @@ async function main() {
     } else {
       btnFullscreen.textContent = '🔲 Fullscreen'
       btnFullscreen.classList.remove('active')
+    }
+  })
+
+  // Debug 버튼
+  btnDebug.addEventListener('click', (e) => {
+    e.stopPropagation()
+    novel.debugMode = !novel.debugMode
+    if (novel.debugMode) {
+      btnDebug.classList.add('active')
+      showToast('🐛 디버그 모드 켜짐', 'info')
+    } else {
+      btnDebug.classList.remove('active')
+      showToast('🐛 디버그 모드 꺼짐', 'info')
     }
   })
 
