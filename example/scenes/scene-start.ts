@@ -53,7 +53,7 @@ export default defineScene({
     type: 'dialogue',
     text: '그곳에는 마치 세상 모든 짐을 짊어진 듯한 표정의 소녀가 있었다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', position: 'center', focus: 'face', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', focus: 'face', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -72,7 +72,7 @@ export default defineScene({
     text: '내가 힐끔 쳐다보자, 살벌한 눈빛과 딱 마주쳤다.'
   },
   { type: 'camera-zoom', preset: 'close-up' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'angry', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -123,7 +123,7 @@ export default defineScene({
     type: 'dialogue',
     text: '확실히 제정신은 아닌 것 같다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 500 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 500 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -143,7 +143,7 @@ export default defineScene({
   // ─── 분기: 버그 질문 ───
   { type: 'label', name: 'ask-bug' },
   { type: 'camera-effect', preset: 'shake', duration: 400 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'angry', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -189,7 +189,7 @@ export default defineScene({
     type: 'dialogue',
     text: '똥이 무서워서 피하나. 나는 슬그머니 자리에서 일어났다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'angry', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:angry', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -227,7 +227,7 @@ export default defineScene({
 
   // ─── 공통 엔딩 ───
   { type: 'label', name: 'common-end' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 800 },
   {
     type: 'dialogue',
     speaker: 'fumika',

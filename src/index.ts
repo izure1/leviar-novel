@@ -5,7 +5,7 @@
 // ─── 타입 정의 ───────────────────────────────────────────────
 export type {
   // config
-  CharImageDef,
+  CharBaseDef,
   CharDef,
   CharDefs,
   BgDef,

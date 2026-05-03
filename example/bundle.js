@@ -1589,42 +1589,105 @@
   });
   characterModule.defineView((ctx, data, setState) => {
     const _charObjs = {};
+    function parseImageKey(imageKey) {
+      const idx = imageKey.indexOf(":");
+      if (idx === -1) return { baseKey: imageKey, emotionKey: imageKey };
+      return { baseKey: imageKey.slice(0, idx), emotionKey: imageKey.slice(idx + 1) };
+    }
+    function getLoadedNaturalWidth(key) {
+      const el = ctx.renderer.world.loader.assets[key];
+      return el?.naturalWidth;
+    }
+    const _updateEmotionParts = (baseObj, baseDef, emotionDef, dur) => {
+      if (!baseDef.points) return;
+      if (!baseObj._partObjs) baseObj._partObjs = {};
+      const baseWidth = baseDef.width ?? 500;
+      const baseHeight = baseDef.height ?? ((baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize.h : baseWidth * 2);
+      const baseSrc = baseDef.src ?? (baseObj._currentBaseKey ?? "");
+      const baseNaturalW = baseDef.naturalWidth ?? getLoadedNaturalWidth(baseSrc) ?? baseWidth;
+      const scale2 = baseWidth / baseNaturalW;
+      for (const [pointKey, point] of Object.entries(baseDef.points)) {
+        const partSrc = emotionDef[pointKey];
+        if (!partSrc) continue;
+        const localX = baseWidth * (point.x - 0.5);
+        const localY = baseHeight * (0.5 - point.y);
+        const existingPart = baseObj._partObjs[pointKey];
+        if (existingPart) {
+          if (existingPart.attribute) existingPart.attribute.src = partSrc;
+          ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, "easeInOutQuad");
+        } else {
+          const partNaturalW = getLoadedNaturalWidth(partSrc);
+          const partWidth = point.width ?? (partNaturalW !== void 0 ? Math.round(partNaturalW * scale2) : void 0);
+          const partObj = ctx.renderer.world.createImage({
+            attribute: { src: partSrc },
+            style: {
+              width: partWidth
+              // opacity/zIndex 는 base(parent)에서 자동 상속
+            },
+            transform: { position: { x: localX, y: localY, z: -0.1 } }
+          });
+          baseObj.addChild(partObj);
+          baseObj._partObjs[pointKey] = partObj;
+        }
+      }
+      for (const [pointKey, partObj] of Object.entries(baseObj._partObjs)) {
+        if (!baseDef.points[pointKey] || !emotionDef[pointKey]) {
+          baseObj.removeChild(partObj);
+          partObj.remove();
+          delete baseObj._partObjs[pointKey];
+        }
+      }
+    };
     const _showCharacter = (name, position, imageKey, duration, immediate = false) => {
       const charDefs = ctx.renderer.config.characters;
       const def = charDefs[name];
       if (!def) return;
-      const resolvedKey = imageKey || Object.keys(def.images)[0];
-      const imageDef = def.images[resolvedKey];
-      if (!imageDef) return;
-      const src = imageDef.src ?? resolvedKey;
+      const allBaseKeys = Object.keys(def.bases);
+      const allEmotionKeys = Object.keys(def.emotions);
+      const { baseKey, emotionKey } = parseImageKey(
+        imageKey || `${allBaseKeys[0]}:${allEmotionKeys[0]}`
+      );
+      const baseDef = def.bases[baseKey];
+      const emotionDef = def.emotions[emotionKey];
+      if (!baseDef || !emotionDef) return;
+      const src = baseDef.src ?? baseKey;
       const xPos = ctx.renderer.width * (resolvePositionX(position) - 0.5);
       const zPos = ctx.renderer.world.camera?.attribute?.focalLength ?? 100;
       const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 400);
+      const baseWidth = baseDef.width ?? 500;
       const existing = _charObjs[name];
       if (existing) {
         ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, "easeInOutQuad");
-        if (imageKey && imageKey !== existing._currentImageKey) {
+        if (baseKey !== existing._currentBaseKey) {
           if (dur > 0 && typeof existing.transition === "function") {
             existing.transition(src, dur);
           } else {
             if (existing.attribute) existing.attribute.src = src;
           }
+          if (existing.style) existing.style.width = baseWidth;
+          existing._currentBaseKey = baseKey;
         }
-        existing._currentImageKey = resolvedKey;
+        if (emotionKey !== existing._currentEmotionKey || baseKey !== existing._currentBaseKey) {
+          _updateEmotionParts(existing, baseDef, emotionDef, dur);
+          existing._currentEmotionKey = emotionKey;
+        }
         return;
       }
       const obj = ctx.renderer.world.createImage({
         attribute: { src },
         style: {
-          width: imageDef.width ?? 500,
+          width: baseWidth,
           opacity: dur > 0 ? 0 : 1,
           zIndex: Z_INDEX.CHARACTER_NORMAL
         },
         transform: { position: { x: xPos, y: 0, z: zPos } }
       });
       ctx.renderer.track(obj);
-      obj._currentImageKey = resolvedKey;
+      obj._currentBaseKey = baseKey;
+      obj._currentEmotionKey = emotionKey;
+      obj._partObjs = {};
       _charObjs[name] = obj;
+      _updateEmotionParts(obj, baseDef, emotionDef, 0);
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur);
       }
@@ -1636,12 +1699,14 @@
         const dur = ctx.renderer.dur(duration ?? 400);
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
-            obj.remove();
+            obj.remove({ child: true });
             ctx.renderer.untrack(obj);
+            obj._partObjs = {};
           });
         } else {
-          obj.remove();
+          obj.remove({ child: true });
           ctx.renderer.untrack(obj);
+          obj._partObjs = {};
         }
       }
     };
@@ -1656,7 +1721,6 @@
           obj?.fadeOut?.(300, "easeIn");
         }
       },
-      // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
       getObj: (name) => _charObjs[name],
       onUpdate: (_ctx, d2, _setState) => {
         const dur = d2._lastDuration;
@@ -1679,9 +1743,11 @@
       const charDefs = ctx.renderer.config.characters;
       const def = charDefs[showCmd.name];
       if (!def) return true;
+      const allBaseKeys = Object.keys(def.bases);
+      const allEmotionKeys = Object.keys(def.emotions);
       const existingState = newChars[showCmd.name];
       const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
-      const resolvedKey = showCmd.image ?? Object.keys(def.images)[0];
+      const resolvedKey = showCmd.image ?? `${allBaseKeys[0]}:${allEmotionKeys[0]}`;
       newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
       setState({ _characters: newChars, _lastDuration: cmd.duration });
       if (showCmd.focus) {
@@ -1719,13 +1785,13 @@
   var character_default = characterModule;
   function _calcFocusCommands(name, target, def, focusType, fit = "inherit", duration = 800) {
     if (!target) return [];
-    const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0];
-    const imageDef = def.images[activeImgKey];
-    const fp = focusType && imageDef?.points ? imageDef.points[focusType] : { x: 0.5, y: 0.5 };
+    const activeBaseKey = target._currentBaseKey ?? Object.keys(def.bases)[0];
+    const baseDef = def.bases[activeBaseKey];
+    const fp = focusType && baseDef?.points ? baseDef.points[focusType] : { x: 0.5, y: 0.5 };
     const targetX = target.transform?.position?.x ?? 0;
     const charW = target.style?.width ?? 500;
     const rendH = target.__renderedSize?.h;
-    const charH = imageDef?.height ?? (rendH && rendH > 0 ? rendH : charW * 2);
+    const charH = baseDef?.height ?? (rendH && rendH > 0 ? rendH : charW * 2);
     const panX = targetX + charW * (fp.x - 0.5);
     const panY = charH * (0.5 - fp.y);
     return [
@@ -3952,8 +4018,10 @@
   }
 
   // src/define/defineCharacter.ts
-  function defineCharacter(def) {
-    return def;
+  function defineCharacter(meta) {
+    return function(def) {
+      return { ...meta, ...def };
+    };
   }
 
   // src/define/defineScene.ts
@@ -18502,48 +18570,28 @@ ${addLineNumbers(fragment)}`);
   };
 
   // example/characters/chat.ts
-  var chat_default = defineCharacter({
-    name: "\uCC44\uD305\uCC3D",
-    images: {}
+  var chat_default = defineCharacter({ name: "\uCC44\uD305\uCC3D" })({
+    bases: {},
+    emotions: {}
   });
 
   // example/characters/fumika.ts
-  var fumika_default = defineCharacter({
-    name: "\uD6C4\uBBF8\uCE74",
-    images: {
+  var fumika_default = defineCharacter({ name: "\uD6C4\uBBF8\uCE74" })({
+    bases: {
       normal: {
-        src: "girl_normal",
+        src: "fumika_base_normal",
         width: 560,
         points: {
-          face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 },
-          legs: { x: 0.5, y: 0.55 }
-        }
-      },
-      smile: {
-        src: "girl_smile",
-        width: 560,
-        points: {
-          face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 }
-        }
-      },
-      angry: {
-        src: "girl_angry",
-        width: 560,
-        points: {
-          face: { x: 0.5, y: 0.18 },
-          chest: { x: 0.5, y: 0.45 }
-        }
-      },
-      embarrassed: {
-        src: "girl_embarrassed",
-        width: 560,
-        points: {
-          face: { x: 0.5, y: 0.18 },
+          face: { x: 0.445, y: 0.06 },
           chest: { x: 0.5, y: 0.45 }
         }
       }
+    },
+    emotions: {
+      normal: { face: "fumika_emotion_base_normal" },
+      smile: { face: "fumika_emotion_base_smile" },
+      angry: { face: "fumika_emotion_base_angry" },
+      embarrassed: { face: "fumika_emotion_base_embarrassed" }
     }
   });
 
@@ -18612,11 +18660,13 @@ ${addLineNumbers(fragment)}`);
       bg_floor: "./assets/bg_floor.png",
       bg_room: "./assets/bg_room.png",
       bg_park: "./assets/bg_park.png",
-      // 캐릭터
-      girl_normal: "./assets/girl_normal.png",
-      girl_smile: "./assets/girl_smile.png",
-      girl_embarrassed: "./assets/girl_embarrassed.png",
-      girl_angry: "./assets/girl_angry.png",
+      // 캐릭터 베이스
+      fumika_base_normal: "./assets/fumika_base_normal.png",
+      // 캐릭터 표정
+      fumika_emotion_base_normal: "./assets/fumika_emotion_base_normal.png",
+      fumika_emotion_base_angry: "./assets/fumika_emotion_base_angry.png",
+      fumika_emotion_base_smile: "./assets/fumika_emotion_base_smile.png",
+      fumika_emotion_base_embarrassed: "./assets/fumika_emotion_base_embarrassed.png",
       img_card_heroine: "./assets/img_card_hero.png",
       // 파티클
       dust: "./assets/particle_dust.png",
@@ -18818,7 +18868,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uADF8\uACF3\uC5D0\uB294 \uB9C8\uCE58 \uC138\uC0C1 \uBAA8\uB4E0 \uC9D0\uC744 \uC9CA\uC5B4\uC9C4 \uB4EF\uD55C \uD45C\uC815\uC758 \uC18C\uB140\uAC00 \uC788\uC5C8\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal", position: "center", focus: "face", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", focus: "face", duration: 800 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -18837,7 +18887,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uB0B4\uAC00 \uD790\uB054 \uCCD0\uB2E4\uBCF4\uC790, \uC0B4\uBC8C\uD55C \uB208\uBE5B\uACFC \uB531 \uB9C8\uC8FC\uCCE4\uB2E4."
     },
     { type: "camera-zoom", preset: "close-up" },
-    { type: "character", action: "show", name: "fumika", image: "angry", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -18886,7 +18936,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD655\uC2E4\uD788 \uC81C\uC815\uC2E0\uC740 \uC544\uB2CC \uAC83 \uAC19\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 500 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 500 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -18905,7 +18955,7 @@ ${addLineNumbers(fragment)}`);
     // ─── 분기: 버그 질문 ───
     { type: "label", name: "ask-bug" },
     { type: "camera-effect", preset: "shake", duration: 400 },
-    { type: "character", action: "show", name: "fumika", image: "angry", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -18950,7 +19000,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB625\uC774 \uBB34\uC11C\uC6CC\uC11C \uD53C\uD558\uB098. \uB098\uB294 \uC2AC\uADF8\uBA38\uB2C8 \uC790\uB9AC\uC5D0\uC11C \uC77C\uC5B4\uB0AC\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "angry", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -18987,7 +19037,7 @@ ${addLineNumbers(fragment)}`);
     },
     // ─── 공통 엔딩 ───
     { type: "label", name: "common-end" },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 800 },
     {
       type: "dialogue",
       speaker: "fumika",

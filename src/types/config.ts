@@ -7,58 +7,78 @@ import type { FallbackRuleOf, EffectType } from './dialogue'
 import type { NovelModule } from '../define/defineCmdUI'
 import type { Novel } from '../core/Novel'
 
-/** 
- * 단일 캐릭터 이미지 변형 정의 
- * 
+/**
+ * 캐릭터 베이스(신체) 이미지 정의.
+ * `points`에 감정 파트를 배치할 앵커 좌표를 기록합니다.
+ *
  * @example
  * ```ts
- * const heroNormal: CharImageDef = {
- *   src: 'hero_normal_img',
- *   width: 400,
- *   points: { head: { x: 0.5, y: 0.1 }, center: { x: 0.5, y: 0.5 } }
+ * const base: CharBaseDef = {
+ *   src: 'girl_normal',
+ *   width: 560,
+ *   naturalWidth: 1120,  // 원본 이미지 너비 (파트 스케일 계산용)
+ *   points: {
+ *     eyes:  { x: 0.5, y: 0.18 },
+ *     mouth: { x: 0.5, y: 0.22, width: 120 },
+ *   }
  * }
  * ```
  */
-export interface CharImageDef {
-  /** 
-   * 캐릭터 이미지의 에셋 키 또는 파일 경로입니다. 
-   */
+export interface CharBaseDef {
+  /** 베이스 이미지 에셋 키 */
   src?: string
-  /** 
-   * 캐릭터의 기본 렌더링 너비(px 단위)입니다. 
-   */
+  /** 렌더링 너비(px). 파트 이미지 스케일 계산의 기준이 됩니다. */
   width?: number
-  /**
-   * 캐릭터의 기본 렌더링 높이(px 단위)입니다.
-   * 이미지가 로드되기 전에 character-focus 등에서 정확한 높이 계산을 위해 사용할 수 있습니다.
-   */
+  /** 렌더링 높이(px). character-focus 높이 계산에 사용됩니다. */
   height?: number
-  /** 
-   * 캐릭터의 포커스 포인트 목록입니다. (0~1 사이 정규화된 값). 
-   * x는 좌에서 우로, y는 위에서 아래로의 위치를 나타냅니다. 
+  /**
+   * 원본(소스) 이미지의 실제 너비(px).
+   * scale = width / naturalWidth 로 파트 이미지 크기를 계산합니다.
+   * 미지정 시 scale = 1 (파트 이미지를 그대로 사용).
    */
-  points?: Record<string, { x: number; y: number }>
+  naturalWidth?: number
+  /**
+   * 감정 파트를 배치할 앵커 포인트 목록 (정규화 좌표 0–1).
+   * x: 좌→우, y: 위→아래.
+   * `width`: 이 포인트에 배치될 파트 이미지의 렌더링 너비(px).
+   *          미지정 시 파트 이미지 naturalWidth × scale 을 자동 계산합니다.
+   */
+  points?: Record<string, { x: number; y: number; width?: number }>
 }
 
-/** 
- * 단일 캐릭터 정의: imageKey → CharImageDef 매핑 
- * 
+/**
+ * 단일 캐릭터 정의: bases(신체) + emotions(표정 파트) 분리 구조.
+ *
  * @example
  * ```ts
  * const heroDef: CharDef = {
- *   normal: { src: 'hero_normal' },
- *   angry: { src: 'hero_angry' }
+ *   name: '히어로',
+ *   bases: {
+ *     normal: { src: 'hero_body', width: 400, points: { eyes: { x: 0.5, y: 0.18 } } }
+ *   },
+ *   emotions: {
+ *     normal: { eyes: 'hero_eyes_normal' },
+ *     angry:  { eyes: 'hero_eyes_angry'  },
+ *   }
  * }
  * ```
  */
 export interface CharDef {
-  /** 캐릭터의 표시용 이름 (대사창 등에 사용) */
+  /** 캐릭터 표시용 이름 (대사창 등에 사용) */
   name?: string
-  /** 캐릭터의 각 표정/상태별 이미지 정의 */
-  images: Record<string, CharImageDef>
+  /** 신체(베이스) 이미지 목록: baseKey → CharBaseDef */
+  bases: Record<string, CharBaseDef>
+  /**
+   * 감정(표정 파트) 목록: emotionKey → { pointKey: assetKey }.
+   * pointKey는 베이스의 `points` 키와 일치해야 합니다.
+   */
+  emotions: Record<string, Record<string, string>>
 }
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
+
+/** @deprecated 하위 호환용 — 새 코드는 CharBaseDef 를 사용하세요 */
+export type CharImageDef = CharBaseDef
 
 /** 
  * 단일 배경 이미지 정의 
@@ -268,14 +288,35 @@ export type CharacterKeysOf<TConfig> =
  * type AriImg = ImageKeysOf<typeof config, 'arisiero'>  // 'normal' | 'smile'
  * ```
  */
-export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
+type _BasesKeysOf<TConfig, TCharKey extends string> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? TCharKey extends keyof TChars
-  ? TChars[TCharKey] extends { images: infer TImgs }
-  ? keyof TImgs & string
+  ? TChars[TCharKey] extends { bases: infer TBases }
+  ? keyof TBases & string
   : string
   : string
   : string
+
+type _EmotionsKeysOf<TConfig, TCharKey extends string> =
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  ? TCharKey extends keyof TChars
+  ? TChars[TCharKey] extends { emotions: infer TEmotions }
+  ? keyof TEmotions & string
+  : string
+  : string
+  : string
+
+/**
+ * `NovelConfig`에서 특정 캐릭터의 이미지 키 유니온을 추출합니다.
+ * `'base:emotion'` 형태의 템플릿 리터럴 타입을 반환합니다.
+ *
+ * @example
+ * ```ts
+ * type FumikaImg = ImageKeysOf<typeof config, 'fumika'>  // 'normal:normal' | 'normal:smile' | ...
+ * ```
+ */
+export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
+  `${_BasesKeysOf<TConfig, TCharKey>}:${_EmotionsKeysOf<TConfig, TCharKey>}`
 
 /**
  * `NovelConfig`에서 에셋 키(`assets`의 key) 유니온을 추출합니다.
@@ -359,8 +400,8 @@ export type VariablesOf<TConfig> =
 export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
   ? TName extends keyof TChars
-  ? TChars[TName] extends { images: infer TImgs }
-  ? TImgs[keyof TImgs] extends { points?: infer P }
+  ? TChars[TName] extends { bases: infer TBases }
+  ? TBases[keyof TBases] extends { points?: infer P }
   ? keyof P & string
   : string
   : string

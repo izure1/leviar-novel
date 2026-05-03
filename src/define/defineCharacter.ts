@@ -1,29 +1,55 @@
-import type { CharDef } from '../types/config'
+import type { CharDef, CharBaseDef } from '../types/config'
+
+type UnionPointsOf<TBases extends Record<string, CharBaseDef>> = {
+  [K in keyof TBases]: keyof NonNullable<TBases[K]['points']>
+}[keyof TBases] & string
 
 /**
- * 캐릭터 설정 객체를 정의할 때 타입 추론 및 자동완성을 돕는 헬퍼 함수입니다.
- * 별도의 모듈에서 캐릭터를 정의하고, `novel.config.ts`의 `characters`에 쉽게 추가할 수 있도록 돕습니다.
+ * T가 Shape의 허용 키만 가지면 T, 아니면 never.
+ * 허용 외 키 사용 시 타입 오류를 유발합니다.
+ */
+type Exact<T, Shape> = T extends Shape
+  ? Exclude<keyof T, keyof Shape> extends never
+    ? T
+    : never
+  : never
+
+/**
+ * 캐릭터를 정의하는 curried 헬퍼 함수입니다.
+ *
+ * ```
+ * defineCharacter(meta)(def)
+ * ```
+ *
+ * - `emotions` 키: `bases.*.points` 키에서 추론, 허용 외 키 → 타입 오류
+ * - `emotions` 값: `string`
  *
  * @example
  * ```ts
- * // example/characters/my-character.ts
- * export const myCharacter = defineCharacter({
- *   name: 'my-character',
- *   images: {
- *     normal: {
- *       src: 'my-character-normal',
- *       width: 350,
- *       points: { face: { x: 0.5, y: 0.18 }, chest: { x: 0.5, y: 0.45 } }
- *     }
+ * export default defineCharacter({ name: '후미카' })({
+ *   bases: {
+ *     normal: { src: '...', width: 560, points: { face: { x: 0.5, y: 0.18 } } }
+ *   },
+ *   emotions: {
+ *     normal: { face: 'fumika_emotion_base_normal' },   // ✅
+ *     smile:  { face: '...', invalid: '...' },          // ❌ 타입 오류
  *   }
- * });
- *
- * // example/novel.config.ts
- * characters: {
- *   'my-character-key': myCharacter
- * }
+ * })
  * ```
  */
-export function defineCharacter<const T extends CharDef>(def: T): T {
-  return def
+export function defineCharacter<const TMeta extends { name?: string }>(meta: TMeta) {
+  return function <
+    const TBases extends Record<string, CharBaseDef>,
+    const TEmotions extends Record<string, Record<string, string>>
+  >(def: {
+    bases: TBases
+    emotions: {
+      [EKey in keyof TEmotions]: Exact<
+        TEmotions[EKey],
+        Partial<Record<UnionPointsOf<TBases>, string>>
+      >
+    }
+  }): TMeta & { bases: TBases; emotions: TEmotions } & Pick<CharDef, 'name'> {
+    return { ...meta, ...def } as unknown as TMeta & { bases: TBases; emotions: TEmotions } & Pick<CharDef, 'name'>
+  }
 }

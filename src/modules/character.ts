@@ -1,4 +1,4 @@
-import type { CharDefs, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
+import type { CharDef, CharDefs, CharBaseDef, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
 import type { ZoomPreset, CameraPanCmd, CameraZoomCmd, CameraEffectPreset } from './camera'
 import { playMotionEffect } from '../core/motion'
 import type { LeviarObject } from 'leviar'
@@ -112,7 +112,10 @@ function resolvePositionX(position: string): number {
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
 export interface CharacterRenderObj extends LeviarObject<Record<string, any>, Record<string, any>> {
-  _currentImageKey?: string
+  _currentBaseKey?: string
+  _currentEmotionKey?: string
+  /** pointKey → part LeviarObject */
+  _partObjs?: Record<string, LeviarObject<Record<string, any>, Record<string, any>>>
   transition?: (src: string, dur: number) => void
   __activeCharEffectStop?: (() => void) | null
 }
@@ -135,6 +138,85 @@ characterModule.defineView((ctx, data, setState) => {
   // 내부 canvas 오브젝트 맵
   const _charObjs: Record<string, CharacterRenderObj> = {}
 
+  // ─── 헬퍼: imageKey 파싱 ──────────────────────────────────
+
+  function parseImageKey(imageKey: string): { baseKey: string; emotionKey: string } {
+    const idx = imageKey.indexOf(':')
+    if (idx === -1) return { baseKey: imageKey, emotionKey: imageKey }
+    return { baseKey: imageKey.slice(0, idx), emotionKey: imageKey.slice(idx + 1) }
+  }
+
+  // ─── 헬퍼: loader.assets에서 이미지 naturalWidth 읽기 ─────
+
+  function getLoadedNaturalWidth(key: string): number | undefined {
+    const el = ctx.renderer.world.loader.assets[key] as HTMLImageElement | undefined
+    return el?.naturalWidth
+  }
+
+  // ─── 헬퍼: emotion 파트 생성/업데이트 ──────────────────────
+
+  const _updateEmotionParts = (
+    baseObj: CharacterRenderObj,
+    baseDef: CharBaseDef,
+    emotionDef: Record<string, string>,
+    dur: number
+  ) => {
+    if (!baseDef.points) return
+    if (!baseObj._partObjs) baseObj._partObjs = {}
+
+    const baseWidth = baseDef.width ?? 500
+    const baseHeight = baseDef.height ?? ((baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize!.h : baseWidth * 2)
+
+    // base 이미지 naturalWidth를 loader.assets에서 런타임 감지 → 비율 계산
+    const baseSrc = baseDef.src ?? (baseObj._currentBaseKey ?? '')
+    const baseNaturalW = baseDef.naturalWidth ?? getLoadedNaturalWidth(baseSrc) ?? baseWidth
+    const scale = baseWidth / baseNaturalW
+
+    for (const [pointKey, point] of Object.entries(baseDef.points)) {
+      const partSrc = emotionDef[pointKey]
+      if (!partSrc) continue
+
+      // base 로컬 좌표 (addChild → base 기준 상대 좌표)
+      const localX = baseWidth * (point.x - 0.5)
+      const localY = baseHeight * (0.5 - point.y)
+
+      const existingPart = baseObj._partObjs[pointKey]
+
+      if (existingPart) {
+        // src 교체, 위치 animate
+        if (existingPart.attribute) existingPart.attribute.src = partSrc
+        ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, 'easeInOutQuad')
+      } else {
+        // 파트 너비: point.width 우선, 없으면 loader.assets에서 naturalWidth × scale
+        const partNaturalW = getLoadedNaturalWidth(partSrc)
+        const partWidth = point.width ?? (partNaturalW !== undefined ? Math.round(partNaturalW * scale) : undefined)
+
+        // 신규 파트 생성 → base의 자식으로 등록
+        const partObj = ctx.renderer.world.createImage({
+          attribute: { src: partSrc },
+          style: {
+            width: partWidth,
+            // opacity/zIndex 는 base(parent)에서 자동 상속
+          },
+          transform: { position: { x: localX, y: localY, z: -0.1 } }
+        }) as LeviarObject<Record<string, any>, Record<string, any>>
+        baseObj.addChild(partObj)
+        baseObj._partObjs[pointKey] = partObj
+      }
+    }
+
+    // 더 이상 필요 없는 파트 제거
+    for (const [pointKey, partObj] of Object.entries(baseObj._partObjs)) {
+      if (!baseDef.points[pointKey] || !emotionDef[pointKey]) {
+        baseObj.removeChild(partObj)
+        partObj.remove()
+        delete baseObj._partObjs[pointKey]
+      }
+    }
+  }
+
+  // ─── 캐릭터 표시 ─────────────────────────────────────────────
+
   const _showCharacter = (
     name: string,
     position: string,
@@ -143,46 +225,68 @@ characterModule.defineView((ctx, data, setState) => {
     immediate = false
   ) => {
     const charDefs = ctx.renderer.config.characters as CharDefs
-    const def = charDefs[name]
+    const def = charDefs[name] as CharDef
     if (!def) return
 
-    const resolvedKey = imageKey || Object.keys(def.images)[0]
-    const imageDef = def.images[resolvedKey]
-    if (!imageDef) return
+    const allBaseKeys = Object.keys(def.bases)
+    const allEmotionKeys = Object.keys(def.emotions)
+    const { baseKey, emotionKey } = parseImageKey(
+      imageKey || `${allBaseKeys[0]}:${allEmotionKeys[0]}`
+    )
 
-    const src = imageDef.src ?? resolvedKey
+    const baseDef = def.bases[baseKey]
+    const emotionDef = def.emotions[emotionKey]
+    if (!baseDef || !emotionDef) return
+
+    const src = baseDef.src ?? baseKey
     const xPos = ctx.renderer.width * (resolvePositionX(position) - 0.5)
     const zPos = (ctx.renderer.world.camera)?.attribute?.focalLength ?? 100
     const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 400)
+    const baseWidth = baseDef.width ?? 500
 
     const existing = _charObjs[name]
     if (existing) {
       ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, 'easeInOutQuad')
-      if (imageKey && imageKey !== existing._currentImageKey) {
+
+      // base 교체
+      if (baseKey !== existing._currentBaseKey) {
         if (dur > 0 && typeof existing.transition === 'function') {
           existing.transition(src, dur)
         } else {
           if (existing.attribute) existing.attribute.src = src
         }
+        if (existing.style) existing.style.width = baseWidth
+        existing._currentBaseKey = baseKey
       }
-      existing._currentImageKey = resolvedKey
+
+      // emotion 파트 교체
+      if (emotionKey !== existing._currentEmotionKey || baseKey !== existing._currentBaseKey) {
+        _updateEmotionParts(existing, baseDef, emotionDef, dur)
+        existing._currentEmotionKey = emotionKey
+      }
       return
     }
 
+    // 신규 오브젝트 생성
     const obj = ctx.renderer.world.createImage({
       attribute: { src },
       style: {
-        width: imageDef.width ?? 500,
+        width: baseWidth,
         opacity: dur > 0 ? 0 : 1,
         zIndex: Z_INDEX.CHARACTER_NORMAL,
       },
       transform: { position: { x: xPos, y: 0, z: zPos } }
     }) as CharacterRenderObj
     ctx.renderer.track(obj)
-    obj._currentImageKey = resolvedKey
+    obj._currentBaseKey = baseKey
+    obj._currentEmotionKey = emotionKey
+    obj._partObjs = {}
     _charObjs[name] = obj
 
+    _updateEmotionParts(obj, baseDef, emotionDef, 0)
+
     if (dur > 0) {
+      // base opacity 0→1 → child(part)도 자동 상속
       ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur)
     }
   }
@@ -192,14 +296,18 @@ characterModule.defineView((ctx, data, setState) => {
     if (obj) {
       delete _charObjs[name]
       const dur = ctx.renderer.dur(duration ?? 400)
+
       if (dur > 0) {
+        // base opacity 0으로 → child(part)도 자동 fade out
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
-          obj.remove()
+          obj.remove({ child: true })
           ctx.renderer.untrack(obj)
+          obj._partObjs = {}
         })
       } else {
-        obj.remove()
+        obj.remove({ child: true })
         ctx.renderer.untrack(obj)
+        obj._partObjs = {}
       }
     }
   }
@@ -213,21 +321,19 @@ characterModule.defineView((ctx, data, setState) => {
     show: () => { /* 개별 캐릭터는 _charObjs 관리 */ },
     hide: () => {
       for (const obj of Object.values(_charObjs)) {
+        // child(part)는 base opacity 상속 → base만 fadeOut
         obj?.fadeOut?.(300, 'easeIn')
       }
     },
-    // 외부에서 캐릭터 오브젝트 접근 (character-focus 등에서 사용)
     getObj: (name: string) => _charObjs[name],
     onUpdate: (_ctx, d: CharacterSchema, _setState) => {
       const dur = d._lastDuration
       const newNames = new Set(Object.keys(d._characters))
-      // 제거된 캐릭터
       for (const name of Object.keys(_charObjs)) {
         if (!newNames.has(name)) {
           _removeCharacter(name, dur)
         }
       }
-      // 추가/변경된 캐릭터
       for (const [name, info] of Object.entries(d._characters)) {
         _showCharacter(name, info.position, info.imageKey, dur)
       }
@@ -241,14 +347,17 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'show') {
     const showCmd = cmd
     const charDefs = ctx.renderer.config.characters as CharDefs
-    const def = charDefs[showCmd.name]
+    const def = charDefs[showCmd.name] as CharDef
     if (!def) return true
+
+    const allBaseKeys = Object.keys(def.bases)
+    const allEmotionKeys = Object.keys(def.emotions)
 
     const existingState = newChars[showCmd.name]
     const resolvedPosition = (!showCmd.position || showCmd.position === 'inherit')
       ? (existingState?.position ?? 'center')
       : showCmd.position
-    const resolvedKey = showCmd.image ?? Object.keys(def.images)[0]
+    const resolvedKey = showCmd.image ?? `${allBaseKeys[0]}:${allEmotionKeys[0]}`
 
     newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey as string }
     setState({ _characters: newChars, _lastDuration: cmd.duration })
@@ -298,20 +407,20 @@ export default characterModule
 function _calcFocusCommands(
   name: string,
   target: CharacterRenderObj | undefined | null,
-  def: { images: Record<string, { points?: Record<string, { x: number; y: number }>; height?: number; width?: number }> },
+  def: CharDef,
   focusType?: string,
   fit: ZoomPreset = 'inherit',
   duration: number = 800
 ): [(CameraPanCmd & { type: 'camera-pan' }), (CameraZoomCmd & { type: 'camera-zoom' })] | [] {
   if (!target) return []
-  const activeImgKey = target._currentImageKey ?? Object.keys(def.images)[0]
-  const imageDef = def.images[activeImgKey]
-  const fp = (focusType && imageDef?.points) ? imageDef.points[focusType] : { x: 0.5, y: 0.5 }
+  const activeBaseKey = target._currentBaseKey ?? Object.keys(def.bases)[0]
+  const baseDef = def.bases[activeBaseKey]
+  const fp = (focusType && baseDef?.points) ? baseDef.points[focusType] : { x: 0.5, y: 0.5 }
 
   const targetX = target.transform?.position?.x ?? 0
   const charW = target.style?.width ?? 500
   const rendH = target.__renderedSize?.h
-  const charH = imageDef?.height ?? ((rendH && rendH > 0) ? rendH : charW * 2)
+  const charH = baseDef?.height ?? ((rendH && rendH > 0) ? rendH : charW * 2)
 
   const panX = targetX + charW * (fp.x - 0.5)
   const panY = charH * (0.5 - fp.y)
@@ -337,7 +446,7 @@ characterFocusModule.defineCommand(function* (cmd, ctx) {
   if (!charObj) return true
 
   const charDefs = ctx.renderer.config.characters as CharDefs
-  const def = charDefs[cmd.name]
+  const def = charDefs[cmd.name] as CharDef
   if (!def) return true
 
   if (!charObj.__renderedSize || charObj.__renderedSize.h <= 0) {
