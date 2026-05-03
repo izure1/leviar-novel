@@ -180,8 +180,3 @@ cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
 
 export { cameraEffectModule }
 
-// ─── @internal 하위 호환 aliases ─────────────────────────────
-
-export const cameraZoomHandler = (p: any, ctx: any) => cameraZoomModule.__handler!(p, ctx)
-export const cameraPanHandler = (p: any, ctx: any) => cameraPanModule.__handler!(p, ctx)
-export const cameraEffectHandler = (p: any, ctx: any) => cameraEffectModule.__handler!(p, ctx)

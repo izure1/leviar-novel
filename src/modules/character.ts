@@ -146,11 +146,10 @@ characterModule.defineView((ctx, data, setState) => {
     return { baseKey: imageKey.slice(0, idx), emotionKey: imageKey.slice(idx + 1) }
   }
 
-  // ─── 헬퍼: loader.assets에서 이미지 naturalWidth 읽기 ─────
+  // ─── 헬퍼: loader.assets에서 이미지 읽기 ─────
 
-  function getLoadedNaturalWidth(key: string): number | undefined {
-    const el = ctx.renderer.world.loader.assets[key] as HTMLImageElement | undefined
-    return el?.naturalWidth
+  function getLoadedImage(key: string): HTMLImageElement | undefined {
+    return ctx.renderer.world.loader.assets[key] as HTMLImageElement | undefined
   }
 
   // ─── 헬퍼: emotion 파트 생성/업데이트 ──────────────────────
@@ -164,13 +163,17 @@ characterModule.defineView((ctx, data, setState) => {
     if (!baseDef.points) return
     if (!baseObj._partObjs) baseObj._partObjs = {}
 
-    const baseWidth = baseDef.width ?? 500
-    const baseHeight = baseDef.height ?? ((baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize!.h : baseWidth * 2)
-
-    // base 이미지 naturalWidth를 loader.assets에서 런타임 감지 → 비율 계산
     const baseSrc = baseDef.src ?? (baseObj._currentBaseKey ?? '')
-    const baseNaturalW = baseDef.naturalWidth ?? getLoadedNaturalWidth(baseSrc) ?? baseWidth
+    const baseImg = getLoadedImage(baseSrc)
+
+    const baseWidth = baseDef.width ?? 500
+    const baseNaturalW = baseDef.naturalWidth ?? baseImg?.naturalWidth ?? baseWidth
     const scale = baseWidth / baseNaturalW
+
+    const baseHeight = baseDef.height ?? (
+      (baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize!.h :
+        (baseImg ? baseWidth * (baseImg.naturalHeight / baseImg.naturalWidth) : baseWidth * 2)
+    )
 
     for (const [pointKey, point] of Object.entries(baseDef.points)) {
       const partSrc = emotionDef[pointKey]
@@ -184,11 +187,17 @@ characterModule.defineView((ctx, data, setState) => {
 
       if (existingPart) {
         // src 교체, 위치 animate
-        if (existingPart.attribute) existingPart.attribute.src = partSrc
+        if (existingPart.attribute && existingPart.attribute.src !== partSrc) {
+          if (dur > 0 && typeof (existingPart as any).transition === 'function') {
+            (existingPart as any).transition(partSrc, dur)
+          } else {
+            existingPart.attribute.src = partSrc
+          }
+        }
         ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, 'easeInOutQuad')
       } else {
         // 파트 너비: point.width 우선, 없으면 loader.assets에서 naturalWidth × scale
-        const partNaturalW = getLoadedNaturalWidth(partSrc)
+        const partNaturalW = getLoadedImage(partSrc)?.naturalWidth
         const partWidth = point.width ?? (partNaturalW !== undefined ? Math.round(partNaturalW * scale) : undefined)
 
         // 신규 파트 생성 → base의 자식으로 등록
@@ -196,9 +205,9 @@ characterModule.defineView((ctx, data, setState) => {
           attribute: { src: partSrc },
           style: {
             width: partWidth,
-            // opacity/zIndex 는 base(parent)에서 자동 상속
+            zIndex: Z_INDEX.CHARACTER_NORMAL + 1,
           },
-          transform: { position: { x: localX, y: localY, z: -0.1 } }
+          transform: { position: { x: localX, y: localY, z: 0 } }
         }) as LeviarObject<Record<string, any>, Record<string, any>>
         baseObj.addChild(partObj)
         baseObj._partObjs[pointKey] = partObj
@@ -521,9 +530,3 @@ characterEffectModule.defineCommand(function* (cmd, ctx) {
 
 export { characterEffectModule }
 
-// ─── 하위 호환 헬퍼 ──────────────────────────────────────────
-
-/** @internal Novel.ts rebuildUI 하위 호환용 */
-export function showCharacter(ctx: unknown, name: string, position?: CharacterPositionPreset, imageKey?: string, duration?: number) {
-  characterModule.__handler?.({ action: 'show', name, position, image: imageKey, duration } as CharacterCmd, ctx as never)
-}

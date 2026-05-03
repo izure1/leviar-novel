@@ -29,9 +29,13 @@ export default defineNovelConfig({
   },
   characters: {
     'heroine': {
-      images: {
-        'normal': { src: 'char_heroine_normal', points: { 'face': { x: 0.5, y: 0.2 } } },
-        'smile': { src: 'char_heroine_smile' }
+      name: '히로인',
+      bases: {
+        'normal': { src: 'char_heroine_base', width: 560, points: { 'face': { x: 0.5, y: 0.2 } } }
+      },
+      emotions: {
+        'normal': { 'face': 'char_heroine_face_normal' },
+        'smile': { 'face': 'char_heroine_face_smile' }
       }
     }
   }
@@ -43,10 +47,15 @@ export default defineNovelConfig({
 프로젝트 규모가 커지면 캐릭터별로 파일을 분리하여 관리하는 것이 좋습니다. `defineCharacter`를 사용하면 다음과 같이 깔끔하게 캐릭터를 정의할 수 있습니다.
 
 ```ts
+import { defineCharacter } from 'fumika'
+
 export const fumika = defineCharacter({
-  name: 'Fumika',
-  images: {
-    normal: { src: 'char_fumika_normal', width: 400 }
+  name: '후미카',
+  bases: {
+    normal: { src: 'char_fumika_base', width: 560, points: { face: { x: 0.5, y: 0.2 } } }
+  },
+  emotions: {
+    normal: { face: 'char_fumika_face_normal' }
   }
 })
 ```
@@ -66,18 +75,18 @@ export const fumika = defineCharacter({
 | `action` | `'show' \| 'remove'` | ✅ | **show**: 등장/갱신 동작<br>**remove**: 퇴장 동작 |
 | `name` | `CharacterKeysOf<Config>` | ✅ | 캐릭터 식별자입니다. |
 | `position` | `CharacterPositionPreset` | - | 배치 위치입니다. (`left`, `center`, `"1/3"` 등) |
-| `image` | `ImageKeysOf<Config, Name>` | - | 표시할 이미지(표정) 키입니다. |
+| `image` | `ImageKeysOf<Config, Name>` | - | 표시할 이미지(표정) 키입니다. (`base:emotion` 형식) |
 | `focus` | `boolean \| PointsOf<Config, Name>` | - | 특정 부위 포커싱 여부입니다. |
 | `duration` | `number` | - | 애니메이션 지속 시간(ms)입니다. |
 
 ### 4.2. 활용 예시
 
 ```ts
-// 1. 첫 등장: 중앙에 'normal' 표정으로 800ms간 페이드인
-{ type: 'character', action: 'show', name: 'heroine', position: 'center', image: 'normal', duration: 800 }
+// 1. 첫 등장: 중앙에 'normal' 베이스의 'normal' 표정으로 800ms간 페이드인
+{ type: 'character', action: 'show', name: 'heroine', position: 'center', image: 'normal:normal', duration: 800 }
 
-// 2. 표정 및 위치 변경: 'smile'로 바꾸며 'right'로 500ms간 이동
-{ type: 'character', action: 'show', name: 'heroine', image: 'smile', position: 'right', duration: 500 }
+// 2. 표정 교체: 'normal' 베이스의 'smile' 표정으로 500ms간 변경
+{ type: 'character', action: 'show', name: 'heroine', image: 'normal:smile', duration: 500 }
 
 // 3. 퇴장: 500ms간 페이드아웃 후 제거
 { type: 'character', action: 'remove', name: 'heroine', duration: 500 }

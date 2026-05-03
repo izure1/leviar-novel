@@ -1594,18 +1594,18 @@
       if (idx === -1) return { baseKey: imageKey, emotionKey: imageKey };
       return { baseKey: imageKey.slice(0, idx), emotionKey: imageKey.slice(idx + 1) };
     }
-    function getLoadedNaturalWidth(key) {
-      const el = ctx.renderer.world.loader.assets[key];
-      return el?.naturalWidth;
+    function getLoadedImage(key) {
+      return ctx.renderer.world.loader.assets[key];
     }
     const _updateEmotionParts = (baseObj, baseDef, emotionDef, dur) => {
       if (!baseDef.points) return;
       if (!baseObj._partObjs) baseObj._partObjs = {};
-      const baseWidth = baseDef.width ?? 500;
-      const baseHeight = baseDef.height ?? ((baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize.h : baseWidth * 2);
       const baseSrc = baseDef.src ?? (baseObj._currentBaseKey ?? "");
-      const baseNaturalW = baseDef.naturalWidth ?? getLoadedNaturalWidth(baseSrc) ?? baseWidth;
+      const baseImg = getLoadedImage(baseSrc);
+      const baseWidth = baseDef.width ?? 500;
+      const baseNaturalW = baseDef.naturalWidth ?? baseImg?.naturalWidth ?? baseWidth;
       const scale2 = baseWidth / baseNaturalW;
+      const baseHeight = baseDef.height ?? ((baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize.h : baseImg ? baseWidth * (baseImg.naturalHeight / baseImg.naturalWidth) : baseWidth * 2);
       for (const [pointKey, point] of Object.entries(baseDef.points)) {
         const partSrc = emotionDef[pointKey];
         if (!partSrc) continue;
@@ -1613,18 +1613,24 @@
         const localY = baseHeight * (0.5 - point.y);
         const existingPart = baseObj._partObjs[pointKey];
         if (existingPart) {
-          if (existingPart.attribute) existingPart.attribute.src = partSrc;
+          if (existingPart.attribute && existingPart.attribute.src !== partSrc) {
+            if (dur > 0 && typeof existingPart.transition === "function") {
+              existingPart.transition(partSrc, dur);
+            } else {
+              existingPart.attribute.src = partSrc;
+            }
+          }
           ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, "easeInOutQuad");
         } else {
-          const partNaturalW = getLoadedNaturalWidth(partSrc);
+          const partNaturalW = getLoadedImage(partSrc)?.naturalWidth;
           const partWidth = point.width ?? (partNaturalW !== void 0 ? Math.round(partNaturalW * scale2) : void 0);
           const partObj = ctx.renderer.world.createImage({
             attribute: { src: partSrc },
             style: {
-              width: partWidth
-              // opacity/zIndex 는 base(parent)에서 자동 상속
+              width: partWidth,
+              zIndex: Z_INDEX.CHARACTER_NORMAL + 1
             },
-            transform: { position: { x: localX, y: localY, z: -0.1 } }
+            transform: { position: { x: localX, y: localY, z: 0 } }
           });
           baseObj.addChild(partObj);
           baseObj._partObjs[pointKey] = partObj;
@@ -4018,10 +4024,8 @@
   }
 
   // src/define/defineCharacter.ts
-  function defineCharacter(meta) {
-    return function(def) {
-      return { ...meta, ...def };
-    };
+  function defineCharacter(def) {
+    return def;
   }
 
   // src/define/defineScene.ts
@@ -14316,7 +14320,7 @@ ${addLineNumbers(fragment)}`);
 
   void main() {
     vec4 color = texture2D(uTexture, vUV);
-    gl_FragColor = vec4(color.rgb * color.a * uOpacity, color.a * uOpacity);
+    gl_FragColor = vec4(color.rgb * uOpacity, color.a * uOpacity);
   }
 `
   );
@@ -14406,7 +14410,7 @@ ${addLineNumbers(fragment)}`);
     }
 
     vec4 color = texture2D(uTexture, vUV);
-    gl_FragColor = vec4(color.rgb * color.a * vOpacity, color.a * vOpacity);
+    gl_FragColor = vec4(color.rgb * vOpacity, color.a * vOpacity);
   }
 `
   );
@@ -15177,7 +15181,7 @@ ${addLineNumbers(fragment)}`);
         height: canvas.height,
         alpha: true,
         antialias: true,
-        premultipliedAlpha: false
+        premultipliedAlpha: true
       });
       this.gl = this.ogl.gl;
       this._width = canvas.width;
@@ -16213,7 +16217,7 @@ ${addLineNumbers(fragment)}`);
         } else {
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
-          const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false });
+          const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false, premultiplyAlpha: true });
           const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram });
           entry = { texture, canvas, ctx, lastText: "", mesh };
           entry._contentKey = contentKey;
@@ -16238,7 +16242,7 @@ ${addLineNumbers(fragment)}`);
           }
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
-          const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false });
+          const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false, premultiplyAlpha: true });
           const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram });
           entry = { texture, canvas, ctx, lastText: "", mesh };
           this.textCache.set(id, entry);
@@ -16584,7 +16588,7 @@ ${addLineNumbers(fragment)}`);
       this._drawRectBorders(obj, x, y, drawW, drawH, obj.__worldOpacity);
       let tex = this.videoTextureCache.get(src);
       if (!tex) {
-        tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
+        tex = new Texture(this.gl, { image: asset, generateMipmaps: false, premultiplyAlpha: true });
         this.videoTextureCache.set(src, tex);
       }
       tex.image = asset;
@@ -16814,7 +16818,7 @@ ${addLineNumbers(fragment)}`);
     _getOrCreateAssetTexture(src, asset) {
       let tex = this.assetTextureCache.get(src);
       if (!tex) {
-        tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
+        tex = new Texture(this.gl, { image: asset, generateMipmaps: false, premultiplyAlpha: true });
         this.assetTextureCache.set(src, tex);
       }
       return tex;
@@ -17602,18 +17606,11 @@ ${addLineNumbers(fragment)}`);
       this.state = new Map(Object.entries(state.pluginState || {}));
     }
     /**
-     * pluginState 데이터를 기반으로 배경, 캐릭터, 무드, 이펙트를 화면에 재생성합니다.
-     * restoreState() 이후 호출하여 실제 렌더링을 복원합니다.
-     * @deprecated Novel._rebuildUI()로 이동됨. 직접 호출 시 Novel에서만 사용.
-     */
-    rebuildFromState() {
-    }
-    /**
      * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
      * 주로 씬(Scene) 전환이나 종료 시 호출됩니다.
      */
     clear() {
-      this._objects.forEach((obj) => obj.remove?.());
+      this._objects.forEach((obj) => obj.remove?.({ child: true }));
       this._objects.clear();
       this.state.clear();
       if (this.camOffsetObj) {
@@ -18358,7 +18355,6 @@ ${addLineNumbers(fragment)}`);
       this._uiRegistry.clear();
       this._renderer.clear();
       this._renderer.restoreState(resolvedData.rendererState);
-      this._renderer.rebuildFromState();
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18570,19 +18566,21 @@ ${addLineNumbers(fragment)}`);
   };
 
   // example/characters/chat.ts
-  var chat_default = defineCharacter({ name: "\uCC44\uD305\uCC3D" })({
+  var chat_default = defineCharacter({
+    name: "\uCC44\uD305\uCC3D",
     bases: {},
     emotions: {}
   });
 
   // example/characters/fumika.ts
-  var fumika_default = defineCharacter({ name: "\uD6C4\uBBF8\uCE74" })({
+  var fumika_default = defineCharacter({
+    name: "\uD6C4\uBBF8\uCE74",
     bases: {
       normal: {
         src: "fumika_base_normal",
         width: 560,
         points: {
-          face: { x: 0.445, y: 0.06 },
+          face: { x: 0.445, y: 0.202 },
           chest: { x: 0.5, y: 0.45 }
         }
       }
@@ -19197,7 +19195,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD654\uBA74 \uC18D\uC5D0\uC11C\uB294 \uC815\uCCB4\uBD88\uBA85\uC758 \uBAAC\uC2A4\uD130\uAC00 \uAE30\uAD34\uD55C \uD3F4\uB9AC\uACE4\uC744 \uD769\uBFCC\uB9AC\uBA70 \uCDA4\uC744 \uCD94\uACE0 \uC788\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal", position: "center", focus: "face", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", focus: "face", duration: 800 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19216,7 +19214,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uADF8\uAC8C \uBB34\uC2A8 \uBBF8\uCE5C \uC870\uC791\uBC95\uC778\uAC00 \uC2F6\uC9C0\uB9CC, \uD654\uBA74 \uC18D \uCE90\uB9AD\uD130\uB294 \uC815\uB9D0\uB85C \uACF5\uC911\uBD80\uC591\uC744 \uC2DC\uC791\uD588\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19269,7 +19267,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uD329\uD2B8\uB97C \uAF42\uC544\uB123\uC790, \uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC2E4\uC2DC\uAC04\uC73C\uB85C \uC369\uC5B4 \uB4E4\uC5B4\uAC14\uB2E4."
     },
     { type: "camera-effect", preset: "shake", duration: 300 },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19291,7 +19289,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "play-game" },
     // ─── 게임 플레이 ───
     { type: "label", name: "play-game" },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 500 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 500 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19315,7 +19313,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB0B4 \uCE90\uB9AD\uD130\uAC00 \uAC11\uC790\uAE30 T\uD3EC\uC988\uB97C \uCDE8\uD558\uB354\uB2C8 \uD558\uB298\uB85C \uC19F\uAD6C\uCE58\uAE30 \uC2DC\uC791\uD588\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19392,7 +19390,7 @@ ${addLineNumbers(fragment)}`);
     },
     // ─── 치킨 ───
     { type: "label", name: "chicken" },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19407,7 +19405,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uADF8\uAC8C \uBB34\uC2A8 \uB054\uCC0D\uD55C \uD63C\uC885\uC778\uAC00."
     },
     { type: "dialogue", text: '"\uB9C8\uB77C\uC5D0 \uB85C\uC81C\uC5D0 \uD06C\uB9BC\uCE58\uC988...? \uC704\uC7A5 \uD14C\uB7EC \uC544\uB0D0?"' },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19417,7 +19415,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "order" },
     // ─── 매운거 ───
     { type: "label", name: "spicy" },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19511,7 +19509,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "camera-effect", preset: "shake", duration: 500 },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19534,7 +19532,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB180\uB78D\uAC8C\uB3C4, \uADF8 \uB2F9\uD669\uD568\uC740 \uB2E8 1\uCD08 \uB9CC\uC5D0 \uD754\uC801\uB3C4 \uC5C6\uC774 \uC0AC\uB77C\uC84C\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19651,7 +19649,7 @@ ${addLineNumbers(fragment)}`);
       speed: 10
     },
     { type: "character-effect", name: "fumika", preset: "shake", intensity: 30, duration: 500, repeat: -1 },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
     {
       type: "dialogue",
       text: "\uD6C4\uBBF8\uCE74\uC758 \uC5BC\uAD74\uC774 \uC0AC\uC0C9\uC774 \uB418\uC5C8\uB2E4. \uADF8\uB140\uB294 \uB9C8\uC774\uD06C\uB97C \uD669\uAE09\uD788 \uAC00\uB838\uB2E4."
@@ -19671,7 +19669,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uD6C4\uBBF8\uCE74\uB294 \uB2E4\uC2DC \uB9C8\uC774\uD06C\uC5D0\uC11C \uC190\uC744 \uB5BC\uACE0 \uC5B5\uC9C0\uC6C3\uC74C\uC744 \uC9C0\uC5C8\uB2E4."
     },
     { type: "character-effect", name: "fumika", preset: "reset" },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19708,7 +19706,7 @@ ${addLineNumbers(fragment)}`);
       speed: 10
     },
     { type: "character-effect", name: "fumika", preset: "shake", intensity: 30, duration: 500, repeat: -1 },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed" },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed" },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19736,7 +19734,7 @@ ${addLineNumbers(fragment)}`);
     {
       type: "dialogue",
       speaker: "fumika",
-      text: '<style fontSize="30">\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uCC44\uD305\uCC3D \uCC3D\uB0AC\uC796\uC544!</style>'
+      text: '<style fontSize="50">\uC57C, \uB108 \uB54C\uBB38\uC5D0 \uCC44\uD305\uCC3D \uCC3D\uB0AC\uC796\uC544!</style>'
     },
     {
       type: "dialogue",
@@ -19803,7 +19801,7 @@ ${addLineNumbers(fragment)}`);
       ],
       speed: 10
     },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
     {
       type: "dialogue",
       text: "\uD6C4\uBBF8\uCE74\uC758 \uC5BC\uAD74\uC5D0\uC11C \uC601\uC5C5\uC6A9 \uBBF8\uC18C\uAC00 \uC644\uC804\uD788 \uC99D\uBC1C\uD588\uB2E4."
@@ -19821,7 +19819,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD558\uC9C0\uB9CC \uC774\uBBF8 \uC5CE\uC9C8\uB7EC\uC9C4 \uBB3C\uC774\uB2E4. \uCC44\uD305\uCC3D\uC758 \uD3ED\uC8FC\uB294 \uBA48\uCD9C \uAE30\uBBF8\uAC00 \uBCF4\uC774\uC9C0 \uC54A\uC558\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       text: "\uD6C4\uBBF8\uCE74\uB294 \uD669\uAE09\uD788 \uB2E4\uC2DC \uC5B5\uC9C0 \uBBF8\uC18C\uB97C \uC7A5\uCC29\uD588\uB2E4."
@@ -19857,7 +19855,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB2E4\uAE09\uD55C \uC778\uC0AC\uC640 \uD568\uAED8 \uD654\uBA74\uC774 \uAEBC\uC84C\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
       text: "\uBC29\uC1A1 \uC885\uB8CC \uBC84\uD2BC\uC744 \uB204\uB974\uC790\uB9C8\uC790 \uD6C4\uBBF8\uCE74\uB294..."
@@ -19911,7 +19909,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uBC29\uAD6C\uC11D\uC5D0\uB9CC \uBC15\uD600\uC788\uB2E4\uAC00\uB294 \uC815\uB9D0\uB85C \uACF0\uD321\uC774\uAC00 \uD53C\uC5B4\uC624\uB97C \uAC83 \uAC19\uC558\uAE30 \uB54C\uBB38\uC774\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal", position: "center", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", duration: 800 },
     { type: "mood", mood: "day", intensity: 1, duration: 800, flicker: "candle" },
     {
       type: "dialogue",
@@ -19941,7 +19939,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."'
     },
-    { type: "character", name: "fumika", action: "show", image: "angry" },
+    { type: "character", name: "fumika", action: "show", image: "normal:angry" },
     {
       type: "dialogue",
       text: "\uB0B4 \uC9C0\uC801\uC5D0 \uD6C4\uBBF8\uCE74\uAC00 \uB367\uB2C8\uB97C \uB4DC\uB7EC\uB0B4\uBA70 \uC73C\uB974\uB801\uAC70\uB838\uB2E4."
@@ -19962,7 +19960,7 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "condition", if: () => true, goto: "walk" },
     { type: "label", name: "content" },
-    { type: "character", action: "show", name: "fumika", image: "normal", focus: "", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", focus: "", duration: 300 },
     {
       type: "dialogue",
       text: '"\uC57C\uC678 \uBC29\uC1A1 \uCF58\uD150\uCE20\uB77C\uACE0 \uC0DD\uAC01\uD574."'
@@ -19992,7 +19990,7 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "condition", if: () => true, goto: "walk" },
     { type: "label", name: "walk" },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
       text: "\uACB0\uAD6D \uADF8\uB140\uB294 \uC785\uC220\uC744 \uC090\uC8FD\uAC70\uB9AC\uBA74\uC11C\uB3C4 \uB098\uB97C \uB530\uB77C\uB098\uC130\uB2E4."
@@ -20035,7 +20033,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "camera-effect", preset: "shake", duration: 500 },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", focus: "face", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", focus: "face", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20067,7 +20065,7 @@ ${addLineNumbers(fragment)}`);
         "\uD6C4\uBBF8\uCE74\uAC00 \uC874\uACBD\uC2A4\uB7EC\uC6B4 \uB208\uBE5B\uC73C\uB85C \uB098\uB97C \uBCF4\uC558\uB2E4."
       ]
     },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20079,7 +20077,7 @@ ${addLineNumbers(fragment)}`);
     { type: "condition", if: () => true, goto: "calm" },
     { type: "label", name: "run" },
     { type: "camera-effect", preset: "shake", duration: 800 },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
     { type: "mood", mood: "horror", action: "add", intensity: 0.3, flicker: "strobe" },
     {
       type: "dialogue",
@@ -20138,7 +20136,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "label", name: "calm" },
-    { type: "character", action: "show", name: "fumika", image: "normal", duration: 500 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 500 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20170,7 +20168,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB2E4\uC0AC\uB2E4\uB09C\uD588\uB358 \uD558\uB8E8\uAC00 \uB05D\uC744 \uD5A5\uD574 \uAC00\uACE0 \uC788\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal", position: "center", duration: 1e3 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", duration: 1e3 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20189,7 +20187,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD6C4\uBBF8\uCE74\uAC00 \uBAA8\uB2C8\uD130\uB85C \uC2DC\uC120\uC744 \uACE0\uC815\uD558\uBA70 \uBB34\uC2EC\uD558\uAC8C \uD22D \uB358\uC84C\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", duration: 500 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 500 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20221,7 +20219,7 @@ ${addLineNumbers(fragment)}`);
       text: "\uBED4\uBED4\uD558\uAC8C \uC190\uC744 \uB0B4\uBC00\uC790, \uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uAD6C\uACA8\uC84C\uB2E4."
     },
     { type: "camera-effect", preset: "shake", duration: 300 },
-    { type: "character", action: "show", name: "fumika", image: "angry", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20246,13 +20244,13 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB2E8\uD638\uD558\uAC8C \uC120\uC744 \uAE0B\uC790, \uD6C4\uBBF8\uCE74\uAC00 \uB2F9\uD669\uD55C \uB4EF \uBAA8\uB2C8\uD130\uC5D0\uC11C \uB208\uC744 \uB5D0\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "embarrassed", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
       text: "\uC5B4? \uC544\uB2C8... \uB2E4\uC74C \uD018\uC2A4\uD2B8\uB3C4 \uD0F1\uCEE4 \uD544\uC218\uC778\uB370..."
     },
-    { type: "character", action: "show", name: "fumika", image: "angry", duration: 300 },
+    { type: "character", action: "show", name: "fumika", image: "normal:angry", duration: 300 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20264,7 +20262,7 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "condition", if: () => true, goto: "epilogue" },
     { type: "label", name: "epilogue" },
-    { type: "character", action: "show", name: "fumika", image: "smile", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 800 },
     {
       type: "dialogue",
       speaker: "fumika",

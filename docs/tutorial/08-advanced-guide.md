@@ -16,13 +16,19 @@
 import { defineCharacter } from 'fumika'
 
 export const heroine = defineCharacter({
-  name: '아리스',
-  images: {
-    normal: { 
-      src: 'aris_normal', 
-      width: 400,
-      points: { face: { x: 0.5, y: 0.2 } } // 자동완성 지원
+  name: '히로인',
+  bases: {
+    normal: {
+      src: 'char_heroine_base',
+      width: 560,
+      points: {
+        face: { x: 0.5, y: 0.2 }
+      }
     }
+  },
+  emotions: {
+    normal: { face: 'char_heroine_face_normal' },
+    happy:  { face: 'char_heroine_face_happy' }
   }
 })
 ```

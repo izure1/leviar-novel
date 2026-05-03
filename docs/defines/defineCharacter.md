@@ -4,12 +4,14 @@
 
 ## 1. 개요 (Overview)
 
-`defineCharacter`는 캐릭터의 정보(이름, 이미지, 포인트 좌표 등)를 정의할 때 사용하는 헬퍼 함수입니다. 프로젝트의 규모가 커짐에 따라 모든 캐릭터 설정을 하나의 설정 파일(`novel.config.ts`)에 작성하는 대신, 캐릭터별로 파일을 분리하여 관리할 수 있게 도와줍니다.
+`defineCharacter`는 캐릭터의 정보(이름, 이미지, 포인트 좌표 등)를 정의할 때 사용하는 헬퍼 함수입니다. 
+
+**커링(Currying)** 방식을 사용하여 캐릭터의 메타 정보와 세부 리소스를 분리하여 정의하며, 신체(`bases`)와 표정(`emotions`) 파트를 독립적으로 구성하여 리소스 재사용성을 극대화하고 강력한 타입 추론을 제공합니다.
 
 ### 주요 이점
 * **모듈화**: 캐릭터별로 독립된 파일을 생성하여 유지보수가 용이해집니다.
-* **타입 추론**: 이미지 키와 포인트 키 등을 TypeScript가 정확히 추론하여 씬 작성 시 강력한 자동완성을 제공합니다.
-* **가독성**: 복잡한 포인트 좌표 데이터를 개별 파일로 격리하여 최상위 설정 파일을 깔끔하게 유지합니다.
+* **강력한 타입 체크**: `emotions` 정의 시 `bases`에서 정의한 `points` 키만 사용할 수 있도록 TypeScript가 강제합니다.
+* **리소스 효율성**: 하나의 신체 이미지(`base`)에 여러 표정 파트(`emotions`)를 조합하는 구조를 완벽하게 지원합니다.
 
 ---
 
@@ -17,26 +19,29 @@
 
 ### 2.1. 캐릭터 파일 생성
 
-`defineCharacter`를 사용하여 캐릭터 개별 모듈을 작성합니다.
+`defineCharacter`는 캐릭터의 모든 속성을 단일 객체로 입력받습니다.
 
 ```ts
 // src/characters/fumika.ts
 import { defineCharacter } from 'fumika'
 
-export const fumika = defineCharacter({
-  name: 'Fumika', // 대사창 등에 표시될 이름
-  images: {
+export default defineCharacter({
+  name: '후미카',
+  bases: {
     normal: {
-      src: 'char_fumika_normal', // novel.config.ts의 assets에 등록된 키
-      width: 400,
+      src: 'fumika_base_normal',
+      width: 560,
+      naturalWidth: 1120, // 원본 이미지 너비 (파트 스케일 계산용)
       points: {
-        face: { x: 0.5, y: 0.2 },
-        heart: { x: 0.5, y: 0.45 }
+        face: { x: 0.445, y: 0.202 },
+        chest: { x: 0.5, y: 0.45 }
       }
-    },
-    happy: {
-      src: 'char_fumika_happy'
     }
+  },
+  emotions: {
+    normal: { face: 'fumika_emotion_normal' },
+    smile:  { face: 'fumika_emotion_smile' },
+    angry:  { face: 'fumika_emotion_angry' }
   }
 })
 ```
@@ -48,15 +53,16 @@ export const fumika = defineCharacter({
 ```ts
 // novel.config.ts
 import { defineNovelConfig } from 'fumika'
-import { fumika } from './characters/fumika'
+import fumika from './characters/fumika'
 
 export default defineNovelConfig({
   assets: {
-    'char_fumika_normal': 'assets/char/fumika_normal.png',
-    'char_fumika_happy': 'assets/char/fumika_happy.png'
+    'fumika_base_normal': 'assets/char/fumika_base.png',
+    'fumika_emotion_normal': 'assets/char/fumika_face_normal.png',
+    // ... 기타 에셋들
   },
   characters: {
-    'fumika': fumika // 이제 씬에서 'fumika' 키로 접근 가능합니다.
+    'fumika': fumika
   }
 })
 ```
@@ -65,32 +71,48 @@ export default defineNovelConfig({
 
 ## 3. 속성 상세 참조 (Property Reference)
 
-#### 캐릭터 정의 (`CharDef`)
+### 3.1. 메타 정보 (Meta)
+`defineCharacter(meta)`의 첫 번째 인자입니다.
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
-| `name` | `string` | 캐릭터의 실명 또는 표시 이름입니다. |
-| `images` | `Record<string, CharImageDef>` | 캐릭터의 상태별 이미지 룩업 테이블입니다. |
+| `name` | `string` | 캐릭터의 실명 또는 표시 이름입니다. (대사창 등에 표시) |
 
-#### 이미지 설정 (`CharImageDef`)
+### 3.2. 정의 상세 (Definition)
+두 번째 호출 인자 `(def)`에 들어가는 객체입니다.
 
-| 속성 | 타입 | 설명 |
-| :--- | :--- | :--- |
-| `src` | `string` | **에셋 키**: `assets` 섹션에 등록된 키입니다. 직접적인 파일 경로가 아님에 주의하십시오. |
-| `width` | `number` | 캐릭터의 기본 렌더링 너비(px)입니다. |
-| `height` | `number` | 캐릭터의 기본 렌더링 높이(px)입니다. 로딩 전 높이 계산 등에 사용됩니다. |
-| `points` | `Record<string, Point>` | 카메라 포커싱용 좌표 데이터입니다. |
-
-#### 좌표 설정 (`Point`)
+#### `bases` (신체/기본 이미지)
+캐릭터의 기본 신체 구조를 정의합니다.
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
-| `x` | `number` | 이미지 가로 비율 (0.0 ~ 1.0) 입니다. |
-| `y` | `number` | 이미지 세로 비율 (0.0 ~ 1.0) 입니다. |
+| `src` | `string` | 베이스 이미지 에셋 키입니다. |
+| `width` | `number` | 캐릭터의 기본 렌더링 너비(px)입니다. 파트 스케일 계산의 기준이 됩니다. |
+| `height` | `number` | 캐릭터의 기본 렌더링 높이(px)입니다. |
+| `naturalWidth`| `number` | **중요**: 원본 이미지의 실제 너비입니다. `width / naturalWidth` 비율로 파트 이미지 크기를 자동 조절합니다. |
+| `points` | `Record<string, Point>` | 파트를 배치할 앵커 좌표 및 포커싱 좌표입니다. |
+
+#### `emotions` (감정/파트 이미지)
+`bases`에서 정의한 `points`에 올릴 파트 이미지들을 조합합니다.
+
+* **구조**: `Record<EmotionKey, Record<PointKey, AssetKey>>`
+* **타입 제약**: `PointKey`는 반드시 `bases` 내부의 `points`에 정의된 키 중 하나여야 합니다.
 
 ---
 
-## 4. 주의 사항 (Edge Cases)
+## 4. 좌표 설정 (`Point`)
 
-* **에셋 동기화**: `defineCharacter`에서 사용한 `src` 키는 반드시 `novel.config.ts`의 `assets` 섹션에 정의되어 있어야 엔진이 리소스를 로드할 수 있습니다.
-* **타입 보존**: `defineCharacter`는 입력받은 객체의 리터럴 타입을 그대로 반환하므로, 씬 작성 시 잘못된 이미지 키나 포인트 키를 사용하면 컴파일 단계에서 오류를 잡아낼 수 있습니다.
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `x` | `number` | 이미지 가로 비율 (0.0 ~ 1.0). 0.5가 가로 중앙입니다. |
+| `y` | `number` | 이미지 세로 비율 (0.0 ~ 1.0). 0.0이 최상단입니다. |
+| `width` | `number` | (선택) 해당 포인트에 배치될 파트의 강제 렌더링 너비(px)입니다. 미지정 시 배율에 따라 자동 계산됩니다. |
+
+---
+
+## 5. 주의 사항 (Edge Cases)
+
+* **타입 오류**: `emotions`에서 `bases`에 존재하지 않는 `point` 키를 사용하면 TypeScript 오류가 발생합니다.
+* **naturalWidth 권장**: 파트 이미지가 신체 이미지와 동일한 캔버스 크기를 공유하지 않는 경우, 정확한 정렬을 위해 `naturalWidth`를 명시하는 것을 강력히 권장합니다.
+* **에셋 등록**: 모든 `src` 및 `emotions`의 값은 `novel.config.ts`의 `assets`에 등록되어 있어야 합니다.
+

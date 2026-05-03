@@ -16,7 +16,7 @@ export default defineScene({
   },
 
   { type: 'camera-effect', preset: 'shake', duration: 500 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', focus: 'face', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', focus: 'face', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -50,7 +50,7 @@ export default defineScene({
       '후미카가 존경스러운 눈빛으로 나를 보았다.'
     ]
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -63,7 +63,7 @@ export default defineScene({
 
   { type: 'label', name: 'run' },
   { type: 'camera-effect', preset: 'shake', duration: 800 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 300 },
   { type: 'mood', mood: 'horror', action: 'add', intensity: 0.3, flicker: 'strobe' },
   {
     type: 'dialogue',
@@ -124,7 +124,7 @@ export default defineScene({
   },
 
   { type: 'label', name: 'calm' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 500 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 500 },
   {
     type: 'dialogue',
     speaker: 'fumika',

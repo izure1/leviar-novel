@@ -15,10 +15,10 @@ type Exact<T, Shape> = T extends Shape
   : never
 
 /**
- * 캐릭터를 정의하는 curried 헬퍼 함수입니다.
+ * 캐릭터를 정의하는 헬퍼 함수입니다.
  *
- * ```
- * defineCharacter(meta)(def)
+ * ```ts
+ * defineCharacter(def)
  * ```
  *
  * - `emotions` 키: `bases.*.points` 키에서 추론, 허용 외 키 → 타입 오류
@@ -26,7 +26,8 @@ type Exact<T, Shape> = T extends Shape
  *
  * @example
  * ```ts
- * export default defineCharacter({ name: '후미카' })({
+ * export default defineCharacter({
+ *   name: '후미카',
  *   bases: {
  *     normal: { src: '...', width: 560, points: { face: { x: 0.5, y: 0.18 } } }
  *   },
@@ -37,19 +38,19 @@ type Exact<T, Shape> = T extends Shape
  * })
  * ```
  */
-export function defineCharacter<const TMeta extends { name?: string }>(meta: TMeta) {
-  return function <
-    const TBases extends Record<string, CharBaseDef>,
-    const TEmotions extends Record<string, Record<string, string>>
-  >(def: {
-    bases: TBases
-    emotions: {
-      [EKey in keyof TEmotions]: Exact<
-        TEmotions[EKey],
-        Partial<Record<UnionPointsOf<TBases>, string>>
-      >
-    }
-  }): TMeta & { bases: TBases; emotions: TEmotions } & Pick<CharDef, 'name'> {
-    return { ...meta, ...def } as unknown as TMeta & { bases: TBases; emotions: TEmotions } & Pick<CharDef, 'name'>
+export function defineCharacter<
+  const TBases extends Record<string, CharBaseDef>,
+  const TEmotions extends Record<string, Record<string, string>>,
+  const TName extends string | undefined = undefined
+>(def: {
+  name?: TName
+  bases: TBases
+  emotions: {
+    [EKey in keyof TEmotions]: Exact<
+      TEmotions[EKey],
+      Partial<Record<UnionPointsOf<TBases>, string>>
+    >
   }
+}): { name?: TName; bases: TBases; emotions: TEmotions } {
+  return def as unknown as { name?: TName; bases: TBases; emotions: TEmotions }
 }

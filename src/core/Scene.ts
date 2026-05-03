@@ -18,7 +18,6 @@ import { screenFadeModule, screenFlashModule, screenWipeModule } from '../module
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
-import { setBackground } from '../modules/background'
 import type { NovelModule } from '../define/defineCmdUI'
 
 // 내장 모듈 핸들러 테이블

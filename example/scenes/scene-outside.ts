@@ -44,7 +44,7 @@ export default defineScene({
     type: 'dialogue',
     text: '방구석에만 박혀있다가는 정말로 곰팡이가 피어오를 것 같았기 때문이다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', position: 'center', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', duration: 800 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 800, flicker: 'candle' },
   {
     type: 'dialogue',
@@ -75,7 +75,7 @@ export default defineScene({
     type: 'dialogue',
     text: '"광합성 좀 해. 창백해서 뱀파이어인 줄 알겠다."'
   },
-  { type: 'character', name: 'fumika', action: 'show', image: 'angry' },
+  { type: 'character', name: 'fumika', action: 'show', image: 'normal:angry' },
   {
     type: 'dialogue',
     text: '내 지적에 후미카가 덧니를 드러내며 으르렁거렸다.'
@@ -97,7 +97,7 @@ export default defineScene({
   { type: 'condition', if: () => true, goto: 'walk' },
 
   { type: 'label', name: 'content' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', focus: '', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', focus: '', duration: 300 },
   {
     type: 'dialogue',
     text: '"야외 방송 콘텐츠라고 생각해."'
@@ -128,7 +128,7 @@ export default defineScene({
   { type: 'condition', if: () => true, goto: 'walk' },
 
   { type: 'label', name: 'walk' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',
     text: '결국 그녀는 입술을 삐죽거리면서도 나를 따라나섰다.'

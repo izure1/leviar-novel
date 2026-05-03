@@ -1,12 +1,13 @@
 import { defineCharacter } from '../../src'
 
-export default defineCharacter({ name: '후미카' })({
+export default defineCharacter({
+  name: '후미카',
   bases: {
     normal: {
       src: 'fumika_base_normal',
       width: 560,
       points: {
-        face: { x: 0.445, y: 0.06 },
+        face: { x: 0.445, y: 0.202 },
         chest: { x: 0.5, y: 0.45 },
       }
     }

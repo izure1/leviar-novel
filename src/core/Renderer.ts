@@ -48,8 +48,6 @@ export interface CameraState {
 export interface RendererState {
   cameraState: CameraState
   pluginState: Record<string, any>
-  /** @deprecated 하위 호환성용 */
-  flicker?: any
   backgroundKey?: string | null
   activeMoods?: any
   activeEffects?: any
@@ -283,22 +281,13 @@ export class Renderer {
     this.state = new Map(Object.entries(state.pluginState || {}))
   }
 
-  /**
-   * pluginState 데이터를 기반으로 배경, 캐릭터, 무드, 이펙트를 화면에 재생성합니다.
-   * restoreState() 이후 호출하여 실제 렌더링을 복원합니다.
-   * @deprecated Novel._rebuildUI()로 이동됨. 직접 호출 시 Novel에서만 사용.
-   */
-  rebuildFromState(): void {
-    // 로직이 Novel._rebuildUI()로 이동됨.
-    // 카메라 복원은 restoreState()에서 실행됨.
-  }
 
   /**
    * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
    * 주로 씬(Scene) 전환이나 종료 시 호출됩니다.
    */
   clear(): void {
-    this._objects.forEach(obj => (obj as any).remove?.())
+    this._objects.forEach(obj => (obj as any).remove?.({ child: true }))
     this._objects.clear()
     this.state.clear()
     if (this.camOffsetObj) {

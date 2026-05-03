@@ -484,7 +484,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._uiRegistry.clear()
     this._renderer.clear()
     this._renderer.restoreState(resolvedData.rendererState)
-    this._renderer.rebuildFromState()
+
 
     // 모듈 View 재생성 (state에서 스키마 읽어 빌더 실행)
     this._rebuildModuleViews()

@@ -192,10 +192,3 @@ backgroundModule.defineCommand(function* (cmd, ctx, state, setState) {
 
 export default backgroundModule
 
-// ─── 하위 호환용 헬퍼 (Novel.ts rebuildUI에서 사용) ──────────
-
-/** @internal */
-export function setBackground(ctx: any, name: string, fit: BackgroundFitPreset, duration: number = 1000, isVideo: boolean = false) {
-  // 모듈의 __handler를 직접 호출하여 호환성 유지
-  backgroundModule.__handler?.({ name, fit, duration, isVideo }, ctx)
-}

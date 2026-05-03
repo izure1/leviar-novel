@@ -30,7 +30,7 @@ export default defineScene({
     ]
   },
   { type: 'camera-effect', preset: 'shake', duration: 500 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -53,7 +53,7 @@ export default defineScene({
     type: 'dialogue',
     text: '놀랍게도, 그 당황함은 단 1초 만에 흔적도 없이 사라졌다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -171,7 +171,7 @@ export default defineScene({
     speed: 10,
   },
   { type: 'character-effect', name: 'fumika', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 300 },
   {
     type: 'dialogue',
     text: '후미카의 얼굴이 사색이 되었다. 그녀는 마이크를 황급히 가렸다.'
@@ -191,7 +191,7 @@ export default defineScene({
     text: '후미카는 다시 마이크에서 손을 떼고 억지웃음을 지었다.'
   },
   { type: 'character-effect', name: 'fumika', preset: 'reset' },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -228,7 +228,7 @@ export default defineScene({
     speed: 10,
   },
   { type: 'character-effect', name: 'fumika', preset: 'shake', intensity: 30, duration: 500, repeat: -1 },
-  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed' },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed' },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -256,7 +256,7 @@ export default defineScene({
   {
     type: 'dialogue',
     speaker: 'fumika',
-    text: '<style fontSize="30">야, 너 때문에 채팅창 창났잖아!</style>'
+    text: '<style fontSize="50">야, 너 때문에 채팅창 창났잖아!</style>'
   },
   {
     type: 'dialogue',
@@ -324,7 +324,7 @@ export default defineScene({
     ],
     speed: 10,
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'embarrassed', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 300 },
   {
     type: 'dialogue',
     text: '후미카의 얼굴에서 영업용 미소가 완전히 증발했다.'
@@ -342,7 +342,7 @@ export default defineScene({
     type: 'dialogue',
     text: '하지만 이미 엎질러진 물이다. 채팅창의 폭주는 멈출 기미가 보이지 않았다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'smile', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
     text: '후미카는 황급히 다시 억지 미소를 장착했다.'
@@ -379,7 +379,7 @@ export default defineScene({
     type: 'dialogue',
     text: '다급한 인사와 함께 화면이 꺼졌다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal', duration: 300 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',
     text: '방송 종료 버튼을 누르자마자 후미카는...'

@@ -18,16 +18,22 @@
 이 기능을 사용하려면 캐릭터 정의 시 이미지별로 `points` 좌표가 설정되어 있어야 합니다.
 
 ```ts
-// src/characters/fumika.ts
+import { defineCharacter } from 'fumika'
+
 export const fumika = defineCharacter({
-  images: {
+  name: '후미카',
+  bases: {
     normal: {
-      src: 'char_fumika_normal',
+      src: 'char_fumika_base',
+      width: 560,
       points: {
         face: { x: 0.5, y: 0.2 }, // 얼굴 위치 (상대 좌표 0.0 ~ 1.0)
         hand: { x: 0.3, y: 0.6 }  // 손 위치
       }
     }
+  },
+  emotions: {
+    normal: { face: 'char_fumika_face_normal' }
   }
 })
 ```

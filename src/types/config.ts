@@ -77,8 +77,6 @@ export interface CharDef {
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>
 
-/** @deprecated 하위 호환용 — 새 코드는 CharBaseDef 를 사용하세요 */
-export type CharImageDef = CharBaseDef
 
 /** 
  * 단일 배경 이미지 정의 
