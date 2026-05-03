@@ -66,7 +66,7 @@ export interface SceneCallbacks {
   /** 지정된 이름의 새로운 씬을 로드하고 현재 씬을 종료합니다. */
   loadScene(target: string | { scene: string; preserve: boolean }): void
   /** 지정된 씬을 서브루틴으로 호출합니다 (콜 스택 push 후 loadScene). */
-  callScene(name: string, callerCursor: number, callerLocalVars: Record<string, any>, callerTextSubIndex: number): void
+  callScene(name: string, callerCursor: number, callerLocalVars: Record<string, any>, callerTextSubIndex: number, preserve: boolean, restore: boolean): void
   /** 세이브 저장을 위해 현재 렌더러 상태를 캡처하여 반환합니다. */
   captureRenderer(): RendererState
   /** 현재 스킵 모드 활성화 여부를 반환합니다. */
@@ -164,11 +164,11 @@ export class DialogueScene {
   }
 
   /** 씬 실행 시작 */
-  start(preserve: boolean = false): void {
+  start(options?: { skipInitial?: boolean; preservedState?: Map<string, any> }): void {
     this.cursor = 0
     this.textSubIndex = 0
-    if (!preserve) {
-      this._runInitial()
+    if (!options?.skipInitial) {
+      this._runInitial(options?.preservedState)
     }
     this._executeNext()
   }
@@ -177,7 +177,13 @@ export class DialogueScene {
    * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
    * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
    */
-  private _runInitial(): void {
+  /**
+   * 모듈 View를 초기화합니다.
+   *
+   * @param preservedState - 이어받을 stateStore (preserve 서브씬 호출 시). 없으면 fresh 초기화.
+   *   mergedData 순서: schema 기본값 → preserved state → 씬 initial
+   */
+  private _runInitial(preservedState?: Map<string, any>): void {
     const initial = this.definition.initial || {}
 
     const r = this.renderer
@@ -221,9 +227,16 @@ export class DialogueScene {
           this._ended = true
           this.callbacks.syncUIState()
         },
-        callScene: (name: string) => {
+        callScene: (name: string, preserve?: boolean, restore?: boolean) => {
           this._ended = true
-          this.callbacks.callScene(name, this.cursor + 1, { ...this.localVars }, this.textSubIndex)
+          this.callbacks.callScene(
+            name,
+            this.cursor + 1,
+            { ...this.localVars },
+            this.textSubIndex,
+            preserve ?? false,
+            restore ?? false
+          )
         }
       },
       execute: (cmd) => this._executeCmd(cmd as any),
@@ -232,8 +245,9 @@ export class DialogueScene {
     for (const [moduleKey, module] of Object.entries(modules)) {
       if (typeof module.__viewBuilder !== 'function') continue
       const initialData = initial[moduleKey]
-      // schema 기본값 + 전달된 initial 데이터로 mergedData 준비
-      const mergedData = Object.assign({}, module.__schemaDefault, initialData ?? {})
+      // schema 기본값 → preserved state (있으면) → 씬 initial 순으로 병합
+      const preserved = preservedState?.get(moduleKey) ?? {}
+      const mergedData = Object.assign({}, module.__schemaDefault, preserved, initialData ?? {})
       const entry = module.__viewBuilder(ctx, mergedData)
       uiRegistry.set(moduleKey, entry)
     }
@@ -396,9 +410,16 @@ export class DialogueScene {
           this._ended = true
           this.callbacks.syncUIState()
         },
-        callScene: (name: string) => {
+        callScene: (name: string, preserve?: boolean, restore?: boolean) => {
           this._ended = true
-          this.callbacks.callScene(name, this.cursor + 1, { ...this.localVars }, this.textSubIndex)
+          this.callbacks.callScene(
+            name,
+            this.cursor + 1,
+            { ...this.localVars },
+            this.textSubIndex,
+            preserve ?? false,
+            restore ?? false
+          )
         }
       },
       execute: (cmd) => this._executeCmd(cmd as any),

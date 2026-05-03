@@ -4,6 +4,7 @@
 
 import { World } from 'leviar'
 import { Renderer } from './Renderer'
+import { AudioManager } from './AudioManager'
 import { DialogueScene } from './Scene'
 import type { SceneCallbacks } from './Scene'
 import type { RendererState } from './Renderer'
@@ -15,7 +16,8 @@ import type { SceneContext } from './SceneContext'
 import type { NovelModule, DefaultHook } from '../define/defineCmdUI'
 import type { IHookallSync } from 'hookall'
 import { useHookallSync } from 'hookall'
-import { syncAudioPositions } from '../modules/audio'
+import audioModule from '../modules/audio'
+import type { AudioHook } from '../modules/audio'
 
 // =============================================================
 // 내부 타입
@@ -53,7 +55,7 @@ export interface SaveData {
 
 /**
  * scene call 호출자 씬의 스냅샷.
- * 서브씬 종료 시 이 프레임으로 호출자 환경을 완전 복원합니다.
+ * 서브씬 종료 시 이 프레임으로 호출자 환경을 복원합니다.
  */
 export interface CallStackFrame {
   /** 호출자 씬 이름 */
@@ -68,6 +70,18 @@ export interface CallStackFrame {
   rendererState: RendererState
   /** 호출 시점의 stateStore 스냅샷 */
   storeSnapshot: Record<string, any>
+  /**
+   * 서브씬 시작 시 현재 상태를 이어받았는지 여부.
+   * true: 서브씬은 caller의 렌더러·state·오디오 상태를 이어받아 시작했음.
+   */
+  preserve: boolean
+  /**
+   * 서브씬 종료 후 caller 상태를 완전 복원할지 여부.
+   * preserve=true일 때만 유효.
+   * - false (기본): 커서·localVars만 복원, 화면/오디오는 서브씬 상태 그대로 이어감
+   * - true: caller 시점의 렌더러·stateStore 완전 복원
+   */
+  restore: boolean
 }
 
 // ─── NovelHook 타입 ──────────────────────────────────────────
@@ -132,6 +146,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   private readonly _option: { element: HTMLElement; canvas: HTMLCanvasElement; width: number; height: number }
   private readonly _world: World
   private readonly _renderer: Renderer
+  /** Novel 인스턴스 내 오디오 관리 클래스 */
+  readonly audio: AudioManager
   private readonly _scenes: Map<string, AnySceneDef> = new Map()
 
   /** State — 씬 전환 후에도 유지, 세이브/로드 대상 */
@@ -226,6 +242,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       width: this._option.width,
       height: this._option.height,
     })
+
+    // AudioManager 초기화 — audioModule.hooker를 공유하여 audio:* 훅 라우팅 유지
+    this.audio = new AudioManager(audioModule.hooker as IHookallSync<AudioHook>)
 
     this.variables = { ...(config.variables as object) } as TConfig['variables']
 
@@ -377,7 +396,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     // 새 씬의 훅 등록
     def.hooks?._register(this)
 
-    scene.start(preserve)
+    scene.start(preserve ? { skipInitial: true } : undefined)
     this._syncUIState()
   }
 
@@ -473,7 +492,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       localVars: this._currentScene.getLocalVars(),
       rendererState: this._renderer.captureState(),
       states: Object.fromEntries(this._stateStore),
-      callStack: this._callStack.map(frame => ({ ...frame, localVars: { ...frame.localVars }, storeSnapshot: { ...frame.storeSnapshot } })),
+      callStack: this._callStack.map(frame => ({
+        ...frame,
+        localVars: { ...frame.localVars },
+        storeSnapshot: { ...frame.storeSnapshot },
+        preserve: frame.preserve,
+        restore: frame.restore,
+      })),
     }
 
     return this._novelHooker.trigger(
@@ -519,10 +544,16 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._renderer.clear()
     this._renderer.restoreState(resolvedData.rendererState)
 
-    // callStack 복원
+    // callStack 복원 (preserve/restore 기본값 fallback 포함)
     this._callStack.length = 0
     for (const frame of resolvedData.callStack) {
-      this._callStack.push({ ...frame, localVars: { ...frame.localVars }, storeSnapshot: { ...frame.storeSnapshot } })
+      this._callStack.push({
+        ...frame,
+        localVars: { ...frame.localVars },
+        storeSnapshot: { ...frame.storeSnapshot },
+        preserve: frame.preserve ?? false,
+        restore: frame.restore ?? false,
+      })
     }
 
     // 모듈 View 재생성 (state에서 스키마 읽어 빌더 실행)
@@ -571,8 +602,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getGlobalVars: () => ({ ...this.variables as object }),
       setGlobalVar: (name, value) => { (this.variables as any)[name] = value },
       loadScene: (target) => { this.loadScene(target) },
-      callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex) => {
-        this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex)
+      callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore) => {
+        this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore)
       },
       captureRenderer: () => this._renderer.captureState(),
       isSkipping: () => this._isSkipping,
@@ -651,15 +682,24 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   /**
    * scene call 시 콜 스택에 호출자 프레임을 push하고 서브씬을 로드합니다.
+   *
+   * - preserve=false: 기존 동작 — 렌더러/stateStore 초기화 후 서브씬 시작
+   * - preserve=true: 렌더러/stateStore 유지, uiRegistry만 재빌드(preserved state + initial 병합)
    */
   private _callScene(
     name: string,
     callerCursor: number,
     callerLocalVars: Record<string, any>,
-    callerTextSubIndex: number
+    callerTextSubIndex: number,
+    preserve: boolean,
+    restore: boolean
   ): void {
-    // 재생 중인 오디오의 현재 위치를 data._tracks.start에 동기화하여 스냅샷에 남깁니다.
-    syncAudioPositions()
+    // 재생 중인 오디오의 현재 위치를 _tracks.start에 동기화
+    const audioState = this._stateStore.get('audio') as { _tracks: Record<string, any> } | undefined
+    if (audioState) {
+      this.audio.syncPositions(audioState._tracks)
+    }
+
     this._callStack.push({
       sceneName: this._currentSceneDef!.name as string,
       cursor: callerCursor,
@@ -667,13 +707,55 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       textSubIndex: callerTextSubIndex,
       rendererState: this._renderer.captureState(),
       storeSnapshot: Object.fromEntries(this._stateStore),
+      preserve,
+      restore,
     })
-    this.loadScene(name)
+
+    if (preserve) {
+      this._loadPreserveSubScene(name)
+    } else {
+      this.loadScene(name)
+    }
   }
 
   /**
-   * 콜 스택에서 프레임을 pop하여 호출자 씬 환경을 완전 복원합니다.
-   * loadSave()와 동일한 방식으로 렌더러, stateStore, UI를 복원합니다.
+   * preserve=true 서브씬 시작.
+   * 렌더러·stateStore를 유지한 채 uiRegistry만 재빌드하고 서브씬을 시작합니다.
+   * 서브씬의 initial이 있으면 preserved state 위에 덮어씁니다.
+   */
+  private _loadPreserveSubScene(name: string): void {
+    const def = this._scenes.get(name)
+    if (!def) {
+      console.error(`[fumika] 씬 '${name}'이 등록되어 있지 않습니다.`)
+      return
+    }
+
+    this._currentSceneDef?.hooks?._unregister(this)
+    this._cleanupUI()
+    this._currentScene = null
+
+    // 렌더러·stateStore는 유지. uiRegistry만 초기화하여 _runInitial이 재등록.
+    this._uiRegistry.clear()
+
+    const callbacks = this._buildCallbacks()
+    const scene = new DialogueScene(this._renderer, callbacks, def)
+
+    this._currentScene = scene
+    this._currentSceneDef = def
+    this._inputMode = 'block'
+
+    def.hooks?._register(this)
+
+    // preservedState로 현재 stateStore를 전달 → schema → preserved → initial 순 병합
+    scene.start({ preservedState: this._stateStore })
+    this._syncUIState()
+  }
+
+  /**
+   * 콜 스택에서 프레임을 pop하여 호출자 씬 환경을 복원합니다.
+   *
+   * - frame.preserve=false OR frame.restore=true: 렌더러·stateStore·UI 완전 복원 (기존 동작)
+   * - frame.preserve=true AND frame.restore=false: 커서·localVars만 복원, 화면/오디오는 서브씬 상태 이어감
    */
   private _resumeCallerScene(): void {
     const frame = this._callStack.pop()!
@@ -683,26 +765,31 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       return
     }
 
-    // 현재 씬 훅 해제, UI 정리
+    const needsFullRestore = !frame.preserve || frame.restore
+
     this._currentSceneDef?.hooks?._unregister(this)
     this._cleanupUI()
     this.stopSkip()
 
-    // 렌더러 복원
-    this._renderer.clear()
-    this._renderer.restoreState(frame.rendererState)
+    if (needsFullRestore) {
+      // 렌더러·stateStore·UI 완전 복원
+      this._renderer.clear()
+      this._renderer.restoreState(frame.rendererState)
 
-    // stateStore 복원
-    this._stateStore.clear()
-    for (const [k, v] of Object.entries(frame.storeSnapshot)) {
-      this._stateStore.set(k, v)
+      this._stateStore.clear()
+      for (const [k, v] of Object.entries(frame.storeSnapshot)) {
+        this._stateStore.set(k, v)
+      }
+
+      this._uiRegistry.clear()
+      this._rebuildModuleViews()
+    } else {
+      // preserve=true, restore=false: uiRegistry만 재빌드 (현재 렌더러/stateStore 유지)
+      this._uiRegistry.clear()
+      this._rebuildModuleViews()
     }
 
-    // UI 재생성 (저장된 state 기반)
-    this._uiRegistry.clear()
-    this._rebuildModuleViews()
-
-    // 호출자 씬 복원
+    // 호출자 씬 복원 (커서·localVars)
     const callbacks = this._buildCallbacks()
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
     scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex)
@@ -825,7 +912,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         setLocalVar: noop as any,
         loadScene: noop as any,
         end: noop,
-        callScene: noop as any,
+        callScene: noop as any,  // rebuild ctx에서는 callScene 호출 없음
       },
       execute: function* () { return false },
     }

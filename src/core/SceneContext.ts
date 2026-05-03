@@ -38,8 +38,12 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
     /**
      * 지정된 씬을 서브루틴으로 호출합니다.
      * 서브씬이 완전히 종료(nextScene 없음)되면 현재 위치로 복귀합니다.
+     *
+     * @param name     - 호출할 씬 이름
+     * @param preserve - true: 현재 렌더러·state·오디오 상태를 서브씬이 이어받음 (기본값: false)
+     * @param restore  - true: 서브씬 종료 후 caller 상태 완전 복원. preserve=true일 때만 유효. (기본값: false)
      */
-    callScene: (name: string) => void
+    callScene: (name: string, preserve?: boolean, restore?: boolean) => void
   }
   /**
    * 씬 전환에도 유지되는 cmd 상태 저장소.
