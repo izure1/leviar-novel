@@ -720,8 +720,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   /**
    * preserve=true 서브씬 시작.
-   * 렌더러·stateStore를 유지한 채 uiRegistry만 재빌드하고 서브씬을 시작합니다.
-   * 서브씬의 initial이 있으면 preserved state 위에 덮어씁니다.
+   * 렌더러·stateStore·uiRegistry를 모두 유지한 채 서브씬의 스크립트만 시작합니다.
+   * _cleanupUI / _uiRegistry.clear / _runInitial을 호출하지 않아
+   * 월드 오브젝트의 중복 생성을 방지합니다.
+   * restore 시에는 _renderer.clear() + restoreState()가 서브씬 추가분을 포함해
+   * 전부 정리하고 caller 상태를 복원합니다.
    */
   private _loadPreserveSubScene(name: string): void {
     const def = this._scenes.get(name)
@@ -731,11 +734,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     this._currentSceneDef?.hooks?._unregister(this)
-    this._cleanupUI()
-    this._currentScene = null
-
-    // 렌더러·stateStore는 유지. uiRegistry만 초기화하여 _runInitial이 재등록.
-    this._uiRegistry.clear()
+    // preserve=true: 렌더러·stateStore·uiRegistry 전부 유지 (cleanupUI·clear 호출 안 함)
 
     const callbacks = this._buildCallbacks()
     const scene = new DialogueScene(this._renderer, callbacks, def)
@@ -746,8 +745,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     def.hooks?._register(this)
 
-    // preservedState로 현재 stateStore를 전달 → schema → preserved → initial 순 병합
-    scene.start({ preservedState: this._stateStore })
+    // skipInitial: true → _runInitial 건너뜀, 월드 오브젝트/UI 상태 그대로 이어받음
+    scene.start({ skipInitial: true })
     this._syncUIState()
   }
 

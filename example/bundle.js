@@ -18689,8 +18689,11 @@ ${addLineNumbers(fragment)}`);
     }
     /**
      * preserve=true 서브씬 시작.
-     * 렌더러·stateStore를 유지한 채 uiRegistry만 재빌드하고 서브씬을 시작합니다.
-     * 서브씬의 initial이 있으면 preserved state 위에 덮어씁니다.
+     * 렌더러·stateStore·uiRegistry를 모두 유지한 채 서브씬의 스크립트만 시작합니다.
+     * _cleanupUI / _uiRegistry.clear / _runInitial을 호출하지 않아
+     * 월드 오브젝트의 중복 생성을 방지합니다.
+     * restore 시에는 _renderer.clear() + restoreState()가 서브씬 추가분을 포함해
+     * 전부 정리하고 caller 상태를 복원합니다.
      */
     _loadPreserveSubScene(name) {
       const def = this._scenes.get(name);
@@ -18699,16 +18702,13 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       this._currentSceneDef?.hooks?._unregister(this);
-      this._cleanupUI();
-      this._currentScene = null;
-      this._uiRegistry.clear();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
-      scene.start({ preservedState: this._stateStore });
+      scene.start({ skipInitial: true });
       this._syncUIState();
     }
     /**
