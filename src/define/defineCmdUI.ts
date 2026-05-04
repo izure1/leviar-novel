@@ -30,11 +30,7 @@ function resolveVal(val: any, vars: any): any {
 function resolveObj(obj: Record<string, any>, vars: any): Record<string, any> {
   const result: Record<string, any> = {}
   for (const key in obj) {
-    if (key.startsWith('$')) {
-      result[key] = obj[key]
-    } else {
-      result[key] = resolveVal(obj[key], vars)
-    }
+    result[key] = resolveVal(obj[key], vars)
   }
   return result
 }
@@ -143,21 +139,8 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
  * defineHook(config)({ 'my:event': (val, ...params) => val })
  * ```
  */
-type _IsAny<T> = 0 extends 1 & T ? true : false;
 
-type _IsFunction<T> = _IsAny<T> extends true 
-  ? false 
-  : NonNullable<T> extends (...args: any[]) => any 
-    ? true 
-    : false;
-
-export type ValidateCmd<T> = {
-  [K in keyof T]: K extends `$${string}`
-    ? (_IsFunction<T[K]> extends true ? T[K] : "Error: $ properties must be functions")
-    : (_IsFunction<T[K]> extends false ? T[K] : "Error: Non-$ properties cannot be functions")
-}
-
-export function define<TCmd extends ValidateCmd<TCmd>, TSchema extends Record<string, any> = Record<string, any>, THook extends ListenerSignature<THook> = DefaultHook>(schema?: TSchema): NovelModule<TCmd, TSchema, THook> {
+export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>, THook extends ListenerSignature<THook> = DefaultHook>(schema?: TSchema): NovelModule<TCmd, TSchema, THook> {
   let _onUpdate: ((data: TSchema) => void) | null = null
   let _moduleKey: string | null = null
 

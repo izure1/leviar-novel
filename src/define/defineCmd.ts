@@ -3,7 +3,6 @@
 // =============================================================
 
 import type { SceneContext, CommandResult } from '../core/SceneContext'
-import type { ValidateCmd } from './defineCmdUI'
 
 
 // ─── Resolvable 유틸리티 타입 ────────────────────────────────
@@ -62,30 +61,11 @@ export type ResolvableItem<T, TVars, TLocalVars> =
 /**
  * `type` 키를 제외한 모든 Cmd 속성을 Resolvable로 변환합니다.
  * 배열 속성(예: choices[])의 원소 내부 속성에도 재귀 적용됩니다.
- *
- * ## $ 접두사 규칙
- * 키가 `$`로 시작하면 Resolvable로 감싸지 않고, 함수 자체를 값으로 받습니다.
- * vars를 인자로 받는 함수를 속성 값으로 선언해야 할 때 사용합니다.
- *
- * @example
- * ```ts
- * // ConditionCmd 정의
- * interface ConditionCmd { $if: (variables: TVars & TLocalVars) => boolean }
- *
- * // 사용 — vars 타입이 올바르게 추론됨
- * { type: 'condition', $if: (vars) => vars.score > 10 }
- * ```
- *
- * @note `ResolvableItem` 대신 `Resolvable`을 직접 사용하여 TypeScript contextual typing을 보장합니다.
- * (VALUE 기반 조건부 타입을 mapped type에 넣으면 contextual typing이 deferred되어 vars가 any로 추론됩니다)
- * $ 접두사 분기는 KEY 기반 조건부 타입이므로 이 문제가 발생하지 않습니다.
  */
 export type ResolvableProps<TCmd, TVars = any, TLocalVars = any> = {
   [K in keyof TCmd]: K extends 'type' | 'skip'
     ? TCmd[K]
-    : K extends `$${string}`
-      ? TCmd[K]
-      : Resolvable<TCmd[K], TVars, TLocalVars>
+    : Resolvable<TCmd[K], TVars, TLocalVars>
 }
 
 // ─── 런타임 resolve 헬퍼 ────────────────────────────────────
@@ -105,11 +85,7 @@ function resolveVal(val: any, vars: any): any {
 function resolveObj(obj: Record<string, any>, vars: any): Record<string, any> {
   const result: Record<string, any> = {}
   for (const key in obj) {
-    if (key.startsWith('$')) {
-      result[key] = obj[key]
-    } else {
-      result[key] = resolveVal(obj[key], vars)
-    }
+    result[key] = resolveVal(obj[key], vars)
   }
   return result
 }
@@ -155,7 +131,7 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * })
  * ```
  */
-export function defineCmd<TCmd extends ValidateCmd<TCmd>>(
+export function defineCmd<TCmd>(
   handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult
 ): (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult {
   return (rawParams, ctx) => {
