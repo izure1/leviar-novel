@@ -1,49 +1,54 @@
 # 🎨 DialogBox State & Layout
 
-`dialogBox` 모듈의 시각적 디자인과 요소 간의 간격을 설정하는 가이드입니다.
+본 문서는 `dialogBox` 모듈의 시각적 디자인과 구성 요소 간의 기하학적 배치를 결정하는 `DialogBoxSchema`에 대해 기술합니다.  
 
 ---
 
 ## 1. 개요 (Overview)
 
-| 속성 그룹 | 설명 |
+대화상자의 상태 설정은 시스템 알림이나 확인창의 심미적 완성도를 결정짓는 핵심 데이터 구조입니다.  
+배경 패널의 형태부터 버튼의 정렬 방식까지 세부적인 제어가 가능하며, 시나리오의 톤앤매너에 맞는 최적의 사용자 인터페이스를 구성할 수 있습니다.  
+
+| 속성 그룹 명칭 | 상세 설명 |
 | :--- | :--- |
-| **`overlay`** | 배경 전체를 덮는 반투명 오버레이 스타일 |
-| **`panel`** | 메인 상자 컨테이너 스타일 |
-| **`titleStyle`** | 제목 텍스트 스타일 |
-| **`contentStyle`** | 본문 텍스트 스타일 |
-| **`button`** | 버튼 기본 배경 스타일 |
-| **`buttonText`** | 버튼 내부 텍스트 스타일 |
-| **`layout`** | 내부 여백 및 간격 설정 |
+| **`overlay`** | 대화상자 활성화 시 배경 전체를 덮는 반투명 레이어의 스타일입니다. |
+| **`panel`** | 메시지가 담기는 메인 컨테이너 박스의 기본 스타일입니다. |
+| **`titleStyle`** | 상단에 표시되는 제목 텍스트의 서체 및 색상 설정입니다. |
+| **`contentStyle`** | 중앙 본문 영역의 텍스트 레이아웃 및 서체 설정입니다. |
+| **`button`** | 하단에 배치되는 버튼들의 공통 배경 스타일입니다. |
+| **`buttonText`** | 버튼 내부에 각인되는 텍스트의 시각적 설정입니다. |
+| **`layout`** | 구성 요소 간의 간격과 여백을 정의하는 기하학적 설정입니다. |
 
 ---
 
-## 2. 레이아웃 설정 (`DialogBoxLayout`)
+## 2. 레이아웃 상세 명세 (`DialogBoxLayout`)
 
-| 속성 | 타입 | 기본값 | 설명 |
+구성 요소 사이의 물리적 거리를 조절하여 정보의 가독성을 확보합니다.  
+
+| 속성 명칭 | 데이터 타입 | 기본값 | 설명 |
 | :--- | :--- | :---: | :--- |
-| `panelPaddingLeft` | `number` | `28` | 패널 내부 좌측 여백(px). |
-| `panelPaddingRight` | `number` | `28` | 패널 내부 우측 여백(px). |
-| `panelPaddingTop` | `number` | `28` | 패널 내부 상단 여백(px). |
-| `panelPaddingBottom` | `number` | `28` | 패널 내부 하단 여백(px). |
-| `buttonPaddingLeft` | `number` | `24` | 버튼 내부 좌측 패딩(px). |
-| `buttonPaddingRight` | `number` | `24` | 버튼 내부 우측 패딩(px). |
-| `buttonPaddingTop` | `number` | `10` | 버튼 내부 상단 패딩(px). |
-| `buttonPaddingBottom` | `number` | `10` | 버튼 내부 하단 패딩(px). |
-| `titleContentGap` | `number` | `12` | 제목과 본문 사이 간격(px). |
-| `contentButtonGap` | `number` | `30` | 본문과 버튼 영역 사이 간격(px). |
-| `buttonRowGap` | `number` | `10` | 버튼 행 사이의 수직 간격(px). |
-| `buttonColumnGap` | `number` | `8` | 같은 행 내 버튼 간의 가로 간격(px). |
+| **`panelPaddingLeft`** | `number` | `28` | 메인 패널 내부의 좌측 여백(px)을 결정합니다. |
+| **`panelPaddingRight`** | `number` | `28` | 메인 패널 내부의 우측 여백(px)을 결정합니다. |
+| **`panelPaddingTop`** | `number` | `28` | 패널 상단에서 콘텐츠 시작 지점까지의 거리입니다. |
+| **`panelPaddingBottom`** | `number` | `28` | 패널 하단에서 버튼 영역 끝까지의 거리입니다. |
+| **`buttonPaddingLeft`** | `number` | `24` | 각 버튼 내부의 좌측 패딩(px)입니다. |
+| **`buttonPaddingRight`** | `number` | `24` | 각 버튼 내부의 우측 패딩(px)입니다. |
+| **`buttonPaddingTop`** | `number` | `10` | 각 버튼 내부의 상단 패딩(px)입니다. |
+| **`buttonPaddingBottom`** | `number` | `10` | 각 버튼 내부의 하단 패딩(px)입니다. |
+| **`titleContentGap`** | `number` | `12` | 제목 텍스트와 본문 텍스트 사이의 수직 간격입니다. |
+| **`contentButtonGap`** | `number` | `30` | 본문 하단과 버튼 영역 사이의 충분한 분리 공간입니다. |
+| **`buttonRowGap`** | `number` | `10` | 버튼이 여러 행일 경우 발생하는 행간 여백입니다. |
+| **`buttonColumnGap`** | `number` | `8` | 동일 행 내에서 버튼들 사이의 가로 간격입니다. |
 
 ---
 
-## 3. 스타일링 예시
+## 3. 스타일링 활용 사례
 
-### 3.1. 경고창 느낌의 붉은색 테두리 디자인
+### 긴박한 경고 연출을 위한 테두리 강조 디자인
+시나리오상 중요한 경고나 위기 상황을 알리기 위한 시각적 연출 예시입니다.  
 
 ```ts
 export default defineScene({
-  config,
   initial: {
     dialogBox: {
       panel: {
@@ -54,26 +59,19 @@ export default defineScene({
       },
       titleStyle: {
         color: '#e74c3c',
-        fontSize: 28
+        fontSize: 28,
+        fontWeight: 'bold'
       }
     }
   }
-}, [ ... ])
+})
 ```
 
 ---
 
-## 4. 상세 스키마 (`DialogBoxSchema`)
+## 4. 주의 사항 (Edge Cases)
 
-### `button` & `buttonHover`
-모든 버튼에 적용되는 기본 스타일입니다. `hover` 시의 색상 변화를 통해 상호작용 효과를 줄 수 있습니다.
-
-### `panel.height`
-기본적으로 패널의 높이는 내부 콘텐츠(제목+본문+버튼) 양에 따라 **자동으로 계산**됩니다. 명시적으로 `height`를 지정할 수도 있지만, 콘텐츠가 잘릴 수 있으므로 주의해야 합니다.
-
----
-
-## 5. 주의 사항 (Edge Cases)
-
-*   **자동 너비 추정**: 버튼의 너비를 명시하지 않으면 텍스트 길이에 따라 자동으로 너비가 계산됩니다.
-*   **그리디(Greedy) 배치**: 버튼들을 최대한 한 행에 배치하려 시도하며, 설정된 패널 너비를 초과할 때만 다음 행으로 넘깁니다.
+*   **지능형 높이 계산**: 패널의 세로 크기는 내부 제목, 본문, 버튼의 양에 따라 엔진에 의해 **자동으로 산출**됩니다.  명시적으로 `height`를 고정할 수 있으나, 콘텐츠의 양이 예상을 초과할 경우 시각적 잘림 현상이 발생할 수 있으므로 주의해 주시기 바랍니다.  
+*   **유동적인 버튼 너비**: 각 버튼의 가로 너비를 지정하지 않을 경우, 내부 텍스트의 길이에 맞춰 최적의 너비가 자동으로 할당됩니다.  
+*   **효율적인 행 전환**: 버튼들을 가능한 한 한 줄에 배치하려 시도하며, 설정된 패널의 가용 너비를 초과하는 시점에만 자동으로 다음 행으로 개행합니다.  
+*   **영속성 보존 정책**: 현재 적용된 모든 시각적 상태는 엔진의 상태 저장소에 보존되어 세이브 및 로드 시 완벽하게 복구됩니다.  

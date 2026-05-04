@@ -1,187 +1,172 @@
-# 📖 Fumika Engine Tutorial
+# 📖 Fumika 엔진 활용 가이드: 기초부터 실전까지
 
-`fumika` 엔진을 사용하여 첫 번째 비주얼 노벨을 만드는 과정을 처음부터 끝까지 안내합니다. 이 튜토리얼은 단계별로 진행되며, 각 장은 이전 장의 지식을 바탕으로 구성됩니다.
+본 가이드는 `fumika` 엔진을 사용하여 고성능 웹 기반 비주얼 노벨을 제작하려는 개발자분들을 위해 작성되었습니다.  
+엔진의 핵심 설계 철학과 실무 적용 방법을 단계별로 상세히 안내해 드립니다.  
 
 ---
 
-## 목차 (Table of Contents)
-1. [01. 환경 구축 및 설치](#step-01)
-2. [02. 프로젝트 설정](#step-02)
-3. [03. 캐릭터 정의 및 시나리오](#step-03)
-4. [04. 엔진 구동 및 확인](#step-04)
-5. [05. 플레이어 상호작용](#step-05)
-6. [06. 연출 효과 더하기](#step-06)
-7. [07. 장면 전환과 마무리](#step-07)
-8. [08. 고급 설계 가이드](#step-08)
-9. [09. 중첩 씬과 커스텀 UI](#step-09)
+## 📑 학습 목차 (Tutorial Index)
+
+| 단계 | 제목 | 주요 학습 및 기술적 포인트 |
+| :--- | :--- | :--- |
+| **[Step 01](#step-01)** | [환경 구축 및 설치](#step-01) | 개발 환경 설정 및 패키지 설치 절차 |
+| **[Step 02](#step-02)** | [프로젝트 구성 및 설정](#step-02) | `novel.config.ts`를 통한 중앙 집중식 관리 |
+| **[Step 03](#step-03)** | [캐릭터 및 리소스 정의](#step-03) | 레이어드 시스템의 구조와 자원 최적화 |
+| **[Step 04](#step-04)** | [엔진 구동 및 라이프사이클](#step-04) | 초기 로딩부터 시나리오 실행까지의 단계 |
+| **[Step 05](#step-05)** | [사용자 상호작용 및 변수](#step-05) | 상태 관리 시스템과 데이터 영속성 구현 |
+| **[Step 06](#step-06)** | [고급 연출 및 시각 효과](#step-06) | 카메라 제어 및 병렬 실행 최적화 기법 |
+| **[Step 07](#step-07)** | [중첩 씬과 서브 시스템](#step-07) | 콜 스택 구조를 활용한 고급 아키텍처 설계 |
 
 ---
 
 ## <a id="step-01"></a>01. 환경 구축 및 설치 (Installation) 🛠️
 
-`fumika` 엔진을 사용하여 게임을 만들기 위한 첫 번째 단계입니다.
+`fumika` 엔진은 최신 웹 표준과 TypeScript의 강력한 타입 시스템을 기반으로 설계되었습니다.  
+안정적이고 효율적인 개발을 위해 적절한 환경을 구축하는 것이 권장됩니다.  
 
-### 프로젝트 초기화
+### **프로젝트 초기화 및 엔진 설치**
 ```bash
-mkdir my-novel-game
-cd my-novel-game
+# 프로젝트 디렉토리 생성 및 이동
+mkdir my-novel-project && cd my-novel-project
+
+# 패키지 매니저 초기화 및 엔진 라이브러리 설치
 npm init -y
 npm install fumika
 ```
 
-### 왜 TypeScript와 VS Code인가요?
-`fumika`는 강력한 **타입 시스템**을 제공합니다. 캐릭터 이름 오타 등을 실행 전(컴파일 타임)에 즉시 빨간 줄로 알려주어 개발 효율을 극대화합니다.
+`fumika`는 대규모 시나리오 작업 시 발생할 수 있는 참조 오류를 방지하기 위해 엄격한 타입 체크를 지원합니다.  
+VS Code와 같은 최신 IDE를 활용하시면 엔진이 제공하는 자동 완성 기능을 통해 더욱 정교한 코딩이 가능합니다.  
 
 ---
 
-## <a id="step-02"></a>02. 프로젝트 설정 (Configuration) ⚙️
+## <a id="step-02"></a>02. 프로젝트 구성 및 설정 (Configuration) ⚙️
 
-모든 프로젝트의 중심에는 `novel.config.ts` 설계도가 있습니다.
+모든 `fumika` 프로젝트는 `novel.config.ts`라는 중앙 설정 파일을 통해 모든 시각적 요소와 시스템 동작을 제어합니다.  
 
+### **설정 파일 구성 예시**
 ```ts
 import { defineNovelConfig } from 'fumika'
 
 export default defineNovelConfig({
   width: 1280,
   height: 720,
-  variables: { score: 0 },
-  scenes: ['scene-intro'],
-  assets: {
-    aris_normal: './assets/aris.png',
-    bg_school: './assets/school.jpg'
+  // 전역적으로 보존되어야 하는 게임 상태 정의
+  variables: { 
+    gold: 100,
+    playerName: '여행자'
   },
-  backgrounds: {
-    school: { src: 'bg_school' }
+  // 에셋 식별자와 경로의 매핑 관리
+  assets: {
+    bg_room: './assets/room.webp',
+    aris_body: './assets/aris_body.png',
   }
 })
 ```
 
+에셋 경로를 직접 명시하지 않고 ID 기반으로 관리함으로써, 파일 구조 변경 시에도 유연하게 대응할 수 있는 아키텍처를 확보하게 됩니다.  
+
 ---
 
-## <a id="step-03"></a>03. 캐릭터 정의 및 시나리오 작성 (Scenario) 🎭
+## <a id="step-03"></a>03. 캐릭터 및 리소스 정의 (Assets) 🎭
 
-### 캐릭터 정의
-신체(`bases`)와 표정(`emotions`) 파트를 분리하여 정의함으로써 다양한 조합을 효율적으로 관리할 수 있습니다.
+`fumika` 엔진은 브라우저의 한정된 자원을 극대화하기 위해 **레이어드 캐릭터 시스템(Layered Character System)**을 채택하고 있습니다.  
+
+### **레이어 기반의 효율적 구조**
+캐릭터의 공통 몸체(`base`)를 공유하고 감정 표현(`emotion`) 레이어만 동적으로 교체함으로써, 메모리 점유율을 획기적으로 낮추고 렌더링 성능을 확보할 수 있습니다.  
 
 ```ts
 characters: {
-  heroine: {
+  aris: {
     name: '아리스',
     bases: {
-      normal: { 
-        src: 'aris_base_normal', 
-        width: 560,
-        points: { face: { x: 0.5, y: 0.2 } }
+      default: { 
+        src: 'aris_body', 
+        width: 600,
+        // 시점 제어를 위한 앵커 포인트(Anchor Point) 정의
+        points: { face: { x: 0.5, y: 0.25 } }
       }
     },
     emotions: {
-      normal: { face: 'aris_face_normal' },
-      smile:  { face: 'aris_face_smile' }
+      happy: { face: 'aris_face_happy' },
+      sad: { face: 'aris_face_sad' }
     }
   }
 }
 ```
 
-### 시나리오 (`defineScene`) 작성
-```ts
-export default defineScene({ config })([
-  { type: 'background', name: 'school' },
-  { type: 'character', name: 'heroine', action: 'show', image: 'normal:normal' },
-  { type: 'dialogue', speaker: 'heroine', text: '안녕! Fumika의 세계에 온 걸 환영해.' }
-])
-```
-
 ---
 
-## <a id="step-04"></a>04. 엔진 구동 및 화면 확인 (Execution) 🚀
+## <a id="step-04"></a>04. 엔진 구동 및 라이프사이클 (Lifecycle) 🚀
 
-`Novel` 클래스가 모든 오케스트레이션을 담당합니다.
+엔진의 구동 과정은 리소스 준비, 시스템 모듈 부팅, 시나리오 실행의 세 가지 주요 단계를 거치게 됩니다.  
 
+### **구동 프로세스 구현 상세**
 ```ts
 const novel = new Novel(config, {
-  element: document.getElementById('game-container'),
-  scenes: { 'scene-intro': sceneIntro }
+  element: document.getElementById('app'),
+  scenes: { 'intro': introScene }
 })
 
-await novel.load() // 에셋 로드
-await novel.boot() // 모듈 부팅
-novel.start('scene-intro') // 첫 씬 시작
+// 엔진의 라이프사이클을 순차적으로 제어합니다.  
+await novel.load(); // 비동기 에셋 프리로딩을 완수합니다.  
+await novel.boot(); // 시스템 모듈 및 렌더링 파이프라인을 초기화합니다.  
+novel.start('intro'); // 시나리오의 첫 번째 명령어를 실행합니다.  
+```
+
+`load()` 단계를 통해 필수 리소스를 사전에 확보함으로써, 장면 전환 중의 시각적 끊김을 방지하고 부드러운 플레이 환경을 제공합니다.  
+
+---
+
+## <a id="step-05"></a>05. 사용자 상호작용 및 변수 관리 (Interaction) 🤝
+
+플레이어의 선택은 이야기의 흐름을 결정짓는 동시에 데이터의 **영속성(Persistence)** 관리와 직결됩니다.  
+
+### **스코프 기반의 변수 시스템**
+`fumika` 엔진은 완벽한 세이브/로드 기능을 위해 모든 내부 상태를 직렬화하여 저장합니다.  
+개발자는 두 가지 스코프의 변수를 활용하여 시나리오 로직을 설계할 수 있습니다.  
+
+*   **전역 변수 (Global Variables)**: 프로젝트 전체에서 공유되며, 씬 전환 후에도 상태를 유지합니다.  
+*   **지역 변수 (Local Variables)**: 특정 씬 내부에서만 유효하며, 씬 종료 시 자동으로 소거됩니다.  
+
+전역 변수와 활성화된 지역 변수, 그리고 모든 모듈의 내부 상태 데이터는 `novel.save()` 호출 시 자동으로 보존되어 로드 시 완벽히 복원됩니다.  
+
+---
+
+## <a id="step-06"></a>06. 고급 연출 및 시각 효과 (Visual Effects) 🎬
+
+역동적인 비주얼 노벨 연출을 위해서는 순차적 실행과 병렬 처리를 전략적으로 조합해야 합니다.  
+
+### **병렬 실행 기법의 활용**
+`skip: true` 속성을 활용하면 해당 연출의 완료를 기다리지 않고 후속 커맨드를 즉시 실행하여, 복합적이고 화려한 장면을 구성할 수 있습니다.  
+
+```ts
+// 배경 전환과 대사 출력을 동시에 진행하는 예시입니다.  
+{ type: 'background', name: 'sunset', skip: true },
+{ type: 'dialogue', text: '어느덧 붉은 노을이 수평선 너머로 드리우기 시작했습니다.' },
+
+// 캐릭터의 얼굴 부위로 시점을 부드럽게 집중시킵니다.  
+{ type: 'character-focus', name: 'aris', point: 'face', duration: 1500 }
 ```
 
 ---
 
-## <a id="step-05"></a>05. 플레이어의 선택 (Interaction) 🤝
+## <a id="step-07"></a>07. 중첩 씬과 서브 시스템 아키텍처 (Advanced) 🪆
 
-선택지를 추가하고 데이터를 조작해 봅니다.
+특수한 기능을 수행한 뒤 원래의 시나리오 지점으로 정밀하게 복귀해야 하는 시스템은 **스택(Stack) 구조의 중첩 씬**으로 설계하는 것이 기술적으로 우수합니다.  
+
+### **서브씬 호출 및 상태 복원**
+중첩 씬은 프로그래밍의 함수 호출 메커니즘을 따르며, 서브씬이 종료되는 시점에 스택에 보존된 이전 씬의 컨텍스트를 즉시 활성화합니다.  
 
 ```ts
 { 
-  type: 'choice', 
-  choices: [
-    { 
-      text: '도서관에 가서 공부한다', 
-      var: ({ score }) => ({ score: score + 10 }),
-      goto: 'label-study'
-    },
-    { text: '집에 간다', next: 'scene-home' }
-  ]
-},
-{ type: 'label', name: 'label-study' },
-{ type: 'dialogue', text: '지식이 상승했다. (현재: {{score}})' }
+  type: 'scene', 
+  call: 'inventory', 
+  preserve: true, // 호출 시점의 시각적 환경을 그대로 유지합니다.  
+  restore: true   // 복귀 시 오디오 및 변수 상태를 이전 시점으로 완벽히 복구합니다.  
+}
 ```
 
----
-
-## <a id="step-06"></a>06. 멋진 연출 더하기 (Effects) 🎬
-
-카메라 연출과 파티클 효과를 추가합니다.
-
-```ts
-// 아리스의 얼굴로 2초간 포커스 이동
-{ type: 'character-focus', name: 'heroine', point: 'face', duration: 2000 },
-// 벚꽃 효과 추가
-{ type: 'effect', action: 'add', effect: 'sakura', src: 'sakura_petal' },
-// 다시 전체 화면으로
-{ type: 'camera-zoom', scale: 1, duration: 1000 }
-```
-
----
-
-## <a id="step-07"></a>07. 장소 이동과 마무리 (Transitions) 🌓
-
-새로운 씬으로 이동할 때는 `config`에 씬을 등록하고, 이전 씬의 `next` 속성에 이름을 지정합니다.
-
-```ts
-// scenes/scene-intro.ts
-export default defineScene({ 
-  config, 
-  next: 'scene-home' 
-})([...])
-```
-
----
-
-## <a id="step-08"></a>08. 고급 설계 가이드 (Advanced) 🚀
-
-대규모 프로젝트를 위한 관리 기법입니다.
-
-1. **캐릭터 리소스 분리**: `defineCharacter`를 사용해 캐릭터별 파일을 독립시킵니다.
-2. **모듈 상태 초기화**: `defineInitial`로 씬 시작 시 UI 레이아웃을 미리 설정합니다.
-3. **공통 로직 자동화**: `defineHook`을 통해 모든 대사 넘김 시 효과음 재생 등을 구현합니다.
-
----
-
-## <a id="step-09"></a>09. 중첩 씬 호출과 커스텀 UI (Nested Scenes) 🪆
-
-환경설정이나 인벤토리처럼 '불러왔다가 다시 돌아가야 하는' 시스템을 구현할 때 사용합니다.
-
-```ts
-// 서브씬 호출. 원래 상태로 완벽히 되돌아옵니다.
-{ type: 'scene', call: 'scene-sub', preserve: true, restore: true }
-```
-
-> [!WARNING]
-> **메모리 누수 주의**: 서브씬에서 호출자 씬으로 직접 전환(`next`)하지 마세요. 반드시 자연스럽게 종료(Return)되어 콜 스택이 정리되도록 해야 합니다.
+서브씬 내부에서 `next` 명령어를 통해 흐름을 강제 전환할 경우 콜 스택 구조가 파괴될 수 있으므로, 설계 시 이에 대한 세심한 주의를 부탁드립니다.  
 
 ---
 

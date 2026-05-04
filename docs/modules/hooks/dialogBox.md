@@ -1,69 +1,73 @@
 # 🪝 DialogBox Hooks
 
-`dialogBox` 모듈의 표시 시점과 사용자 선택 시점에 개입할 수 있는 훅 목록입니다.
+본 문서는 `dialogBox` 모듈의 활성화 지점과 사용자의 선택 시점에 개입하여 데이터를 제어하거나 기록할 수 있는 훅(Hooks) 명세를 기술합니다.  
 
 ---
 
 ## 1. 개요 (Overview)
 
-| 훅 이름 | 설명 | 권장 활용 |
+시스템 대화상자의 라이프사이클을 추적하고 제어할 수 있는 핵심 훅 목록입니다.  
+
+| 훅 이름 | 상세 기능 | 권장 활용 사례 |
 | :--- | :--- | :--- |
-| `dialogBox:show` | 상자가 화면에 나타나기 직전 발생 | 제목/본문 텍스트 동적 수정, 강제 persist 설정 |
-| `dialogBox:select` | 버튼이 클릭되거나 창이 닫힐 때 발생 | 선택 로그 기록, 특정 선택 시 부가 효과 발생 |
+| `dialogBox:show` | 대화상자 노출 직전의 데이터 변형 | 제목 및 본문의 동적 수정, 강제 영속성(Persist) 설정 등 |
+| `dialogBox:select` | 버튼 클릭 또는 창 닫힘 이벤트 감지 | 사용자 선택 내역 기록, 선택에 따른 부가 연출 실행 등 |
 
 ---
 
-## 2. 훅 상세 (Reference)
+## 2. 훅 상세 명세 (Reference)
 
 ### 2.1. `dialogBox:show`
-커맨드 데이터가 UI에 전달되기 직전에 호출됩니다. 모든 커맨드 속성을 훅에서 동적으로 변경할 수 있습니다.
+커맨드 데이터가 UI 렌더러에 전달되어 화면에 그려지기 직전에 호출됩니다.  
+시나리오상의 고정된 문구를 게임 내 변수 상태에 따라 실시간으로 보정하거나, 특수 상황에서 강제로 상호작용을 제약하는 등의 고도화된 제어가 가능합니다.  
 
-* **Payload**: `DialogBoxCmd` (title, content, buttons, persist, duration)
-* **Return**: `DialogBoxCmd`
+*   **Payload**: `DialogBoxCmd` (`title`, `content`, `buttons`, `persist`, `duration`)  
+*   **Return**: 보정된 `DialogBoxCmd` 객체를 반환합니다.  
 
 ```ts
-// 예시: 특정 변수 상태에 따라 모든 대화상자를 강제 종료 불가능(persist)하게 만들기
+// 구현 예시: 긴급 상황 시 모든 대화상자의 제목을 보정하고 배경 클릭을 차단합니다.  
 novel.hooker.onBefore('dialogBox:show', (cmd) => {
   if (novel.variables.isUrgent) {
-    return { ...cmd, persist: true, title: `[긴급] ${cmd.title}` }
+    return { ...cmd, persist: true, title: `[긴급 상황] ${cmd.title}` };
   }
-  return cmd
+  return cmd;
 })
 ```
 
 ### 2.2. `dialogBox:select`
-사용자가 버튼을 클릭하거나, 배경을 클릭하여 창을 닫았을 때 호출됩니다.
+사용자가 버튼을 클릭하거나, 특정 설정에 의해 배경을 클릭하여 창을 닫았을 때 호출됩니다.  
 
-* **Payload**: `{ index: number, selected?: ButtonObject }`
-* **Return**: `{ index: number, selected?: ButtonObject }`
+*   **Payload**: `{ index: number, selected?: ButtonObject }`  
+*   **Return**: 처리된 데이터를 반환합니다.  
 
-| 필드 | 설명 |
+| 필드 명칭 | 설명 |
 | :--- | :--- |
-| **`index`** | 클릭된 버튼의 인덱스. **배경 클릭으로 닫힌 경우 `-1`**입니다. |
-| **`selected`** | 클릭된 버튼 객체 본체입니다. (인덱스가 -1인 경우 `undefined`) |
+| **`index`** | 클릭된 버튼의 배열 인덱스 번호입니다.  **배경 클릭으로 닫힌 경우에는 `-1`**이 할당됩니다. |
+| **`selected`** | 클릭된 버튼의 속성 객체입니다.  (배경 클릭으로 인한 종료 시에는 `undefined`입니다) |
 
 ```ts
-// 예시: 선택 결과 로그 기록
+// 구현 예시: 플레이어의 선택 결과를 분석하여 시스템 로그에 기록합니다.  
 novel.hooker.onAfter('dialogBox:select', (state) => {
   if (state.index === -1) {
-    console.log('대화상자가 무시되었습니다.')
+    console.log('[System Log] 대화상자가 응답 없이 소거되었습니다.');
   } else {
-    console.log(`사용자가 "${state.selected.text}" 버튼을 선택했습니다.`)
+    console.log(`[System Log] 사용자 선택 버튼: ${state.selected?.text}`);
   }
-  return state
+  return state;
 })
 ```
 
 ---
 
-## 3. 관련 가이드
+## 3. 주의 사항 (Edge Cases)
 
-* [상세 가이드: Hooks 개념 및 릴레이 방식](../../concepts.md#hooks)
-* [상세 가이드: defineHook (훅 정의 헬퍼)](../../defines/defineHook.md)
+*   **배경 클릭 인덱스(-1)의 발생 조건**: `persist` 설정이 `false`이고 버튼이 전혀 정의되지 않은 특수한 상황에서만 배경 클릭을 통한 창 닫기가 가능하며, 이때 인덱스 `-1`이 발생합니다.  **버튼이 하나 이상 존재하는 경우 보안을 위해 배경 클릭이 자동 차단되므로 이 인덱스는 발생하지 않습니다.**  
+*   **데이터 불변성 권장**: `selected` 객체의 내부 속성을 훅에서 직접 수정하는 행위는 이미 실행 로직이 결정된 시점일 수 있으므로 권장되지 않습니다.  주로 인덱스 값을 통한 상태 판별이나 외부 로깅 용도로 활용해 주시기 바랍니다.  
+*   **동기식 처리**: 훅 로직이 지연될 경우 전체적인 시스템 응답성에 영향을 줄 수 있으므로, 가급적 가벼운 비즈니스 로직 위주로 구성해 주십시오.  
 
 ---
 
-## 4. 주의 사항 (Edge Cases)
+## 4. 관련 참조 문서
 
-*   **인덱스 -1**: `persist: false`이고 버튼이 없는 특수한 상황에서 배경을 클릭했을 때 발생하는 인덱스입니다. **버튼이 하나라도 있다면 `persist`가 자동으로 `true`가 되어 배경 클릭이 차단되므로, 이 인덱스는 발생하지 않습니다.**
-*   **불변성 유지**: 훅에서 `selected` 객체를 직접 수정해도 이미 로직이 끝난 시점일 수 있으므로, 주로 `index`나 데이터를 읽는 용도로 활용하는 것이 좋습니다.
+*   **[Hooks 시스템 기초 개념](../../concepts.md#hooks)**: 엔진의 이벤트 릴레이 방식에 대한 상세 정보를 제공합니다.  
+*   **[범용 대화상자 가이드](../dialogBox.md)**: `dialogBox` 커맨드의 상세 속성과 활용법을 기술합니다.  

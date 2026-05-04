@@ -302,7 +302,7 @@ inputModule.defineView((ctx, data, setState) => {
       'position:fixed',
       'top:-9999px',
       'left:-9999px',
-      'width:1000px',  // 폭이 좁으면 브라우저가 스크롤 연산 중 커서를 0으로 튕겨내는 버그 발생
+      'width:1000px', // 폭이 좁으면 브라우저가 스크롤 연산 중 커서를 0으로 튕겨내는 버그 발생
       'height:100px',
       'opacity:0',
       'z-index:-1',

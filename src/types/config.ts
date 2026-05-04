@@ -16,7 +16,7 @@ import type { Novel } from '../core/Novel'
  * const base: CharBaseDef = {
  *   src: 'girl_normal',
  *   width: 560,
- *   naturalWidth: 1120,  // 원본 이미지 너비 (파트 스케일 계산용)
+ *   naturalWidth: 1120, // 원본 이미지 너비 (파트 스케일 계산용)
  *   points: {
  *     eyes:  { x: 0.5, y: 0.18 },
  *     mouth: { x: 0.5, y: 0.22, width: 120 },

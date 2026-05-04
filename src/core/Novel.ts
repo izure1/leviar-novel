@@ -914,7 +914,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         setLocalVar: noop as any,
         loadScene: noop as any,
         end: noop,
-        callScene: noop as any,  // rebuild ctx에서는 callScene 호출 없음
+        callScene: noop as any, // rebuild ctx에서는 callScene 호출 없음
       },
       execute: function* () { return false },
     }

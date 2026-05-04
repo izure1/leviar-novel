@@ -10,8 +10,8 @@ type UnionPointsOf<TBases extends Record<string, CharBaseDef>> = {
  */
 type Exact<T, Shape> = T extends Shape
   ? Exclude<keyof T, keyof Shape> extends never
-    ? T
-    : never
+  ? T
+  : never
   : never
 
 /**
@@ -32,8 +32,8 @@ type Exact<T, Shape> = T extends Shape
  *     normal: { src: '...', width: 560, points: { face: { x: 0.5, y: 0.18 } } }
  *   },
  *   emotions: {
- *     normal: { face: 'fumika_emotion_base_normal' },   // ✅
- *     smile:  { face: '...', invalid: '...' },          // ❌ 타입 오류
+ *     normal: { face: 'fumika_emotion_base_normal' },  // ✅
+ *     smile:  { face: '...', invalid: '...' },         // ❌ 타입 오류
  *   }
  * })
  * ```
