@@ -10,7 +10,7 @@
 
 씬 단위로 훅을 안전하게 관리하려면 `defineHook` 헬퍼를 사용하는 것이 권장됩니다.
 
-* [상세 가이드: Hooks (훅 시스템)](../../concepts/hooks.md)
+* [상세 가이드: Hooks (훅 시스템)](../../concepts.md#5-훅-시스템-hooks)
 * [상세 가이드: defineHook (훅 정의 헬퍼)](../../defines/defineHook.md)
 
 | 훅 이름 | 설명 | 시점 |

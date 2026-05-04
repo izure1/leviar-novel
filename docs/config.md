@@ -7,8 +7,8 @@
 `novel.config.ts`는 `fumika` 엔진의 모든 동작과 데이터를 정의하는 최상위 설정 파일입니다. 게임의 해상도, 전역 변수 초기값, 캐릭터 및 배경 정의, 에셋 경로, 그리고 각종 모듈의 물리적/시각적 기본값을 이곳에서 관리합니다.
 
 **관련 문서:**
-* [엔진 아키텍처 개요](./concepts/overview.md)
-* [동적 설정값 (Resolvable) 활용](./concepts/resolvable.md)
+* [엔진 아키텍처 개요](./concepts.md#1-핵심-메커니즘-개요-overview)
+* [동적 설정값 (Resolvable) 활용](./concepts.md#4-동적-속성-resolvable)
 
 ---
 
@@ -49,7 +49,7 @@ variables: {
 **관련 문서:**
 * [Variable 모듈 (변수 조작)](./modules/var.md)
 * [Condition 모듈 (변수 활용 분기)](./modules/condition.md)
-* [변수 시스템 상세 가이드](./concepts/variables.md)
+* [변수 시스템 상세 가이드](./concepts.md#3-변수-시스템-variables)
 
 ---
 
@@ -66,7 +66,7 @@ scenes: ['prologue', 'chapter1', 'ending_good', 'ending_bad']
 ```
 
 **관련 문서:**
-* [Scene 개념 가이드](./concepts/scenes.md)
+* [Scene 개념 가이드](./concepts.md#2-장면-시스템-scenes)
 * [defineScene 정의 상세](./defines/defineScene.md)
 * [공통 초기값 정의 (defineInitial)](./defines/defineInitial.md)
 
@@ -264,7 +264,7 @@ audios: {
 
 **관련 문서:**
 * [Audio 모듈 가이드 (BGM/SFX)](./modules/audio.md)
-* [에셋 로딩 및 관리 시스템](./concepts/overview.md#에셋-시스템)
+* [에셋 로딩 및 관리 시스템](./concepts.md#1-핵심-메커니즘-개요-overview)
 
 ---
 
@@ -288,7 +288,7 @@ modules: {
 **관련 문서:**
 * [모듈 시스템 아키텍처](./modules.md)
 * [UI 모듈 가이드 (Visibility 제어)](./modules/ui.md)
-* [커스텀 훅 시스템 (Hooks)](./concepts/hooks.md)
+* [커스텀 훅 시스템 (Hooks)](./concepts.md#5-훅-시스템-hooks)
 * [defineHook 정의 상세](./defines/defineHook.md)
 
 ---

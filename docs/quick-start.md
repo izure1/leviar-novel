@@ -119,6 +119,6 @@ init().catch(console.error)
 
 더 깊이 있는 연출과 시스템이 궁금하다면 아래 문서를 참조하세요.
 
-- **[입체적인 연출을 위한 10분 가이드 (Step-by-Step Tutorial)](./tutorial/01-installation.md)**
+- **[입체적인 연출을 위한 단계별 가이드 (Full Tutorial)](./tutorial.md)**
 - **[모든 명령어 레퍼런스 (Command Reference)](./commands.md)**
 - **[엔진 설정 가이드 (Configuration Guide)](./config.md)**

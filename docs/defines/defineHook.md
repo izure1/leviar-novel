@@ -12,7 +12,7 @@
 | **대상** | `novel.config.ts`에 등록된 모듈 훅 및 `novel:` 엔진 훅 |
 | **장점** | 수동으로 `off`를 호출할 필요 없이 메모리 누수 방지 |
 
-* [상세 가이드: Hooks (훅 시스템)](../concepts/hooks.md)
+* [상세 가이드: Hooks (훅 시스템)](../concepts.md#5-훅-시스템-hooks)
 
 ---
 
