@@ -87,4 +87,4 @@ export const commonHooks = defineHook(config)({
 
 ---
 
-[⬅️ 07. 씬 전환](./07-transitions.md) | [📚 전체 문서](../README.md)
+[⬅️ 07. 씬 전환](./07-transitions.md) | [09. 중첩 씬 ➡️](./09-nested-scenes.md) | [📚 전체 문서](../README.md)

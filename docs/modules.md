@@ -88,6 +88,9 @@ noticeModule.defineView((ctx, state, setState) => {
 | **`onUpdate`** | 상태 데이터 변경 시 | `(ctx, state, setState)`를 인자로 받습니다. 변경된 데이터를 UI 요소에 즉시 투영하거나, 필요 시 상태를 재업데이트하십시오. |
 | **`onCleanup`** | 모듈 제거 또는 씬 전환 시 | 인자가 없으며, 이벤트 리스너 해제 등 모든 자원을 정리하십시오. |
 
+> [!NOTE]
+> 중첩 씬 호출 시 `preserve: true` 옵션을 사용하면 씬이 전환되더라도 기존 모듈들의 `onCleanup`이 호출되지 않고 상태가 유지됩니다. 시스템 UI나 팝업 창 구현 시의 상태 보존 메커니즘은 [중첩 씬 튜토리얼](./tutorial/09-nested-scenes.md)에서 자세히 다룹니다.
+
 #### 💡 초기화 (onBoot)
 
 모듈이 엔진에 등록된 직후, 비동기적으로 딱 한 번 호출되는 초기화 콜백입니다. `novel.boot()`를 명시적으로 호출할 때 실행됩니다.

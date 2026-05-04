@@ -60,11 +60,15 @@
 
 게임의 진행 방향과 상태를 관리합니다.
 
+*   [`scene`](./tutorial/09-nested-scenes.md): 다른 씬으로 이동하거나 서브씬으로 호출 (Stack-based)
 *   [`choices`](./modules/choices.md): 사용자 선택지 분기
 *   [`condition`](./modules/condition.md): 변수 상태에 따른 자동 조건 분기
 *   [`var`](./concepts/variables.md): 전역/지역 변수 값 변경 및 조작
 *   [`label`](./modules/label.md): 시나리오 내 점프 위치 표시
 *   [`control`](./modules/control.md): 사용자 입력 차단 및 스킵 방지
+
+> [!TIP]
+> `scene` 커맨드의 `call` 속성을 사용하면 함수처럼 씬을 호출하고 복귀하는 **중첩 씬(Nested Scenes)** 기능을 사용할 수 있습니다. 자세한 연출 기법은 [튜토리얼 09](./tutorial/09-nested-scenes.md)를 참조하십시오.
 
 ---
 
