@@ -5,16 +5,16 @@
 ---
 
 ## 목차
-1. [핵심 메커니즘 개요](#1-핵심-메커니즘-개요-overview)
-2. [장면 시스템 (Scenes)](#2-장면-시스템-scenes)
-3. [변수 시스템 (Variables)](#3-변수-시스템-variables)
-4. [동적 속성 (Resolvable)](#4-동적-속성-resolvable)
-5. [훅 시스템 (Hooks)](#5-훅-시스템-hooks)
-6. [디버그 모드 (Debug Mode)](#6-디버그-모드-debug-mode)
+1. [핵심 메커니즘 개요](#overview)
+2. [장면 시스템 (Scenes)](#scenes)
+3. [변수 시스템 (Variables)](#variables)
+4. [동적 속성 (Resolvable)](#resolvable)
+5. [훅 시스템 (Hooks)](#hooks)
+6. [디버그 모드 (Debug Mode)](#debug-mode)
 
 ---
 
-## 1. 핵심 메커니즘 개요 (Overview)
+## <a id="overview"></a>1. 핵심 메커니즘 개요 (Overview)
 
 | 개념 | 설명 | 비고 |
 | :--- | :--- | :--- |
@@ -42,7 +42,7 @@
 
 ---
 
-## 2. 장면 시스템 (Scenes)
+## <a id="scenes"></a>2. 장면 시스템 (Scenes)
 
 `defineScene` 함수를 통해 독립적인 이야기의 단위인 씬을 구성합니다. 씬은 고유의 로컬 상태와 초기 UI 환경을 가집니다.
 
@@ -63,7 +63,7 @@
 
 ---
 
-## 3. 변수 시스템 (Variables)
+## <a id="variables"></a>3. 변수 시스템 (Variables)
 
 `fumika` 엔진의 변수 시스템은 **명명 규칙(Naming Convention)을 통해 런타임 스코프를 결정**합니다.
 
@@ -78,7 +78,7 @@
 
 ---
 
-## 4. 동적 속성 (Resolvable)
+## <a id="resolvable"></a>4. 동적 속성 (Resolvable)
 
 `Resolvable`은 많은 커맨드 속성들이 고정된 값뿐만 아니라 **함수**를 허용하게 하는 디자인 패턴입니다.
 
@@ -92,7 +92,7 @@ text: (vars) => `안녕하세요, ${vars.player_name}님!`
 
 ---
 
-## 5. 훅 시스템 (Hooks)
+## <a id="hooks"></a>5. 훅 시스템 (Hooks)
 
 프레임워크 내부의 데이터 흐름에 개입하여 값을 변경하거나 특정 시점에 로직을 실행하는 이벤트 인터셉터 메커니즘입니다.
 
@@ -106,7 +106,7 @@ text: (vars) => `안녕하세요, ${vars.player_name}님!`
 
 ---
 
-## 6. 디버그 모드 (Debug Mode)
+## <a id="debug-mode"></a>6. 디버그 모드 (Debug Mode)
 
 UI 요소의 **실제 영역(Hitbox)과 레이아웃 경계**를 시각화하여 정확한 위치 파악을 돕는 도구입니다.
 

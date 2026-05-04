@@ -67,8 +67,8 @@
 // 기존 호감도에 10을 더함
 var: ({ heart }) => ({ heart: heart + 10 })
 ```
-* [상세 가이드: Resolvable (함수형 값)](../concepts.md#4-동적-속성-resolvable)
-* [상세 가이드: Variables (변수 시스템)](../concepts.md#3-변수-시스템-variables)
+* [상세 가이드: Resolvable (함수형 값)](../concepts.md#resolvable)
+* [상세 가이드: Variables (변수 시스템)](../concepts.md#variables)
 
 ---
 

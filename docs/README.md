@@ -20,19 +20,19 @@
 | **🏁 입문 (Get Started)** | 엔진 설치, 환경 설정 및 첫 번째 게임 루프 구동 방법 | [Tutorial](./tutorial.md) / [Quick Start](./quick-start.md) |
 | **💡 핵심 개념 (Concepts)** | 엔진 철학, 변수 시스템, 씬 생명 주기 및 디버깅 등 | [Core Concepts](./concepts.md) |
 | **📜 명령어 (Commands)** | 시나리오 작성을 위한 모든 내장 명령어 상세 레퍼런스 | [Command List](./commands.md) |
-| **🧩 확장 (Extensions)** | 커스텀 모듈 제작 및 엔진 내부 이벤트를 제어하는 방법 | [Custom Module](./modules.md) / [Hooks 시스템](./concepts.md#5-훅-시스템-hooks) |
+| **🧩 확장 (Extensions)** | 커스텀 모듈 제작 및 엔진 내부 이벤트를 제어하는 방법 | [Custom Module](./modules.md) / [Hooks 시스템](./concepts.md#hooks) |
 
 ---
 
 ## 📂 상세 문서 상세 안내 (Detailed Reference)
 
 ### 1. 설계 및 흐름 (Flow & Logic)
-*   **[Core Concepts Overview](./concepts.md#1-핵심-메커니즘-개요-overview)**: 엔진의 MVC 구조와 렌더링 파이프라인.
-*   **[Scenes & Transitions](./concepts.md#2-장면-시스템-scenes)**: 씬 전환, 지역 변수 및 초기화 전략.
-*   **[Variables & Scoping](./concepts.md#3-변수-시스템-variables)**: 전역/지역 변수 스코핑 및 템플릿 보간법.
-*   **[Resolvable Patterns](./concepts.md#4-동적-속성-resolvable)**: 정적 값 대신 함수를 사용하여 동적인 연출 구현하기.
-*   **[Hooks & Lifecycle](./concepts.md#5-훅-시스템-hooks)**: 엔진 및 모듈의 라이프사이클 가로채기.
-*   **[Debug Mode](./concepts.md#6-디버그-모드-debug-mode)**: 레이아웃 시각화 및 디버깅 가이드.
+*   **[Core Concepts Overview](./concepts.md#overview)**: 엔진의 MVC 구조와 렌더링 파이프라인.
+*   **[Scenes & Transitions](./concepts.md#scenes)**: 씬 전환, 지역 변수 및 초기화 전략.
+*   **[Variables & Scoping](./concepts.md#variables)**: 전역/지역 변수 스코핑 및 템플릿 보간법.
+*   **[Resolvable Patterns](./concepts.md#resolvable)**: 정적 값 대신 함수를 사용하여 동적인 연출 구현하기.
+*   **[Hooks & Lifecycle](./concepts.md#hooks)**: 엔진 및 모듈의 라이프사이클 가로채기.
+*   **[Debug Mode](./concepts.md#debug-mode)**: 레이아웃 시각화 및 디버깅 가이드.
 
 ### 2. 설정 및 리소스 (Setup & Assets)
 *   **[Configuration Guide](./config.md)**: `novel.config.ts`의 모든 속성과 폴백 규칙.
@@ -42,9 +42,9 @@
 
 ### 3. 내장 모듈 및 튜토리얼 (Modules & Tutorials)
 *   **튜토리얼 단계별 이동**:
-    * [01. 설치](#01-환경-구축-및-설치-installation) / [02. 설정](#02-프로젝트-설정-configuration) / [03. 시나리오](#03-캐릭터-정의-및-시나리오-작성-scenario)
-    * [04. 구동](#04-엔진-구동-및-화면-확인-execution) / [05. 상호작용](#05-플레이어의-선택-interaction) / [06. 연출효과](#06-멋진-연출-더하기-effects)
-    * [07. 씬 전환](#07-장소-이동과-마무리-transitions) / [08. 고급설계](#08-고급-설계-가이드-advanced) / [09. 중첩씬](#09-중첩-씬-호출과-커스텀-ui-nested-scenes)
+    * [01. 설치](./tutorial.md#step-01) / [02. 설정](./tutorial.md#step-02) / [03. 시나리오](./tutorial.md#step-03)
+    * [04. 구동](./tutorial.md#step-04) / [05. 상호작용](./tutorial.md#step-05) / [06. 연출효과](./tutorial.md#step-06)
+    * [07. 씬 전환](./tutorial.md#step-07) / [08. 고급설계](./tutorial.md#step-08) / [09. 중첩씬](./tutorial.md#step-09)
 *   **명령어 레퍼런스**: [전체 커맨드 목록](./commands.md)
 
 ---

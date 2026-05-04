@@ -51,7 +51,7 @@ novel.hooker.onBefore('dialogue:text-run', (state) => {
 
 ## 3. 관련 가이드
 
-* [상세 가이드: Hooks 개념 및 릴레이 방식](../../concepts.md#5-훅-시스템-hooks)
+* [상세 가이드: Hooks 개념 및 릴레이 방식](../../concepts.md#hooks)
 * [상세 가이드: defineHook (훅 정의 헬퍼)](../../defines/defineHook.md)
 
 ---

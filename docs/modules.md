@@ -89,7 +89,7 @@ noticeModule.defineView((ctx, state, setState) => {
 | **`onCleanup`** | 모듈 제거 또는 씬 전환 시 | 인자가 없으며, 이벤트 리스너 해제 등 모든 자원을 정리하십시오. |
 
 > [!NOTE]
-> 중첩 씬 호출 시 `preserve: true` 옵션을 사용하면 씬이 전환되더라도 기존 모듈들의 `onCleanup`이 호출되지 않고 상태가 유지됩니다. 시스템 UI나 팝업 창 구현 시의 상태 보존 메커니즘은 [중첩 씬 튜토리얼](./tutorial.md#09-중첩-씬-호출과-커스텀-ui-nested-scenes)에서 자세히 다룹니다.
+> 중첩 씬 호출 시 `preserve: true` 옵션을 사용하면 씬이 전환되더라도 기존 모듈들의 `onCleanup`이 호출되지 않고 상태가 유지됩니다. 시스템 UI나 팝업 창 구현 시의 상태 보존 메커니즘은 [중첩 씬 튜토리얼](./tutorial.md#step-09)에서 자세히 다룹니다.
 
 #### 💡 초기화 (onBoot)
 

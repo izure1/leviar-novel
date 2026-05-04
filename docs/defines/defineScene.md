@@ -105,5 +105,5 @@ defineScene({ config, initial: spookyInitial })([ ... ])
 ---
 
 **관련 문서:**
-* [Scene 개념 가이드](../concepts.md#2-장면-시스템-scenes)
+* [Scene 개념 가이드](../concepts.md#scenes)
 * [Configuration 설정 가이드](../config.md)

@@ -5,19 +5,19 @@
 ---
 
 ## 목차 (Table of Contents)
-1. [01. 환경 구축 및 설치](#01-환경-구축-및-설치-installation)
-2. [02. 프로젝트 설정](#02-프로젝트-설정-configuration)
-3. [03. 캐릭터 정의 및 시나리오](#03-캐릭터-정의-및-시나리오-작성-scenario)
-4. [04. 엔진 구동 및 확인](#04-엔진-구동-및-화면-확인-execution)
-5. [05. 플레이어 상호작용](#05-플레이어의-선택-interaction)
-6. [06. 연출 효과 더하기](#06-멋진-연출-더하기-effects)
-7. [07. 장면 전환과 마무리](#07-장소-이동과-마무리-transitions)
-8. [08. 고급 설계 가이드](#08-고급-설계-가이드-advanced)
-9. [09. 중첩 씬과 커스텀 UI](#09-중첩-씬-호출과-커스텀-ui-nested-scenes)
+1. [01. 환경 구축 및 설치](#step-01)
+2. [02. 프로젝트 설정](#step-02)
+3. [03. 캐릭터 정의 및 시나리오](#step-03)
+4. [04. 엔진 구동 및 확인](#step-04)
+5. [05. 플레이어 상호작용](#step-05)
+6. [06. 연출 효과 더하기](#step-06)
+7. [07. 장면 전환과 마무리](#step-07)
+8. [08. 고급 설계 가이드](#step-08)
+9. [09. 중첩 씬과 커스텀 UI](#step-09)
 
 ---
 
-## 01. 환경 구축 및 설치 (Installation) 🛠️
+## <a id="step-01"></a>01. 환경 구축 및 설치 (Installation) 🛠️
 
 `fumika` 엔진을 사용하여 게임을 만들기 위한 첫 번째 단계입니다.
 
@@ -34,7 +34,7 @@ npm install fumika
 
 ---
 
-## 02. 프로젝트 설정 (Configuration) ⚙️
+## <a id="step-02"></a>02. 프로젝트 설정 (Configuration) ⚙️
 
 모든 프로젝트의 중심에는 `novel.config.ts` 설계도가 있습니다.
 
@@ -58,7 +58,7 @@ export default defineNovelConfig({
 
 ---
 
-## 03. 캐릭터 정의 및 시나리오 작성 (Scenario) 🎭
+## <a id="step-03"></a>03. 캐릭터 정의 및 시나리오 작성 (Scenario) 🎭
 
 ### 캐릭터 정의
 신체(`bases`)와 표정(`emotions`) 파트를 분리하여 정의함으로써 다양한 조합을 효율적으로 관리할 수 있습니다.
@@ -93,7 +93,7 @@ export default defineScene({ config })([
 
 ---
 
-## 04. 엔진 구동 및 화면 확인 (Execution) 🚀
+## <a id="step-04"></a>04. 엔진 구동 및 화면 확인 (Execution) 🚀
 
 `Novel` 클래스가 모든 오케스트레이션을 담당합니다.
 
@@ -110,7 +110,7 @@ novel.start('scene-intro') // 첫 씬 시작
 
 ---
 
-## 05. 플레이어의 선택 (Interaction) 🤝
+## <a id="step-05"></a>05. 플레이어의 선택 (Interaction) 🤝
 
 선택지를 추가하고 데이터를 조작해 봅니다.
 
@@ -132,7 +132,7 @@ novel.start('scene-intro') // 첫 씬 시작
 
 ---
 
-## 06. 멋진 연출 더하기 (Effects) 🎬
+## <a id="step-06"></a>06. 멋진 연출 더하기 (Effects) 🎬
 
 카메라 연출과 파티클 효과를 추가합니다.
 
@@ -147,7 +147,7 @@ novel.start('scene-intro') // 첫 씬 시작
 
 ---
 
-## 07. 장소 이동과 마무리 (Transitions) 🌓
+## <a id="step-07"></a>07. 장소 이동과 마무리 (Transitions) 🌓
 
 새로운 씬으로 이동할 때는 `config`에 씬을 등록하고, 이전 씬의 `next` 속성에 이름을 지정합니다.
 
@@ -161,7 +161,7 @@ export default defineScene({
 
 ---
 
-## 08. 고급 설계 가이드 (Advanced) 🚀
+## <a id="step-08"></a>08. 고급 설계 가이드 (Advanced) 🚀
 
 대규모 프로젝트를 위한 관리 기법입니다.
 
@@ -171,7 +171,7 @@ export default defineScene({
 
 ---
 
-## 09. 중첩 씬 호출과 커스텀 UI (Nested Scenes) 🪆
+## <a id="step-09"></a>09. 중첩 씬 호출과 커스텀 UI (Nested Scenes) 🪆
 
 환경설정이나 인벤토리처럼 '불러왔다가 다시 돌아가야 하는' 시스템을 구현할 때 사용합니다.
 
