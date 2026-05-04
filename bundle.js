@@ -721,11 +721,7 @@
   function resolveObj(obj, vars) {
     const result = {};
     for (const key in obj) {
-      if (key.startsWith("$")) {
-        result[key] = obj[key];
-      } else {
-        result[key] = resolveVal(obj[key], vars);
-      }
+      result[key] = resolveVal(obj[key], vars);
     }
     return result;
   }
@@ -18900,7 +18896,6 @@ ${addLineNumbers(fragment)}`);
   }).defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   } })).defineCommand(function* (cmd, ctx) {
-    cmd.$callback(Date.now());
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
   });
@@ -19147,9 +19142,7 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
     { type: "effect", action: "add", effect: "dust", src: "dust", rate: 25 },
     { type: "screen-fade", dir: "in", preset: "black", duration: 1e3 },
-    { type: "test-cmd", message: "hello", $callback: (now) => {
-      console.log(now);
-    } },
+    { type: "test-cmd", message: "hello" },
     {
       type: "dialogue",
       text: "\uC8FC\uB9D0 \uC624\uD6C4\uC758 \uCE74\uD398. \uCC3D\uBC16\uC73C\uB85C \uB0B4\uB9AC\uCB10\uB294 \uD587\uC0B4\uC774 \uD3C9\uD654\uB86D\uB2E4."

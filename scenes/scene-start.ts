@@ -34,7 +34,7 @@ export default defineScene({
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
   { type: 'effect', action: 'add', effect: 'dust', src: 'dust', rate: 25 },
   { type: 'screen-fade', dir: 'in', preset: 'black', duration: 1000 },
-  { type: 'test-cmd', message: 'hello', $callback: (now: number) => { console.log(now) } },
+  { type: 'test-cmd', message: 'hello' },
 
   {
     type: 'dialogue',
