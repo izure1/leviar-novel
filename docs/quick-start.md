@@ -5,7 +5,7 @@
 
 ---
 
-## 1. 패키지 설치 및 초기화 (Installation)
+## 1. 패키지 설치 및 초기화 (Installation) <a id="installation"></a>
 
 엔진은 표준 npm 패키지 매니저를 통해 간편하게 설치하실 수 있습니다.  
 적절한 개발 디렉토리 내에서 아래의 명령어를 실행하여 라이브러리를 확보해 주십시오.  
@@ -16,7 +16,7 @@ npm install fumika
 
 ---
 
-## 2. 프로젝트 설정 작성 (Configuration)
+## 2. 프로젝트 설정 작성 (Configuration) <a id="configuration"></a>
 
 엔진의 모든 시스템 동작은 `novel.config.ts` 설정 파일을 중심으로 수행됩니다.  
 프로젝트 루트 디렉토리에 다음과 같이 기초적인 환경 설정을 정의해 주십시오.  
@@ -40,7 +40,7 @@ export default defineNovelConfig({
 
 ---
 
-## 3. 시나리오 스크립트 작성 (Scripting)
+## 3. 시나리오 스크립트 작성 (Scripting) <a id="scripting"></a>
 
 `defineScene` 헬퍼 함수를 활용하여 게임의 구체적인 연출 흐름을 설계합니다.  
 
@@ -59,7 +59,7 @@ export default defineScene({ config })([
 
 ---
 
-## 4. 엔진 인스턴스 구동 및 마운트 (Bootstrapping)
+## 4. 엔진 인스턴스 구동 및 마운트 (Bootstrapping) <a id="bootstrapping"></a>
 
 최종적으로 `Novel` 인스턴스를 생성하고 시나리오의 첫 번째 장면을 실행합니다.  
 
