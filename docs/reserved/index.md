@@ -1,17 +1,18 @@
-# 🔀 흐름 제어 (Flow Control)
+# 🔀 예약어 및 흐름 제어 (Reserved Words & Flow Control)
 
-이 문서는 Fumika 엔진에서 제공하는 **흐름 제어 예약어(Flow Control Builders)**의 사용법과 동작 원리를 설명합니다. (Reference & How-to)
+이 문서는 Fumika 엔진에서 제공하는 **흐름 제어 예약어(Flow Control Builders)**의 개념과 사용법을 설명합니다. (Reference & Explanation)
 
 ---
 
-## 1. 개요 (Overview)
+## 1. 예약어(Reserved Words)란?
 
-흐름 제어(Flow Control) 구문은 `defineScene` 빌더(Builder) API 내의 **전용 예약어**로 제공됩니다.
-이러한 흐름 제어 함수들을 통해 특정 조건에 따라 시나리오를 분기하거나, 다른 씬으로 이동하는 등 복잡한 논리를 직관적으로 작성할 수 있습니다.
+Fumika 엔진에서 **예약어**란, 시나리오의 흐름을 직접적으로 제어하기 위해 엔진 코어에서 특별히 취급하는 식별자 및 함수들을 의미합니다.
+일반적인 시나리오 커맨드(예: `dialogue`, `character`)는 각 모듈에 의해 순차적으로 실행되지만, 예약어는 이와 다릅니다.
 
-### 주요 특징
-*   **빌더 주입**: `defineScene`의 콜백 함수 매개변수로 `label`, `goto`, `next`, `call`, `condition`, `set` 함수가 자동 주입됩니다.
-*   **타입 안전성**: 일반 모듈 실행기(`ctx.execute`)에서 호출할 수 없도록 타입 레벨에서 엄격하게 분리된 예약어로 취급됩니다.
+### 예약어의 특징
+*   **컴파일 타임 안전성**: 예약어는 `defineScene` 빌더(Builder) API의 매개변수로 직접 주입되어, 타입스크립트의 강력한 타입 체크를 받습니다.
+*   **실행 파이프라인 우회**: 모듈 실행기(`ctx.execute`)를 거치지 않고 엔진의 씬 매니저에서 직접 호출되므로, 비동기 연출 중간에 씬이 전환되거나 종료되는 등의 복잡한 상태 변이를 안전하게 처리합니다.
+*   **모듈 내 호출 불가**: 예약어는 철저히 시나리오 작성자를 위한 흐름 제어 도구이므로, 커스텀 모듈의 핸들러 내부에서 임의로 호출할 수 없도록 격리되어 있습니다.
 
 ---
 
@@ -63,7 +64,7 @@ export default defineScene({
 
 ---
 
-## 4. 커맨드 상세 (Command Reference)
+## 4. 예약어 목록 (Command Reference)
 
 ### `label(name: string)`
 시나리오 내부의 특정 위치를 식별하는 마커를 생성합니다.
@@ -85,8 +86,8 @@ export default defineScene({
 *   **restore**: `true`일 경우 서브 씬 종료 후 호출자 씬의 상태(배경, 캐릭터 등)를 강제로 복구합니다.
 
 ### `set(name: string, value: any | ((vars) => any))`
-변수의 값을 설정합니다.
-*   **name**: 변수명. `_` 접두사는 지역변수, 아니면 전역변수로 처리됩니다.
+변수의 값을 설정합니다. [상세 사용법은 set 문서](./set.md)를 확인하세요.
+*   **name**: 변수명. `novel.config.ts`에 정의된 전역 변수이거나, 현재 씬(`defineScene`)의 `variables` 블록에 선언된 지역 변수여야 합니다. (지역 변수명은 반드시 `_`로 시작해야 합니다.)
 *   **value**: 설정할 값. 정적 값 또는 현재 변수 상태를 인자로 받는 함수를 허용합니다.
 
 ### `condition(fn, ifSteps, elseSteps?)`

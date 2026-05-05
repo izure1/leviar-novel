@@ -15,7 +15,7 @@
 | **카메라 제어** | `camera-zoom`, `camera-pan`, `camera-effect`, `character-focus`, `character-effect` | [Camera Control](#camera-control) |
 | **시각 특수 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect`, `overlay-*` | [Visual Effects](#visual-effects) |
 | **사운드 시스템** | `audio` | [Audio](#audio) |
-| **로직 및 흐름** | `choices`, `var`, `control`, `flow-control` | [Logic & Flow](#logic-flow) |
+| **로직 및 흐름** | `choices`, `set`, `control`, 예약어 | [Logic & Flow](#logic-flow) |
 | **시스템 상호작용** | `ui`, `dialogBox`, `input` | [System & Misc](#system-misc) |
 
 ---
@@ -64,10 +64,11 @@
 
 시나리오의 진행 방향과 게임 내 데이터 상태를 동적으로 관리합니다.  
 
-*   **[흐름 제어 예약어 (Flow Control)](./flow-control.md)**: `defineScene` 빌더에서 제공되는 `label`, `goto`, `next`, `call`, `condition` 함수로 시나리오 흐름을 제어합니다.
+*   **[흐름 제어 예약어 (Flow Control)](./reserved/index.md)**: `defineScene` 빌더에서 제공되는 `label`, `goto`, `next`, `call`, `condition` 함수로 시나리오 흐름을 제어합니다.
 *   **[`choices`](./modules/choices.md)**: 플레이어의 의사 결정을 위한 선택지 분기를 생성합니다.  
-*   **[`var`](./modules/var.md)**: 전역 및 지역 변수의 값을 변경하고 동적으로 조작합니다.  
+*   **[`set`](./reserved/set.md)**: 전역 및 지역 변수의 값을 변경하고 동적으로 조작합니다. (구 `var` 커맨드)
 *   **[`control`](./modules/control.md)**: 사용자의 입력을 일시 제한하거나 스킵 기능을 통제합니다.  
+*   **[세이브 데이터 (Save Data)](./save-data.md)**: 게임의 진행 상태와 변수들이 저장되는 구조와 주의사항을 확인합니다.
 
 > [!TIP]
 > `scene` 커맨드의 호출 기능을 활용하면 프로그래밍의 함수 호출과 유사한 **중첩 씬(Nested Scenes)** 연출이 가능합니다.  
