@@ -1,73 +1,49 @@
-# 🪝 Audio Hooks
+# 🪝 오디오 훅 (Audio Hooks)
 
-본 문서는 `audio` 모듈에서 발생하는 재생, 정지, 반복 및 종료 등 오디오 라이프사이클 이벤트를 감지하고 제어하는 훅(Hooks) 명세를 기술합니다.  
+## 개요 (Overview)
 
----
+`audio` 모듈에서 발생하는 재생, 정지, 반복, 종료 이벤트를 감지하여 부가적인 연출을 실행하거나 시스템 로그를 남길 수 있는 훅입니다.  
 
-## 1. 개요 (Overview)
+## 훅 이벤트 목록 (Events)
 
-오디오 시스템의 상태 변화를 실시간으로 추적할 수 있는 훅 목록입니다.  
+| 훅 이름 | 페이로드 타입 | 실행 시점 |
+| :--- | :--- | :--- |
+| **`audio:play`** | `AudioPlayCmd` | 재생 명령이 하달된 직후 (즉시) |
+| **`audio:pause`** | `AudioPauseCmd` | 페이드아웃 후 일시정지 완료 시 |
+| **`audio:stop`** | `AudioStopCmd` | 완전히 정지되고 트랙이 지워진 직후 |
+| **`audio:end`** | `AudioEventPayload` | 자연적으로 종료되거나 끝부분에 도달 시 |
+| **`audio:repeat`** | `AudioEventPayload` | 루프 설정에 의해 처음부터 다시 시작될 때 |
 
-| 훅 이름 | 페이로드 타입 | 실행 시점 | 상세 설명 |
-| :--- | :--- | :--- | :--- |
-| `audio:play` | `AudioPlayCmd` | **즉시** | 오디오 재생 명령이 하달된 직후 호출됩니다.  (페이드 여부 무관) |
-| `audio:pause` | `AudioPauseCmd` | **완료 후** | 페이드아웃 애니메이션이 종료되어 일시정지가 완료된 시점에 호출됩니다. |
-| `audio:stop` | `AudioStopCmd` | **완료 후** | 오디오가 완전히 정지되고 해당 트랙이 소거된 직후 호출됩니다. |
-| `audio:end` | `AudioEventPayload` | **완료 시** | 재생이 자연적으로 종료되거나 지정된 종료 지점에 도달했을 때 호출됩니다. |
-| `audio:repeat` | `AudioEventPayload` | **반복 시** | 루프 설정에 의해 오디오가 처음부터 다시 시작되는 시점에 호출됩니다. |
+## 핵심 예제 (Main Example)
 
----
+### 상태 제어 감지 (`play` / `pause` / `stop`)
 
-## 2. 훅 상세 명세 (Reference)
-
-### 2.1. 상태 제어 훅 (`play` / `pause` / `stop`)
-오디오 트랙의 물리적인 동작 변화가 발생했을 때 연동되는 훅입니다.  
-
-*   **Payload**: `AudioPlayCmd` | `AudioPauseCmd` | `AudioStopCmd`  
-*   **Return**: 전달받은 데이터 타입을 그대로 반환합니다.  (동작 자체를 변경하지 않는 알림 성격입니다)  
-
-```ts
-// 구현 예시: 특정 배경음 재생 시 로그를 기록하고 부가 연출을 실행합니다.  
+```typescript
+// 특정 BGM 재생 시 로그를 기록하고 이펙트를 실행합니다
 novel.hooker.onAfter('audio:play', (cmd) => {
   if (cmd.name === 'bgm') {
-    console.log(`[Audio System] 배경음 재생 시작: ${cmd.src}`);
+    console.log(`배경음 재생 시작: ${cmd.src}`)
   }
-  return cmd;
+  return cmd
 })
 ```
 
-### 2.2. 재생 흐름 훅 (`end` / `repeat`)
-오디오의 진행 궤적이 끝에 도달하거나 다시 순환할 때 발생하는 이벤트를 처리합니다.  
+### 재생 완료 감지 (`end` / `repeat`)
 
-*   **Payload**: `AudioEventPayload` (`{ name: string, src: string }`)  
-*   **Return**: `AudioEventPayload`  
+`AudioEventPayload`는 `{ name: string, src: string }` 구조를 가집니다.  
 
-| 필드 명칭 | 설명 |
-| :--- | :--- |
-| **`name`** | 이벤트를 발생시킨 대상 오디오 트랙의 식별자입니다. |
-| **`src`** | 현재 연동 중인 오디오 에셋의 고유 키입니다. |
-
-```ts
-// 구현 예시: 특정 효과음 재생 완료 후 시나리오의 다음 로직을 동기화합니다.  
+```typescript
+// 문 닫히는 효과음이 끝나면 다음 로직을 동기화합니다
 novel.hooker.onAfter('audio:end', (payload) => {
   if (payload.src === 'sfx_door_close') {
-    console.log('문의 닫힘 소리가 종료되었습니다.');
+    console.log('문이 닫혔습니다')
   }
-  return payload;
+  return payload
 })
 ```
 
----
+## 주의 사항 (Edge Cases)
 
-## 3. 주의 사항 (Edge Cases)
-
-*   **동작 제어의 한계**: `audio` 모듈의 훅들은 시스템의 물리적 동작이 이미 개시되었거나 완료된 시점에 실행되므로, 훅 내부에서의 반환값 수정을 통해 실제 오디오의 동작(재생 여부 등)을 변경할 수는 없습니다.  연쇄적인 시나리오 연출이나 로그 데이터 수집을 위한 목적으로 활용해 주십시오.  
-*   **재생 시작점 판별**: `audio:play` 훅은 페이드인 효과의 완료를 기다리지 않고, 명령이 수신되어 재생 프로세스가 시작된 즉시 실행됩니다.  
-*   **반복 감지 메커니즘**: `audio:repeat` 훅은 사용자가 지정한 구간 반복 설정뿐만 아니라, 오디오 파일 자체가 처음으로 되감겨 다시 재생되는 자연 루프 시점도 정밀하게 감지하여 호출됩니다.  
-
----
-
-## 4. 관련 참조 문서
-
-*   **[Hooks 시스템 기초 개념](../../concepts.md#hooks)**: 훅의 실행 순서와 데이터 전달 방식에 대한 전반적인 이해를 돕습니다.  
-*   **[오디오 모듈 연출 가이드](../audio.md)**: 오디오 커맨드의 상세 속성과 연출 기법을 기술합니다.  
+| 상황 | 설명 |
+| :--- | :--- |
+| **물리적 제어 불가** | 오디오 훅은 모듈이 이미 실행된 직후나 끝난 시점에 호출됩니다. 따라서 훅 내부에서 값을 바꿔 반환한다고 해도 오디오 자체가 멈추거나 동작이 변하지는 않습니다. |

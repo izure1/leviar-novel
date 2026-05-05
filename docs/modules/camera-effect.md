@@ -1,66 +1,62 @@
-# 💥 Camera Effect Module
+# 💥 카메라 효과 (Camera Effect)
 
-본 문서는 `camera-effect` 모듈을 사용하여 화면 전체에 역동적인 물리 연출 효과를 적용하는 방법을 기술합니다.  
+## 개요 (Overview)
 
----
+`camera-effect` 모듈은 화면 전체에 흔들림이나 진동 같은 연출을 줍니다.  
+폭발이나 지진처럼 배경과 캐릭터가 동시에 흔들려야 하는 거대한 물리적 충격을 표현할 때 사용합니다.  
 
-## 1. 개요 (Overview)
-
-`camera-effect` 모듈은 화면 전반에 걸친 흔들림이나 순간적인 진동 등 물리적인 연출을 담당합니다.  
-폭발 상황, 캐릭터의 극심한 동요, 긴박한 현장감 등을 시각적으로 표현할 때 매우 강력한 몰입감을 제공합니다.  
-
----
-
-## 2. 핵심 예제 (Main Example)
+## 핵심 예제 (Main Example)
 
 ### 강렬한 화면 흔들림 (Shake)
-지진이나 폭발 등 주변 환경의 큰 변화를 시각화합니다.  
 
-```ts
-{ 
-  type: 'camera-effect', 
-  preset: 'shake', 
-  duration: 500, 
-  intensity: 10, 
-  repeat: 5 
-}
+```typescript
+import { defineScene } from 'fumika'
+import config from './novel.config'
+
+export default defineScene({ config })(() => [
+  { 
+    type: 'camera-effect', 
+    preset: 'shake', 
+    duration: 500, 
+    intensity: 10, 
+    repeat: 5 
+  }
+])
 ```
 
 ### 순간적인 충격 연출 (Jolt)
-날카로운 타격이나 예기치 못한 놀람을 표현하는 데 최적화된 연출입니다.  
 
-```ts
-{ 
-  type: 'camera-effect', 
-  preset: 'jolt', 
-  duration: 200,
-  intensity: 30
-}
+누군가에게 맞았거나 깜짝 놀란 연출입니다.  
+
+```typescript
+import { defineScene } from 'fumika'
+import config from './novel.config'
+
+export default defineScene({ config })(() => [
+  { 
+    type: 'camera-effect', 
+    preset: 'jolt', 
+    duration: 200,
+    intensity: 30
+  }
+])
 ```
 
----
+## 옵션 상세
 
-## 3. 커맨드 상세 (Command Reference)
+| 속성 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`type`** | `'camera-effect'` | 필수 | 커맨드 타입 |
+| **`preset`** | `string` | 필수 | 적용할 연출 프리셋 (예: `shake`, `jolt`) |
+| **`duration`** | `number` | 프리셋 기본값 | 물리 효과가 지속될 전체 시간(ms) |
+| **`intensity`** | `number` | 프리셋 기본값 | 효과의 세기(강도) 지정 |
+| **`repeat`** | `number` | `1` | 지정된 효과의 반복 횟수 |
 
-### Camera Effect 명령 (`CameraEffectCmd`)
+사용 가능한 프리셋의 전체 목록은 [이펙트 프리셋](../effects/presets.md)을 참고하세요.  
 
-| 속성 | 타입 | 필수 | 기본값 | 설명 |
-| :--- | :--- | :---: | :---: | :--- |
-| `type` | `'camera-effect'` | ✅ | - | 커맨드 타입을 명시합니다. |
-| `preset` | `string` | ✅ | - | 적용할 연출 효과 프리셋을 선택합니다. |
-| `duration` | `number` | - | 프리셋 기본값 | 물리 효과가 지속될 전체 시간(ms)입니다. |
-| `intensity` | `number` | - | 프리셋 기본값 | 효과의 물리적 세기(강도)를 지정합니다. |
-| `repeat` | `number` | - | `1` | 지정된 효과의 반복 횟수를 설정합니다. |
+## 주의 사항 (Edge Cases)
 
-### 3.2. 효과 프리셋 활용 가이드
-
-사용 가능한 다양한 물리 효과 프리셋에 대한 상세 명세는 [모션 효과 프리셋 목록 가이드](../effects/presets.md) 문서를 참조해 주십시오.  
-
----
-
-## 4. 주의 사항 (Edge Cases)
-
-*   **화면 전체 전파**: 캐릭터 객체에만 국한되는 `character-effect`와 달리, 본 커맨드는 배경을 포함한 화면 내 모든 시각적 요소를 동시에 흔들어 거대한 물리적 변화를 연출합니다.  
-*   **효과 전환 정책**: 새로운 카메라 효과 명령이 수신되면, 이전에 진행 중이던 물리 연출은 즉시 중단되고 새로운 시퀀스가 최우선적으로 시작됩니다.  
-*   **시각적 편의성**: 과도한 강도나 장시간 지속되는 효과는 사용자의 시각적 피로를 유발할 수 있으므로, 시나리오의 흐름에 맞는 절제된 사용을 권장합니다.  
-*   **좌표 복구**: 모든 물리 효과가 종료된 후, 카메라는 효과 시작 전의 원래 좌표로 정밀하게 복구되도록 설계되어 있습니다.  
+| 상황 | 원인 및 해결 방법 |
+| :--- | :--- |
+| **특정 캐릭터만 흔들고 싶을 때** | 화면 전체가 아닌 특정 캐릭터만 흔들고 싶다면 `character-effect` 명령어를 사용해야 합니다. |
+| **효과 중단 및 덮어쓰기** | 연출 도중에 다른 `camera-effect`가 들어오면, 이전 효과는 즉시 취소되고 새로운 효과가 덮어씌워집니다. |

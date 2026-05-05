@@ -1,65 +1,90 @@
-# ⚙️ Configuration Guide
+# ⚙️ 프로젝트 설정 (Configuration)
 
-본 문서는 `fumika` 엔진의 모든 동작 메커니즘과 시스템의 초기 상태를 정의하는 `novel.config.ts` 설정 파일의 명세를 기술합니다.  
-각 속성이 지닌 기술적 의미와 구성 방법을 상세히 안내하여, 프로젝트에 최적화된 환경을 구축하실 수 있도록 지원합니다.  
-
----
-
-## 1. 기초 환경 설정 (Base Options) <a id="base-options"></a>
-
-프로젝트의 전반적인 구동 환경을 결정하는 최상위 설정 항목입니다.  
-
-| 속성 명칭 | 데이터 타입 | 기본값 | 상세 설명 |
-| :--- | :--- | :---: | :--- |
-| **`width`** | `number` | `1280` | 게임 연출의 기준이 되는 논리적 가로 해상도입니다. |
-| **`height`** | `number` | `720` | 게임 연출의 기준이 되는 논리적 세로 해상도입니다. |
-| **`variables`** | `object` | `{}` | 전역 변수의 초기값과 데이터 구조를 정의합니다. |
-| **`scenes`** | `Record<string, Function>` | `{}` | 씬 식별자와 해당 씬을 생성하는 팩토리 함수의 매핑 테이블입니다. |
-| **`assets`** | `Record<string, string>` | `{}` | 리소스 식별자와 실제 파일 경로를 연결하는 자원 관리 표입니다. |
+이 문서는 프로젝트의 해상도, 변수, 캐릭터, 에셋 등을 중앙에서 관리하는 설정 파일의 작성법을 안내합니다.  
 
 ---
 
-## 2. 시스템 모듈 초기 상태 (Initial State) <a id="initial-state"></a>
+## 1. 기본 환경 설정 (Base Options)
 
-`initial` 속성은 각 시스템 모듈(대사창, 오버레이, 카메라 등)이 씬 시작 시점에 기본적으로 갖추어야 할 데이터 상태를 정의합니다.  
-이는 씬별로 차별화된 연출 환경을 신속하게 구축하는 데 활용됩니다.  
+화면 크기와 초기 전역 변수, 그리고 게임에 사용할 이미지나 사운드 파일의 경로를 등록합니다.  
 
-### **대화 시스템 초기 설정 예시**
-대화창의 노출 여부와 텍스트 출력 속도 등을 사전에 규정할 수 있습니다.  
+### 핵심 예제 (Main Example)
 
 ```typescript
-initial: {
-  dialogue: {
-    visible: true, // 씬 시작 시 대화창 자동 노출 여부
-    speed: 50      // 텍스트 타이핑 효과의 지연 시간(ms)
+import { defineNovelConfig } from 'fumika'
+
+export default defineNovelConfig({
+  // 기준 해상도입니다
+  width: 1280,
+  height: 720,
+  
+  // 게임이 시작될 때 설정되는 초기 전역 변수입니다
+  variables: {
+    gold: 100,
+    playerName: '여행자'
+  },
+  
+  // 게임에서 사용할 리소스(이미지, 소리)에 ID를 부여합니다
+  assets: {
+    'bg-room': './assets/room.webp',
+    'char-aris-body': './assets/aris_body.png'
   }
-}
+})
 ```
 
 ---
 
-## 3. 리소스 및 개체 정의 (Definitions) <a id="definitions"></a>
+## 2. 캐릭터 설정 (Characters)
 
-캐릭터 및 배경과 같은 연출 개체들의 정교한 물리적 구조를 정의합니다.  
+화면에 출력할 캐릭터의 몸체와 표정을 조합할 수 있도록 구조를 미리 등록합니다.  
 
-### **레이어드 캐릭터 설정 (`characters`)**
-신체 구조(`bases`)와 그 위에 중첩될 감정 표현(`emotions`)의 앵커 포인트를 세밀하게 구성합니다.  
+### 핵심 예제 (Main Example)
 
 ```typescript
-characters: {
-  'heroine': {
-    name: '아리스',
-    bases: {
-      'normal': { src: 'aris_body', width: 600 }
-    },
-    emotions: {
-      'smile': { face: 'aris_face_smile' }
+import { defineNovelConfig } from 'fumika'
+
+export default defineNovelConfig({
+  // ... 기본 설정 생략
+  characters: {
+    heroine: {
+      name: '아리스',
+      // 기본 몸체 이미지입니다
+      bases: {
+        normal: { src: 'char-aris-body', width: 600 }
+      },
+      // 기본 몸체 위에 덧씌워질 표정 이미지입니다
+      emotions: {
+        smile: { face: 'aris_face_smile' }
+      }
     }
   }
-}
+})
 ```
 
 ---
 
-본 설정 가이드를 통해 귀하의 프로젝트 요구사항에 완벽히 부합하는 게임 환경을 조성해 주시기 바랍니다.  
-추가적인 아키텍처 정보가 필요하실 경우 **[Core Concepts](./concepts.md)** 문서를 참조해 주십시오.  
+## 3. 모듈 초기 상태 (Initial State)
+
+게임이 시작될 때 대화창이 미리 떠 있을지, 텍스트 출력 속도는 몇일지 등 모듈의 기본 상태를 지정합니다.  
+
+### 핵심 예제 (Main Example)
+
+```typescript
+import { defineNovelConfig } from 'fumika'
+
+export default defineNovelConfig({
+  // ... 기본 설정 생략
+  initial: {
+    dialogue: {
+      // 씬 시작 시 대화창을 기본적으로 노출시킵니다
+      visible: true, 
+      // 텍스트 타이핑 효과의 지연 시간(ms)입니다
+      speed: 50      
+    }
+  }
+})
+```
+
+---
+
+설정을 마치셨다면 **[빠른 시작](./quick-start.md)** 또는 **[튜토리얼](./tutorial.md)**을 통해 본격적인 시나리오를 작성해 보세요.  

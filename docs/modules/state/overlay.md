@@ -1,45 +1,45 @@
-# ⚙️ Overlay State & Layout
+# ⚙️ 오버레이 상태 (Overlay State)
 
-본 문서는 `overlay` 모듈에서 텍스트 및 이미지 오버레이의 전역적인 기본 외형(Style)을 관리하는 데이터 구조인 `OverlaySchema`에 대해 기술합니다.  
+## 개요 (Overview)
 
----
+`overlay` 모듈에서 텍스트(`overlay-text`) 및 이미지(`overlay-image`) 오버레이 생성 시 적용되는 전역적인 기본 스타일 구조인 `OverlaySchema`입니다.  
 
-## 1. 개요 (Overview)
-
-오버레이 모듈의 상태 설정은 화면 위에 독립적으로 표시되는 모든 시각 객체들의 공통적인 디자인 테마를 정의합니다.  
-`overlay-text`와 `overlay-image` 명령 하달 시 매번 반복되는 스타일 설정을 전역적으로 관리하여 코드의 중복을 줄이고, 일관성 있는 연출 톤을 유지하는 데 기여합니다.  
-
----
-
-## 2. 상태 상세 명세 (`OverlaySchema`)
+## 상태 상세 명세 (Properties)
 
 | 속성 명칭 | 데이터 타입 | 상세 설명 |
 | :--- | :--- | :--- |
-| **`textStyle`** | `Partial<Style>` | 모든 텍스트 오버레이 객체에 기본적으로 적용될 전역 스타일입니다. |
-| **`imageStyle`** | `Partial<Style>` | 모든 이미지 오버레이 객체에 공통적으로 부여될 시각적 설정입니다. |
+| **`textStyle`** | `Partial<Style>` | 모든 텍스트 오버레이 객체에 적용될 기본 스타일 |
+| **`imageStyle`** | `Partial<Style>` | 모든 이미지 오버레이 객체에 적용될 기본 스타일 |
 
----
+## 핵심 예제 (Main Example)
 
-## 3. 활용 사례 (Examples)
+### 씬 진입 시 전역 테마 세팅
 
-### 씬 진입 시 전역 테마 스타일링
-특정 장면에 최적화된 오버레이의 기본 폰트와 이미지 질감을 사전에 정의하는 방식입니다.  
+`defineScene`의 `initial` 속성을 통해 오버레이 생성 전 기본 테마를 세팅합니다.  
 
-```ts
-export const customOverlayStyle = defineInitial(config)({
-  overlay: {
-    // 황금색 계열의 강조된 텍스트 스타일을 기본으로 설정합니다.  
-    textStyle: { fontSize: 32, fontColor: '#ffd700', fontWeight: 'bold' },
-    // 이미지 오버레이에 일괄적으로 부드러운 투명도와 모서리 곡률을 부여합니다.  
-    imageStyle: { opacity: 0.8, borderRadius: 10 }
+```typescript
+import { defineScene } from 'fumika'
+import config from './novel.config'
+
+export default defineScene({
+  config,
+  initial: {
+    overlay: {
+      // 텍스트 오버레이에 일괄 적용될 테마
+      textStyle: { fontSize: 32, color: '#ffd700', fontWeight: 'bold' },
+      // 이미지 오버레이에 일괄 적용될 테마
+      imageStyle: { opacity: 0.8, borderRadius: 10 }
+    }
   }
-})
+})(() => [
+  // 지정된 기본 스타일로 렌더링됩니다
+  { type: 'overlay-text', id: 'title', text: '제 1장' }
+])
 ```
 
----
+## 주의 사항 (Edge Cases)
 
-## 4. 주의 사항 (Edge Cases)
-
-*   **스타일 오버라이드 정책**: `overlay-text`나 `overlay-image` 커맨드 내부에서 직접 명시한 개별 스타일 속성은 본 상태 설정값보다 **높은 우선순위**를 가지며, 전역 설정을 덮어씌웁니다.  
-*   **상태 병합 및 계승**: 런타임에 `ui` 커맨드로 스타일을 변경하면, 그 시점 이후에 생성되는 모든 새로운 오버레이 객체들이 변경된 스타일을 상속받게 됩니다.  
-*   **영속성 보존**: 현재 적용된 전역 스타일 상태는 엔진의 상태 시스템에 의해 관리되어 세이브 및 로드 시에도 디자인의 일관성이 완벽하게 보장됩니다.  
+| 상황 | 설명 |
+| :--- | :--- |
+| **스타일 오버라이드 덮어쓰기** | `overlay-text`나 `overlay-image` 명령어 자체에 직접 명시한 개별 스타일 속성이 전역 상태 스타일보다 무조건 우선합니다. |
+| **실시간 병합 및 상속** | 중간에 `ui` 커맨드로 상태를 변경하면, 그 시점 이후 새로 생성되는 오버레이들부터 변경된 스타일을 상속받습니다. |

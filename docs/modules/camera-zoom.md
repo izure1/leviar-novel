@@ -1,66 +1,56 @@
-# 🔍 Camera Zoom Module
+# 🔍 카메라 줌 (Camera Zoom)
 
-본 문서는 `camera-zoom` 커맨드를 사용하여 카메라의 배율을 조절하고 시각적 거리를 제어하는 방법을 기술합니다.  
+## 개요 (Overview)
 
----
+`camera-zoom` 명령어는 화면을 확대하거나 축소하는 기능을 담당합니다.  
+특정 인물이나 객체를 클로즈업하여 긴장감을 주거나, 화각을 넓혀 배경을 강조할 때 사용합니다.  
 
-## 1. 개요 (Overview)
+## 핵심 예제 (Main Example)
 
-`camera-zoom` 커맨드는 카메라의 시야를 정교하게 확장하거나 축소하는 기능을 담당합니다.  
-특정 인물이나 객체를 클로즈업하여 긴장감을 조성하거나, 넓은 화각으로 배경 전체의 분위기를 전달하는 등 연출의 깊이를 더하는 데 필수적인 도구입니다.  
+### 인물 클로즈업
 
----
+```typescript
+import { defineScene } from 'fumika'
+import config from './novel.config'
 
-## 2. 핵심 예제 (Main Example)
-
-### 인물 클로즈업 연출
-화면을 1.5배 확대하여 인물의 감정 표현을 강조합니다.  
-
-```ts
-{ 
-  type: 'camera-zoom', 
-  preset: 'close-up', 
-  duration: 800 
-}
+export default defineScene({ config })(() => [
+  // 화면을 1.5배 확대하여 클로즈업합니다
+  { type: 'camera-zoom', preset: 'close-up', duration: 800 }
+])
 ```
 
 ### 시점 초기화 (Reset)
-변경되었던 카메라 배율을 기본값(1.0)으로 복원합니다.  
 
-```ts
-{ 
-  type: 'camera-zoom', 
-  preset: 'reset', 
-  duration: 400 
-}
+```typescript
+import { defineScene } from 'fumika'
+import config from './novel.config'
+
+export default defineScene({ config })(() => [
+  // 확대되었던 카메라 배율을 기본값(1.0)으로 원래대로 되돌립니다
+  { type: 'camera-zoom', preset: 'reset', duration: 400 }
+])
 ```
 
----
+## 옵션 상세
 
-## 3. 커맨드 상세 (Command Reference)
+| 속성 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :---: | :--- |
+| **`type`** | `'camera-zoom'` | 필수 | 커맨드 타입 |
+| **`preset`** | `string` | 필수 | 줌 배율 프리셋 (`close-up`, `medium`, `wide`, `reset`) |
+| **`duration`** | `number` | 프리셋 기본값 | 확대/축소에 걸리는 시간(ms) |
 
-### Camera Zoom 명령 (`CameraZoomCmd`)
+### 줌 프리셋 상세 (`ZoomPreset`)
 
-| 속성 | 타입 | 필수 | 기본값 | 설명 |
-| :--- | :--- | :---: | :---: | :--- |
-| `type` | `'camera-zoom'` | ✅ | - | 커맨드 타입을 명시합니다. |
-| `preset` | `string` | ✅ | - | 정의된 줌 배율 프리셋을 선택합니다. |
-| `duration` | `number` | - | 프리셋 기본값 | 애니메이션이 진행될 총 시간(ms)입니다. |
-
-#### 줌 프리셋 명세 (`ZoomPreset`)
-
-| 프리셋 이름 | 배율 (Scale) | 기본 지속 시간 | 연출 목적 |
+| 이름 | 배율 (Scale) | 기본 시간 | 설명 |
 | :--- | :---: | :---: | :--- |
-| `close-up` | `1.5` | `800ms` | 특정 대상을 강하게 부각시킵니다. |
-| `medium` | `1.2` | `600ms` | 상반신 위주의 적절한 거리감을 유지합니다. |
-| `wide` | `0.92` | `800ms` | 배경의 광활함을 표현하거나 전경을 보여줍니다. |
-| `reset` | `1.0` | `600ms` | 모든 줌 효과를 제거하고 기본 상태로 복구합니다. |
-| `inherit` | - | - | 이전 씬의 줌 상태를 그대로 유지합니다. |
+| `close-up` | `1.5` | `800ms` | 대상을 강하게 확대하여 강조합니다. |
+| `medium` | `1.2` | `600ms` | 상반신 위주의 적절한 거리감으로 다가갑니다. |
+| `wide` | `0.92` | `800ms` | 화각을 약간 넓혀 배경이 더 잘 보이게 합니다. |
+| `reset` | `1.0` | `600ms` | 확대/축소 상태를 지우고 기본 상태로 돌아갑니다. |
+| `inherit` | - | - | 이전 씬에서 사용했던 줌 상태를 그대로 물려받습니다. |
 
----
+## 주의 사항 (Edge Cases)
 
-## 4. 주의 사항 (Edge Cases)
-
-*   **상태의 영속성**: 줌 상태는 명시적인 리셋 명령이 수행되기 전까지 엔진 내부 상태로 유지됩니다.  새로운 씬 로드 시 `preserve` 설정에 따라 해당 상태가 계승될 수 있습니다.  
-*   **복합 연출 구성**: `camera-pan` 커맨드와 병렬로 실행하여, 특정 캐릭터를 향해 다가가며 확대하는 더욱 역동적인 연출을 구성할 수 있습니다.  
-*   **성능 최적화**: 지나치게 빠른 줌 전환은 사용자에게 시각적 피로감을 줄 수 있으므로, 연출 의도에 맞는 적절한 `duration` 설정을 권장합니다.  
+| 상황 | 설명 |
+| :--- | :--- |
+| **상태의 유지 보존** | 줌 배율은 명시적으로 `reset`하기 전까지 유지됩니다. 씬이 넘어가도 계속 유지하고 싶다면 `preset: 'inherit'`을 쓰거나 씬 이동 시 `preserve: true` 옵션을 주어야 합니다. |

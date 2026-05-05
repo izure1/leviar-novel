@@ -1,71 +1,69 @@
-# 🎨 defineInitial
+# 🎨 초기 상태 빌더 (defineInitial)
 
-본 문서는 여러 장면(Scene)에서 공통적으로 사용되는 시스템 모듈의 초기 상태(`initial`) 설정을 통합 관리하고 재사용하기 위한 `defineInitial` 유틸리티 함수에 대해 기술합니다.  
+## 개요 (Overview)
 
----
+`defineInitial`은 여러 씬(Scene)에서 공통으로 사용할 모듈의 초기 상태(initial)를 미리 정의해 두는 함수입니다.  
+과거 회상 씬의 세피아 필터나 긴박한 상황의 붉은 대화창 등, 반복해서 쓰이는 씬 설정을 밖으로 빼서 재사용할 때 사용합니다.  
 
-## 1. 개요 (Overview)
+## 사전 준비 (Prerequisites)
 
-`defineInitial`은 프로젝트 전반에 걸쳐 일관된 시각적 테마와 시스템 환경을 유지하기 위해 설계되었습니다.  
-반복되는 초기화 설정(예: 특정 구역 전용 대화창 스타일, 공통 UI 레이아웃 등)을 독립된 상수로 선언함으로써, 시나리오 파일의 가독성을 높이고 설정 오류를 방지하며 유지보수 효율성을 극대화합니다.  
+`novel.config.ts` 파일의 설정 객체(`config`)를 불러와야 합니다.  
 
----
+## 핵심 예제 (Main Example)
 
-## 2. 사용 방법 (Usage)
+특정 분위기(예: 긴박한 상황)를 위한 공통 초기 설정을 정의하고 씬에 적용하는 예제입니다.  
 
-`defineInitial`은 현재의 `config` 객체를 주입받아, 해당 프로젝트의 모듈 구조에 최적화된 타입 추론을 제공하는 커리 형식의 인터페이스를 가지고 있습니다.  
-
-```ts
+```typescript
+// 1. 공통 설정 정의 (initials.ts 등 별도 파일)
 import { defineInitial } from 'fumika'
 import config from './novel.config'
 
-/** 
- * 특정 연출 분위기(예: 긴박한 상황)를 위한 공통 초기 설정 정의 예시입니다.  
- */
 export const intenseInitial = defineInitial(config)({
+  // 화면 전체를 붉게 물들입니다
   mood: { mood: 'alert', intensity: 0.7 },
+  // 대화창을 어두운 붉은색으로 바꿉니다
   dialogue: { bg: { color: 'rgba(30, 0, 0, 0.9)', borderColor: '#ff0000' } },
+  // 선택지 버튼 색상을 붉은색으로 바꿉니다
   choices: { button: { color: 'rgba(100, 0, 0, 0.5)' } }
 })
 ```
 
----
-
-## 3. 씬(Scene) 연동 및 활용
-
-정의된 공통 설정 객체는 `defineScene`의 `initial` 속성에 직접 할당하여 사용할 수 있습니다.  
-
-```ts
-import { intenseInitial } from './common/initials'
+```typescript
+// 2. 씬에 적용 (scene-battle.ts)
+import { defineScene } from 'fumika'
+import config from './novel.config'
+import { intenseInitial } from './initials'
 
 export default defineScene({
   config,
-  initial: intenseInitial // 사전에 정의된 공통 테마를 즉시 적용합니다.  
+  // 만들어둔 공통 설정을 그대로 씬의 initial에 넣습니다
+  initial: intenseInitial
 })(() => [
   { type: 'dialogue', text: '공기가 평소와는 다르게 차갑고 무겁습니다.' }
 ])
 ```
 
----
+## 주의 사항 (Edge Cases)
 
-## 4. 부분 확장 및 오버라이드 (Override)
+| 상황 | 설명 및 해결 방법 |
+| :--- | :--- |
+| **일부 속성만 덮어쓰기 (Override)** | 만들어둔 공통 테마를 기본으로 쓰되, 이 씬에서만 속성을 살짝 바꾸고 싶다면 자바스크립트의 스프레드 연산자(`...`)를 사용해 확장하세요. |
 
-공통 테마를 기본으로 사용하되, 특정 장면에서만 세부 속성을 미세 조정하고 싶다면 JavaScript의 스프레드 연산자(`...`)를 활용하여 안전하게 확장할 수 있습니다.  
+### 오버라이드 활용 예제
 
-```ts
+```typescript
+import { defineScene } from 'fumika'
+import config from './novel.config'
+import { intenseInitial } from './initials'
+
 export default defineScene({
   config,
   initial: {
     ...intenseInitial,
-    // 공통 설정의 다른 부분은 유지하면서, 특정 속성의 강도만 강화합니다.  
+    // 공통 설정의 다른 부분은 유지하면서, 특정 속성의 강도만 덮어씁니다
     mood: { ...intenseInitial.mood, intensity: 1.0 } 
   }
-})(() => [ ... ])
+})(() => [
+  { type: 'dialogue', text: '위험합니다!' }
+])
 ```
-
----
-
-## 5. 관련 참조 문서
-
-*   **[defineScene 상세 가이드](./defineScene.md)**: 장면 구성의 기초와 고급 설정법을 안내합니다.  
-*   **[Configuration 중앙 설정 가이드](../config.md)**: 엔진 전역 설정 및 에셋 관리 방법을 다룹니다.  
