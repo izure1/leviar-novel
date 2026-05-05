@@ -18,7 +18,6 @@ export type { CharacterPositionPreset } from '../modules/character'
 // 인터페이스 import
 import type { DialogueCmd } from '../modules/dialogue'
 import type { ChoiceCmd } from '../modules/choice'
-import type { VarCmd } from '../modules/var'
 import type { BackgroundCmd } from '../modules/background'
 import type { MoodCmd } from '../modules/mood'
 import type { EffectCmd } from '../modules/effect'
@@ -34,7 +33,7 @@ import type { InputCmd } from '../modules/input'
 
 // 재수출
 export type {
-  DialogueCmd, ChoiceCmd, VarCmd, BackgroundCmd,
+  DialogueCmd, ChoiceCmd, BackgroundCmd,
   MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
   UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd,
@@ -148,11 +147,11 @@ export type FlowControlEntry = {
  */
 type _BuiltinEntryUnion<TConfig, TVars, TLocalVars> = {
   [K in keyof BuiltinCmdMap<TConfig, TVars, TLocalVars>]:
-    ResolvableProps<
-      BuiltinCmdMap<TConfig, TVars, TLocalVars>[K] & { type: K } & _StepBase,
-      TVars,
-      TLocalVars
-    >
+  ResolvableProps<
+    BuiltinCmdMap<TConfig, TVars, TLocalVars>[K] & { type: K } & _StepBase,
+    TVars,
+    TLocalVars
+  >
 }[keyof BuiltinCmdMap<TConfig, TVars, TLocalVars>]
 
 /**
@@ -161,9 +160,9 @@ type _BuiltinEntryUnion<TConfig, TVars, TLocalVars> = {
  */
 export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
   [K in keyof ModulesOf<TConfig> & string]:
-    ModulesOf<TConfig>[K] extends NovelModule<infer TSchema>
-      ? ResolvableProps<TSchema & { type: K } & _StepBase, TVars, TLocalVars>
-      : never
+  ModulesOf<TConfig>[K] extends NovelModule<infer TSchema>
+  ? ResolvableProps<TSchema & { type: K } & _StepBase, TVars, TLocalVars>
+  : never
 }[keyof ModulesOf<TConfig> & string]
 
 // ─── 최종 타입 ───────────────────────────────────────────────
