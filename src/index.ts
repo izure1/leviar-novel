@@ -50,7 +50,6 @@ export type {
   CallCmd,
   ConditionFlowCmd,
   FlowControlEntry,
-  VarCmd,
   SetCmd,
   BackgroundCmd,
   MoodCmd,
