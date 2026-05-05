@@ -895,7 +895,6 @@
       transform: { position: toLocal(w / 2, BOX_CY) }
     });
     ctx.world.camera?.addChild(bgObj);
-    ctx.renderer.track(bgObj);
     const spkY = h - BOX_H + layoutCfg.panelPaddingTop;
     const speakerObj = ctx.world.createText({
       attribute: { text: "" },
@@ -907,10 +906,12 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(baseX, spkY) }
+      transform: {
+        pivot: { x: 0.5, y: 0 },
+        position: toLocal(baseX, spkY)
+      }
     });
     ctx.world.camera?.addChild(speakerObj);
-    ctx.renderer.track(speakerObj);
     const spkH = (spkCfg.fontSize ?? 18) * 1.5;
     const textObj = ctx.world.createText({
       attribute: { text: "" },
@@ -922,10 +923,12 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) }
+      transform: {
+        pivot: { x: 0.5, y: 0 },
+        position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap)
+      }
     });
     ctx.world.camera?.addChild(textObj);
-    ctx.renderer.track(textObj);
     const charDefs = ctx.renderer.config.characters;
     let _isTyping = false;
     let _fullText = "";
@@ -979,6 +982,13 @@
     return {
       show: (dur = 250) => {
         bgObj.fadeIn(dur, "easeOut");
+      },
+      onCleanup: () => {
+        _activeTx?.stop?.();
+        _activeTx = null;
+        bgObj.remove({ child: true });
+        speakerObj.remove({ child: true });
+        textObj.remove({ child: true });
       },
       hide: (dur = 300) => {
         bgObj.fadeOut(dur, "easeIn");
@@ -1127,7 +1137,6 @@
       transform: { position: toLocal(w / 2, h / 2) }
     });
     ctx.world.camera?.addChild(bgObj);
-    ctx.renderer.track(bgObj);
     let _btnObjs = [];
     const _clearButtons = () => {
       _btnObjs.forEach((obj) => {
@@ -1145,9 +1154,10 @@
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
       hideGroups: ["dialogue"],
-      /** 씬 전환 시 버튼 즉시 제거 */
+      /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
+        bgObj.remove({ child: true });
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
       _onChoices: (choices, onSelect) => {
@@ -1230,8 +1240,6 @@
           });
           btnObj.addChild(txtObj);
           ctx.world.camera?.addChild(btnObj);
-          ctx.renderer.track(btnObj);
-          ctx.renderer.track(txtObj);
           _btnObjs.push(btnObj);
         });
       },
@@ -1361,7 +1369,6 @@
       if (!parallax) {
         ctx.renderer.world.camera?.addChild(obj);
       }
-      ctx.renderer.track(obj);
       return obj;
     };
     if (data._key) {
@@ -1374,6 +1381,12 @@
       },
       hide: (dur = 300) => {
         _bgObj?.fadeOut?.(dur, "easeIn");
+      },
+      onCleanup: () => {
+        if (_bgObj) {
+          _bgObj.remove({ child: true });
+          _bgObj = null;
+        }
       },
       onUpdate: (_ctx, state, _setState) => {
         if (!state._key) return;
@@ -1396,7 +1409,6 @@
             return;
           }
           _bgObj.remove();
-          ctx.renderer.untrack(_bgObj);
           _bgObj = null;
         }
         _bgParallax = useParallax;
@@ -1684,7 +1696,6 @@
         },
         transform: { position: { x: xPos, y: 0, z: zPos } }
       });
-      ctx.renderer.track(obj);
       obj._currentBaseKey = baseKey;
       obj._currentEmotionKey = emotionKey;
       obj._partObjs = {};
@@ -1702,12 +1713,10 @@
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
             obj.remove({ child: true });
-            ctx.renderer.untrack(obj);
             obj._partObjs = {};
           });
         } else {
           obj.remove({ child: true });
-          ctx.renderer.untrack(obj);
           obj._partObjs = {};
         }
       }
@@ -1718,9 +1727,15 @@
     return {
       show: () => {
       },
+      onCleanup: () => {
+        for (const obj of Object.values(_charObjs)) {
+          obj.remove({ child: true });
+        }
+        Object.keys(_charObjs).forEach((k2) => delete _charObjs[k2]);
+      },
       hide: () => {
         for (const obj of Object.values(_charObjs)) {
-          obj?.fadeOut?.(300, "easeIn");
+          obj.fadeOut(300, "easeIn");
         }
       },
       getObj: (name) => _charObjs[name],
@@ -1806,6 +1821,8 @@
     show: () => {
     },
     hide: () => {
+    },
+    onCleanup: () => {
     }
   }));
   characterFocusModule.defineCommand(function* (cmd, ctx) {
@@ -1840,6 +1857,8 @@
     show: () => {
     },
     hide: () => {
+    },
+    onCleanup: () => {
     }
   }));
   characterHighlightModule.defineCommand(function* (_cmd, _ctx) {
@@ -1850,6 +1869,8 @@
     show: () => {
     },
     hide: () => {
+    },
+    onCleanup: () => {
     }
   }));
   characterEffectModule.defineCommand(function* (cmd, ctx) {
@@ -1930,7 +1951,6 @@
         rectOpts.style.gradientType = "circular";
       }
       const rect = ctx.renderer.world.createRectangle(rectOpts);
-      ctx.renderer.track(rect);
       ctx.renderer.world.camera?.addChild(rect);
       rect._currentMood = mood;
       _moodObjs[mood] = rect;
@@ -1946,11 +1966,9 @@
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
             obj.remove();
-            ctx.renderer.untrack(obj);
           });
         } else {
           obj.remove();
-          ctx.renderer.untrack(obj);
         }
       }
     };
@@ -1963,9 +1981,15 @@
     return {
       show: () => {
       },
+      onCleanup: () => {
+        for (const obj of Object.values(_moodObjs)) {
+          obj.remove();
+        }
+        Object.keys(_moodObjs).forEach((k2) => delete _moodObjs[k2]);
+      },
       hide: () => {
         for (const obj of Object.values(_moodObjs)) {
-          obj?.fadeOut?.(300, "easeIn");
+          obj.fadeOut(300, "easeIn");
         }
       },
       // flicker용 오브젝트 접근
@@ -2136,7 +2160,6 @@
         transform: { position: { x: 0, y: 0, z: particleZ } }
       });
       _effectObjs[type] = particle;
-      ctx.renderer.track(particle);
       particle.play();
     };
     const _removeEffect = (type, duration, immediate = false) => {
@@ -2147,11 +2170,9 @@
         if (dur > 0) {
           ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
             effect.remove();
-            ctx.renderer.untrack(effect);
           });
         } else {
           effect.remove();
-          ctx.renderer.untrack(effect);
         }
       }
     };
@@ -2161,9 +2182,15 @@
     return {
       show: () => {
       },
+      onCleanup: () => {
+        for (const obj of Object.values(_effectObjs)) {
+          obj.remove();
+        }
+        Object.keys(_effectObjs).forEach((k2) => delete _effectObjs[k2]);
+      },
       hide: () => {
         for (const obj of Object.values(_effectObjs)) {
-          obj?.fadeOut?.(300, "easeIn");
+          obj.fadeOut(300, "easeIn");
         }
       },
       onUpdate: (_ctx, state, _setState) => {
@@ -2255,7 +2282,6 @@
         transform: { position: pos }
       });
       ctx.renderer.world.camera?.addChild(textObj);
-      ctx.renderer.track(textObj);
       _overlayObjs[name] = textObj;
       _overlayEntries[name] = entry;
       if (!immediate) textObj.fadeIn(duration ?? 300, "easeOut");
@@ -2290,7 +2316,6 @@
         transform: { position: pos }
       });
       ctx.renderer.world.camera?.addChild(imgObj);
-      ctx.renderer.track(imgObj);
       _overlayObjs[name] = imgObj;
       _overlayEntries[name] = entry;
       if (fit !== "stretch" && imgH === 0) {
@@ -2325,11 +2350,9 @@
         if (dur > 0) {
           ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
             obj.remove();
-            ctx.renderer.untrack(obj);
           });
         } else {
           obj.remove();
-          ctx.renderer.untrack(obj);
         }
       }
     };
@@ -2345,6 +2368,13 @@
     }
     return {
       show: () => {
+      },
+      onCleanup: () => {
+        for (const obj of Object.values(_overlayObjs)) {
+          obj.remove();
+        }
+        Object.keys(_overlayObjs).forEach((k2) => delete _overlayObjs[k2]);
+        Object.keys(_overlayEntries).forEach((k2) => delete _overlayEntries[k2]);
       },
       hide: () => {
         for (const obj of Object.values(_overlayObjs)) {
@@ -2423,6 +2453,8 @@
     show: () => {
     },
     hide: () => {
+    },
+    onCleanup: () => {
     }
   }));
   overlayEffectModule.defineCommand(function* (cmd, ctx) {
@@ -2484,7 +2516,6 @@
         transform: { position: { x: 0, y: 0, z: 10 } }
       });
       ctx.renderer.world.camera?.addChild(rect);
-      ctx.renderer.track(rect);
       ctx.renderer.state.set("_transitionObj", rect);
     }
     if (data._isCovered) {
@@ -2500,6 +2531,12 @@
       show: () => {
       },
       hide: () => {
+      },
+      onCleanup: () => {
+        if (rect) {
+          rect.remove({ child: true });
+          ctx.renderer.state.delete("_transitionObj");
+        }
       },
       onUpdate: (_ctx, _state, _setState) => {
       }
@@ -2553,7 +2590,6 @@
         transform: { position: { x: 0, y: 0, z: 10 } }
       });
       ctx.renderer.world.camera?.addChild(rect);
-      ctx.renderer.track(rect);
       ctx.renderer.state.set("_flashObj", rect);
     }
     rect.style.opacity = 0;
@@ -2561,6 +2597,12 @@
       show: () => {
       },
       hide: () => {
+      },
+      onCleanup: () => {
+        if (rect) {
+          rect.remove({ child: true });
+          ctx.renderer.state.delete("_flashObj");
+        }
       },
       onUpdate: (_ctx, _state, _setState) => {
       }
@@ -2597,6 +2639,8 @@
     show: () => {
     },
     hide: () => {
+    },
+    onCleanup: () => {
     }
   }));
   screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -2733,6 +2777,7 @@
   var cameraZoomModule = define2({ _lastPreset: "reset" });
   cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
+  }, onCleanup: () => {
   } }));
   cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolved = cmd.preset === "inherit" ? state._lastPreset : cmd.preset;
@@ -2743,6 +2788,7 @@
   var cameraPanModule = define2({ _lastPreset: "center" });
   cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
+  }, onCleanup: () => {
   } }));
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolved = cmd.position === "inherit" ? state._lastPreset : cmd.position;
@@ -2753,6 +2799,7 @@
   var cameraEffectModule = define2({ _lastPreset: "shake" });
   cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
+  }, onCleanup: () => {
   } }));
   cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
     setState({ _lastPreset: cmd.preset });
@@ -2764,6 +2811,7 @@
   var uiModule = define2({});
   uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
+  }, onCleanup: () => {
   } }));
   uiModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.action === "show") {
@@ -2779,6 +2827,7 @@
   var controlModule = define2({ expireAt: 0 });
   controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
+  }, onCleanup: () => {
   } }));
   controlModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.action === "disable" && typeof cmd.duration === "number") {
@@ -2809,6 +2858,8 @@
       show: () => {
       },
       hide: () => {
+      },
+      onCleanup: () => {
       },
       onUpdate: (_ctx, state, _setState) => {
         if (!audioManager || !audioMap) return;
@@ -3016,7 +3067,6 @@
       transform: { position: toLocal(w / 2, h / 2) }
     });
     ctx.world.camera?.addChild(overlayObj);
-    ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
     const panelCfgInit = data.panel ?? DEFAULT_DIALOG_BOX_STYLE.panel;
     const _initMinW = panelCfgInit.minWidth ?? 400;
@@ -3034,7 +3084,6 @@
       transform: { position: { x: 0, y: 0, z: 0 } }
     });
     overlayObj.addChild(panelObj);
-    ctx.renderer.track(panelObj);
     let _dynamicObjs = [];
     const _clearDynamic = () => {
       _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
@@ -3130,7 +3179,6 @@
           transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - TITLE_H / 2, z: 0 } }
         });
         panelObj.addChild(tObj);
-        ctx.renderer.track(tObj);
         _dynamicObjs.push(tObj);
         currentY -= TITLE_H + GAP;
       }
@@ -3141,7 +3189,6 @@
           transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - CONTENT_H / 2, z: 0 } }
         });
         panelObj.addChild(cObj);
-        ctx.renderer.track(cObj);
         _dynamicObjs.push(cObj);
         currentY -= CONTENT_H + CONTENT_BTN_GAP;
       }
@@ -3190,8 +3237,6 @@
           });
           btnObj.addChild(txtObj);
           panelObj.addChild(btnObj);
-          ctx.renderer.track(btnObj);
-          ctx.renderer.track(txtObj);
           _dynamicObjs.push(btnObj);
         });
       });
@@ -3210,6 +3255,10 @@
       },
       // ─── 입력 역할 선언 ────────────────────────────────
       hideGroups: ["dialogue"],
+      onCleanup: () => {
+        _clearDynamic();
+        overlayObj.remove({ child: true });
+      },
       onUpdate: (_ctx, state, _setState) => {
         if (state._resolve && state._buttons.length > 0) {
           _render(
@@ -3426,7 +3475,6 @@
       transform: { position: toLocal(w / 2, h / 2) }
     });
     ctx.world.camera?.addChild(overlayObj);
-    ctx.renderer.track(overlayObj);
     overlayObj.fadeOut(0).stop();
     const panelCfgInit = data.panel ?? DEFAULT_INPUT_STYLE.panel;
     const _initMinW = panelCfgInit.minWidth ?? 420;
@@ -3443,7 +3491,6 @@
       transform: { position: { x: 0, y: 0, z: 0 } }
     });
     overlayObj.addChild(panelObj);
-    ctx.renderer.track(panelObj);
     let _dynamicObjs = [];
     const _clearDynamic = () => {
       _dynamicObjs.forEach((obj) => obj.remove({ child: true }));
@@ -3532,7 +3579,6 @@
           transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
         });
         panelObj.addChild(labelObj);
-        ctx.renderer.track(labelObj);
         _dynamicObjs.push(labelObj);
         cursorY -= LABEL_H / 2 + LBL_INP_GAP;
       }
@@ -3558,7 +3604,6 @@
         }
       });
       panelObj.addChild(inputBgObj);
-      ctx.renderer.track(inputBgObj);
       _dynamicObjs.push(inputBgObj);
       const TEXT_PAD = 10;
       _textObj = ctx.world.createText({
@@ -3577,7 +3622,6 @@
         }
       });
       inputBgObj.addChild(_textObj);
-      ctx.renderer.track(_textObj);
       _dynamicObjs.push(_textObj);
       cursorY -= INPUT_H / 2 + INP_BTN_GAP;
       cursorY -= BTN_H / 2;
@@ -3627,8 +3671,6 @@
         });
         btnObj.addChild(txtObj);
         panelObj.addChild(btnObj);
-        ctx.renderer.track(btnObj);
-        ctx.renderer.track(txtObj);
         _dynamicObjs.push(btnObj);
       });
       _destroyHiddenInput();
@@ -3702,6 +3744,7 @@
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
+        overlayObj.remove({ child: true });
       },
       onUpdate: (_ctx, state, _setState) => {
         if (!state._resolve || state._buttons.length === 0) return;
@@ -17278,7 +17321,6 @@ ${addLineNumbers(fragment)}`);
     config;
     width;
     height;
-    _objects = /* @__PURE__ */ new Set();
     _isSkipping = false;
     // 커스텀 명령어들이 저장할 범용 상태 저장소
     state = /* @__PURE__ */ new Map();
@@ -17377,23 +17419,6 @@ ${addLineNumbers(fragment)}`);
       return anim;
     }
     /**
-     * 렌더러가 관리할 객체를 추적 목록에 추가합니다.
-     * 씬(Scene) 종료 시 추적된 객체들은 자동으로 화면에서 제거(clear)됩니다.
-     * @param obj 추적할 객체
-     */
-    track(obj) {
-      this._objects.add(obj);
-      return obj;
-    }
-    /**
-     * 지정된 객체를 추적 목록에서 제거합니다.
-     * 더 이상 렌더러의 일괄 삭제 관리를 받지 않게 됩니다.
-     * @param obj 추적 해제할 객체
-     */
-    untrack(obj) {
-      this._objects.delete(obj);
-    }
-    /**
      * 세이브 저장을 위해 현재 렌더러의 뷰포트/카메라 상태와 커스텀 플러그인 상태를 캡처하여 반환합니다.
      */
     captureState() {
@@ -17470,12 +17495,11 @@ ${addLineNumbers(fragment)}`);
       this.state = new Map(Object.entries(state.pluginState || {}));
     }
     /**
-     * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
+     * 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
      * 주로 씬(Scene) 전환이나 종료 시 호출됩니다.
+     * 렌더 오브젝트의 제거는 각 모듈의 onCleanup()이 담당합니다.
      */
     clear() {
-      this._objects.forEach((obj) => obj.remove?.({ child: true }));
-      this._objects.clear();
       this.state.clear();
       if (this.camOffsetObj) {
         this.camOffsetObj.transform.position.x = 0;
@@ -18463,9 +18487,9 @@ ${addLineNumbers(fragment)}`);
       }
       this._currentSceneDef?.hooks?._unregister(this);
       const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
-      this._cleanupUI();
       this._currentScene = null;
       if (!preserve) {
+        this._cleanupUI();
         this._renderer.clear();
         if (prevState) {
           this._renderer.restoreState(prevState);
@@ -18484,7 +18508,7 @@ ${addLineNumbers(fragment)}`);
     /** 씬 전환 시 모든 UI 엔트리의 onCleanup() 호출 */
     _cleanupUI() {
       for (const entry of this._uiRegistry.values()) {
-        entry.onCleanup?.();
+        entry.onCleanup();
       }
     }
     // ─── 스킵 기능 ───────────────────────────────────────────────
@@ -18953,6 +18977,7 @@ ${addLineNumbers(fragment)}`);
     console.log("booting...");
   }).defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
+  }, onCleanup: () => {
   } })).defineCommand(function* (cmd, ctx) {
     console.log("[test-cmd]", cmd.message, ctx.globalVars);
     return true;
@@ -18962,6 +18987,8 @@ ${addLineNumbers(fragment)}`);
     show: () => {
     },
     hide: () => {
+    },
+    onCleanup: () => {
     },
     onUpdate: (ctx, state, setState) => {
       ctx.world.debugMode = state.on;
@@ -19616,7 +19643,10 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "sunset", intensity: 0.7, duration: 3e3 },
     {
       type: "dialogue",
-      text: "\uD6C4\uBBF8\uCE74\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."
+      text: [
+        "\uADF8\uB85C\uBD80\uD130 \uBA70\uCE60 \uD6C4.",
+        "\uD6C4\uBBF8\uCE74\uC758 \uC544\uC9C0\uD2B8.\n\uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."
+      ]
     },
     {
       type: "dialogue",
