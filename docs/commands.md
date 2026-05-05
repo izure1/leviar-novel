@@ -23,7 +23,7 @@ export default defineScene({ config })(({ set, condition }) => [
   // 시각적/청각적 연출 (명령어)
   {
     type: 'dialogue',
-    character: 'fumika',
+    speaker: 'fumika',
     text: '이것이 연출을 담당하는 명령어 객체입니다.'
   }
 ])

@@ -69,7 +69,7 @@ import config from './novel.config'
 export default defineScene({ config })(() => [
   {
     type: 'dialogue',
-    character: 'fumika',
+    speaker: 'fumika',
     // 텍스트 속성에 함수를 넣어 변수(vars)를 참조합니다
     text: (vars) => vars.likeability > 50 ? '항상 고마워' : '무슨 일이야?'
   }
@@ -98,7 +98,7 @@ import config from './novel.config'
 export default defineScene({ config })(() => [
   {
     type: 'dialogue',
-    character: 'fumika',
+    speaker: 'fumika',
     // {{playerName}} 부분이 실제 변수 값으로 자동 치환되어 출력됩니다
     text: '안녕, {{playerName}}.  오늘 날씨가 참 좋네.'
   }

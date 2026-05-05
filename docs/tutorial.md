@@ -27,7 +27,7 @@ export default defineNovelConfig({
     fumika: {
       name: '후미카',
       bases: {
-        default: { src: 'char-fumika-base', width: 400 }
+        default: { src: 'char-fumika-base', width: 400, points: { face: { x: 0.5, y: 0.2 } } }
       },
       emotions: {
         smile: { face: 'char-fumika-smile' }
@@ -55,14 +55,14 @@ export default defineScene({ config })(() => [
   { type: 'background', name: 'bg-classroom' },
 
   // 2. 캐릭터를 출력합니다
-  { type: 'character', name: 'fumika', base: 'default', position: 'center' },
+  { type: 'character', action: 'show', name: 'fumika', image: 'default:default', position: 'center' },
 
   // 3. 대사를 출력합니다
-  { type: 'dialogue', character: 'fumika', text: '안녕, 오늘부터 잘 부탁해.' },
+  { type: 'dialogue', speaker: 'fumika', text: '안녕, 오늘부터 잘 부탁해.' },
 
   // 4. 캐릭터의 표정을 바꿉니다
-  { type: 'character', name: 'fumika', emotion: 'smile' },
-  { type: 'dialogue', character: 'fumika', text: '앞으로 재미있는 일이 많을 거야.' }
+  { type: 'character', action: 'show', name: 'fumika', image: 'default:smile' },
+  { type: 'dialogue', speaker: 'fumika', text: '앞으로 재미있는 일이 많을 거야.' }
 ])
 ```
 
@@ -83,8 +83,8 @@ export default defineScene({ config })(() => [
   { type: 'background', name: 'bg-classroom' },
 
   // skip: true가 있으면 멈추지 않고 즉시 다음 명령어와 동시에 실행됩니다
-  { type: 'character', name: 'fumika', emotion: 'smile', skip: true },
-  { type: 'dialogue', character: 'fumika', text: '안녕, 이렇게 나타남과 동시에 말할 수도 있어.' }
+  { type: 'character', action: 'show', name: 'fumika', image: 'default:smile', skip: true },
+  { type: 'dialogue', speaker: 'fumika', text: '안녕, 이렇게 나타남과 동시에 말할 수도 있어.' }
 ])
 ```
 

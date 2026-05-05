@@ -50,7 +50,12 @@ export default defineNovelConfig({
       name: '아리스',
       // 기본 몸체 이미지입니다
       bases: {
-        normal: { src: 'char-aris-body', width: 600 }
+        normal: {
+          src: 'char-aris-body', 
+          width: 600, 
+          // 캐릭터의 머리, 눈, 입의 위치를 설정합니다 (0.0 ~ 1.0)
+          points: { face: { x: 0.5, y: 0.2 } }
+        }
       },
       // 기본 몸체 위에 덧씌워질 표정 이미지입니다
       emotions: {
