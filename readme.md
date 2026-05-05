@@ -64,21 +64,63 @@ npm install fumika
 
 ### 2. 최소 구동 예제 구현
 ```typescript
-import { Novel } from "fumika";
-import config from "./novel.config";
-import sceneIntro from "./scenes/scene-intro";
+import { defineNovelConfig, defineScene, defineCharacter, Novel } from 'fumika'
+
+const character = defineCharacter({
+  name: '후미카',
+  bases: {
+    default: {
+      src: 'character_fumika_base',
+      width: 400,
+      points: {
+        face: { x: 0.5, y: 0.2 }
+      }
+    }
+  },
+  emotions: {
+    smile: { face: 'emotion_fumika_base_smile' }
+  }
+})
+
+const config = defineNovelConfig({
+  width: 1280,
+  height: 720,
+  scenes: ['scene-intro'],
+  assets: {
+    'character_fumika_base': './assets/fumika_base.png',
+    'emotion_fumika_base_smile': './assets/emotion_fumika_base_smile.png',
+  },
+  characters: {
+    'fumika': character,
+  }
+})
+
+const sceneIntro = defineScene({ config })(() => [
+  {
+    type: 'character',
+    action: 'show',
+    name: 'fumika',
+    image: 'fumika:smile',
+    focus: 'face',
+  },
+  {
+    type: 'dialogue',
+    speaker: 'fumika',
+    text: '안녕하세요! 저는 후미카입니다.',
+  }
+])
 
 const init = async () => {
   // 엔진 인스턴스를 생성하고 대상 DOM 요소에 마운트합니다.  
   const novel = new Novel(config, {
-    element: document.getElementById("game-container") as HTMLElement,
-    scenes: { "scene-intro": sceneIntro },
-  });
+    element: document.getElementById('game-container') as HTMLElement,
+    scenes: { 'scene-intro': sceneIntro },
+  })
 
   // 에셋 로드 및 시스템 부팅 후 시나리오를 시작합니다.  
-  await novel.load(); // 리소스 프리로딩
-  await novel.boot(); // 시스템 초기화
-  novel.start("scene-intro"); // 장면 개시
+  await novel.load() // 리소스 프리로딩
+  await novel.boot() // 시스템 초기화
+  novel.start('scene-intro') // 장면 개시
 };
 
 init().catch(console.error);
