@@ -16,13 +16,7 @@ Fumika 엔진에서 **예약어**란, 시나리오의 흐름을 직접적으로 
 
 ---
 
-## 2. 사전 준비 (Prerequisites)
-
-*   `defineScene`을 사용할 때 배열 대신 **빌더 함수(Curried function) 방식**을 사용해야 흐름 제어 예약어를 주입받을 수 있습니다.
-
----
-
-## 3. 핵심 예제 (Main Example)
+## 2. 핵심 예제 (Main Example)
 
 빌더 함수를 통해 주입받은 흐름 제어 예약어를 사용하는 표준적인 구현 패턴입니다.
 
@@ -64,7 +58,7 @@ export default defineScene({
 
 ---
 
-## 4. 예약어 목록 (Command Reference)
+## 3. 예약어 목록 (Command Reference)
 
 ### `label(name: string)`
 시나리오 내부의 특정 위치를 식별하는 마커를 생성합니다.
@@ -98,7 +92,7 @@ export default defineScene({
 
 ---
 
-## 5. 주의 사항 (Edge Cases)
+## 4. 주의 사항 (Edge Cases)
 
 *   **동적 조건 배열 수정 불가**: `condition` 내부의 스텝 배열을 런타임에 동적으로 조작(`push`, `pop` 등)하려는 시도는 에러를 발생시킬 수 있으므로 지양해야 합니다.
 *   **중첩 씬 메모리 누수**: `call`을 통해 씬을 호출한 후 명시적으로 종료하지 않고 내부에서 계속 `next`나 새로운 `call`을 반복하면, 호출 스택(Call Stack)이 누적되어 **메모리 누수(Memory Leak)**가 발생합니다. 서브 씬은 반드시 자연스럽게 종료(배열의 끝 도달)되어야 합니다.

@@ -13,10 +13,8 @@
 
 ## 2. 사용 방법 (Usage)
 
-`defineScene`은 개발 환경에 따라 두 가지 호출 방식을 지원합니다.  IDE의 타입 추론 기능을 극대화하고 코드의 명확성을 확보하기 위해 **커리(Curried) 형식**의 사용을 강력히 권장합니다.  
-
-### 2.1. 커리(Curried) 형식 (권장)
-설정 객체를 먼저 주입하고, 반환된 함수에 커맨드 배열을 전달하는 방식입니다.  이 방식은 커맨드 내부의 속성들에 대해 가장 정밀한 타입 완성을 제공합니다.  
+`defineScene`은 설정 객체와 커맨드 배열을 인자로 전달하는 curried 함수입니다.  
+이 방식은 커맨드 내부의 속성들에 대해 가장 정밀한 타입 완성을 제공합니다.  
 
 ```ts
 import config from './novel.config'
@@ -30,17 +28,6 @@ export default defineScene({
   set('_isDoorOpened', true)
 ])
 ```
-
-### 2.2. 단일 호출(Two-Argument) 형식
-설정 객체와 커맨드 배열을 동시에 인자로 전달하는 간결한 방식입니다.  
-
-```ts
-export default defineScene({ config }, [
-  { type: 'dialogue', text: '간결한 씬 구성 방식입니다.' }
-])
-```
-
----
 
 ## 3. 설정 옵션 상세 (`SceneOptions`)
 

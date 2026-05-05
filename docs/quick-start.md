@@ -48,7 +48,7 @@ export default defineNovelConfig({
 import { defineScene } from 'fumika';
 import config from './novel.config';
 
-export default defineScene({ config })([
+export default defineScene({ config })(() => [
   // 배경 이미지를 화면에 노출합니다.  
   { type: 'background', name: 'bg-school' },
   

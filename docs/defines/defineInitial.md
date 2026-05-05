@@ -41,7 +41,7 @@ import { intenseInitial } from './common/initials'
 export default defineScene({
   config,
   initial: intenseInitial // 사전에 정의된 공통 테마를 즉시 적용합니다.  
-})([
+})(() => [
   { type: 'dialogue', text: '공기가 평소와는 다르게 차갑고 무겁습니다.' }
 ])
 ```
@@ -60,7 +60,7 @@ export default defineScene({
     // 공통 설정의 다른 부분은 유지하면서, 특정 속성의 강도만 강화합니다.  
     mood: { ...intenseInitial.mood, intensity: 1.0 } 
   }
-})([ ... ])
+})(() => [ ... ])
 ```
 
 ---
