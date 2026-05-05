@@ -42,8 +42,6 @@ export default defineNovelConfig({
     endingReached: false,
     useHeroineVoice: true,
     username: '',
-    _test: '',
-    $test: '',
   },
   modules: {
     'test-cmd': testModule,

@@ -19035,9 +19035,7 @@ ${addLineNumbers(fragment)}`);
       metHeroine: false,
       endingReached: false,
       useHeroineVoice: true,
-      username: "",
-      _test: "",
-      $test: ""
+      username: ""
     },
     modules: {
       "test-cmd": testModule,

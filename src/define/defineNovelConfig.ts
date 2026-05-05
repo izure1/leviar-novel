@@ -90,7 +90,7 @@ export function defineNovelConfig<
   config: {
     width?: number
     height?: number
-    variables: TVars
+    variables: TVars & { [K in keyof TVars]: K extends `$${string}` | `_${string}` ? never : TVars[K] }
     scenes: TScenes
     characters: TCharacters
     backgrounds: TBackgrounds
@@ -99,7 +99,7 @@ export function defineNovelConfig<
     audios?: TAudios
     fallback?: FallbackRuleOf<any>[]
     modules?: TModules
-    environments?: TEnvs
+    environments?: TEnvs & { [K in keyof TEnvs]: K extends `$${string}` ? TEnvs[K] : never }
   }
 ): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TAudios, BuiltinModules & TModules, TEnvs> {
   // 내장 모듈 + 유저 모듈 merge (유저 모듈이 덮어쓸 수 있음)
