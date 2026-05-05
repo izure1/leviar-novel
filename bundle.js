@@ -17831,8 +17831,11 @@ ${addLineNumbers(fragment)}`);
       return true;
     },
     "var": function* (cmd, ctx) {
-      const val = typeof cmd.value === "function" ? cmd.value(ctx.scene.getVars()) : cmd.value;
-      if (cmd.name.startsWith("_")) {
+      const allVars = ctx.scene.getVars();
+      const val = typeof cmd.value === "function" ? cmd.value(allVars) : cmd.value;
+      if (cmd.name.startsWith("$")) {
+        ctx.callbacks.setEnvironment(cmd.name, val);
+      } else if (cmd.name.startsWith("_")) {
         ctx.scene.setLocalVar(cmd.name, val);
       } else {
         ctx.scene.setGlobalVar(cmd.name, val);
@@ -17895,9 +17898,9 @@ ${addLineNumbers(fragment)}`);
         }
       });
     }
-    /** 통합 변수 맵. 지역변수 키에 `_` 포함되어 있으므로 직접 spread */
+    /** 통합 변수 맵. 환경변수 → 전역변수 → 지역변수 순서로 spread (좁은 스코프 우선) */
     get _vars() {
-      return { ...this.callbacks.getGlobalVars(), ...this.localVars };
+      return { ...this.callbacks.getEnvironments(), ...this.callbacks.getGlobalVars(), ...this.localVars };
     }
     _interpolateText(text) {
       return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
@@ -17945,6 +17948,7 @@ ${addLineNumbers(fragment)}`);
         world: r.world,
         globalVars: this.callbacks.getGlobalVars(),
         localVars: this.localVars,
+        environments: this.callbacks.getEnvironments(),
         renderer: r,
         callbacks: this.callbacks,
         state: {
@@ -18109,6 +18113,7 @@ ${addLineNumbers(fragment)}`);
         world: r.world,
         globalVars: this.callbacks.getGlobalVars(),
         localVars: this.localVars,
+        environments: this.callbacks.getEnvironments(),
         renderer: r,
         callbacks: this.callbacks,
         state: {
@@ -18294,6 +18299,8 @@ ${addLineNumbers(fragment)}`);
   var Novel = class {
     /** 전역 변수. 씬 전환에도 유지됩니다 */
     variables;
+    /** 환경변수. 모든 세이브에서 공유됩니다 */
+    environments;
     /** 엔진 전용 컨테이너 (캔버스와 UI 요소들을 감싸는 래퍼) */
     container;
     _config;
@@ -18373,6 +18380,7 @@ ${addLineNumbers(fragment)}`);
       });
       this.audio = new AudioManager(audio_default.hooker);
       this.variables = { ...config.variables };
+      this.environments = { ...config.environments ?? {} };
       this._collectModules(config.modules);
       this.hooker = this._createHookerProxy();
       this._world.start();
@@ -18596,6 +18604,19 @@ ${addLineNumbers(fragment)}`);
       );
     }
     /**
+     * 현재 환경변수 상태를 스냅샷으로 반환합니다.
+     * 반환된 객체를 외부 스토리지(localStorage 등)에 수동 저장하십시오.
+     */
+    saveEnv() {
+      return { ...this.environments ?? {} };
+    }
+    /**
+     * 외부 스토리지에서 불러온 데이터로 환경변수를 복원합니다.
+     */
+    loadEnv(data) {
+      Object.assign(this.environments, data);
+    }
+    /**
      * SaveData로부터 진행 상태를 복원합니다.
      */
     loadSave(data) {
@@ -18664,6 +18685,10 @@ ${addLineNumbers(fragment)}`);
         getGlobalVars: () => ({ ...this.variables }),
         setGlobalVar: (name, value) => {
           this.variables[name] = value;
+        },
+        getEnvironments: () => ({ ...this.environments ?? {} }),
+        setEnvironment: (name, value) => {
+          this.environments[name] = value;
         },
         loadScene: (target) => {
           this.loadScene(target);
@@ -18894,10 +18919,15 @@ ${addLineNumbers(fragment)}`);
         renderer: this._renderer,
         globalVars: {},
         localVars: {},
+        environments: { ...this.environments ?? {} },
         callbacks: {
           getNovel: () => this,
           getGlobalVars: () => ({}),
           setGlobalVar: noop,
+          getEnvironments: () => ({ ...this.environments ?? {} }),
+          setEnvironment: (name, value) => {
+            this.environments[name] = value;
+          },
           loadScene: noop,
           callScene: noop,
           captureRenderer: () => this._renderer.captureState(),
@@ -20925,8 +20955,10 @@ ${addLineNumbers(fragment)}`);
       e.stopPropagation();
       try {
         const data = novel.save();
-        console.log(data);
+        const env = novel.saveEnv();
+        console.log(data, env);
         localStorage.setItem("fumika-save", JSON.stringify(data));
+        localStorage.setItem("fumika-env", JSON.stringify(env));
         showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
       } catch (e2) {
         console.error(e2);
@@ -20936,13 +20968,16 @@ ${addLineNumbers(fragment)}`);
     btnLoad.addEventListener("click", (e) => {
       e.stopPropagation();
       const raw = localStorage.getItem("fumika-save");
+      const rawEnv = localStorage.getItem("fumika-env");
       if (!raw) {
         showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
         return;
       }
       try {
         const data = JSON.parse(raw);
+        const env = JSON.parse(rawEnv || "{}");
         novel.loadSave(data);
+        novel.loadEnv(env);
         showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
       } catch (e2) {
         console.error(e2);

@@ -174,8 +174,10 @@ async function main() {
     e.stopPropagation()
     try {
       const data = novel.save()
-      console.log(data)
+      const env = novel.saveEnv()
+      console.log(data, env)
       localStorage.setItem('fumika-save', JSON.stringify(data))
+      localStorage.setItem('fumika-env', JSON.stringify(env))
       showToast('💾 저장 완료!', 'success')
     } catch (e) {
       console.error(e)
@@ -187,13 +189,16 @@ async function main() {
   btnLoad.addEventListener('click', (e) => {
     e.stopPropagation()
     const raw = localStorage.getItem('fumika-save')
+    const rawEnv = localStorage.getItem('fumika-env')
     if (!raw) {
       showToast('📂 저장 데이터 없음', 'info')
       return
     }
     try {
       const data = JSON.parse(raw)
+      const env = JSON.parse(rawEnv || '{}')
       novel.loadSave(data)
+      novel.loadEnv(env)
       showToast('📂 불러오기 완료!', 'success')
     } catch (e) {
       console.error(e)
