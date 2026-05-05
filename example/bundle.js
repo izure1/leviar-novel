@@ -20955,8 +20955,10 @@ ${addLineNumbers(fragment)}`);
       e.stopPropagation();
       try {
         const data = novel.save();
-        console.log(data);
+        const env = novel.saveEnv();
+        console.log(data, env);
         localStorage.setItem("fumika-save", JSON.stringify(data));
+        localStorage.setItem("fumika-env", JSON.stringify(env));
         showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
       } catch (e2) {
         console.error(e2);
@@ -20966,13 +20968,16 @@ ${addLineNumbers(fragment)}`);
     btnLoad.addEventListener("click", (e) => {
       e.stopPropagation();
       const raw = localStorage.getItem("fumika-save");
+      const rawEnv = localStorage.getItem("fumika-env");
       if (!raw) {
         showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
         return;
       }
       try {
         const data = JSON.parse(raw);
+        const env = JSON.parse(rawEnv || "{}");
         novel.loadSave(data);
+        novel.loadEnv(env);
         showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
       } catch (e2) {
         console.error(e2);
