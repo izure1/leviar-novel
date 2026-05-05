@@ -9,7 +9,7 @@ export default defineScene({
     scene: 'scene-stream',
     preserve: true,
   },
-})([
+})(({ label, goto }) => [
   { type: 'mood', mood: 'sunset', action: 'remove', duration: 3000 },
   { type: 'mood', mood: 'night', action: 'add', intensity: 0.7, duration: 3000, disable: true },
   { type: 'dialogue', text: '해가 진다.' },
@@ -59,7 +59,7 @@ export default defineScene({
   },
 
   // ─── 치킨 ───
-  { type: 'label', name: 'chicken' },
+  label('chicken'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',
@@ -82,10 +82,10 @@ export default defineScene({
     text: '테러방지법은 통과됐지만, 찜닭방지법은 아직이거든, 내가.',
   },
   { type: 'dialogue', text: '할 말을 잃었다.' },
-  { type: 'condition', if: () => true, goto: 'order' },
+  goto('order'),
 
   // ─── 매운거 ───
-  { type: 'label', name: 'spicy' },
+  label('spicy'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 300 },
   {
     type: 'dialogue',
@@ -112,10 +112,10 @@ export default defineScene({
     text: '대체 어디서부터 태클을 걸어야 할지 모르겠다.'
   },
   { type: 'dialogue', text: '기적의 논리다.' },
-  { type: 'condition', if: () => true, goto: 'order' },
+  goto('order'),
 
   // ─── 공통 주문 ───
-  { type: 'label', name: 'order' },
+  label('order'),
   {
     type: 'dialogue',
     text: '결국 기승전 찜닭, 완벽한 답정너였다.'

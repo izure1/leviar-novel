@@ -6,7 +6,7 @@ export default defineScene({
   config,
   initial: commonInitial,
   next: 'scene-ending',
-})([
+})(({ label, goto }) => [
   {
     type: 'dialogue',
     text: [
@@ -42,7 +42,7 @@ export default defineScene({
     ]
   },
 
-  { type: 'label', name: 'hero' },
+  label('hero'),
   {
     type: 'dialogue',
     text: [
@@ -59,9 +59,9 @@ export default defineScene({
       '너 방금 디버깅 속도 개쩔었어. 인정.'
     ]
   },
-  { type: 'condition', if: () => true, goto: 'calm' },
+  goto('calm'),
 
-  { type: 'label', name: 'run' },
+  label('run'),
   { type: 'camera-effect', preset: 'shake', duration: 800 },
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 300 },
   { type: 'mood', mood: 'horror', action: 'add', intensity: 0.3, flicker: 'strobe' },
@@ -81,9 +81,9 @@ export default defineScene({
     ]
   },
   { type: 'mood', mood: 'horror', action: 'remove', duration: 1000 },
-  { type: 'condition', if: () => true, goto: 'calm' },
+  goto('calm'),
 
-  { type: 'label', name: 'prank' },
+  label('prank'),
   {
     type: 'dialogue',
     text: [
@@ -123,7 +123,7 @@ export default defineScene({
     ]
   },
 
-  { type: 'label', name: 'calm' },
+  label('calm'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 500 },
   {
     type: 'dialogue',

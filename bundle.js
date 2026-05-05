@@ -2760,63 +2760,6 @@
     return true;
   });
 
-  // src/modules/condition.ts
-  var conditionModule = define2({});
-  conditionModule.defineView((_ctx, _data, _setState) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  conditionModule.defineCommand(function* (cmd, ctx) {
-    const result = cmd.if;
-    if (result) {
-      if (cmd.goto) {
-        ctx.scene.jumpToLabel(cmd.goto);
-      } else if (cmd.next) {
-        ctx.scene.loadScene(cmd.next);
-      }
-    } else {
-      if (cmd["else-goto"]) {
-        ctx.scene.jumpToLabel(cmd["else-goto"]);
-      } else if (cmd["else-next"]) {
-        ctx.scene.loadScene(cmd["else-next"]);
-      } else if (cmd.else) {
-        if (ctx.scene.hasLabel(cmd.else)) {
-          ctx.scene.jumpToLabel(cmd.else);
-        } else {
-          ctx.scene.loadScene(cmd.else);
-        }
-      }
-    }
-    return true;
-  });
-  var condition_default = conditionModule;
-
-  // src/modules/var.ts
-  var varModule = define2({});
-  varModule.defineView((_ctx, _data, _setState) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  varModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const nameStr = cmd.name;
-    const val = cmd.value;
-    if (nameStr.startsWith("_")) {
-      ctx.scene.setLocalVar(nameStr, val);
-    } else {
-      ctx.scene.setGlobalVar(nameStr, val);
-    }
-    return true;
-  });
-  var var_default = varModule;
-
-  // src/modules/label.ts
-  var labelModule = define2({});
-  labelModule.defineView((_ctx, _data, _setState) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  labelModule.defineCommand(function* (_cmd, _ctx, state, setState) {
-    return true;
-  });
-  var label_default = labelModule;
-
   // src/modules/ui.ts
   var uiModule = define2({});
   uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {
@@ -3842,9 +3785,6 @@
     "camera-zoom": cameraZoomModule,
     "camera-pan": cameraPanModule,
     "camera-effect": cameraEffectModule,
-    "condition": condition_default,
-    "var": var_default,
-    "label": label_default,
     "ui": ui_default,
     "control": control_default,
     "audio": audio_default,
@@ -3865,25 +3805,116 @@
   function defineInitial(config) {
     return (initial) => initial;
   }
-  function defineScene(options, dialogues) {
+  var _conditionUid = 0;
+  var FLOW_MARKER = /* @__PURE__ */ Symbol.for("fumika:flow");
+  function _isFlowMarker(step) {
+    return step && step[FLOW_MARKER] === true;
+  }
+  function _flattenSteps(steps) {
+    const result = [];
+    for (const step of steps) {
+      if (!_isFlowMarker(step)) {
+        result.push(step);
+        continue;
+      }
+      switch (step.__flow) {
+        case "label":
+          result.push({ type: "label", name: step.name });
+          break;
+        case "goto":
+          result.push({ type: "goto", label: step.label });
+          break;
+        case "next":
+          result.push({ type: "next", scene: step.scene, preserve: step.preserve });
+          break;
+        case "call":
+          result.push({ type: "call", scene: step.scene, preserve: step.preserve, restore: step.restore });
+          break;
+        case "set":
+          result.push({ type: "var", name: step.name, value: step.value });
+          break;
+        case "condition": {
+          const id = _conditionUid++;
+          const elseLabel = `__cond_else_${id}`;
+          const endLabel = `__cond_end_${id}`;
+          const hasElse = step.elseSteps && step.elseSteps.length > 0;
+          result.push({
+            type: "condition",
+            if: step.if,
+            elseGoto: hasElse ? elseLabel : endLabel
+          });
+          result.push(..._flattenSteps(step.ifSteps ?? []));
+          if (hasElse) {
+            result.push({ type: "goto", label: endLabel });
+            result.push({ type: "label", name: elseLabel });
+            result.push(..._flattenSteps(step.elseSteps));
+          }
+          result.push({ type: "label", name: endLabel });
+          break;
+        }
+      }
+    }
+    return result;
+  }
+  function _createBuilders() {
+    return {
+      label: (name) => ({
+        [FLOW_MARKER]: true,
+        __flow: "label",
+        name
+      }),
+      goto: (name) => ({
+        [FLOW_MARKER]: true,
+        __flow: "goto",
+        label: name
+      }),
+      next: (scene, opts) => ({
+        [FLOW_MARKER]: true,
+        __flow: "next",
+        scene,
+        ...opts
+      }),
+      call: (scene, opts) => ({
+        [FLOW_MARKER]: true,
+        __flow: "call",
+        scene,
+        ...opts
+      }),
+      condition: (fn, ifSteps, elseSteps) => ({
+        [FLOW_MARKER]: true,
+        __flow: "condition",
+        if: fn,
+        ifSteps,
+        elseSteps
+      }),
+      set: (name, value) => ({
+        [FLOW_MARKER]: true,
+        __flow: "set",
+        name,
+        value
+      })
+    };
+  }
+  function defineScene(options) {
     const {
       variables = {},
       next,
       initial,
       hooks
     } = options;
-    const build = (steps) => ({
-      kind: "dialogue",
-      dialogues: steps,
-      localVars: variables,
-      nextScene: next,
-      initial,
-      hooks
-    });
-    if (dialogues !== void 0) {
-      return build(dialogues);
-    }
-    return build;
+    return (factory) => {
+      const builders = _createBuilders();
+      const rawSteps = factory(builders);
+      const flatSteps = _flattenSteps(rawSteps);
+      return {
+        kind: "dialogue",
+        dialogues: flatSteps,
+        localVars: variables,
+        nextScene: next,
+        initial,
+        hooks
+      };
+    };
   }
 
   // node_modules/leviar/dist/index.js
@@ -17750,19 +17781,44 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
-  // src/modules/scene.ts
-  function* sceneCallHandler(params, ctx) {
-    ctx.scene.callScene(params.call, params.preserve, params.restore);
-    return false;
-  }
-
   // src/core/Scene.ts
+  var FLOW_CONTROL_HANDLERS = {
+    "label": function* () {
+      return true;
+    },
+    "goto": function* (cmd, ctx) {
+      ctx.scene.jumpToLabel(cmd.label);
+      return false;
+    },
+    "next": function* (cmd, ctx) {
+      const target = cmd.preserve ? { scene: cmd.scene, preserve: true } : cmd.scene;
+      ctx.scene.loadScene(target);
+      return false;
+    },
+    "call": function* (cmd, ctx) {
+      ctx.scene.callScene(cmd.scene, cmd.preserve, cmd.restore);
+      return false;
+    },
+    "condition": function* (cmd, ctx) {
+      const result = typeof cmd.if === "function" ? cmd.if(ctx.scene.getVars()) : cmd.if;
+      if (!result && cmd.elseGoto) {
+        ctx.scene.jumpToLabel(cmd.elseGoto);
+      }
+      return true;
+    },
+    "var": function* (cmd, ctx) {
+      const val = typeof cmd.value === "function" ? cmd.value(ctx.scene.getVars()) : cmd.value;
+      if (cmd.name.startsWith("_")) {
+        ctx.scene.setLocalVar(cmd.name, val);
+      } else {
+        ctx.scene.setGlobalVar(cmd.name, val);
+      }
+      return true;
+    }
+  };
   var BUILTIN_HANDLERS = {
     "dialogue": (p, c) => dialogue_default.__handler(p, c),
     "choice": (p, c) => choice_default.__handler(p, c),
-    "condition": (p, c) => condition_default.__handler(p, c),
-    "var": (p, c) => var_default.__handler(p, c),
-    "label": (p, c) => label_default.__handler(p, c),
     "background": (p, c) => background_default.__handler(p, c),
     "mood": (p, c) => mood_default.__handler(p, c),
     "effect": (p, c) => effect_default.__handler(p, c),
@@ -17779,8 +17835,7 @@ ${addLineNumbers(fragment)}`);
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
     "control": (p, c) => control_default.__handler(p, c),
-    "audio": (p, c) => audio_default.__handler(p, c),
-    "scene": (p, c) => sceneCallHandler(p, c)
+    "audio": (p, c) => audio_default.__handler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -18081,6 +18136,9 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd2) => this._executeCmd(cmd2)
       };
+      if (FLOW_CONTROL_HANDLERS[type]) {
+        return FLOW_CONTROL_HANDLERS[type](params, ctx);
+      }
       const modules = r.config.modules;
       if (modules && typeof modules[type]?.__handler === "function") {
         return modules[type].__handler(params, ctx);
@@ -19121,7 +19179,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-game",
       preserve: true
     }
-  })([
+  })(({ label, goto, call, condition, set: set6 }) => [
     {
       type: "dialogBox",
       title: "\uC74C\uC131 \uC81C\uC5B4",
@@ -19209,7 +19267,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 분기: 일 질문 ───
-    { type: "label", name: "ask-job" },
+    label("ask-job"),
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19243,9 +19301,9 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uB18D\uB2F4\uC784."
     },
-    { type: "condition", if: () => true, goto: "common-end" },
+    goto("common-end"),
     // ─── 분기: 버그 질문 ───
-    { type: "label", name: "ask-bug" },
+    label("ask-bug"),
     { type: "camera-effect", preset: "shake", duration: 400 },
     { type: "character", action: "show", name: "fumika", image: "normal:angry", duration: 300 },
     {
@@ -19285,9 +19343,9 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uB9D0\uD22C\uAC00 \uB531 \uD2B8\uC704\uCE58 \uCC44\uD305\uCC3D\uC778\uB370."
     },
-    { type: "condition", if: () => true, goto: "common-end" },
+    goto("common-end"),
     // ─── 분기: 도망 ───
-    { type: "label", name: "escape" },
+    label("escape"),
     {
       type: "dialogue",
       text: "\uB625\uC774 \uBB34\uC11C\uC6CC\uC11C \uD53C\uD558\uB098. \uB098\uB294 \uC2AC\uADF8\uBA38\uB2C8 \uC790\uB9AC\uC5D0\uC11C \uC77C\uC5B4\uB0AC\uB2E4."
@@ -19321,14 +19379,9 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uBC29\uAE08 \uB098\uB791 \uB208 \uB9C8\uC8FC\uCCE4\uC73C\uB2C8\uAE4C \uC774\uC81C \uC6B0\uB9B0 \uAD6C\uB3C5\uACFC \uC88B\uC544\uC694 \uAD00\uACC4\uC57C. \uB3C4\uB9DD \uBABB \uAC00."
     },
-    { type: "condition", if: () => true, goto: "common-end" },
-    {
-      type: "dialogue",
-      speaker: "fumika",
-      text: "hello"
-    },
+    goto("common-end"),
     // ─── 공통 엔딩 ───
-    { type: "label", name: "common-end" },
+    label("common-end"),
     { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 800 },
     {
       type: "dialogue",
@@ -19357,7 +19410,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // 입력
-    { type: "label", name: "input-username" },
+    label("input-username"),
     {
       type: "input",
       to: "username",
@@ -19376,106 +19429,112 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // 빈 이름일 때 반복 분기로
-    {
-      type: "condition",
-      if: ({ username }) => username.replaceAll(" ", "") === "",
-      goto: "empty-name"
-    },
-    // 이름이 후미카가 아닐 경우 공통 분기로
-    {
-      type: "condition",
-      if: ({ username }) => username !== "\uD6C4\uBBF8\uCE74",
-      goto: "choice-game"
-    },
-    // 이름이 후미카일 경우 특수 분기로
-    {
-      type: "condition",
-      if: ({ username }) => username === "\uD6C4\uBBF8\uCE74",
-      "goto": "same-name"
-    },
-    // ─── 분기: 빈 이름 ───
-    { type: "label", name: "empty-name" },
-    { type: "var", name: "_inputRepeatCount", value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
-    {
-      type: "dialogue",
-      text: "\uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC369\uC5B4\uB4E4\uC5B4\uAC04\uB2E4."
-    },
-    {
-      type: "condition",
-      if: ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
-      goto: "escape"
-    },
-    {
-      type: "dialogue",
-      speaker: "fumika",
-      text: [
-        '\uC774\uB984\uC774 \uACF5\uBC31\uC778 \uAC74, "\uB458\uC774 \uD569\uCCD0\uC11C \u300E  \u300F" \uBB50 \uADF8\uB7F0 \uB4DC\uB9BD\uC744 \uCE58\uB824\uB294\uAC70\uC57C?',
-        "\uD55C\uCC38 \uC9C0\uB09C \uC560\uB2C8\uBA54\uC774\uC158\uB4DC\uB9BD\uC778\uAC74 \uC54C\uC9C0?",
-        "\uC544\uB2C8\uBA74.. \uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB294 \uAC70\uC57C?"
+    condition(
+      ({ username }) => username.replaceAll(" ", "") === "",
+      [
+        // ─── 분기: 빈 이름 ───
+        set6("_inputRepeatCount", ({ _inputRepeatCount }) => _inputRepeatCount + 1),
+        {
+          type: "dialogue",
+          text: "\uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC369\uC5B4\uB4E4\uC5B4\uAC04\uB2E4."
+        },
+        condition(
+          ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
+          [
+            {
+              type: "dialogue",
+              speaker: "fumika",
+              text: "\uC8FD\uACE0 \uC2F6\uC5B4?"
+            },
+            {
+              type: "dialogue",
+              text: [
+                '"\uC8C4\uC1A1\uD569\uB2C8\uB2E4."',
+                "\uC5ED\uC2DC 3\uBC88\uC774\uB098 \uB180\uB9AC\uB294 \uAC74 \uC548\uB418\uB098\uBCF4\uB2E4.",
+                "\uB09C \uB300\uCDA9 \uB458\uB7EC\uB314\uB2E4."
+              ]
+            },
+            goto("choice-game")
+          ]
+        ),
+        {
+          type: "dialogue",
+          speaker: "fumika",
+          text: [
+            '\uC774\uB984\uC774 \uACF5\uBC31\uC778 \uAC74, "\uB458\uC774 \uD569\uCCD0\uC11C \u300E  \u300F" \uBB50 \uADF8\uB7F0 \uB4DC\uB9BD\uC744 \uCE58\uB824\uB294\uAC70\uC57C?',
+            "\uD55C\uCC38 \uC9C0\uB09C \uC560\uB2C8\uBA54\uC774\uC158\uB4DC\uB9BD\uC778\uAC74 \uC54C\uC9C0?",
+            "\uC544\uB2C8\uBA74.. \uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB294 \uAC70\uC57C?"
+          ]
+        },
+        {
+          type: "dialogue",
+          text: [
+            "\uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB0D0\uB2C8, \uB300\uCCB4 \uBB34\uC2A8 \uC18C\uB9AC\uB97C \uD558\uB294\uAC78\uAE4C?",
+            "\uAC8C\uC784\uC778 \uC904 \uC544\uB098\uBCF4\uB124.",
+            "\uC544\uBB34\uD2BC \uC774\uB984\uC744 \uC785\uB825\uD574\uC57C \uD55C\uB2E4."
+          ]
+        },
+        goto("input-username")
+      ],
+      [
+        // 이름이 후미카일 경우 특수 분기로
+        condition(
+          ({ username }) => username === "\uD6C4\uBBF8\uCE74",
+          [
+            {
+              type: "dialogue",
+              text: [
+                "\uADF8\uB140\uB294 \uC7A0\uC2DC \uB098\uB97C \uCCD0\uB2E4\uBCF4\uC558\uACE0",
+                "\uC7A0\uC2DC \uD6C4 \uC774\uC0C1\uD55C \uD45C\uC815\uC73C\uB85C \uBB3C\uC5B4\uBCF4\uC558\uB2E4."
+              ]
+            },
+            {
+              type: "dialogue",
+              speaker: "fumika",
+              text: "\uC7A5\uB09C\uCE58\uB294\uAC8C \uC544\uB2C8\uACE0?"
+            },
+            {
+              type: "dialogue",
+              text: [
+                "\uC544\uBB34\uB798\uB3C4 \uC774\uB984\uC774 \uAC19\uC73C\uB2C8 \uC758\uC2EC\uC2A4\uB7EC\uC6B4 \uB208\uCD08\uB9AC\uB97C \uAC70\uB458 \uC218 \uC5C6\uB2E4.",
+                "\uB098\uB294 \uD559\uC0DD\uC99D\uC744 \uAEBC\uB0B4 \uBCF4\uC5EC\uC8FC\uC5C8\uB2E4."
+              ]
+            },
+            {
+              type: "overlay-image",
+              action: "show",
+              name: "id_card",
+              src: "img_card_heroine"
+            },
+            {
+              type: "dialogue",
+              text: "\uADF8\uB140\uB294 \uB0B4 \uD559\uC0DD\uC99D\uC744 \uBCF4\uACE0 \uC5B4\uB9AC\uB465\uC808\uD55C \uD45C\uC815\uC744 \uC9C0\uC5C8\uB2E4."
+            },
+            {
+              type: "dialogue",
+              speaker: "fumika",
+              text: "\uC9C4\uC9DC \uC774\uB984\uC774 \uB098\uB791 \uAC19\uB124."
+            },
+            {
+              type: "dialogue",
+              text: "\uD655\uC2E4\uD788 \uC2E0\uAE30\uD55C \uC6B0\uC5F0\uC774\uB2E4."
+            },
+            {
+              type: "overlay-effect",
+              name: "id_card",
+              preset: "fall"
+            },
+            {
+              type: "overlay-image",
+              action: "hide",
+              name: "id_card"
+            }
+          ]
+        )
       ]
-    },
-    {
-      type: "dialogue",
-      text: [
-        "\uC785\uB825\uD558\uB294 \uBC95\uC744 \uBAA8\uB974\uB0D0\uB2C8, \uB300\uCCB4 \uBB34\uC2A8 \uC18C\uB9AC\uB97C \uD558\uB294\uAC78\uAE4C?",
-        "\uAC8C\uC784\uC778 \uC904 \uC544\uB098\uBCF4\uB124.",
-        "\uC544\uBB34\uD2BC \uC774\uB984\uC744 \uC785\uB825\uD574\uC57C \uD55C\uB2E4."
-      ]
-    },
-    { type: "condition", if: () => true, goto: "input-username" },
-    // ─── 분기: 이름이 후미카일 경우 ───
-    { type: "label", name: "same-name" },
-    {
-      type: "dialogue",
-      text: [
-        "\uADF8\uB140\uB294 \uC7A0\uC2DC \uB098\uB97C \uCCD0\uB2E4\uBCF4\uC558\uACE0",
-        "\uC7A0\uC2DC \uD6C4 \uC774\uC0C1\uD55C \uD45C\uC815\uC73C\uB85C \uBB3C\uC5B4\uBCF4\uC558\uB2E4."
-      ]
-    },
-    {
-      type: "dialogue",
-      speaker: "fumika",
-      text: "\uC7A5\uB09C\uCE58\uB294\uAC8C \uC544\uB2C8\uACE0?"
-    },
-    {
-      type: "dialogue",
-      text: [
-        "\uC544\uBB34\uB798\uB3C4 \uC774\uB984\uC774 \uAC19\uC73C\uB2C8 \uC758\uC2EC\uC2A4\uB7EC\uC6B4 \uB208\uCD08\uB9AC\uB97C \uAC70\uB458 \uC218 \uC5C6\uB2E4.",
-        "\uB098\uB294 \uD559\uC0DD\uC99D\uC744 \uAEBC\uB0B4 \uBCF4\uC5EC\uC8FC\uC5C8\uB2E4."
-      ]
-    },
-    {
-      type: "overlay-image",
-      action: "show",
-      name: "id_card",
-      src: "img_card_heroine"
-    },
-    {
-      type: "dialogue",
-      text: "\uADF8\uB140\uB294 \uB0B4 \uD559\uC0DD\uC99D\uC744 \uBCF4\uACE0 \uC5B4\uB9AC\uB465\uC808\uD55C \uD45C\uC815\uC744 \uC9C0\uC5C8\uB2E4."
-    },
-    {
-      type: "dialogue",
-      speaker: "fumika",
-      text: "\uC9C4\uC9DC \uC774\uB984\uC774 \uB098\uB791 \uAC19\uB124."
-    },
-    {
-      type: "dialogue",
-      text: "\uD655\uC2E4\uD788 \uC2E0\uAE30\uD55C \uC6B0\uC5F0\uC774\uB2E4."
-    },
-    {
-      type: "overlay-effect",
-      name: "id_card",
-      preset: "fall"
-    },
-    {
-      type: "overlay-image",
-      action: "hide",
-      name: "id_card"
-    },
-    { type: "condition", if: () => true, goto: "choice-game" },
+    ),
     // ─── 공통 분기: 전화 수신 ───
-    { type: "label", name: "choice-game" },
+    label("choice-game"),
     {
       type: "dialogue",
       speaker: "fumika",
@@ -19509,7 +19568,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uBBF8\uCE5C, \uBC8C\uC368 \uC131\uC801 \uACF5\uC9C0 \uB5B4\uC744 \uC2DC\uAC04\uC774\uC796\uC544. \uB098 \uC7A0\uAE50 \uD3F0 \uC880 \uBCFC\uAC8C. \uC808\uB300 \uB9D0 \uAC78\uC9C0 \uB9C8."
     },
-    { type: "scene", call: "scene-sub", preserve: true, restore: true },
+    call("scene-sub", { preserve: true, restore: true }),
     {
       type: "dialogue",
       text: "\uC7A0\uC2DC \uD6C4, \uC2A4\uB9C8\uD2B8\uD3F0\uC744 \uB0B4\uB824\uB193\uB294 \uADF8\uB140\uC758 \uB208\uB3D9\uC790\uC5D0\uB294 \uCD08\uC810\uC774 \uC5C6\uC5C8\uB2E4."
@@ -19550,7 +19609,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-food",
       preserve: true
     }
-  })([
+  })(({ label, goto, set: set6 }) => [
     { type: "character", name: "fumika", action: "remove", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
@@ -19607,7 +19666,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 분기: 동의 ───
-    { type: "label", name: "agree" },
+    label("agree"),
     {
       type: "dialogue",
       text: '"\uBC84\uADF8\uAC00 \uC544\uB2C8\uB77C \uAE30\uB2A5\uC774\uB124\uC694."'
@@ -19626,10 +19685,10 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
     },
-    { type: "var", name: "likeability", value: 10 },
-    { type: "condition", if: () => true, goto: "play-game" },
+    set6("likeability", 10),
+    goto("play-game"),
     // ─── 분기: 반대 ───
-    { type: "label", name: "disagree" },
+    label("disagree"),
     {
       type: "dialogue",
       text: '"\uADF8\uB0E5 \uB9DD\uAC9C \uC544\uB2C8\uC57C?"'
@@ -19658,9 +19717,9 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC624\uD788\uB824 \uD3C9\uC0DD \uC774\uD574\uD558\uACE0 \uC2F6\uC9C0 \uC54A\uB2E4."
     },
-    { type: "condition", if: () => true, goto: "play-game" },
+    goto("play-game"),
     // ─── 게임 플레이 ───
-    { type: "label", name: "play-game" },
+    label("play-game"),
     { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 500 },
     {
       type: "dialogue",
@@ -19713,7 +19772,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-stream",
       preserve: true
     }
-  })([
+  })(({ label, goto }) => [
     { type: "mood", mood: "sunset", action: "remove", duration: 3e3 },
     { type: "mood", mood: "night", action: "add", intensity: 0.7, duration: 3e3, disable: true },
     { type: "dialogue", text: "\uD574\uAC00 \uC9C4\uB2E4." },
@@ -19761,7 +19820,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // ─── 치킨 ───
-    { type: "label", name: "chicken" },
+    label("chicken"),
     { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
@@ -19784,9 +19843,9 @@ ${addLineNumbers(fragment)}`);
       text: "\uD14C\uB7EC\uBC29\uC9C0\uBC95\uC740 \uD1B5\uACFC\uB410\uC9C0\uB9CC, \uCC1C\uB2ED\uBC29\uC9C0\uBC95\uC740 \uC544\uC9C1\uC774\uAC70\uB4E0, \uB0B4\uAC00."
     },
     { type: "dialogue", text: "\uD560 \uB9D0\uC744 \uC783\uC5C8\uB2E4." },
-    { type: "condition", if: () => true, goto: "order" },
+    goto("order"),
     // ─── 매운거 ───
-    { type: "label", name: "spicy" },
+    label("spicy"),
     { type: "character", action: "show", name: "fumika", image: "normal:smile", duration: 300 },
     {
       type: "dialogue",
@@ -19813,9 +19872,9 @@ ${addLineNumbers(fragment)}`);
       text: "\uB300\uCCB4 \uC5B4\uB514\uC11C\uBD80\uD130 \uD0DC\uD074\uC744 \uAC78\uC5B4\uC57C \uD560\uC9C0 \uBAA8\uB974\uACA0\uB2E4."
     },
     { type: "dialogue", text: "\uAE30\uC801\uC758 \uB17C\uB9AC\uB2E4." },
-    { type: "condition", if: () => true, goto: "order" },
+    goto("order"),
     // ─── 공통 주문 ───
-    { type: "label", name: "order" },
+    label("order"),
     {
       type: "dialogue",
       text: "\uACB0\uAD6D \uAE30\uC2B9\uC804 \uCC1C\uB2ED, \uC644\uBCBD\uD55C \uB2F5\uC815\uB108\uC600\uB2E4."
@@ -19857,7 +19916,7 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     initial: commonInitial,
     next: "scene-outside"
-  })([
+  })(({ label, goto }) => [
     {
       type: "mood",
       mood: "night",
@@ -19972,7 +20031,7 @@ ${addLineNumbers(fragment)}`);
         { text: '"\uC57C, \uB0B4 \uCC1C\uB2ED\uC740 \uC5B8\uC81C \uC640?" \uB77C\uACE0 \uC18C\uB9AC\uCE5C\uB2E4', goto: "troll" }
       ]
     },
-    { type: "label", name: "wave" },
+    label("wave"),
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20128,8 +20187,8 @@ ${addLineNumbers(fragment)}`);
       speed: 10
     },
     { type: "camera-effect", preset: "reset" },
-    { type: "condition", if: () => true, goto: "stream-end" },
-    { type: "label", name: "troll" },
+    goto("stream-end"),
+    label("troll"),
     {
       type: "dialogue",
       speaker: "fumika",
@@ -20214,8 +20273,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC544\uBB34\uB3C4 \uBBFF\uC9C0 \uC54A\uC744 \uBCC0\uBA85\uC744 \uB358\uC9C0\uACE0\uB294, \uADF8\uB140\uAC00 \uB2E4\uAE09\uD558\uAC8C \uB9C8\uC6B0\uC2A4\uB97C \uC950\uC5C8\uB2E4."
     },
-    { type: "condition", if: () => true, goto: "stream-end" },
-    { type: "label", name: "stream-end" },
+    goto("stream-end"),
+    label("stream-end"),
     { type: "camera-effect", preset: "reset", duration: 500 },
     { type: "character-effect", name: "fumika", preset: "reset", duration: 500 },
     {
@@ -20247,7 +20306,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-bug",
       preserve: true
     }
-  })([
+  })(({ label, goto }) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
@@ -20306,7 +20365,7 @@ ${addLineNumbers(fragment)}`);
         { text: '"\uC57C\uC678 \uBC29\uC1A1 \uCF58\uD150\uCE20\uB77C\uACE0 \uC0DD\uAC01\uD574."', goto: "content" }
       ]
     },
-    { type: "label", name: "sun" },
+    label("sun"),
     {
       type: "dialogue",
       text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."'
@@ -20330,8 +20389,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uC544\uCE68\uBD80\uD130 \uC2DC\uBE44 \uAC70\uB294 \uC19C\uC528\uAC00 \uBCF4\uD1B5\uC774 \uC544\uB2C8\uB2E4."
     },
-    { type: "condition", if: () => true, goto: "walk" },
-    { type: "label", name: "content" },
+    goto("walk"),
+    label("content"),
     { type: "character", action: "show", name: "fumika", image: "normal:normal", focus: "", duration: 300 },
     {
       type: "dialogue",
@@ -20360,8 +20419,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB300\uCCB4 \uADF8 \uC810\uC218\uB294 \uC5B4\uB514\uB2E4 \uC4F0\uB294 \uAC74\uC9C0 \uBB3B\uACE0 \uC2F6\uC5C8\uC9C0\uB9CC \uAFB9 \uCC38\uC558\uB2E4."
     },
-    { type: "condition", if: () => true, goto: "walk" },
-    { type: "label", name: "walk" },
+    goto("walk"),
+    label("walk"),
     { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 300 },
     {
       type: "dialogue",
@@ -20396,7 +20455,7 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     initial: commonInitial,
     next: "scene-ending"
-  })([
+  })(({ label, goto }) => [
     {
       type: "dialogue",
       text: [
@@ -20429,7 +20488,7 @@ ${addLineNumbers(fragment)}`);
         { text: "\uB9E4\uBBF8\uB97C \uC7A1\uC544\uC11C \uB4F1\uC5D0 \uBD99\uC5EC\uC900\uB2E4", goto: "prank" }
       ]
     },
-    { type: "label", name: "hero" },
+    label("hero"),
     {
       type: "dialogue",
       text: [
@@ -20446,8 +20505,8 @@ ${addLineNumbers(fragment)}`);
         "\uB108 \uBC29\uAE08 \uB514\uBC84\uAE45 \uC18D\uB3C4 \uAC1C\uCA54\uC5C8\uC5B4. \uC778\uC815."
       ]
     },
-    { type: "condition", if: () => true, goto: "calm" },
-    { type: "label", name: "run" },
+    goto("calm"),
+    label("run"),
     { type: "camera-effect", preset: "shake", duration: 800 },
     { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
     { type: "mood", mood: "horror", action: "add", intensity: 0.3, flicker: "strobe" },
@@ -20467,8 +20526,8 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     { type: "mood", mood: "horror", action: "remove", duration: 1e3 },
-    { type: "condition", if: () => true, goto: "calm" },
-    { type: "label", name: "prank" },
+    goto("calm"),
+    label("prank"),
     {
       type: "dialogue",
       text: [
@@ -20507,7 +20566,7 @@ ${addLineNumbers(fragment)}`);
         "\uAC15\uC81C \uB2EC\uB9AC\uAE30 \uC6B4\uB3D9\uC73C\uB85C \uC624\uB298\uCE58 \uCE7C\uB85C\uB9AC \uC18C\uBAA8\uB294 \uC644\uBCBD\uD558\uB2E4."
       ]
     },
-    { type: "label", name: "calm" },
+    label("calm"),
     { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 500 },
     {
       type: "dialogue",
@@ -20531,7 +20590,7 @@ ${addLineNumbers(fragment)}`);
         // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
       }
     }
-  })([
+  })(({}) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 300 },
     { type: "audio", action: "pause", name: "bgm", duration: 500 },
     { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uC228\uC744 \uC8FD\uC778 \uCC44 \uD559\uAD50 \uD3EC\uD138 \uC0AC\uC774\uD2B8\uC5D0 \uC811\uC18D\uD588\uB2E4." },
@@ -20544,7 +20603,7 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uC758 \uC601\uD63C\uC774 \uBE60\uC838\uB098\uAC00\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB9AC\uB294 \uB4EF\uD588\uB2E4." },
     { type: "dialogue", text: "\uC2A4\uB9C8\uD2B8\uD3F0 \uD654\uBA74\uC774 \uAEBC\uC9C0\uBA70, \uADF8\uB140\uC758 \uC5B4\uAE68\uB3C4 \uD568\uAED8 \uCD95 \uCC98\uC84C\uB2E4." },
     { type: "dialogue", speaker: "fumika", text: "\uB0B4 \uC7A5\uD559\uAE08\uC774..." },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 500, disable: true }
+    { type: "screen-fade", dir: "in", preset: "black", duration: 500, disable: true }
   ]);
 
   // example/scenes/scene-ending.ts
@@ -20553,7 +20612,7 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     // 씬 5개 종료 후 처음으로 롤백
     next: "scene-start"
-  })([
+  })(({ label, goto }) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },
@@ -20607,7 +20666,7 @@ ${addLineNumbers(fragment)}`);
         { text: '"\uB2E4\uC74C \uB808\uC774\uB4DC\uB294 \uB534 \uC0AC\uB78C \uAD6C\uD574\uB77C."', goto: "tired" }
       ]
     },
-    { type: "label", name: "pay" },
+    label("pay"),
     {
       type: "dialogue",
       text: '"\uC5B4\uADF8\uB85C \uB04C\uC5B4\uC92C\uC73C\uB2C8\uAE4C \uD0F1\uCEE4 \uC218\uACE0\uBE44 \uB0B4\uB194."'
@@ -20632,8 +20691,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uD56D\uC0C1 \uB51C\uB7EC\uB9CC \uACE0\uC9D1\uD558\uBA70 \uB3CC\uC9C4\uD558\uB2E4 \uC8FD\uB294 \uD6C4\uBBF8\uCE74\uC758 \uC131\uD5A5\uC744 \uC0DD\uAC01\uD558\uBA74 \uC5C4\uCCAD\uB09C \uD30C\uACA9 \uB300\uC6B0\uB2E4."
     },
-    { type: "condition", if: () => true, goto: "epilogue" },
-    { type: "label", name: "tired" },
+    goto("epilogue"),
+    label("tired"),
     {
       type: "dialogue",
       text: '"\uC624\uB298 \uD53C\uB85C\uB3C4 \uB2E4 \uC37C\uB2E4. \uB2E4\uC74C \uB808\uC774\uB4DC\uB294 \uB2E4\uB978 \uD30C\uD2F0\uC6D0 \uAD6C\uD574\uB77C."'
@@ -20658,8 +20717,8 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uACB0\uAD6D \uAC15\uC81C \uC9D5\uC6A9 \uC5D4\uB529\uC774\uB2E4."
     },
-    { type: "condition", if: () => true, goto: "epilogue" },
-    { type: "label", name: "epilogue" },
+    goto("epilogue"),
+    label("epilogue"),
     { type: "character", action: "show", name: "fumika", image: "normal:normal", duration: 800 },
     {
       type: "dialogue",
