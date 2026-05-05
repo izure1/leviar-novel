@@ -85,6 +85,7 @@ export function defineNovelConfig<
   TAssets extends Record<string, string> = Record<string, string>,
   TAudios extends Record<string, string> = Record<string, string>,
   TModules extends Record<string, NovelModule<any>> = Record<never, never>,
+  TEnvs extends Record<`$${string}`, any> = Record<never, never>,
 >(
   config: {
     width?: number
@@ -98,8 +99,9 @@ export function defineNovelConfig<
     audios?: TAudios
     fallback?: FallbackRuleOf<any>[]
     modules?: TModules
+    environments?: TEnvs
   }
-): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TAudios, BuiltinModules & TModules> {
+): NovelConfig<TVars, TScenes, TCharacters, TBackgrounds, TAssets, TAudios, BuiltinModules & TModules, TEnvs> {
   // 내장 모듈 + 유저 모듈 merge (유저 모듈이 덮어쓸 수 있음)
   const mergedModules = { ...BUILTIN_MODULES, ...(config.modules ?? {}) }
   return { ...config, modules: mergedModules } as any

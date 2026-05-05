@@ -22,6 +22,7 @@ export type {
   SceneNextTarget,
   VariablesOf,
   PointsOf,
+  EnvironmentsOf,
   // modules 유틸리티 타입
   ModulesOf,
   ModuleKeysOf,

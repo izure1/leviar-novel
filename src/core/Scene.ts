@@ -47,10 +47,13 @@ const FLOW_CONTROL_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Gen
     return true
   },
   'var': function* (cmd: { name: string; value: any }, ctx) {
+    const allVars = ctx.scene.getVars()
     const val = typeof cmd.value === 'function'
-      ? cmd.value(ctx.scene.getVars())
+      ? cmd.value(allVars)
       : cmd.value
-    if (cmd.name.startsWith('_')) {
+    if (cmd.name.startsWith('$')) {
+      ctx.callbacks.setEnvironment(cmd.name, val)
+    } else if (cmd.name.startsWith('_')) {
       ctx.scene.setLocalVar(cmd.name, val)
     } else {
       ctx.scene.setGlobalVar(cmd.name, val)
@@ -97,6 +100,10 @@ export interface SceneCallbacks {
   getGlobalVars(): Record<string, any>
   /** 특정 전역 변수의 값을 설정합니다. */
   setGlobalVar(name: string, value: any): void
+  /** 환경변수 전체 객체를 반환합니다. */
+  getEnvironments(): Record<string, any>
+  /** 특정 환경변수의 값을 설정합니다. */
+  setEnvironment(name: string, value: any): void
   /** 지정된 이름의 새로운 씬을 로드하고 현재 씬을 종료합니다. */
   loadScene(target: string | { scene: string; preserve: boolean }): void
   /** 지정된 씬을 서브루틴으로 호출합니다 (콜 스택 push 후 loadScene). */
@@ -177,9 +184,9 @@ export class DialogueScene {
     })
   }
 
-  /** 통합 변수 맵. 지역변수 키에 `_` 포함되어 있으므로 직접 spread */
+  /** 통합 변수 맵. 환경변수 → 전역변수 → 지역변수 순서로 spread (좁은 스코프 우선) */
   private get _vars(): Record<string, any> {
-    return { ...this.callbacks.getGlobalVars(), ...this.localVars }
+    return { ...this.callbacks.getEnvironments(), ...this.callbacks.getGlobalVars(), ...this.localVars }
   }
 
   private _interpolateText(text: string): string {
@@ -233,6 +240,7 @@ export class DialogueScene {
       world: r.world,
       globalVars: this.callbacks.getGlobalVars(),
       localVars: this.localVars,
+      environments: this.callbacks.getEnvironments(),
       renderer: r,
       callbacks: this.callbacks,
       state: {
@@ -420,6 +428,7 @@ export class DialogueScene {
       world: r.world,
       globalVars: this.callbacks.getGlobalVars(),
       localVars: this.localVars,
+      environments: this.callbacks.getEnvironments(),
       renderer: r,
       callbacks: this.callbacks,
       state: {

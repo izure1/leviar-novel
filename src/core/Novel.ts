@@ -123,7 +123,7 @@ type UnionToIntersectionLocal<U> =
  * `novel.hooker`의 타입 매개변수로 사용됩니다.
  */
 export type AllModuleHooksOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods, any>
   ? UnionToIntersectionLocal<{
     [K in keyof TMods]: TMods[K] extends NovelModule<any, any, infer THook> ? THook : DefaultHook
   }[keyof TMods]>
@@ -135,9 +135,12 @@ export type AllModuleHooksOf<TConfig> =
 // Novel 클래스
 // =============================================================
 
-export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any>> {
+export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any, any>> {
   /** 전역 변수. 씬 전환에도 유지됩니다 */
   readonly variables: TConfig['variables']
+
+  /** 환경변수. 모든 세이브에서 공유됩니다 */
+  readonly environments: TConfig['environments']
 
   /** 엔진 전용 컨테이너 (캔버스와 UI 요소들을 감싸는 래퍼) */
   readonly container: HTMLDivElement
@@ -247,6 +250,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this.audio = new AudioManager(audioModule.hooker as IHookallSync<AudioHook>)
 
     this.variables = { ...(config.variables as object) } as TConfig['variables']
+    this.environments = { ...(config.environments ?? {} as object) } as TConfig['environments']
 
     // config.modules 수집 및 key 주입
     this._collectModules(config.modules)
@@ -509,6 +513,21 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   }
 
   /**
+   * 현재 환경변수 상태를 스냅샷으로 반환합니다.
+   * 반환된 객체를 외부 스토리지(localStorage 등)에 수동 저장하십시오.
+   */
+  saveEnv(): Record<string, any> {
+    return { ...(this.environments ?? {}) as object }
+  }
+
+  /**
+   * 외부 스토리지에서 불러온 데이터로 환경변수를 복원합니다.
+   */
+  loadEnv(data: Record<string, any>): void {
+    Object.assign(this.environments as object, data)
+  }
+
+  /**
    * SaveData로부터 진행 상태를 복원합니다.
    */
   loadSave(data: SaveData): void {
@@ -604,6 +623,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getNovel: () => this as any,
       getGlobalVars: () => ({ ...this.variables as object }),
       setGlobalVar: (name, value) => { (this.variables as any)[name] = value },
+      getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
+      setEnvironment: (name, value) => { (this.environments as any)[name] = value },
       loadScene: (target) => { this.loadScene(target) },
       callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore) => {
         this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore)
@@ -879,10 +900,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       renderer: this._renderer,
       globalVars: {},
       localVars: {},
+      environments: { ...(this.environments ?? {}) as object },
       callbacks: {
         getNovel: () => this as any,
         getGlobalVars: () => ({}),
         setGlobalVar: noop as any,
+        getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
+        setEnvironment: (name: string, value: any) => { (this.environments as any)[name] = value },
         loadScene: noop as any,
         callScene: noop as any,
         captureRenderer: () => this._renderer.captureState(),

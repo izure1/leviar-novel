@@ -93,3 +93,28 @@ export default defineNovelConfig({
 ---
 
 설정을 마치셨다면 **[빠른 시작](./quick-start.md)** 또는 **[튜토리얼](./tutorial.md)**을 통해 본격적인 시나리오를 작성해 보세요.  
+
+---
+
+## 4. 환경변수 (Environments)
+
+모든 세이브 슬롯에서 공유되는 변수입니다.  
+사용자 설정(텍스트 속도, 볼륨, CG 회수 여부 등)을 저장하는 데 적합합니다.  
+키는 반드시 `$`로 시작해야 합니다.  
+
+### 핵심 예제 (Main Example)
+
+```typescript
+import { defineNovelConfig } from 'fumika'
+
+export default defineNovelConfig({
+  // ... 기본 설정 생략
+  environments: {
+    $textSpeed: 'normal',
+    $seenEnding: false,
+    $bgmVolume: 0.8,
+  }
+})
+```
+
+자세한 사용법은 **[환경변수 문서](./reserved/environments.md)**를 참조하세요.  

@@ -11,6 +11,7 @@ import type { DialogueEntry } from '../types/dialogue'
 export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdContext<TVars, TLocalVars> {
   /** Fumika 렌더러 인스턴스 (화면 렌더링 담당) */
   renderer: Renderer
+  /** 환경변수 (모든 세이브 공유). CustomCmdContext에서 상속됨. */
   /** Novel 엔진 본체와의 통신을 위한 콜백 함수들 */
   callbacks: SceneCallbacks
   /** 현재 실행 중인 씬을 조작하기 위한 메서드 모음 */

@@ -288,10 +288,13 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
     renderer,
     globalVars: {},
     localVars: {},
+    environments: {},
     callbacks: {
       getNovel: () => null as any,
       getGlobalVars: () => ({}),
       setGlobalVar: noop as any,
+      getEnvironments: () => ({}),
+      setEnvironment: noop as any,
       loadScene: noop as any,
       callScene: noop as any,
       captureRenderer: () => renderer.captureState(),

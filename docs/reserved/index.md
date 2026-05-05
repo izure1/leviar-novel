@@ -13,8 +13,8 @@
 | **`goto`** | `name: string` | 지정된 라벨 위치로 실행 흐름을 즉시 점프시킵니다. |
 | **`next`** | `scene: string, opts?: { preserve?: boolean }` | 현재 씬을 완전히 종료하고 지정된 다른 씬으로 넘어갑니다. |
 | **`call`** | `scene: string, opts?: { preserve?: boolean, restore?: boolean }` | 다른 씬을 서브루틴으로 호출합니다. 호출된 씬이 끝나면 원래 씬의 다음 줄로 되돌아옵니다. |
-| **`set`** | `name: string, value: any` | [변수의 값을 직접 설정](./set.md)하거나 연산합니다. |
-| **`condition`** | `fn: Function, ifSteps: array, elseSteps?: array` | 조건 함수 평가 결과에 따라 내부 스텝들을 분기 처리합니다. |
+| **`set`** | `name: string, value: any` | [변수의 값을 직접 설정](./set.md)하거나 연산합니다. `$` 접두사는 [환경변수](./environments.md), `_` 접두사는 지역변수, 그 외는 전역변수를 조작합니다. |
+| **`condition`** | `fn: Function, ifSteps: array, elseSteps?: array` | 조건 함수 평가 결과에 따라 내부 스텝들을 분기 처리합니다. 콜백에서 환경변수(`$`), 전역변수, 지역변수(`_`) 모두 접근 가능합니다. |
 
 ## 핵심 예제 (Main Example)
 

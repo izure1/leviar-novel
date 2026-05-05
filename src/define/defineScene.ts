@@ -2,7 +2,7 @@
 // defineScene.ts — DialogueScene 정의 헬퍼
 // =============================================================
 
-import type { NovelConfig, CharDefs, BgDefs, SceneNextTarget } from '../types/config'
+import type { NovelConfig, CharDefs, BgDefs, SceneNextTarget, EnvironmentsOf } from '../types/config'
 import type { NovelModule } from '../define/defineCmdUI'
 import type { SceneHookDescriptor } from '../define/defineCmdUI'
 import type { DialogueStep } from '../types/dialogue'
@@ -81,7 +81,7 @@ import type { SceneNamesOf } from '../types/config'
  * defineScene의 builder 함수에 주입되는 흐름제어 예약어 헬퍼.
  * 이 함수들은 빌드타임에 flat 배열로 컴파일되는 마커 객체를 반환합니다.
  */
-export type SceneBuilders<TConfig, TLocalVars, TVars> = {
+export type SceneBuilders<TConfig, TLocalVars, TVars, TEnvs = Record<never, never>> = {
   /** 씬 내부 점프 위치를 정의합니다. */
   label: (name: string) => DialogueStep<TConfig, TLocalVars, TVars>
   /** 라벨 위치로 실행 커서를 이동합니다. */
@@ -98,14 +98,14 @@ export type SceneBuilders<TConfig, TLocalVars, TVars> = {
   ) => DialogueStep<TConfig, TLocalVars, TVars>
   /** 조건 분기. ifSteps / elseSteps 내부에 중첩 사용 가능. */
   condition: (
-    fn: ((vars: TVars & TLocalVars) => boolean) | boolean,
+    fn: ((vars: TVars & TLocalVars & TEnvs) => boolean) | boolean,
     ifSteps: DialogueStep<TConfig, TLocalVars, TVars>[],
     elseSteps?: DialogueStep<TConfig, TLocalVars, TVars>[]
   ) => DialogueStep<TConfig, TLocalVars, TVars>
-  /** 변수 값을 설정합니다. `_` 접두사는 지역변수, 아니면 전역변수. */
-  set: <K extends keyof (TVars & TLocalVars) & string>(
+  /** 변수 값을 설정합니다. `$` 접두사는 환경변수, `_` 접두사는 지역변수, 그 외는 전역변수. */
+  set: <K extends keyof (TVars & TLocalVars & TEnvs) & string>(
     name: K,
-    value: (TVars & TLocalVars)[K] | ((vars: TVars & TLocalVars) => (TVars & TLocalVars)[K])
+    value: (TVars & TLocalVars & TEnvs)[K] | ((vars: TVars & TLocalVars & TEnvs) => (TVars & TLocalVars & TEnvs)[K])
   ) => DialogueStep<TConfig, TLocalVars, TVars>
 }
 
@@ -282,7 +282,7 @@ export function defineScene<
 >(
   options: _SceneOptions<TVars, TConfig, TLocalVars, TInitial>,
 ): (
-  factory: (builders: SceneBuilders<TConfig, TLocalVars, TVars>) => DialogueStep<TConfig, TLocalVars, TVars>[]
+  factory: (builders: SceneBuilders<TConfig, TLocalVars, TVars, EnvironmentsOf<TConfig>>) => DialogueStep<TConfig, TLocalVars, TVars>[]
 ) => _SceneReturn<TConfig, TLocalVars> {
   const {
     variables = {} as any,

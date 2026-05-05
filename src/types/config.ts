@@ -157,6 +157,8 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
   globalVars: TVars
   /** 현재 진행 중인 씬의 지역 변수 목록 */
   localVars: TLocalVars
+  /** 환경변수 (모든 세이브 공유) */
+  environments: Record<string, any>
 }
 
 /** 
@@ -183,6 +185,7 @@ export interface NovelConfig<
   TAssets extends Record<string, string> = Record<string, string>,
   TAudios extends Record<string, string> = Record<string, string>,
   TModules extends Record<string, NovelModule<any>> = Record<string, NovelModule<any>>,
+  TEnvs extends Record<string, any> = Record<never, never>,
 > {
   /** 
    * 씬의 논리적 렌더링 너비(px 단위)입니다. 
@@ -236,6 +239,20 @@ export interface NovelConfig<
    * ```
    */
   modules?: TModules
+  /**
+   * 환경변수 초기값 목록입니다.
+   * 모든 세이브 슬롯에서 공유되며, `novel.saveEnv()` / `novel.loadEnv()`로 수동 관리합니다.
+   * 키는 반드시 `$`로 시작해야 합니다.
+   *
+   * @example
+   * ```ts
+   * environments: {
+   *   $textSpeed: 'normal',
+   *   $seenEnding: false,
+   * }
+   * ```
+   */
+  environments?: TEnvs
 }
 
 export type { FallbackRuleOf } from './dialogue'
@@ -274,7 +291,7 @@ export interface NovelOption {
  * ```
  */
 export type CharacterKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
   ? keyof TChars & string
   : string
 
@@ -287,7 +304,7 @@ export type CharacterKeysOf<TConfig> =
  * ```
  */
 type _BasesKeysOf<TConfig, TCharKey extends string> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
   ? TCharKey extends keyof TChars
   ? TChars[TCharKey] extends { bases: infer TBases }
   ? keyof TBases & string
@@ -296,7 +313,7 @@ type _BasesKeysOf<TConfig, TCharKey extends string> =
   : string
 
 type _EmotionsKeysOf<TConfig, TCharKey extends string> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
   ? TCharKey extends keyof TChars
   ? TChars[TCharKey] extends { emotions: infer TEmotions }
   ? keyof TEmotions & string
@@ -325,7 +342,7 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
  * ```
  */
 export type AssetKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any>
+  TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any, any>
   ? keyof TAssets & string
   : string
 
@@ -338,7 +355,7 @@ export type AssetKeysOf<TConfig> =
  * ```
  */
 export type BackgroundKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any>
+  TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any, any>
   ? keyof TBgs & string
   : string
 
@@ -351,7 +368,7 @@ export type BackgroundKeysOf<TConfig> =
  * ```
  */
 export type SceneNamesOf<TConfig> =
-  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any>
+  TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any, any>
   ? TScenes[number]
   : string
 
@@ -382,7 +399,7 @@ export type SceneNextTarget<TConfig> =
  * ```
  */
 export type VariablesOf<TConfig> =
-  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any>
+  TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any, any>
   ? TVars
   : Record<string, any>
 
@@ -396,7 +413,7 @@ export type VariablesOf<TConfig> =
  * ```
  */
 export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
-  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any>
+  TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
   ? TName extends keyof TChars
   ? TChars[TName] extends { bases: infer TBases }
   ? TBases[keyof TBases] extends { points?: infer P }
@@ -415,7 +432,7 @@ export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = Character
  * ```
  */
 export type ModulesOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods, any>
   ? TMods
   : Record<never, never>
 
@@ -428,7 +445,7 @@ export type ModulesOf<TConfig> =
  * ```
  */
 export type ModuleKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods>
+  TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods, any>
   ? keyof TMods & string
   : string
 
@@ -441,6 +458,19 @@ export type ModuleKeysOf<TConfig> =
  * ```
  */
 export type AudioKeysOf<TConfig> =
-  TConfig extends NovelConfig<any, any, any, any, any, infer TAudios, any>
+  TConfig extends NovelConfig<any, any, any, any, any, infer TAudios, any, any>
   ? keyof TAudios & string
   : string
+
+/**
+ * `NovelConfig`에서 환경변수 타입(`environments`)을 추출합니다.
+ *
+ * @example
+ * ```ts
+ * type Envs = EnvironmentsOf<typeof config>  // { $textSpeed: string; $seenEnding: boolean; ... }
+ * ```
+ */
+export type EnvironmentsOf<TConfig> =
+  TConfig extends NovelConfig<any, any, any, any, any, any, any, infer TEnvs>
+  ? TEnvs
+  : Record<string, any>
