@@ -66,7 +66,6 @@ export class Renderer {
   public readonly width: number
   public readonly height: number
 
-  private _objects: Set<LeviarObject> = new Set()
   private _isSkipping: boolean = false
 
   // 커스텀 명령어들이 저장할 범용 상태 저장소
@@ -185,25 +184,6 @@ export class Renderer {
   }
 
   /**
-   * 렌더러가 관리할 객체를 추적 목록에 추가합니다.
-   * 씬(Scene) 종료 시 추적된 객체들은 자동으로 화면에서 제거(clear)됩니다.
-   * @param obj 추적할 객체
-   */
-  public track<T extends LeviarObject>(obj: T): T {
-    this._objects.add(obj)
-    return obj
-  }
-
-  /**
-   * 지정된 객체를 추적 목록에서 제거합니다.
-   * 더 이상 렌더러의 일괄 삭제 관리를 받지 않게 됩니다.
-   * @param obj 추적 해제할 객체
-   */
-  public untrack(obj: LeviarObject): void {
-    this._objects.delete(obj)
-  }
-
-  /**
    * 세이브 저장을 위해 현재 렌더러의 뷰포트/카메라 상태와 커스텀 플러그인 상태를 캡처하여 반환합니다.
    */
   captureState(): RendererState {
@@ -283,12 +263,11 @@ export class Renderer {
 
 
   /**
-   * 렌더러가 화면에 그린 모든 추적 객체를 제거하고, 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
+   * 커스텀 플러그인 상태 및 카메라 오프셋을 초기화합니다.
    * 주로 씬(Scene) 전환이나 종료 시 호출됩니다.
+   * 렌더 오브젝트의 제거는 각 모듈의 onCleanup()이 담당합니다.
    */
   clear(): void {
-    this._objects.forEach(obj => (obj as any).remove?.({ child: true }))
-    this._objects.clear()
     this.state.clear()
     if (this.camOffsetObj) {
       this.camOffsetObj.transform.position.x = 0

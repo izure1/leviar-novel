@@ -111,7 +111,6 @@ effectModule.defineView((ctx, data, setState) => {
       transform: { position: { x: 0, y: 0, z: particleZ } },
     })
     _effectObjs[type] = particle
-    ctx.renderer.track(particle)
     particle.play()
   }
 
@@ -123,11 +122,9 @@ effectModule.defineView((ctx, data, setState) => {
       if (dur > 0) {
         ctx.renderer.animate(effect, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
           effect.remove()
-          ctx.renderer.untrack(effect)
         })
       } else {
         effect.remove()
-        ctx.renderer.untrack(effect)
       }
     }
   }
@@ -139,9 +136,15 @@ effectModule.defineView((ctx, data, setState) => {
 
   return {
     show: () => { },
+    onCleanup: () => {
+      for (const obj of Object.values(_effectObjs)) {
+        obj.remove()
+      }
+      Object.keys(_effectObjs).forEach(k => delete _effectObjs[k])
+    },
     hide: () => {
       for (const obj of Object.values(_effectObjs)) {
-        obj?.fadeOut?.(300, 'easeIn')
+        obj.fadeOut(300, 'easeIn')
       }
     },
     onUpdate: (_ctx, state, _setState) => {

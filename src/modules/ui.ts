@@ -13,7 +13,7 @@ export interface UICmd<TConfig = any> {
 
 const uiModule = define<UICmd<any>>({})
 
-uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {}, hide: () => {} }))
+uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {}, hide: () => {}, onCleanup: () => {} }))
 
 uiModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'show') {

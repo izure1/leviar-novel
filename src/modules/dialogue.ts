@@ -199,7 +199,6 @@ dialogueModule.defineView((ctx, data, setState) => {
     transform: { position: toLocal(w / 2, BOX_CY) },
   })
   ctx.world.camera?.addChild(bgObj)
-  ctx.renderer.track(bgObj)
 
   // 화자 이름창
   const spkY = h - BOX_H + layoutCfg.panelPaddingTop
@@ -216,7 +215,6 @@ dialogueModule.defineView((ctx, data, setState) => {
     transform: { position: toLocal(baseX, spkY) },
   })
   ctx.world.camera?.addChild(speakerObj)
-  ctx.renderer.track(speakerObj)
 
   // 대사 텍스트창
   const spkH = (spkCfg.fontSize ?? 18) * 1.5
@@ -233,7 +231,6 @@ dialogueModule.defineView((ctx, data, setState) => {
     transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) },
   })
   ctx.world.camera?.addChild(textObj)
-  ctx.renderer.track(textObj)
 
   const charDefs = ctx.renderer.config.characters
 
@@ -306,6 +303,13 @@ dialogueModule.defineView((ctx, data, setState) => {
 
   return {
     show: (dur = 250) => { bgObj.fadeIn(dur, 'easeOut') },
+    onCleanup: () => {
+      _activeTx?.stop?.()
+      _activeTx = null
+      bgObj.remove({ child: true })
+      speakerObj.remove({ child: true })
+      textObj.remove({ child: true })
+    },
     hide: (dur = 300) => {
       bgObj.fadeOut(dur, 'easeIn')
       speakerObj.fadeOut(dur, 'easeIn')

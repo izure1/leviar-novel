@@ -121,7 +121,6 @@ backgroundModule.defineView((ctx, data, setState) => {
     if (!parallax) {
       ctx.renderer.world.camera?.addChild(obj)
     }
-    ctx.renderer.track(obj)
     return obj
   }
 
@@ -134,6 +133,9 @@ backgroundModule.defineView((ctx, data, setState) => {
   return {
     show: (dur = 250) => { _bgObj?.fadeIn?.(dur, 'easeOut') },
     hide: (dur = 300) => { _bgObj?.fadeOut?.(dur, 'easeIn') },
+    onCleanup: () => {
+      if (_bgObj) { _bgObj.remove({ child: true }); _bgObj = null }
+    },
     onUpdate: (_ctx, state, _setState) => {
       if (!state._key) return
       const bgDefs = ctx.renderer.config.backgrounds as BgDefs
@@ -159,7 +161,6 @@ backgroundModule.defineView((ctx, data, setState) => {
         }
         // parallax 모드 변경 → 기존 제거
         _bgObj.remove()
-        ctx.renderer.untrack(_bgObj)
         _bgObj = null
       }
 

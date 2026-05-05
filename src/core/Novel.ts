@@ -372,11 +372,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       ? this._renderer.captureState()
       : null
 
-    // 씬 전환 시 UI 정리
-    this._cleanupUI()
     this._currentScene = null
 
     if (!preserve) {
+      // 씬 전환 시 UI 정리 (preserve=true 시에는 오브젝트 유지)
+      this._cleanupUI()
       this._renderer.clear()
       if (prevState) {
         this._renderer.restoreState(prevState)
@@ -403,7 +403,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /** 씬 전환 시 모든 UI 엔트리의 onCleanup() 호출 */
   private _cleanupUI(): void {
     for (const entry of this._uiRegistry.values()) {
-      entry.onCleanup?.()
+      entry.onCleanup()
     }
   }
 

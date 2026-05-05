@@ -171,7 +171,6 @@ choiceModule.defineView((ctx, data, setState) => {
     transform: { position: toLocal(w / 2, h / 2) },
   })
   ctx.world.camera?.addChild(bgObj)
-  ctx.renderer.track(bgObj)
 
   let _btnObjs: any[] = []
 
@@ -192,8 +191,11 @@ choiceModule.defineView((ctx, data, setState) => {
     // ─── 입력 역할 선언 ─────────────────────────────────
     hideGroups: ['dialogue'],
 
-    /** 씬 전환 시 버튼 즉시 제거 */
-    onCleanup: () => { _clearButtons() },
+    /** 씬 전환 시 오브젝트 즉시 제거 */
+    onCleanup: () => {
+      _clearButtons()
+      bgObj.remove({ child: true })
+    },
 
     // ─── 모듈 내부 전용 ─────────────────────────────────
     _onChoices: (choices: ResolvedChoiceItem[], onSelect: (i: number) => void) => {
@@ -299,8 +301,6 @@ choiceModule.defineView((ctx, data, setState) => {
 
         btnObj.addChild(txtObj)
         ctx.world.camera?.addChild(btnObj)
-        ctx.renderer.track(btnObj)
-        ctx.renderer.track(txtObj)
         _btnObjs.push(btnObj)
       })
     },

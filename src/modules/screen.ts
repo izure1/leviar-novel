@@ -92,7 +92,6 @@ screenFadeModule.defineView((ctx, data, setState) => {
       transform: { position: { x: 0, y: 0, z: 10 } },
     })
     ctx.renderer.world.camera?.addChild(rect)
-    ctx.renderer.track(rect)
     ctx.renderer.state.set('_transitionObj', rect)
   }
 
@@ -109,6 +108,12 @@ screenFadeModule.defineView((ctx, data, setState) => {
   return {
     show: () => { },
     hide: () => { },
+    onCleanup: () => {
+      if (rect) {
+        rect.remove({ child: true })
+        ctx.renderer.state.delete('_transitionObj')
+      }
+    },
     onUpdate: (_ctx, _state, _setState) => { },
   }
 })
@@ -181,7 +186,6 @@ screenFlashModule.defineView((ctx, _data, setState) => {
       transform: { position: { x: 0, y: 0, z: 10 } },
     })
     ctx.renderer.world.camera?.addChild(rect)
-    ctx.renderer.track(rect)
     ctx.renderer.state.set('_flashObj', rect)
   }
 
@@ -190,6 +194,12 @@ screenFlashModule.defineView((ctx, _data, setState) => {
   return {
     show: () => { },
     hide: () => { },
+    onCleanup: () => {
+      if (rect) {
+        rect.remove({ child: true })
+        ctx.renderer.state.delete('_flashObj')
+      }
+    },
     onUpdate: (_ctx, _state, _setState) => { }
   }
 })
@@ -243,6 +253,7 @@ const screenWipeModule = define<ScreenWipeCmd, ScreenWipeSchema>({
 screenWipeModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
+  onCleanup: () => { },
 }))
 
 screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {

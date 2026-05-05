@@ -364,7 +364,7 @@ inputModule.defineView((ctx, data, setState) => {
     transform: { position: toLocal(w / 2, h / 2) },
   })
   ctx.world.camera?.addChild(overlayObj)
-  ctx.renderer.track(overlayObj)
+
   overlayObj.fadeOut(0).stop()
 
   const panelCfgInit = data.panel ?? DEFAULT_INPUT_STYLE.panel
@@ -383,7 +383,7 @@ inputModule.defineView((ctx, data, setState) => {
     transform: { position: { x: 0, y: 0, z: 0 } },
   })
   overlayObj.addChild(panelObj)
-  ctx.renderer.track(panelObj)
+
 
   // ─── 동적 자식 오브젝트 목록 ─────────────────────────────
 
@@ -519,7 +519,7 @@ inputModule.defineView((ctx, data, setState) => {
         transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } },
       })
       panelObj.addChild(labelObj)
-      ctx.renderer.track(labelObj)
+
       _dynamicObjs.push(labelObj)
       cursorY -= LABEL_H / 2 + LBL_INP_GAP
     }
@@ -548,7 +548,7 @@ inputModule.defineView((ctx, data, setState) => {
       }
     })
     panelObj.addChild(inputBgObj)
-    ctx.renderer.track(inputBgObj)
+
     _dynamicObjs.push(inputBgObj)
 
     // 가상 텍스트 오브젝트 (실시간 동기화)
@@ -569,7 +569,7 @@ inputModule.defineView((ctx, data, setState) => {
       },
     })
     inputBgObj.addChild(_textObj)
-    ctx.renderer.track(_textObj)
+
     _dynamicObjs.push(_textObj)
 
     // 커서는 _textObj 텍스트 끝에 '|'를 덧붙여 자동 추적
@@ -631,8 +631,7 @@ inputModule.defineView((ctx, data, setState) => {
 
       btnObj.addChild(txtObj)
       panelObj.addChild(btnObj)
-      ctx.renderer.track(btnObj)
-      ctx.renderer.track(txtObj)
+
       _dynamicObjs.push(btnObj)
     })
 
@@ -726,6 +725,7 @@ inputModule.defineView((ctx, data, setState) => {
     onCleanup: () => {
       _destroyHiddenInput()
       _clearDynamic()
+      overlayObj.remove({ child: true })
     },
 
     onUpdate: (_ctx, state, _setState) => {

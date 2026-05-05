@@ -121,7 +121,6 @@ moodModule.defineView((ctx, data, setState) => {
     }
 
     const rect = ctx.renderer.world.createRectangle(rectOpts)
-    ctx.renderer.track(rect)
     ctx.renderer.world.camera?.addChild(rect)
       ; (rect as any)._currentMood = mood
     _moodObjs[mood] = rect
@@ -139,11 +138,9 @@ moodModule.defineView((ctx, data, setState) => {
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
           obj.remove()
-          ctx.renderer.untrack(obj)
         })
       } else {
         obj.remove()
-        ctx.renderer.untrack(obj)
       }
     }
   }
@@ -158,9 +155,15 @@ moodModule.defineView((ctx, data, setState) => {
 
   return {
     show: () => { },
+    onCleanup: () => {
+      for (const obj of Object.values(_moodObjs)) {
+        obj.remove()
+      }
+      Object.keys(_moodObjs).forEach(k => delete _moodObjs[k])
+    },
     hide: () => {
       for (const obj of Object.values(_moodObjs)) {
-        obj?.fadeOut?.(300, 'easeIn')
+        obj.fadeOut(300, 'easeIn')
       }
     },
     // flicker용 오브젝트 접근

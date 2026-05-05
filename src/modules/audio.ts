@@ -124,6 +124,7 @@ audioModule.defineView((ctx, data) => {
   return {
     show: () => { },
     hide: () => { },
+    onCleanup: () => { },
     onUpdate: (_ctx, state, _setState) => {
       // state 변경 시 AudioManager에 동기화
       if (!audioManager || !audioMap) return

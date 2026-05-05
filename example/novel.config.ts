@@ -8,7 +8,7 @@ testModule
   .onBoot(async (world) => {
     console.log('booting...')
   })
-  .defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
+  .defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
   .defineCommand(function* (cmd, ctx) {
     console.log('[test-cmd]', cmd.message, ctx.globalVars)
     return true
@@ -23,6 +23,7 @@ debugModule
   .defineView((_ctx, _state, _setState) => ({
     show: () => { },
     hide: () => { },
+    onCleanup: () => { },
     onUpdate: (ctx, state, setState) => {
       ctx.world.debugMode = state.on
     }

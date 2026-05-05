@@ -134,16 +134,19 @@ myModule.defineView((ctx, state, setState) => {
     transform: { position: { x: 0, y: 0, z: 0 } }
   })
   
-  // 카메라 자식으로 부착하고 엔진 렌더러에 추적(track)을 등록합니다.
-  // 추적된 객체는 씬이 종료되거나, 전환 시 자동으로 제거됩니다.
+  // 카메라 자식으로 부착합니다.
   ctx.world.camera?.addChild(scoreTextObj)
-  ctx.renderer.track(scoreTextObj)
 
   return {
     show: (duration = 200) => { scoreTextObj.fadeIn(duration) },
     hide: (duration = 200) => { scoreTextObj.fadeOut(duration) },
     
-    // 2. 초기 렌더링(1회 강제 실행) 및 상태 변경 시 자동 호출됩니다.
+    // 2. 씬 전환 시 명시적으로 객체를 제거하여 메모리 누수를 방지합니다.
+    onCleanup: () => {
+      scoreTextObj.remove({ child: true })
+    },
+    
+    // 3. 초기 렌더링(1회 강제 실행) 및 상태 변경 시 자동 호출됩니다.
     // 이 곳에 시각 요소를 최신 데이터로 동기화하는 로직을 일원화하십시오.
     onUpdate: (_ctx, newState) => { 
       scoreTextObj.attribute.text = `Score: ${newState.score}` 
@@ -163,7 +166,7 @@ myModule.defineView((ctx, state, setState) => {
 | **`show(duration?)`** | 모듈의 시각 요소가 화면에 나타나야 할 때 호출됩니다. 파라미터로 전달된 `duration`(ms)을 바탕으로 `fadeIn` 등의 등장 애니메이션을 처리해야 합니다. |
 | **`hide(duration?)`** | 모듈의 시각 요소가 화면에서 사라져야 할 때 호출됩니다. `duration`을 바탕으로 `fadeOut` 등의 퇴장 애니메이션을 처리합니다. |
 | **`onUpdate(newState)`** | 모듈의 상태가 `setState`에 의해 변경될 때 즉각 호출됩니다. 반환된 최신 상태를 바탕으로 렌더 객체의 텍스트, 색상, 위치 등을 갱신하여 화면을 최신화합니다. (뷰 최초 생성 직후 1회 자동 호출됩니다) |
-| **`onCleanup()`** | 씬이 종료되거나 전환될 때 호출됩니다. 엔진 렌더러에 추적(`track`)된 객체는 자동으로 제거되지만, 추적되지 않는 커스텀 타이머나 전역 DOM 이벤트 리스너 등은 이곳에서 명시적으로 해제하여 메모리 누수를 방지해야 합니다. |
+| **`onCleanup()`** | 씬이 종료되거나 전환될 때 호출됩니다. 이곳에서 명시적으로 객체를 제거하거나 해제하여 메모리 누수를 방지해야 합니다. |
 
 ### ⚠️ 주의 사항 (Edge Cases)
 

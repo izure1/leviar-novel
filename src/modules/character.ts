@@ -286,7 +286,6 @@ characterModule.defineView((ctx, data, setState) => {
       },
       transform: { position: { x: xPos, y: 0, z: zPos } }
     }) as CharacterRenderObj
-    ctx.renderer.track(obj)
     obj._currentBaseKey = baseKey
     obj._currentEmotionKey = emotionKey
     obj._partObjs = {}
@@ -310,12 +309,10 @@ characterModule.defineView((ctx, data, setState) => {
         // base opacity 0으로 → child(part)도 자동 fade out
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
           obj.remove({ child: true })
-          ctx.renderer.untrack(obj)
           obj._partObjs = {}
         })
       } else {
         obj.remove({ child: true })
-        ctx.renderer.untrack(obj)
         obj._partObjs = {}
       }
     }
@@ -328,10 +325,16 @@ characterModule.defineView((ctx, data, setState) => {
 
   return {
     show: () => { /* 개별 캐릭터는 _charObjs 관리 */ },
+    onCleanup: () => {
+      for (const obj of Object.values(_charObjs)) {
+        obj.remove({ child: true })
+      }
+      Object.keys(_charObjs).forEach(k => delete _charObjs[k])
+    },
     hide: () => {
       for (const obj of Object.values(_charObjs)) {
         // child(part)는 base opacity 상속 → base만 fadeOut
-        obj?.fadeOut?.(300, 'easeIn')
+        obj.fadeOut(300, 'easeIn')
       }
     },
     getObj: (name: string) => _charObjs[name],
@@ -447,6 +450,7 @@ const characterFocusModule = define<CharacterFocusCmd<any>, CharacterFocusSchema
 characterFocusModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
+  onCleanup: () => { },
 }))
 
 characterFocusModule.defineCommand(function* (cmd, ctx) {
@@ -490,6 +494,7 @@ const characterHighlightModule = define<CharacterHighlightCmd<any>, CharacterHig
 characterHighlightModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
+  onCleanup: () => { },
 }))
 
 characterHighlightModule.defineCommand(function* (_cmd, _ctx) {
@@ -508,6 +513,7 @@ const characterEffectModule = define<CharacterEffectCmd<any>, CharacterEffectSch
 characterEffectModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
+  onCleanup: () => { },
 }))
 
 characterEffectModule.defineCommand(function* (cmd, ctx) {

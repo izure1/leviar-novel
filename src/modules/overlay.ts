@@ -243,7 +243,6 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
       transform: { position: pos },
     })
     ctx.renderer.world.camera?.addChild(textObj)
-    ctx.renderer.track(textObj)
     _overlayObjs[name] = textObj
     _overlayEntries[name] = entry
 
@@ -285,7 +284,6 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
       transform: { position: pos },
     })
     ctx.renderer.world.camera?.addChild(imgObj)
-    ctx.renderer.track(imgObj)
     _overlayObjs[name] = imgObj
     _overlayEntries[name] = entry
 
@@ -325,11 +323,9 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
           obj.remove()
-          ctx.renderer.untrack(obj)
         })
       } else {
         obj.remove()
-        ctx.renderer.untrack(obj)
       }
     }
   }
@@ -350,6 +346,13 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
 
   return {
     show: () => { },
+    onCleanup: () => {
+      for (const obj of Object.values(_overlayObjs)) {
+        obj.remove()
+      }
+      Object.keys(_overlayObjs).forEach(k => delete _overlayObjs[k])
+      Object.keys(_overlayEntries).forEach(k => delete _overlayEntries[k])
+    },
     hide: () => {
       for (const obj of Object.values(_overlayObjs)) {
         obj?.fadeOut?.(300, 'easeIn')
@@ -516,6 +519,7 @@ const overlayEffectModule = define<OverlayEffectCmd, OverlayEffectSchema>({ _unu
 overlayEffectModule.defineView((_ctx, _data, _setState) => ({
   show: () => { },
   hide: () => { },
+  onCleanup: () => { },
 }))
 
 overlayEffectModule.defineCommand(function* (cmd, ctx) {

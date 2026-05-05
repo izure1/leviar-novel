@@ -23,7 +23,7 @@ export interface UIRuntimeEntry<TSchema = any> {
    * 씬 전환/로드 시 이 엔트리를 정리해야 할 때 호출됩니다.
    * 버튼 제거, 애니메이션 중단 등 즉시 정리 로직을 구현하세요.
    */
-  onCleanup?(): void
+  onCleanup(): void
 
   // ─── 입력 역할 선언 ──────────────────────────────────────
 

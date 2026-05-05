@@ -136,7 +136,7 @@ export interface CameraZoomSchema { _lastPreset: string }
 
 const cameraZoomModule = define<CameraZoomCmd, CameraZoomSchema>({ _lastPreset: 'reset' })
 
-cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
+cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
 
 cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolved = cmd.preset === 'inherit' ? state._lastPreset : cmd.preset
@@ -153,7 +153,7 @@ export interface CameraPanSchema { _lastPreset: string }
 
 const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ _lastPreset: 'center' })
 
-cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
+cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
 
 cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolved = cmd.position === 'inherit' ? state._lastPreset : cmd.position
@@ -170,7 +170,7 @@ export interface CameraEffectSchema { _lastPreset: string }
 
 const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({ _lastPreset: 'shake' })
 
-cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { } }))
+cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
 
 cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
   setState({ _lastPreset: cmd.preset })

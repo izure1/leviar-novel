@@ -286,7 +286,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
     transform: { position: toLocal(w / 2, h / 2) },
   })
   ctx.world.camera?.addChild(overlayObj)
-  ctx.renderer.track(overlayObj)
   // __fadeOpacity 초기값=1이므로 첫 fadeIn이 1→1로 동작 안 함.
   // fadeOut(0).stop()으로 즉시 __fadeOpacity=0, display=none 초기화
   overlayObj.fadeOut(0).stop()
@@ -310,7 +309,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
     transform: { position: { x: 0, y: 0, z: 0 } },
   })
   overlayObj.addChild(panelObj)
-  ctx.renderer.track(panelObj)
 
   // ─── 동적 자식 (매 _render마다 panelObj 자식으로 새로 생성) ─
   // - animate() 없이 생성 위치 = 최종 위치 → fadeIn 충돌 없음
@@ -451,7 +449,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
         transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - TITLE_H / 2, z: 0 } },
       })
       panelObj.addChild(tObj)
-      ctx.renderer.track(tObj)
       _dynamicObjs.push(tObj)
       currentY -= (TITLE_H + GAP)
     }
@@ -464,7 +461,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
         transform: { position: { x: (PANEL_PAD_L - PANEL_PAD_R) / 2, y: currentY - CONTENT_H / 2, z: 0 } },
       })
       panelObj.addChild(cObj)
-      ctx.renderer.track(cObj)
       _dynamicObjs.push(cObj)
       currentY -= (CONTENT_H + CONTENT_BTN_GAP)
     }
@@ -523,8 +519,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
 
         btnObj.addChild(txtObj)
         panelObj.addChild(btnObj)
-        ctx.renderer.track(btnObj)
-        ctx.renderer.track(txtObj)
         _dynamicObjs.push(btnObj)
       })
     })
@@ -546,6 +540,11 @@ dialogBoxModule.defineView((ctx, data, setState) => {
 
     // ─── 입력 역할 선언 ────────────────────────────────
     hideGroups: ['dialogue'],
+
+    onCleanup: () => {
+      _clearDynamic()
+      overlayObj.remove({ child: true })
+    },
 
     onUpdate: (_ctx, state, _setState) => {
       if (state._resolve && state._buttons.length > 0) {

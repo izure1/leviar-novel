@@ -14,7 +14,7 @@ export interface ControlSchema {
 
 const controlModule = define<ControlCmd, ControlSchema>({ expireAt: 0 })
 
-controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {}, hide: () => {} }))
+controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {}, hide: () => {}, onCleanup: () => {} }))
 
 controlModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'disable' && typeof cmd.duration === 'number') {
