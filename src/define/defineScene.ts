@@ -73,42 +73,139 @@ export interface SceneDefinition<
   readonly hooks?: SceneHookDescriptor
 }
 
+// ─── SceneBuilders 타입 ──────────────────────────────────────
+
+import type { SceneNamesOf } from '../types/config'
+
 /**
- * DialogueScene을 정의합니다.
- *
- * - `variables`에 씬 **지역변수** 초깃값을 전달합니다 (키에 `_` 접두사 필수).
- * - `initial`에 씬 시작 시 적용할 모듈 초기 데이터를 전달합니다 (optional).
- *   `novel.config`의 `modules` 키를 기반으로 키/값 타입이 추론됩니다.
- *
- * @example 지역변수 없음
- * ```ts
- * export default defineScene({ config }, [
- *   { type: 'background', name: 'bg-classroom' },
- *   { type: 'dialogue', speaker: 'characterA', text: '안녕!' },
- * ])
- * ```
- *
- * @example initial 사용
- * ```ts
- * export default defineScene({
- *   config,
- *   initial: {
- *     'dialogue': { bg: { color: '#00000000', height: 168 } },
- *     'choices':  { background: 'rgba(20,20,50,0.90)', minWidth: 280 },
- *   },
- * }, [
- *   { type: 'dialogue', text: '...' },
- * ])
- * ```
- *
- * @example 지역변수 사용 (_ 접두사 필수)
- * ```ts
- * export default defineScene({ config, variables: { _tries: 0 } }, [
- *   { type: 'var', name: '_tries', value: 0 },
- *   { type: 'condition', if: '_tries >= 3', goto: 'end' },
- * ], { next: 'scene-b' })
- * ```
+ * defineScene의 builder 함수에 주입되는 흐름제어 예약어 헬퍼.
+ * 이 함수들은 빌드타임에 flat 배열로 컴파일되는 마커 객체를 반환합니다.
  */
+export type SceneBuilders<TConfig, TLocalVars, TVars> = {
+  /** 씬 내부 점프 위치를 정의합니다. */
+  label: (name: string) => DialogueStep<TConfig, TLocalVars, TVars>
+  /** 라벨 위치로 실행 커서를 이동합니다. */
+  goto: (name: string) => DialogueStep<TConfig, TLocalVars, TVars>
+  /** 다른 씬으로 전환합니다. */
+  next: (
+    scene: SceneNamesOf<TConfig>,
+    opts?: { preserve?: boolean }
+  ) => DialogueStep<TConfig, TLocalVars, TVars>
+  /** 다른 씬을 서브루틴으로 호출합니다. */
+  call: (
+    scene: SceneNamesOf<TConfig>,
+    opts?: { preserve?: boolean; restore?: boolean }
+  ) => DialogueStep<TConfig, TLocalVars, TVars>
+  /** 조건 분기. ifSteps / elseSteps 내부에 중첩 사용 가능. */
+  condition: (
+    fn: ((vars: TVars & TLocalVars) => boolean) | boolean,
+    ifSteps: DialogueStep<TConfig, TLocalVars, TVars>[],
+    elseSteps?: DialogueStep<TConfig, TLocalVars, TVars>[]
+  ) => DialogueStep<TConfig, TLocalVars, TVars>
+}
+
+// ─── 빌드타임 평탄화 ─────────────────────────────────────────
+
+/** @internal condition 평탄화용 고유 ID 카운터 */
+let _conditionUid = 0
+
+/** @internal 마커 식별용 심볼 */
+const FLOW_MARKER = Symbol.for('fumika:flow')
+
+interface _FlowMarker {
+  [key: symbol]: true
+  __flow: string
+  [prop: string]: any
+}
+
+function _isFlowMarker(step: any): step is _FlowMarker {
+  return step && step[FLOW_MARKER] === true
+}
+
+/**
+ * builder가 반환한 마커 객체 + 중첩 condition을
+ * flat한 DialogueStep[] 배열로 컴파일합니다.
+ * @internal
+ */
+function _flattenSteps(steps: any[]): any[] {
+  const result: any[] = []
+
+  for (const step of steps) {
+    if (!_isFlowMarker(step)) {
+      result.push(step)
+      continue
+    }
+
+    switch (step.__flow) {
+      case 'label':
+        result.push({ type: 'label', name: step.name })
+        break
+      case 'goto':
+        result.push({ type: 'goto', label: step.label })
+        break
+      case 'next':
+        result.push({ type: 'next', scene: step.scene, preserve: step.preserve })
+        break
+      case 'call':
+        result.push({ type: 'call', scene: step.scene, preserve: step.preserve, restore: step.restore })
+        break
+      case 'condition': {
+        const id = _conditionUid++
+        const elseLabel = `__cond_else_${id}`
+        const endLabel = `__cond_end_${id}`
+        const hasElse = step.elseSteps && step.elseSteps.length > 0
+
+        // 조건 체크: false → else 또는 end 로 점프
+        result.push({
+          type: 'condition',
+          if: step.if,
+          elseGoto: hasElse ? elseLabel : endLabel,
+        })
+
+        // ifSteps (재귀 평탄화)
+        result.push(..._flattenSteps(step.ifSteps ?? []))
+
+        // if 분기 끝 → end 로 점프 (else가 있을 때만)
+        if (hasElse) {
+          result.push({ type: 'goto', label: endLabel })
+          result.push({ type: 'label', name: elseLabel })
+          result.push(..._flattenSteps(step.elseSteps))
+        }
+
+        // end 라벨
+        result.push({ type: 'label', name: endLabel })
+        break
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * builder 헬퍼 객체를 생성합니다.
+ * @internal
+ */
+function _createBuilders(): SceneBuilders<any, any, any> {
+  return {
+    label: (name) => ({
+      [FLOW_MARKER]: true, __flow: 'label', name,
+    }) as any,
+    goto: (name) => ({
+      [FLOW_MARKER]: true, __flow: 'goto', label: name,
+    }) as any,
+    next: (scene, opts) => ({
+      [FLOW_MARKER]: true, __flow: 'next', scene, ...opts,
+    }) as any,
+    call: (scene, opts) => ({
+      [FLOW_MARKER]: true, __flow: 'call', scene, ...opts,
+    }) as any,
+    condition: (fn, ifSteps, elseSteps) => ({
+      [FLOW_MARKER]: true, __flow: 'condition', if: fn, ifSteps, elseSteps,
+    }) as any,
+  }
+}
+
 // ─── defineScene 내부 헬퍼 ────────────────────────────────────
 
 type _SceneOptions<
@@ -146,38 +243,26 @@ type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
 /**
  * DialogueScene을 정의합니다.
  *
- * **두 가지 호출 형식을 지원합니다:**
+ * Curried builder 함수 형식을 사용합니다.
+ * 두 번째 인자(함수)에 흐름제어 builder가 주입됩니다.
  *
- * ### 1. Curried 형식 (권장 — IDE 자동완성 지원)
+ * @example
  * ```ts
- * export default defineScene({ config })([ ... ])
- * ```
- *
- * ### 2. 기존 2-arg 형식
- * ```ts
- * export default defineScene({ config }, [ ... ])
- * ```
- *
- * - `variables`에 씬 **지역변수** 초깃값을 전달합니다 (키에 `_` 접두사 필수).
- * - `initial`에 씬 시작 시 적용할 모듈 초기 데이터를 전달합니다 (optional).
- *
- * @example curried 형식 (IDE 자동완성 지원)
- * ```ts
- * export default defineScene({ config, variables: { _tries: 0 } })([
- *   { type: 'dialogue', text: '...' },
- *   { type: 'condition', if: (vars) => vars._tries >= 3, goto: 'end' },
- * ])
- * ```
- *
- * @example 기존 2-arg 형식
- * ```ts
- * export default defineScene({ config }, [
- *   { type: 'background', name: 'bg-classroom' },
- *   { type: 'dialogue', speaker: 'characterA', text: '안녕!' },
- * ])
+ * export default defineScene({ config, variables: { _tries: 0 } })(
+ *   ({ label, goto, next, call, condition }) => [
+ *     label('start'),
+ *     { type: 'dialogue', text: '안녕!' },
+ *     condition(
+ *       ({ _tries }) => _tries >= 3,
+ *       [goto('end')],
+ *       [{ type: 'var', name: '_tries', value: 1 }]
+ *     ),
+ *     label('end'),
+ *     next('scene-b'),
+ *   ]
+ * )
  * ```
  */
-// 오버로드 1: 기존 2-arg 형식 (NoInfer로 vars 추론 보호)
 export function defineScene<
   TVars extends Record<string, any>,
   TConfig extends NovelConfig<TVars, readonly string[], any, any, any> & { modules?: Record<string, NovelModule<any>> },
@@ -185,29 +270,9 @@ export function defineScene<
   TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>) = ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
 >(
   options: _SceneOptions<TVars, TConfig, TLocalVars, TInitial>,
-  dialogues: NoInfer<DialogueStep<TConfig, TLocalVars, TVars>>[]
-): _SceneReturn<TConfig, TLocalVars>
-
-// 오버로드 2: curried 형식 (IDE 자동완성 지원 — NoInfer 불필요)
-export function defineScene<
-  TVars extends Record<string, any>,
-  TConfig extends NovelConfig<TVars, readonly string[], any, any, any> & { modules?: Record<string, NovelModule<any>> },
-  TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
-  TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>) = ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
->(
-  options: _SceneOptions<TVars, TConfig, TLocalVars, TInitial>,
-): (dialogues: DialogueStep<TConfig, TLocalVars, TVars>[]) => _SceneReturn<TConfig, TLocalVars>
-
-// 구현
-export function defineScene<
-  TVars extends Record<string, any>,
-  TConfig extends NovelConfig<TVars, readonly string[], any, any, any> & { modules?: Record<string, NovelModule<any>> },
-  TLocalVars extends Record<`_${string}`, any> = Record<never, never>,
-  TInitial extends ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>) = ([TConfig['modules']] extends [undefined] ? Record<string, unknown> : InitialOf<NonNullable<TConfig['modules']>>)
->(
-  options: _SceneOptions<TVars, TConfig, TLocalVars, TInitial>,
-  dialogues?: DialogueStep<TConfig, TLocalVars, TVars>[]
-): any {
+): (
+  factory: (builders: SceneBuilders<TConfig, TLocalVars, TVars>) => DialogueStep<TConfig, TLocalVars, TVars>[]
+) => _SceneReturn<TConfig, TLocalVars> {
   const {
     variables = {} as any,
     next,
@@ -215,20 +280,19 @@ export function defineScene<
     hooks,
   } = options
 
-  const build = (steps: any[]): any => ({
-    kind: 'dialogue',
-    dialogues: steps,
-    localVars: variables,
-    nextScene: next as string | { scene: string; preserve: boolean } | undefined,
-    initial: initial as Record<string, unknown> | undefined,
-    hooks,
-  })
+  return (factory) => {
+    const builders = _createBuilders()
+    const rawSteps = factory(builders as any)
+    const flatSteps = _flattenSteps(rawSteps)
 
-  // 2-arg: defineScene(options, dialogues)
-  if (dialogues !== undefined) {
-    return build(dialogues)
+    return {
+      kind: 'dialogue',
+      dialogues: flatSteps,
+      localVars: variables,
+      nextScene: next as string | { scene: string; preserve: boolean } | undefined,
+      initial: initial as Record<string, unknown> | undefined,
+      hooks,
+    } as any
   }
-
-  // Curried: defineScene(options)(dialogues)
-  return build
 }
+

@@ -9,7 +9,7 @@ export default defineScene({
       bg: { color: 'rgba(0, 0, 50, 0.8)' } // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
     }
   }
-})([
+})(({}) => [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 300 },
   { type: 'audio', action: 'pause', name: 'bgm', duration: 500 },
   { type: 'dialogue', text: '후미카는 숨을 죽인 채 학교 포털 사이트에 접속했다.' },
@@ -24,4 +24,3 @@ export default defineScene({
   { type: 'dialogue', speaker: 'fumika', text: '내 장학금이...' },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 500, disable: true },
 ])
-

@@ -13,7 +13,7 @@ export default defineScene({
     scene: 'scene-game',
     preserve: true,
   },
-})([
+})(({ label, goto, call, condition }) => [
   {
     type: 'dialogBox',
     title: '음성 제어',
@@ -104,7 +104,7 @@ export default defineScene({
   },
 
   // ─── 분기: 일 질문 ───
-  { type: 'label', name: 'ask-job' },
+  label('ask-job'),
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -138,10 +138,10 @@ export default defineScene({
     speaker: 'fumika',
     text: '농담임.'
   },
-  { type: 'condition', if: () => true, goto: 'common-end' },
+  goto('common-end'),
 
   // ─── 분기: 버그 질문 ───
-  { type: 'label', name: 'ask-bug' },
+  label('ask-bug'),
   { type: 'camera-effect', preset: 'shake', duration: 400 },
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:angry', duration: 300 },
   {
@@ -181,10 +181,10 @@ export default defineScene({
     speaker: 'fumika',
     text: '말투가 딱 트위치 채팅창인데.'
   },
-  { type: 'condition', if: () => true, goto: 'common-end' },
+  goto('common-end'),
 
   // ─── 분기: 도망 ───
-  { type: 'label', name: 'escape' },
+  label('escape'),
   {
     type: 'dialogue',
     text: '똥이 무서워서 피하나. 나는 슬그머니 자리에서 일어났다.'
@@ -218,15 +218,10 @@ export default defineScene({
     speaker: 'fumika',
     text: '방금 나랑 눈 마주쳤으니까 이제 우린 구독과 좋아요 관계야. 도망 못 가.'
   },
-  { type: 'condition', if: () => true, goto: 'common-end' },
-  {
-    type: 'dialogue',
-    speaker: 'fumika',
-    text: 'hello',
-  },
+  goto('common-end'),
 
   // ─── 공통 엔딩 ───
-  { type: 'label', name: 'common-end' },
+  label('common-end'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 800 },
   {
     type: 'dialogue',
@@ -256,7 +251,7 @@ export default defineScene({
   },
 
   // 입력
-  { type: 'label', name: 'input-username' },
+  label('input-username'),
   {
     type: 'input',
     to: 'username',
@@ -276,111 +271,111 @@ export default defineScene({
   },
 
   // 빈 이름일 때 반복 분기로
-  {
-    type: 'condition',
-    if: ({ username }) => username.replaceAll(' ', '') === '',
-    goto: 'empty-name'
-  },
-
-  // 이름이 후미카가 아닐 경우 공통 분기로
-  {
-    type: 'condition',
-    if: ({ username }) => username !== '후미카',
-    goto: 'choice-game'
-  },
-
-  // 이름이 후미카일 경우 특수 분기로
-  {
-    type: 'condition',
-    if: ({ username }) => username === '후미카',
-    'goto': 'same-name'
-  },
-
-  // ─── 분기: 빈 이름 ───
-  { type: 'label', name: 'empty-name' },
-  { type: 'var', name: '_inputRepeatCount', value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
-  {
-    type: 'dialogue',
-    text: '후미카의 표정이 썩어들어간다.'
-  },
-  {
-    type: 'condition',
-    if: ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
-    goto: 'escape'
-  },
-  {
-    type: 'dialogue',
-    speaker: 'fumika',
-    text: [
-      '이름이 공백인 건, "둘이 합쳐서 『  』" 뭐 그런 드립을 치려는거야?',
-      '한참 지난 애니메이션드립인건 알지?',
-      '아니면.. 입력하는 법을 모르는 거야?',
-    ]
-  },
-  {
-    type: 'dialogue',
-    text: [
-      '입력하는 법을 모르냐니, 대체 무슨 소리를 하는걸까?',
-      '게임인 줄 아나보네.',
-      '아무튼 이름을 입력해야 한다.'
-    ]
-  },
-  { type: 'condition', if: () => true, goto: 'input-username' },
-
-  // ─── 분기: 이름이 후미카일 경우 ───
-  { type: 'label', name: 'same-name' },
-  {
-    type: 'dialogue',
-    text: [
-      '그녀는 잠시 나를 쳐다보았고',
-      '잠시 후 이상한 표정으로 물어보았다.'
-    ]
-  },
-  {
-    type: 'dialogue',
-    speaker: 'fumika',
-    text: '장난치는게 아니고?'
-  },
-  {
-    type: 'dialogue',
-    text: [
-      '아무래도 이름이 같으니 의심스러운 눈초리를 거둘 수 없다.',
-      '나는 학생증을 꺼내 보여주었다.'
-    ]
-  },
-  {
-    type: 'overlay-image',
-    action: 'show',
-    name: 'id_card',
-    src: 'img_card_heroine',
-  },
-  {
-    type: 'dialogue',
-    text: '그녀는 내 학생증을 보고 어리둥절한 표정을 지었다.'
-  },
-  {
-    type: 'dialogue',
-    speaker: 'fumika',
-    text: '진짜 이름이 나랑 같네.'
-  },
-  {
-    type: 'dialogue',
-    text: '확실히 신기한 우연이다.'
-  },
-  {
-    type: 'overlay-effect',
-    name: 'id_card',
-    preset: 'fall'
-  },
-  {
-    type: 'overlay-image',
-    action: 'hide',
-    name: 'id_card',
-  },
-  { type: 'condition', if: () => true, goto: 'choice-game' },
+  condition(
+    ({ username }) => (username as string).replaceAll(' ', '') === '',
+    [
+      // ─── 분기: 빈 이름 ───
+      { type: 'var', name: '_inputRepeatCount', value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+      {
+        type: 'dialogue',
+        text: '후미카의 표정이 썩어들어간다.'
+      },
+      condition(
+        ({ _inputRepeatCount }) => _inputRepeatCount >= 3,
+        [
+          {
+            type: 'dialogue',
+            speaker: 'fumika',
+            text: '죽고 싶어?'
+          },
+          {
+            type: 'dialogue',
+            text: [
+              '"죄송합니다."',
+              '역시 3번이나 놀리는 건 안되나보다.',
+              '난 대충 둘러댔다.',
+            ]
+          },
+          goto('choice-game'),
+        ]
+      ),
+      {
+        type: 'dialogue',
+        speaker: 'fumika',
+        text: [
+          '이름이 공백인 건, "둘이 합쳐서 『  』" 뭐 그런 드립을 치려는거야?',
+          '한참 지난 애니메이션드립인건 알지?',
+          '아니면.. 입력하는 법을 모르는 거야?',
+        ]
+      },
+      {
+        type: 'dialogue',
+        text: [
+          '입력하는 법을 모르냐니, 대체 무슨 소리를 하는걸까?',
+          '게임인 줄 아나보네.',
+          '아무튼 이름을 입력해야 한다.'
+        ]
+      },
+      goto('input-username'),
+    ], [
+    // 이름이 후미카일 경우 특수 분기로
+    condition(
+      ({ username }) => username === '후미카',
+      [
+        {
+          type: 'dialogue',
+          text: [
+            '그녀는 잠시 나를 쳐다보았고',
+            '잠시 후 이상한 표정으로 물어보았다.'
+          ]
+        },
+        {
+          type: 'dialogue',
+          speaker: 'fumika',
+          text: '장난치는게 아니고?'
+        },
+        {
+          type: 'dialogue',
+          text: [
+            '아무래도 이름이 같으니 의심스러운 눈초리를 거둘 수 없다.',
+            '나는 학생증을 꺼내 보여주었다.'
+          ]
+        },
+        {
+          type: 'overlay-image',
+          action: 'show',
+          name: 'id_card',
+          src: 'img_card_heroine',
+        },
+        {
+          type: 'dialogue',
+          text: '그녀는 내 학생증을 보고 어리둥절한 표정을 지었다.'
+        },
+        {
+          type: 'dialogue',
+          speaker: 'fumika',
+          text: '진짜 이름이 나랑 같네.'
+        },
+        {
+          type: 'dialogue',
+          text: '확실히 신기한 우연이다.'
+        },
+        {
+          type: 'overlay-effect',
+          name: 'id_card',
+          preset: 'fall'
+        },
+        {
+          type: 'overlay-image',
+          action: 'hide',
+          name: 'id_card',
+        },
+      ]
+    )
+  ]),
 
   // ─── 공통 분기: 전화 수신 ───
-  { type: 'label', name: 'choice-game' },
+  label('choice-game'),
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -414,7 +409,7 @@ export default defineScene({
     speaker: 'fumika',
     text: '미친, 벌써 성적 공지 떴을 시간이잖아. 나 잠깐 폰 좀 볼게. 절대 말 걸지 마.'
   },
-  { type: 'scene', call: 'scene-sub', preserve: true, restore: true },
+  call('scene-sub', { preserve: true, restore: true }),
   {
     type: 'dialogue',
     text: '잠시 후, 스마트폰을 내려놓는 그녀의 눈동자에는 초점이 없었다.'

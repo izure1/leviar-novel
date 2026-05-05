@@ -7,7 +7,7 @@ export default defineScene({
   initial: commonInitial,
   // 씬 5개 종료 후 처음으로 롤백
   next: 'scene-start',
-})([
+})(({ label, goto }) => [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'mood', mood: 'sunset', intensity: 0.8, duration: 0 },
@@ -64,7 +64,7 @@ export default defineScene({
     ]
   },
 
-  { type: 'label', name: 'pay' },
+  label('pay'),
   {
     type: 'dialogue',
     text: '"어그로 끌어줬으니까 탱커 수고비 내놔."'
@@ -89,9 +89,9 @@ export default defineScene({
     type: 'dialogue',
     text: '항상 딜러만 고집하며 돌진하다 죽는 후미카의 성향을 생각하면 엄청난 파격 대우다.'
   },
-  { type: 'condition', if: () => true, goto: 'epilogue' },
+  goto('epilogue'),
 
-  { type: 'label', name: 'tired' },
+  label('tired'),
   {
     type: 'dialogue',
     text: '"오늘 피로도 다 썼다. 다음 레이드는 다른 파티원 구해라."'
@@ -116,9 +116,9 @@ export default defineScene({
     type: 'dialogue',
     text: '결국 강제 징용 엔딩이다.'
   },
-  { type: 'condition', if: () => true, goto: 'epilogue' },
+  goto('epilogue'),
 
-  { type: 'label', name: 'epilogue' },
+  label('epilogue'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 800 },
   {
     type: 'dialogue',

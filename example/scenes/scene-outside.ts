@@ -9,7 +9,7 @@ export default defineScene({
     scene: 'scene-bug',
     preserve: true,
   },
-})([
+})(({ label, goto }) => [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'park', duration: 1000 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
@@ -70,7 +70,7 @@ export default defineScene({
     ]
   },
 
-  { type: 'label', name: 'sun' },
+  label('sun'),
   {
     type: 'dialogue',
     text: '"광합성 좀 해. 창백해서 뱀파이어인 줄 알겠다."'
@@ -94,9 +94,9 @@ export default defineScene({
     type: 'dialogue',
     text: '아침부터 시비 거는 솜씨가 보통이 아니다.'
   },
-  { type: 'condition', if: () => true, goto: 'walk' },
+  goto('walk'),
 
-  { type: 'label', name: 'content' },
+  label('content'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', focus: '', duration: 300 },
   {
     type: 'dialogue',
@@ -125,9 +125,9 @@ export default defineScene({
     type: 'dialogue',
     text: '대체 그 점수는 어디다 쓰는 건지 묻고 싶었지만 꾹 참았다.'
   },
-  { type: 'condition', if: () => true, goto: 'walk' },
+  goto('walk'),
 
-  { type: 'label', name: 'walk' },
+  label('walk'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', duration: 300 },
   {
     type: 'dialogue',

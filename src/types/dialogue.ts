@@ -18,9 +18,7 @@ export type { CharacterPositionPreset } from '../modules/character'
 // 인터페이스 import
 import type { DialogueCmd } from '../modules/dialogue'
 import type { ChoiceCmd } from '../modules/choice'
-import type { ConditionCmd } from '../modules/condition'
 import type { VarCmd } from '../modules/var'
-import type { LabelCmd } from '../modules/label'
 import type { BackgroundCmd } from '../modules/background'
 import type { MoodCmd } from '../modules/mood'
 import type { EffectCmd } from '../modules/effect'
@@ -33,14 +31,44 @@ import type { ControlCmd } from '../modules/control'
 import type { AudioCmd } from '../modules/audio'
 import type { DialogBoxCmd } from '../modules/dialogBox'
 import type { InputCmd } from '../modules/input'
-import type { SceneCallCmd } from '../modules/scene'
 
 // 재수출
 export type {
-  DialogueCmd, ChoiceCmd, ConditionCmd, VarCmd, LabelCmd, BackgroundCmd,
+  DialogueCmd, ChoiceCmd, VarCmd, BackgroundCmd,
   MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
-  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd, SceneCallCmd
+  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd,
+}
+
+// ─── 흐름제어 예약어 타입 ────────────────────────────────────
+
+/** 라벨 마커. 씬 내부 점프 위치를 정의합니다. */
+export interface LabelCmd {
+  name: string
+}
+
+/** 라벨 위치로 실행 커서를 이동합니다. */
+export interface GotoCmd {
+  label: string
+}
+
+/** 다른 씬으로 전환합니다. */
+export interface NextCmd {
+  scene: string
+  preserve?: boolean
+}
+
+/** 다른 씬을 서브루틴으로 호출합니다. */
+export interface CallCmd {
+  scene: string
+  preserve?: boolean
+  restore?: boolean
+}
+
+/** 빌드타임 평탄화된 조건 분기. 조건이 거짓이면 elseGoto로 점프합니다. */
+export interface ConditionFlowCmd {
+  if: ((vars: any) => boolean) | boolean
+  elseGoto?: string
 }
 
 // ─── 스텝 공통 필드 ──────────────────────────────────────────
@@ -56,13 +84,12 @@ interface _StepBase {
 /**
  * `type` 문자열 → Cmd 인터페이스 매핑 테이블.
  * 새 빌트인 명령어 추가 시 여기에 한 줄 추가하면 됩니다.
+ * 흐름제어 예약어(label, goto, next, call, condition)는 포함하지 않습니다.
  */
 type BuiltinCmdMap<TConfig, TVars, TLocalVars> = {
   'dialogue': DialogueCmd<TConfig>
   'choice': ChoiceCmd<TConfig, TLocalVars>
-  'condition': ConditionCmd<TConfig, TVars, TLocalVars>
   'var': VarCmd<TVars, TLocalVars>
-  'label': LabelCmd
   'background': BackgroundCmd<TConfig>
   'mood': MoodCmd
   'effect': EffectCmd<TConfig>
@@ -84,8 +111,24 @@ type BuiltinCmdMap<TConfig, TVars, TLocalVars> = {
   'audio': AudioCmd<TConfig>
   'dialogBox': DialogBoxCmd<TConfig>
   'input': InputCmd<TConfig, TLocalVars>
-  'scene': SceneCallCmd
 }
+
+/**
+ * 흐름제어 예약어 매핑 테이블.
+ * defineScene의 builder에서만 생성되며, ctx.execute에서는 접근 불가.
+ */
+type FlowControlMap = {
+  'label': LabelCmd
+  'goto': GotoCmd
+  'next': NextCmd
+  'call': CallCmd
+  'condition': ConditionFlowCmd
+}
+
+/** 흐름제어 유니온 (defineScene 전용) */
+export type FlowControlEntry = {
+  [K in keyof FlowControlMap]: { type: K } & FlowControlMap[K] & _StepBase
+}[keyof FlowControlMap]
 
 // ─── 유니온 생성 ─────────────────────────────────────────────
 
@@ -119,12 +162,15 @@ export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
 
 // ─── 최종 타입 ───────────────────────────────────────────────
 
+/** 모듈 커맨드 유니온. ctx.execute 파라미터 타입으로 사용됩니다. */
 export type DialogueEntry<TConfig, TVars, TLocalVars> =
   | _BuiltinEntryUnion<TConfig, TVars, TLocalVars>
   | CustomCmd<TConfig, TVars, TLocalVars>
 
+/** 씬 스텝 유니온. 모듈 커맨드 + 흐름제어 예약어 모두 포함합니다. */
 export type DialogueStep<TConfig, TLocalVars = Record<never, never>, TVars = VariablesOf<TConfig>> =
-  DialogueEntry<TConfig, TVars, TLocalVars>
+  | DialogueEntry<TConfig, TVars, TLocalVars>
+  | FlowControlEntry
 
 // ─── Fallback 룰 ─────────────────────────────────────────────
 

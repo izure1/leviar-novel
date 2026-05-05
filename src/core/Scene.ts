@@ -5,9 +5,7 @@ import type { SceneContext, CommandResult } from './SceneContext'
 import type { UIRuntimeEntry } from './UIRegistry'
 import dialogueModule from '../modules/dialogue'
 import choiceModule from '../modules/choice'
-import conditionModule from '../modules/condition'
 import varModule from '../modules/var'
-import labelModule from '../modules/label'
 import backgroundModule from '../modules/background'
 import moodModule from '../modules/mood'
 import effectModule from '../modules/effect'
@@ -18,16 +16,44 @@ import { screenFadeModule, screenFlashModule, screenWipeModule } from '../module
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
-import { sceneCallHandler } from '../modules/scene'
 import type { NovelModule } from '../define/defineCmdUI'
+
+// ─── 흐름제어 예약어 핸들러 (모듈과 별도 관리) ──────────
+const FLOW_CONTROL_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
+  'label': function* () {
+    return true
+  },
+  'goto': function* (cmd: { label: string }, ctx) {
+    ctx.scene.jumpToLabel(cmd.label)
+    return false
+  },
+  'next': function* (cmd: { scene: string; preserve?: boolean }, ctx) {
+    const target = cmd.preserve
+      ? { scene: cmd.scene, preserve: true }
+      : cmd.scene
+    ctx.scene.loadScene(target)
+    return false
+  },
+  'call': function* (cmd: { scene: string; preserve?: boolean; restore?: boolean }, ctx) {
+    ctx.scene.callScene(cmd.scene, cmd.preserve, cmd.restore)
+    return false
+  },
+  'condition': function* (cmd: { if: ((vars: any) => boolean) | boolean; elseGoto?: string }, ctx) {
+    const result = typeof cmd.if === 'function'
+      ? cmd.if(ctx.scene.getVars())
+      : cmd.if
+    if (!result && cmd.elseGoto) {
+      ctx.scene.jumpToLabel(cmd.elseGoto)
+    }
+    return true
+  },
+}
 
 // 내장 모듈 핸들러 테이블
 const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
   'dialogue': (p, c) => dialogueModule.__handler!(p, c),
   'choice': (p, c) => choiceModule.__handler!(p, c),
-  'condition': (p, c) => conditionModule.__handler!(p, c),
   'var': (p, c) => varModule.__handler!(p, c),
-  'label': (p, c) => labelModule.__handler!(p, c),
   'background': (p, c) => backgroundModule.__handler!(p, c),
   'mood': (p, c) => moodModule.__handler!(p, c),
   'effect': (p, c) => effectModule.__handler!(p, c),
@@ -45,7 +71,6 @@ const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generato
   'ui': (p, c) => uiModule.__handler!(p, c),
   'control': (p, c) => controlModule.__handler!(p, c),
   'audio': (p, c) => audioModule.__handler!(p, c),
-  'scene': (p, c) => sceneCallHandler(p, c),
 }
 
 // =============================================================
@@ -430,12 +455,18 @@ export class DialogueScene {
       execute: (cmd) => this._executeCmd(cmd as any),
     }
 
-    // config.modules 우선 확인
+    // 1. 흐름제어 예약어 먼저 체크 (오버라이드 불가)
+    if (FLOW_CONTROL_HANDLERS[type]) {
+      return FLOW_CONTROL_HANDLERS[type](params, ctx)
+    }
+
+    // 2. config.modules 사용자 정의 모듈
     const modules = r.config.modules as Record<string, NovelModule<any>> | undefined
     if (modules && typeof modules[type]?.__handler === 'function') {
       return modules[type].__handler!(params, ctx)
     }
 
+    // 3. 빌트인 모듈 핸들러
     if (BUILTIN_HANDLERS[type]) {
       return BUILTIN_HANDLERS[type](params, ctx)
     }

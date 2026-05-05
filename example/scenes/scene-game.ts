@@ -12,7 +12,7 @@ export default defineScene({
     scene: 'scene-food',
     preserve: true,
   },
-})([
+})(({ label, goto }) => [
   { type: 'character', name: 'fumika', action: 'remove', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
@@ -71,7 +71,7 @@ export default defineScene({
   },
 
   // ─── 분기: 동의 ───
-  { type: 'label', name: 'agree' },
+  label('agree'),
   {
     type: 'dialogue',
     text: '"버그가 아니라 기능이네요."'
@@ -91,10 +91,10 @@ export default defineScene({
     text: '개발자의 의도를 완벽히 파악했어.'
   },
   { type: 'var', name: 'likeability', value: 10 },
-  { type: 'condition', if: () => true, goto: 'play-game' },
+  goto('play-game'),
 
   // ─── 분기: 반대 ───
-  { type: 'label', name: 'disagree' },
+  label('disagree'),
   {
     type: 'dialogue',
     text: '"그냥 망겜 아니야?"'
@@ -123,10 +123,10 @@ export default defineScene({
     type: 'dialogue',
     text: '오히려 평생 이해하고 싶지 않다.'
   },
-  { type: 'condition', if: () => true, goto: 'play-game' },
+  goto('play-game'),
 
   // ─── 게임 플레이 ───
-  { type: 'label', name: 'play-game' },
+  label('play-game'),
   { type: 'character', action: 'show', name: 'fumika', image: 'normal:smile', duration: 500 },
   {
     type: 'dialogue',

@@ -10,9 +10,7 @@ import effectModule from '../modules/effect'
 import { overlayTextModule, overlayImageModule, overlayEffectModule } from '../modules/overlay'
 import { screenFadeModule, screenFlashModule, screenWipeModule } from '../modules/screen'
 import { cameraZoomModule, cameraPanModule, cameraEffectModule } from '../modules/camera'
-import conditionModule from '../modules/condition'
 import varModule from '../modules/var'
-import labelModule from '../modules/label'
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
@@ -44,9 +42,7 @@ export const BUILTIN_MODULES = {
   'camera-zoom': cameraZoomModule,
   'camera-pan': cameraPanModule,
   'camera-effect': cameraEffectModule,
-  'condition': conditionModule,
   'var': varModule,
-  'label': labelModule,
   'ui': uiModule,
   'control': controlModule,
   'audio': audioModule,

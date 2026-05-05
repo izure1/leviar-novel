@@ -44,9 +44,13 @@ export type {
   // 커맨드 타입
   DialogueCmd,
   ChoiceCmd,
-  ConditionCmd,
-  VarCmd,
   LabelCmd,
+  GotoCmd,
+  NextCmd,
+  CallCmd,
+  ConditionFlowCmd,
+  FlowControlEntry,
+  VarCmd,
   BackgroundCmd,
   MoodCmd,
   EffectCmd,
@@ -74,7 +78,7 @@ export { defineNovelConfig, BUILTIN_MODULES } from './define/defineNovelConfig'
 export type { BuiltinModules } from './define/defineNovelConfig'
 export { defineCharacter } from './define/defineCharacter'
 export { defineScene, defineInitial } from './define/defineScene'
-export type { SceneDefinition } from './define/defineScene'
+export type { SceneDefinition, SceneBuilders } from './define/defineScene'
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
 export { define, defineHook } from './define/defineCmdUI'
@@ -97,9 +101,7 @@ export { default as effectModule } from './modules/effect'
 export { overlayTextModule, overlayImageModule, overlayEffectModule } from './modules/overlay'
 export { screenFadeModule, screenFlashModule, screenWipeModule } from './modules/screen'
 export { cameraZoomModule, cameraPanModule, cameraEffectModule } from './modules/camera'
-export { default as conditionModule } from './modules/condition'
 export { default as varModule } from './modules/var'
-export { default as labelModule } from './modules/label'
 export { default as uiModule } from './modules/ui'
 export { default as controlModule } from './modules/control'
 export { default as dialogBoxModule, DEFAULT_DIALOG_BOX_STYLE, DEFAULT_DIALOG_BOX_LAYOUT } from './modules/dialogBox'
