@@ -73,14 +73,19 @@ const character = defineCharacter({
       src: 'character_fumika_base',
       width: 400,
       points: {
+        // 각 이미지에 대한 표시 위치
         face: { x: 0.5, y: 0.2 }
       }
     }
   },
   emotions: {
-    smile: { face: 'emotion_fumika_base_smile' }
+    smile: {
+      // 각 이미지의 표정 상태에 대한 표시 위치
+      face: 'emotion_fumika_base_smile'
+    }
   }
 })
+
 
 const config = defineNovelConfig({
   width: 1280,
@@ -96,13 +101,25 @@ const config = defineNovelConfig({
 })
 
 const sceneIntro = defineScene({ config })(() => [
+  // 캐릭터의 bases와 emotions를 조합하여 보여주고 싶으면, image:bases:emotions 형식으로 지정합니다.
+  // 예를 들어, fumika가 웃고 있는 모습을 보여주려면 image: 'default:smile'로 지정합니다.
   {
     type: 'character',
     action: 'show',
     name: 'fumika',
-    image: 'fumika:smile',
-    focus: 'face',
+    image: 'default:smile',
   },
+
+  // defineCharacter에서 선언된 points 위치로 카메라를 1초에 걸쳐 이동시킵니다. 
+  {
+    type: 'character-focus',
+    name: 'fumika',
+    point: 'face',
+    zoom: 'close-up',
+    duration: 1000,
+  },
+
+  // 대사창에 이름과 대사를 출력합니다
   {
     type: 'dialogue',
     speaker: 'fumika',
