@@ -20603,7 +20603,7 @@ ${addLineNumbers(fragment)}`);
     { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uC758 \uC601\uD63C\uC774 \uBE60\uC838\uB098\uAC00\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB9AC\uB294 \uB4EF\uD588\uB2E4." },
     { type: "dialogue", text: "\uC2A4\uB9C8\uD2B8\uD3F0 \uD654\uBA74\uC774 \uAEBC\uC9C0\uBA70, \uADF8\uB140\uC758 \uC5B4\uAE68\uB3C4 \uD568\uAED8 \uCD95 \uCC98\uC84C\uB2E4." },
     { type: "dialogue", speaker: "fumika", text: "\uB0B4 \uC7A5\uD559\uAE08\uC774..." },
-    { type: "screen-fade", dir: "out", preset: "black", duration: 500, disable: true }
+    { type: "screen-fade", dir: "in", preset: "black", duration: 500, disable: true }
   ]);
 
   // example/scenes/scene-ending.ts
