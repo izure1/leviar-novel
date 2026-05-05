@@ -5,7 +5,6 @@ import type { SceneContext, CommandResult } from './SceneContext'
 import type { UIRuntimeEntry } from './UIRegistry'
 import dialogueModule from '../modules/dialogue'
 import choiceModule from '../modules/choice'
-import varModule from '../modules/var'
 import backgroundModule from '../modules/background'
 import moodModule from '../modules/mood'
 import effectModule from '../modules/effect'
@@ -47,13 +46,23 @@ const FLOW_CONTROL_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Gen
     }
     return true
   },
+  'var': function* (cmd: { name: string; value: any }, ctx) {
+    const val = typeof cmd.value === 'function'
+      ? cmd.value(ctx.scene.getVars())
+      : cmd.value
+    if (cmd.name.startsWith('_')) {
+      ctx.scene.setLocalVar(cmd.name, val)
+    } else {
+      ctx.scene.setGlobalVar(cmd.name, val)
+    }
+    return true
+  },
 }
 
 // 내장 모듈 핸들러 테이블
 const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
   'dialogue': (p, c) => dialogueModule.__handler!(p, c),
   'choice': (p, c) => choiceModule.__handler!(p, c),
-  'var': (p, c) => varModule.__handler!(p, c),
   'background': (p, c) => backgroundModule.__handler!(p, c),
   'mood': (p, c) => moodModule.__handler!(p, c),
   'effect': (p, c) => effectModule.__handler!(p, c),

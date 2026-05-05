@@ -25,9 +25,9 @@ import { defineScene } from 'fumika'
 export default defineScene({ 
   config,
   variables: { _isDoorOpened: false } // 씬 전용 지역 변수 정의
-})([
+})(({ set }) => [
   { type: 'dialogue', text: '굳게 닫힌 문 앞에 도착했습니다.' },
-  { type: 'var', name: '_isDoorOpened', value: true }
+  set('_isDoorOpened', true)
 ])
 ```
 

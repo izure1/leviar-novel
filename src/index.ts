@@ -51,6 +51,7 @@ export type {
   ConditionFlowCmd,
   FlowControlEntry,
   VarCmd,
+  SetCmd,
   BackgroundCmd,
   MoodCmd,
   EffectCmd,
@@ -101,7 +102,6 @@ export { default as effectModule } from './modules/effect'
 export { overlayTextModule, overlayImageModule, overlayEffectModule } from './modules/overlay'
 export { screenFadeModule, screenFlashModule, screenWipeModule } from './modules/screen'
 export { cameraZoomModule, cameraPanModule, cameraEffectModule } from './modules/camera'
-export { default as varModule } from './modules/var'
 export { default as uiModule } from './modules/ui'
 export { default as controlModule } from './modules/control'
 export { default as dialogBoxModule, DEFAULT_DIALOG_BOX_STYLE, DEFAULT_DIALOG_BOX_LAYOUT } from './modules/dialogBox'

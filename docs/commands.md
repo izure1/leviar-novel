@@ -15,7 +15,7 @@
 | **카메라 제어** | `camera-zoom`, `camera-pan`, `camera-effect`, `character-focus`, `character-effect` | [Camera Control](#camera-control) |
 | **시각 특수 효과** | `screen-fade`, `screen-flash`, `screen-wipe`, `mood`, `effect`, `overlay-*` | [Visual Effects](#visual-effects) |
 | **사운드 시스템** | `audio` | [Audio](#audio) |
-| **로직 및 흐름** | `choices`, `condition`, `var`, `label`, `control` | [Logic & Flow](#logic-flow) |
+| **로직 및 흐름** | `choices`, `var`, `control`, `flow-control` | [Logic & Flow](#logic-flow) |
 | **시스템 상호작용** | `ui`, `dialogBox`, `input` | [System & Misc](#system-misc) |
 
 ---
@@ -64,11 +64,9 @@
 
 시나리오의 진행 방향과 게임 내 데이터 상태를 동적으로 관리합니다.  
 
-*   **[`scene`](./modules/scene.md)**: 다른 장면으로 이동하거나 서브 시퀀스로 호출(Stack-based)합니다.  
+*   **[흐름 제어 예약어 (Flow Control)](./flow-control.md)**: `defineScene` 빌더에서 제공되는 `label`, `goto`, `next`, `call`, `condition` 함수로 시나리오 흐름을 제어합니다.
 *   **[`choices`](./modules/choices.md)**: 플레이어의 의사 결정을 위한 선택지 분기를 생성합니다.  
-*   **[`condition`](./modules/condition.md)**: 변수 상태에 따른 지능적인 자동 분기 로직을 실행합니다.  
 *   **[`var`](./modules/var.md)**: 전역 및 지역 변수의 값을 변경하고 동적으로 조작합니다.  
-*   **[`label`](./modules/label.md)**: 시나리오 내에서 점프 가능한 마커 지점을 설정합니다.  
 *   **[`control`](./modules/control.md)**: 사용자의 입력을 일시 제한하거나 스킵 기능을 통제합니다.  
 
 > [!TIP]

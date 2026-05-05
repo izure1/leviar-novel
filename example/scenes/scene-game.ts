@@ -12,7 +12,7 @@ export default defineScene({
     scene: 'scene-food',
     preserve: true,
   },
-})(({ label, goto }) => [
+})(({ label, goto, set }) => [
   { type: 'character', name: 'fumika', action: 'remove', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'screen-wipe', dir: 'in', preset: 'left', duration: 3000, disable: true },
@@ -90,7 +90,7 @@ export default defineScene({
     speaker: 'fumika',
     text: '개발자의 의도를 완벽히 파악했어.'
   },
-  { type: 'var', name: 'likeability', value: 10 },
+  set('likeability', 10),
   goto('play-game'),
 
   // ─── 분기: 반대 ───

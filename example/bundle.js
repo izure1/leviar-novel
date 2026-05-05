@@ -2760,23 +2760,6 @@
     return true;
   });
 
-  // src/modules/var.ts
-  var varModule = define2({});
-  varModule.defineView((_ctx, _data, _setState) => ({ show: () => {
-  }, hide: () => {
-  } }));
-  varModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const nameStr = cmd.name;
-    const val = cmd.value;
-    if (nameStr.startsWith("_")) {
-      ctx.scene.setLocalVar(nameStr, val);
-    } else {
-      ctx.scene.setGlobalVar(nameStr, val);
-    }
-    return true;
-  });
-  var var_default = varModule;
-
   // src/modules/ui.ts
   var uiModule = define2({});
   uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {
@@ -3802,7 +3785,6 @@
     "camera-zoom": cameraZoomModule,
     "camera-pan": cameraPanModule,
     "camera-effect": cameraEffectModule,
-    "var": var_default,
     "ui": ui_default,
     "control": control_default,
     "audio": audio_default,
@@ -3847,6 +3829,9 @@
           break;
         case "call":
           result.push({ type: "call", scene: step.scene, preserve: step.preserve, restore: step.restore });
+          break;
+        case "set":
+          result.push({ type: "var", name: step.name, value: step.value });
           break;
         case "condition": {
           const id = _conditionUid++;
@@ -3901,6 +3886,12 @@
         if: fn,
         ifSteps,
         elseSteps
+      }),
+      set: (name, value) => ({
+        [FLOW_MARKER]: true,
+        __flow: "set",
+        name,
+        value
       })
     };
   }
@@ -17814,12 +17805,20 @@ ${addLineNumbers(fragment)}`);
         ctx.scene.jumpToLabel(cmd.elseGoto);
       }
       return true;
+    },
+    "var": function* (cmd, ctx) {
+      const val = typeof cmd.value === "function" ? cmd.value(ctx.scene.getVars()) : cmd.value;
+      if (cmd.name.startsWith("_")) {
+        ctx.scene.setLocalVar(cmd.name, val);
+      } else {
+        ctx.scene.setGlobalVar(cmd.name, val);
+      }
+      return true;
     }
   };
   var BUILTIN_HANDLERS = {
     "dialogue": (p, c) => dialogue_default.__handler(p, c),
     "choice": (p, c) => choice_default.__handler(p, c),
-    "var": (p, c) => var_default.__handler(p, c),
     "background": (p, c) => background_default.__handler(p, c),
     "mood": (p, c) => mood_default.__handler(p, c),
     "effect": (p, c) => effect_default.__handler(p, c),
@@ -19180,7 +19179,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-game",
       preserve: true
     }
-  })(({ label, goto, call, condition }) => [
+  })(({ label, goto, call, condition, set: set6 }) => [
     {
       type: "dialogBox",
       title: "\uC74C\uC131 \uC81C\uC5B4",
@@ -19434,7 +19433,7 @@ ${addLineNumbers(fragment)}`);
       ({ username }) => username.replaceAll(" ", "") === "",
       [
         // ─── 분기: 빈 이름 ───
-        { type: "var", name: "_inputRepeatCount", value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+        set6("_inputRepeatCount", ({ _inputRepeatCount }) => _inputRepeatCount + 1),
         {
           type: "dialogue",
           text: "\uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC369\uC5B4\uB4E4\uC5B4\uAC04\uB2E4."
@@ -19610,7 +19609,7 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-food",
       preserve: true
     }
-  })(({ label, goto }) => [
+  })(({ label, goto, set: set6 }) => [
     { type: "character", name: "fumika", action: "remove", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "screen-wipe", dir: "in", preset: "left", duration: 3e3, disable: true },
@@ -19686,7 +19685,7 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
     },
-    { type: "var", name: "likeability", value: 10 },
+    set6("likeability", 10),
     goto("play-game"),
     // ─── 분기: 반대 ───
     label("disagree"),

@@ -71,6 +71,12 @@ export interface ConditionFlowCmd {
   elseGoto?: string
 }
 
+/** 변수 값을 설정합니다. `_` 접두사는 지역변수, 아니면 전역변수. */
+export interface SetCmd {
+  name: string
+  value: any
+}
+
 // ─── 스텝 공통 필드 ──────────────────────────────────────────
 
 /** 모든 DialogueEntry에 공통으로 붙는 메타 필드 */
@@ -89,7 +95,6 @@ interface _StepBase {
 type BuiltinCmdMap<TConfig, TVars, TLocalVars> = {
   'dialogue': DialogueCmd<TConfig>
   'choice': ChoiceCmd<TConfig, TLocalVars>
-  'var': VarCmd<TVars, TLocalVars>
   'background': BackgroundCmd<TConfig>
   'mood': MoodCmd
   'effect': EffectCmd<TConfig>
@@ -123,6 +128,7 @@ type FlowControlMap = {
   'next': NextCmd
   'call': CallCmd
   'condition': ConditionFlowCmd
+  'var': SetCmd
 }
 
 /** 흐름제어 유니온 (defineScene 전용) */

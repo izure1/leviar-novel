@@ -102,6 +102,11 @@ export type SceneBuilders<TConfig, TLocalVars, TVars> = {
     ifSteps: DialogueStep<TConfig, TLocalVars, TVars>[],
     elseSteps?: DialogueStep<TConfig, TLocalVars, TVars>[]
   ) => DialogueStep<TConfig, TLocalVars, TVars>
+  /** 변수 값을 설정합니다. `_` 접두사는 지역변수, 아니면 전역변수. */
+  set: <K extends keyof (TVars & TLocalVars) & string>(
+    name: K,
+    value: (TVars & TLocalVars)[K] | ((vars: TVars & TLocalVars) => (TVars & TLocalVars)[K])
+  ) => DialogueStep<TConfig, TLocalVars, TVars>
 }
 
 // ─── 빌드타임 평탄화 ─────────────────────────────────────────
@@ -148,6 +153,9 @@ function _flattenSteps(steps: any[]): any[] {
         break
       case 'call':
         result.push({ type: 'call', scene: step.scene, preserve: step.preserve, restore: step.restore })
+        break
+      case 'set':
+        result.push({ type: 'var', name: step.name, value: step.value })
         break
       case 'condition': {
         const id = _conditionUid++
@@ -203,6 +211,9 @@ function _createBuilders(): SceneBuilders<any, any, any> {
     condition: (fn, ifSteps, elseSteps) => ({
       [FLOW_MARKER]: true, __flow: 'condition', if: fn, ifSteps, elseSteps,
     }) as any,
+    set: (name, value) => ({
+      [FLOW_MARKER]: true, __flow: 'set', name, value,
+    }) as any,
   }
 }
 
@@ -249,13 +260,13 @@ type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
  * @example
  * ```ts
  * export default defineScene({ config, variables: { _tries: 0 } })(
- *   ({ label, goto, next, call, condition }) => [
+ *   ({ label, goto, next, call, condition, set }) => [
  *     label('start'),
  *     { type: 'dialogue', text: '안녕!' },
  *     condition(
  *       ({ _tries }) => _tries >= 3,
  *       [goto('end')],
- *       [{ type: 'var', name: '_tries', value: 1 }]
+ *       [set('_tries', 1)]
  *     ),
  *     label('end'),
  *     next('scene-b'),

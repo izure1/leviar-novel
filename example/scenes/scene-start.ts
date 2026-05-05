@@ -13,7 +13,7 @@ export default defineScene({
     scene: 'scene-game',
     preserve: true,
   },
-})(({ label, goto, call, condition }) => [
+})(({ label, goto, call, condition, set }) => [
   {
     type: 'dialogBox',
     title: '음성 제어',
@@ -275,7 +275,7 @@ export default defineScene({
     ({ username }) => (username as string).replaceAll(' ', '') === '',
     [
       // ─── 분기: 빈 이름 ───
-      { type: 'var', name: '_inputRepeatCount', value: ({ _inputRepeatCount }) => _inputRepeatCount + 1 },
+      set('_inputRepeatCount', ({ _inputRepeatCount }) => _inputRepeatCount + 1),
       {
         type: 'dialogue',
         text: '후미카의 표정이 썩어들어간다.'
