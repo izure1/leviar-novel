@@ -212,7 +212,10 @@ dialogueModule.defineView((ctx, data, setState) => {
       display: 'none',
       pointerEvents: false,
     },
-    transform: { position: toLocal(baseX, spkY) },
+    transform: {
+      pivot: { x: 0.5, y: 0 },
+      position: toLocal(baseX, spkY)
+    },
   })
   ctx.world.camera?.addChild(speakerObj)
 
@@ -228,7 +231,10 @@ dialogueModule.defineView((ctx, data, setState) => {
       display: 'none',
       pointerEvents: false,
     },
-    transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) },
+    transform: {
+      pivot: { x: 0.5, y: 0 },
+      position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap)
+    },
   })
   ctx.world.camera?.addChild(textObj)
 

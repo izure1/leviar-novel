@@ -906,7 +906,10 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(baseX, spkY) }
+      transform: {
+        pivot: { x: 0.5, y: 0 },
+        position: toLocal(baseX, spkY)
+      }
     });
     ctx.world.camera?.addChild(speakerObj);
     const spkH = (spkCfg.fontSize ?? 18) * 1.5;
@@ -920,7 +923,10 @@
         display: "none",
         pointerEvents: false
       },
-      transform: { position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap) }
+      transform: {
+        pivot: { x: 0.5, y: 0 },
+        position: toLocal(baseX, spkY + spkH + layoutCfg.speakerTextGap)
+      }
     });
     ctx.world.camera?.addChild(textObj);
     const charDefs = ctx.renderer.config.characters;
@@ -19637,7 +19643,10 @@ ${addLineNumbers(fragment)}`);
     { type: "mood", mood: "sunset", intensity: 0.7, duration: 3e3 },
     {
       type: "dialogue",
-      text: "\uD6C4\uBBF8\uCE74\uC758 \uC544\uC9C0\uD2B8. \uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."
+      text: [
+        "\uADF8\uB85C\uBD80\uD130 \uBA70\uCE60 \uD6C4.",
+        "\uD6C4\uBBF8\uCE74\uC758 \uC544\uC9C0\uD2B8.\n\uB0A1\uC740 \uCC45\uC0C1 \uC704\uC5D0\uB294 \uD654\uB824\uD55C RGB \uC870\uBA85\uC774 \uBC88\uCA4D\uC774\uB294 \uD0A4\uBCF4\uB4DC\uC640 \uB4C0\uC5BC \uBAA8\uB2C8\uD130\uAC00 \uB193\uC5EC \uC788\uB2E4."
+      ]
     },
     {
       type: "dialogue",

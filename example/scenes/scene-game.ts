@@ -19,7 +19,10 @@ export default defineScene({
   { type: 'mood', mood: 'sunset', intensity: 0.7, duration: 3000 },
   {
     type: 'dialogue',
-    text: '후미카의 아지트. 낡은 책상 위에는 화려한 RGB 조명이 번쩍이는 키보드와 듀얼 모니터가 놓여 있다.'
+    text: [
+      '그로부터 며칠 후.',
+      '후미카의 아지트.\n낡은 책상 위에는 화려한 RGB 조명이 번쩍이는 키보드와 듀얼 모니터가 놓여 있다.'
+    ]
   },
   {
     type: 'dialogue',
