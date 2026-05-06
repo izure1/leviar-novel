@@ -940,7 +940,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         end: noop,
         callScene: noop as any, // rebuild ctx에서는 callScene 호출 없음
       },
-      execute: function* () { return false },
+      execute: (cmd: any) => {
+        const scene = this._currentScene
+        if (scene && scene instanceof DialogueScene) {
+          return (scene as any)._executeCmd(cmd)
+        }
+        return (function* () { return false })()
+      },
       actions: {
         get: () => undefined,
       },

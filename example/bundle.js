@@ -19202,8 +19202,14 @@ ${addLineNumbers(fragment)}`);
           callScene: noop
           // rebuild ctx에서는 callScene 호출 없음
         },
-        execute: function* () {
-          return false;
+        execute: (cmd) => {
+          const scene = this._currentScene;
+          if (scene && scene instanceof DialogueScene) {
+            return scene._executeCmd(cmd);
+          }
+          return (function* () {
+            return false;
+          })();
         },
         actions: {
           get: () => void 0
