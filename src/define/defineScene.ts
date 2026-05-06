@@ -260,7 +260,7 @@ type _SceneOptions<
    * }
    * ```
    */
-  actions?: Record<string, (ctx: SceneContext, vars: TVars & TLocalVars) => void>
+  actions?: Record<string, (ctx: SceneContext, vars: TVars & TLocalVars & EnvironmentsOf<TConfig>) => void>
 }
 
 type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<

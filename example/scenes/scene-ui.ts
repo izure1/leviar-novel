@@ -12,7 +12,8 @@ export default defineScene({
       } catch (e) {
         console.warn('[scene-ui] 저장 실패:', e)
       }
-      ctx.execute({ type: 'should be error' })
+      console.log(vars.$bgmVolume)
+      ctx.execute({ type: 'dialogue', text: '테스트 문자열' })
     },
     load: (ctx) => {
       try {

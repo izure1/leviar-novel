@@ -43,6 +43,9 @@ export default defineNovelConfig({
     useHeroineVoice: true,
     username: '',
   },
+  environments: {
+    $bgmVolume: 1,
+  },
   modules: {
     'test-cmd': testModule,
     'debug': debugModule,

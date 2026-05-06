@@ -19268,6 +19268,9 @@ ${addLineNumbers(fragment)}`);
       useHeroineVoice: true,
       username: ""
     },
+    environments: {
+      $bgmVolume: 1
+    },
     modules: {
       "test-cmd": testModule,
       "debug": debugModule
@@ -19343,7 +19346,8 @@ ${addLineNumbers(fragment)}`);
         } catch (e) {
           console.warn("[scene-ui] \uC800\uC7A5 \uC2E4\uD328:", e);
         }
-        ctx.execute({ type: "should be error" });
+        console.log(vars.$bgmVolume);
+        ctx.execute({ type: "dialogue", text: "\uD14C\uC2A4\uD2B8 \uBB38\uC790\uC5F4" });
       },
       load: (ctx) => {
         try {
