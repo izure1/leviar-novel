@@ -215,10 +215,6 @@ export class DialogueScene {
   }
 
   /**
-   * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
-   * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
-   */
-  /**
    * 모듈 View를 초기화합니다.
    *
    * @param preservedState - 이어받을 stateStore (preserve=true 서브씬 호출 시).

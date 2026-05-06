@@ -101,8 +101,8 @@ const config = defineNovelConfig({
 })
 
 const sceneIntro = defineScene({ config })(() => [
-  // 캐릭터의 bases와 emotions를 조합하여 보여주고 싶으면, image:bases:emotions 형식으로 지정합니다.
-  // 예를 들어, fumika가 웃고 있는 모습을 보여주려면 image: 'default:smile'로 지정합니다.
+  // 캐릭터의 bases와 emotions를 조합하여 보여주기 위해, bases:emotions 형식으로 지정합니다.
+  // 예를 들어, fumika가 default + smile 상태의 모습을 보여주려면 image: 'default:smile'로 지정합니다.
   {
     type: 'character',
     action: 'show',

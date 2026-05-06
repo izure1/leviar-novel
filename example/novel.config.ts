@@ -48,6 +48,7 @@ export default defineNovelConfig({
     'debug': debugModule,
   },
   scenes: [
+    'scene-ui',
     'scene-start',
     'scene-game',
     'scene-food',

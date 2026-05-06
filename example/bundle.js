@@ -811,18 +811,16 @@
   var Z_INDEX = {
     BACKGROUND: 0,
     CHARACTER_NORMAL: 100,
-    CHARACTER_HIGHLIGHT: 110,
-    ENVIRONMENT: 200,
+    EFFECT: 200,
     MOOD: 200,
     LIGHT: 210,
-    TRANSITION: 300,
+    FADE: 300,
     UI_BASE: 400,
     OVERLAY_WHISPER: 500,
     OVERLAY_CAPTION: 510,
     OVERLAY_TITLE: 520,
     UI_HELPERS: 600,
-    DIALOG_BOX: 700,
-    CHARACTER_CUTIN: 800
+    DIALOG_BOX: 700
   };
 
   // src/modules/dialogue.ts
@@ -2510,7 +2508,7 @@
           width: w,
           height: h,
           opacity: 0,
-          zIndex: Z_INDEX.TRANSITION,
+          zIndex: Z_INDEX.FADE,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -2584,7 +2582,7 @@
           width: w * 2,
           height: h * 2,
           opacity: 0,
-          zIndex: Z_INDEX.TRANSITION + 1,
+          zIndex: Z_INDEX.FADE + 1,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -17926,10 +17924,6 @@ ${addLineNumbers(fragment)}`);
       this._executeNext();
     }
     /**
-     * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
-     * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
-     */
-    /**
      * 모듈 View를 초기화합니다.
      *
      * @param preservedState - 이어받을 stateStore (preserve=true 서브씬 호출 시).
@@ -19042,6 +19036,7 @@ ${addLineNumbers(fragment)}`);
       "debug": debugModule
     },
     scenes: [
+      "scene-ui",
       "scene-start",
       "scene-game",
       "scene-food",
@@ -19098,6 +19093,13 @@ ${addLineNumbers(fragment)}`);
       }
     }
   });
+
+  // example/scenes/scene-ui.ts
+  var scene_ui_default = defineScene({
+    config: novel_config_default
+  })(() => [
+    { type: "overlay-text", action: "show", name: "test", preset: "caption", text: "\uD14C\uC2A4\uD2B8\uC785\uB2C8\uB2E4" }
+  ]);
 
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
@@ -19252,6 +19254,8 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
+    // 공용 ui를 보여줍니다.
+    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -20366,7 +20370,8 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-bug",
       preserve: true
     }
-  })(({ label, goto }) => [
+  })(({ label, goto, call }) => [
+    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
@@ -20672,7 +20677,8 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     // 씬 5개 종료 후 처음으로 롤백
     next: "scene-start"
-  })(({ label, goto }) => [
+  })(({ label, goto, call }) => [
+    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },
@@ -20890,6 +20896,7 @@ ${addLineNumbers(fragment)}`);
     const novel = new Novel(novel_config_default, {
       element,
       scenes: {
+        "scene-ui": scene_ui_default,
         "scene-start": scene_start_default,
         "scene-game": scene_game_default,
         "scene-food": scene_food_default,

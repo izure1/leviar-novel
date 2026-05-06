@@ -9,6 +9,7 @@ import {
 import { Novel } from '../src'
 import config from './novel.config'
 
+import sceneUI from './scenes/scene-ui'
 import sceneStart from './scenes/scene-start'
 import sceneGame from './scenes/scene-game'
 import sceneFood from './scenes/scene-food'
@@ -89,6 +90,7 @@ async function main() {
   const novel = new Novel(config, {
     element,
     scenes: {
+      'scene-ui': sceneUI,
       'scene-start': sceneStart,
       'scene-game': sceneGame,
       'scene-food': sceneFood,

@@ -29,6 +29,10 @@ export default defineScene({
       }
     ]
   },
+
+  // 공용 ui를 보여줍니다.
+  call('scene-ui', { preserve: true, restore: false }),
+
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },
