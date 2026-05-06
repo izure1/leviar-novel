@@ -107,6 +107,14 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    * ```
    */
   execute: (cmd: DialogueEntry<any, any, any> | { type: string;[key: string]: any }) => Generator<CommandResult, CommandResult, any>
+  /**
+   * 씬에 등록된 액션을 이름으로 조회합니다.
+   * `defineScene({ actions: { ... } })`로 선언된 콜백을 반환합니다.
+   */
+  actions: {
+    /** 이름으로 액션 콜백을 조회합니다 */
+    get(name: string): ((ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+  }
 }
 
 /**

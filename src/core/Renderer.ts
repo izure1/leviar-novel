@@ -329,5 +329,8 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       callScene: noop as any,
     },
     execute: function* () { return false },
+    actions: {
+      get: () => undefined,
+    },
   }
 }

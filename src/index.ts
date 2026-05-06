@@ -72,6 +72,7 @@ export type {
   DialogueStep,
   DialogBoxCmd,
   InputCmd,
+  ElementCmd,
 } from './types/dialogue'
 
 // ─── define 헬퍼 함수 ────────────────────────────────────────
@@ -91,6 +92,7 @@ export type { DialogueSchema, DialogueHook } from './modules/dialogue'
 export type { ChoiceSchema } from './modules/choice'
 export type { DialogBoxSchema } from './modules/dialogBox'
 export type { InputSchema, InputHook, InputLayout, InputButton } from './modules/input'
+export type { ElementChild, ElementSchema, ElementEntry, ElementKind } from './modules/element'
 
 // ─── 내장 모듈 ───────────────────────────────────────────────
 export { default as dialogueModule, DEFAULT_DIALOGUE_BG, DEFAULT_DIALOGUE_SPEAKER, DEFAULT_DIALOGUE_TEXT, DEFAULT_DIALOGUE_LAYOUT } from './modules/dialogue'
@@ -106,6 +108,7 @@ export { default as uiModule } from './modules/ui'
 export { default as controlModule } from './modules/control'
 export { default as dialogBoxModule, DEFAULT_DIALOG_BOX_STYLE, DEFAULT_DIALOG_BOX_LAYOUT } from './modules/dialogBox'
 export { default as inputModule, DEFAULT_INPUT_STYLE, DEFAULT_INPUT_LAYOUT } from './modules/input'
+export { default as elementModule } from './modules/element'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'

@@ -15,6 +15,7 @@ import { screenFadeModule, screenFlashModule, screenWipeModule } from '../module
 import uiModule from '../modules/ui'
 import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
+import elementModule from '../modules/element'
 import type { NovelModule } from '../define/defineCmdUI'
 
 // ─── 흐름제어 예약어 핸들러 (모듈과 별도 관리) ──────────
@@ -83,6 +84,7 @@ const BUILTIN_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generato
   'ui': (p, c) => uiModule.__handler!(p, c),
   'control': (p, c) => controlModule.__handler!(p, c),
   'audio': (p, c) => audioModule.__handler!(p, c),
+  'element': (p, c) => elementModule.__handler!(p, c),
 }
 
 // =============================================================
@@ -279,6 +281,9 @@ export class DialogueScene {
         }
       },
       execute: (cmd) => this._executeCmd(cmd as any),
+      actions: {
+        get: (name: string) => this.definition.actions?.[name],
+      },
     }
 
     for (const [moduleKey, module] of Object.entries(modules)) {
@@ -467,6 +472,9 @@ export class DialogueScene {
         }
       },
       execute: (cmd) => this._executeCmd(cmd as any),
+      actions: {
+        get: (name: string) => this.definition.actions?.[name],
+      },
     }
 
     // 1. 흐름제어 예약어 먼저 체크 (오버라이드 불가)

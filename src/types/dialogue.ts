@@ -30,13 +30,14 @@ import type { ControlCmd } from '../modules/control'
 import type { AudioCmd } from '../modules/audio'
 import type { DialogBoxCmd } from '../modules/dialogBox'
 import type { InputCmd } from '../modules/input'
+import type { ElementCmd } from '../modules/element'
 
 // 재수출
 export type {
   DialogueCmd, ChoiceCmd, BackgroundCmd,
   MoodCmd, EffectCmd, OverlayTextCmd, OverlayImageCmd, OverlayEffectCmd, CharacterCmd, CharacterFocusCmd, CharacterHighlightCmd, CharacterEffectCmd,
   CameraZoomCmd, CameraPanCmd, CameraEffectCmd, ScreenFadeCmd, ScreenFlashCmd, ScreenWipeCmd,
-  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd,
+  UICmd, ControlCmd, AudioCmd, DialogBoxCmd, InputCmd, ElementCmd,
 }
 
 // ─── 흐름제어 예약어 타입 ────────────────────────────────────
@@ -115,6 +116,7 @@ type BuiltinCmdMap<TConfig, TVars, TLocalVars> = {
   'audio': AudioCmd<TConfig>
   'dialogBox': DialogBoxCmd<TConfig>
   'input': InputCmd<TConfig, TLocalVars>
+  'element': ElementCmd<TConfig>
 }
 
 /**

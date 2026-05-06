@@ -6,6 +6,7 @@ import type { NovelConfig, CharDefs, BgDefs, SceneNextTarget, EnvironmentsOf } f
 import type { NovelModule } from '../define/defineCmdUI'
 import type { SceneHookDescriptor } from '../define/defineCmdUI'
 import type { DialogueStep } from '../types/dialogue'
+import type { SceneContext } from '../core/SceneContext'
 
 // ─── UI initial 타입 헬퍼 ────────────────────────────────────
 
@@ -71,6 +72,11 @@ export interface SceneDefinition<
    * `defineHook()`의 반환값을 전달하면 씬 시작 시 자동 등록, 씬 종료 시 자동 해제됩니다.
    */
   readonly hooks?: SceneHookDescriptor
+  /**
+   * 씬 스코프 액션 맵.
+   * `element` 명령어의 `onClick`에서 이름으로 참조하여 호출됩니다.
+   */
+  readonly actions?: Record<string, (ctx: SceneContext, vars: Record<string, any>) => void>
 }
 
 // ─── SceneBuilders 타입 ──────────────────────────────────────
@@ -240,6 +246,21 @@ type _SceneOptions<
    * 씬 시작 시 자동으로 훅이 등록되고, 씬 종료/전환 시 자동으로 해제됩니다.
    */
   hooks?: SceneHookDescriptor
+  /**
+   * 씬 스코프 액션 맵.
+   * element의 onClick에서 이름 문자열로 참조하여 호출됩니다.
+   *
+   * @example
+   * ```ts
+   * actions: {
+   *   save: (ctx) => {
+   *     const data = ctx.novel.save()
+   *     localStorage.setItem('save', JSON.stringify(data))
+   *   }
+   * }
+   * ```
+   */
+  actions?: Record<string, (ctx: SceneContext, vars: TVars & TLocalVars) => void>
 }
 
 type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
@@ -289,6 +310,7 @@ export function defineScene<
     next,
     initial,
     hooks,
+    actions,
   } = options
 
   return (factory) => {
@@ -303,6 +325,7 @@ export function defineScene<
       nextScene: next as string | { scene: string; preserve: boolean } | undefined,
       initial: initial as Record<string, unknown> | undefined,
       hooks,
+      actions,
     } as any
   }
 }

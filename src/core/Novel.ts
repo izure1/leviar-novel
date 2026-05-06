@@ -941,6 +941,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         callScene: noop as any, // rebuild ctx에서는 callScene 호출 없음
       },
       execute: function* () { return false },
+      actions: {
+        get: () => undefined,
+      },
     }
   }
 }

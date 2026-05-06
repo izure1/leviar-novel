@@ -819,6 +819,7 @@
     OVERLAY_WHISPER: 500,
     OVERLAY_CAPTION: 510,
     OVERLAY_TITLE: 520,
+    ELEMENT: 550,
     UI_HELPERS: 600,
     DIALOG_BOX: 700
   };
@@ -3806,6 +3807,229 @@
   });
   var input_default = inputModule;
 
+  // src/modules/element.ts
+  function flattenChildren(parentId, children, out) {
+    if (!children) return;
+    for (const child of children) {
+      out[child.id] = {
+        id: child.id,
+        kind: child.kind,
+        text: child.text,
+        image: child.image,
+        position: child.position ?? { x: 0, y: 0 },
+        parent: parentId,
+        style: child.style,
+        hoverStyle: child.hoverStyle,
+        pivot: child.pivot,
+        rotation: child.rotation,
+        onClick: child.onClick
+      };
+      flattenChildren(child.id, child.children, out);
+    }
+  }
+  function collectDescendants(id, elements) {
+    const result = /* @__PURE__ */ new Set([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const [eid, entry] of Object.entries(elements)) {
+        if (entry.parent && result.has(entry.parent) && !result.has(eid)) {
+          result.add(eid);
+          changed = true;
+        }
+      }
+    }
+    return result;
+  }
+  function topoSort(entries) {
+    const byId = new Map(entries.map((e) => [e.id, e]));
+    const sorted = [];
+    const visited = /* @__PURE__ */ new Set();
+    const visit = (entry) => {
+      if (visited.has(entry.id)) return;
+      if (entry.parent && byId.has(entry.parent)) {
+        visit(byId.get(entry.parent));
+      }
+      visited.add(entry.id);
+      sorted.push(entry);
+    };
+    for (const entry of entries) visit(entry);
+    return sorted;
+  }
+  var _actionCache = /* @__PURE__ */ new Map();
+  var elementModule = define2({
+    _elements: {}
+  });
+  elementModule.defineView((ctx, data, setState) => {
+    const _elementObjs = {};
+    const _elementEntries = {};
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (nx, ny) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(nx * w, ny * h) : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const KIND_CREATORS = {
+      rect: (entry) => ctx.world.createRectangle({
+        style: {
+          zIndex: Z_INDEX.ELEMENT,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
+          ...entry.pivot ? { pivot: entry.pivot } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      }),
+      text: (entry) => ctx.world.createText({
+        attribute: { text: entry.text ?? "" },
+        style: {
+          zIndex: Z_INDEX.ELEMENT + 1,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
+          ...entry.pivot ? { pivot: entry.pivot } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      }),
+      image: (entry) => ctx.world.createImage({
+        attribute: { src: entry.image ?? "" },
+        style: {
+          zIndex: Z_INDEX.ELEMENT,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
+          ...entry.pivot ? { pivot: entry.pivot } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      })
+    };
+    const _addElement = (entry, immediate = false, duration) => {
+      if (_elementObjs[entry.id]) return;
+      const creator = KIND_CREATORS[entry.kind];
+      if (!creator) return;
+      const obj = creator(entry);
+      if (entry.parent && _elementObjs[entry.parent]) {
+        _elementObjs[entry.parent].addChild(obj);
+      } else {
+        cam?.addChild(obj);
+      }
+      if (entry.hoverStyle) {
+        const mergedHoverStyle = { ...entry.hoverStyle };
+        const normalStyleProps = Object.fromEntries(
+          Object.keys(mergedHoverStyle).map((key) => [key, entry.style?.[key]])
+        );
+        obj.on("mouseover", () => {
+          obj.animate({ style: mergedHoverStyle }, 150);
+        });
+        obj.on("mouseout", () => {
+          obj.animate({ style: normalStyleProps }, 150);
+        });
+      }
+      if (entry.onClick) {
+        const actionName = entry.onClick;
+        obj.on("click", (e) => {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          const action = _actionCache.get(actionName);
+          if (action) {
+            action(ctx, ctx.scene.getVars());
+          } else {
+            console.warn(`[fumika] element onClick: action '${actionName}' not found`);
+          }
+        });
+      }
+      _elementObjs[entry.id] = obj;
+      _elementEntries[entry.id] = entry;
+      if (!immediate) {
+        obj.style.opacity = 0;
+        ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, "easeOut");
+      }
+    };
+    const _removeElement = (id, duration, immediate = false) => {
+      const obj = _elementObjs[id];
+      if (!obj) return;
+      delete _elementObjs[id];
+      delete _elementEntries[id];
+      const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200);
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeIn", () => {
+          obj.remove({ child: true });
+        });
+      } else {
+        obj.remove({ child: true });
+      }
+    };
+    const sorted = topoSort(Object.values(data._elements));
+    for (const entry of sorted) {
+      _addElement(entry, true);
+    }
+    return {
+      show: () => {
+      },
+      hide: () => {
+      },
+      onCleanup: () => {
+        for (const obj of Object.values(_elementObjs)) {
+          obj.remove({ child: true });
+        }
+        for (const key of Object.keys(_elementObjs)) delete _elementObjs[key];
+        for (const key of Object.keys(_elementEntries)) delete _elementEntries[key];
+      },
+      onUpdate: (_ctx, state, _setState) => {
+        const dur = state._lastDuration;
+        const newKeys = new Set(Object.keys(state._elements));
+        for (const key of Object.keys(_elementObjs)) {
+          if (!newKeys.has(key)) _removeElement(key, dur);
+        }
+        const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
+        const sortedAdd = topoSort(toAdd);
+        for (const entry of sortedAdd) {
+          _addElement(entry, false, dur);
+        }
+      }
+    };
+  });
+  function cacheOnClickActions(cmd, ctx) {
+    if (cmd.onClick) {
+      const action = ctx.actions.get(cmd.onClick);
+      if (action) _actionCache.set(cmd.onClick, action);
+    }
+    if (cmd.children) {
+      for (const child of cmd.children) {
+        cacheOnClickActions(child, ctx);
+      }
+    }
+  }
+  elementModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const newElements = { ...state._elements };
+    if (cmd.action === "show") {
+      cacheOnClickActions(cmd, ctx);
+      newElements[cmd.id] = {
+        id: cmd.id,
+        kind: cmd.kind,
+        text: cmd.text,
+        image: cmd.image,
+        position: cmd.position ?? { x: 0.5, y: 0.5 },
+        style: cmd.style,
+        hoverStyle: cmd.hoverStyle,
+        pivot: cmd.pivot,
+        rotation: cmd.rotation,
+        onClick: cmd.onClick
+      };
+      flattenChildren(cmd.id, cmd.children, newElements);
+    } else {
+      const toRemove = collectDescendants(cmd.id, newElements);
+      for (const id of toRemove) delete newElements[id];
+    }
+    setState({ _elements: newElements, _lastDuration: cmd.duration });
+    return true;
+  });
+  var element_default = elementModule;
+
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
@@ -3830,7 +4054,8 @@
     "control": control_default,
     "audio": audio_default,
     "dialogBox": dialogBox_default,
-    "input": input_default
+    "input": input_default,
+    "element": element_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -3941,7 +4166,8 @@
       variables = {},
       next,
       initial,
-      hooks
+      hooks,
+      actions
     } = options;
     return (factory) => {
       const builders = _createBuilders();
@@ -3953,7 +4179,8 @@
         localVars: variables,
         nextScene: next,
         initial,
-        hooks
+        hooks,
+        actions
       };
     };
   }
@@ -17860,7 +18087,8 @@ ${addLineNumbers(fragment)}`);
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
     "control": (p, c) => control_default.__handler(p, c),
-    "audio": (p, c) => audio_default.__handler(p, c)
+    "audio": (p, c) => audio_default.__handler(p, c),
+    "element": (p, c) => element_default.__handler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -17992,7 +18220,10 @@ ${addLineNumbers(fragment)}`);
             );
           }
         },
-        execute: (cmd) => this._executeCmd(cmd)
+        execute: (cmd) => this._executeCmd(cmd),
+        actions: {
+          get: (name) => this.definition.actions?.[name]
+        }
       };
       for (const [moduleKey, module] of Object.entries(modules)) {
         if (typeof module.__viewBuilder !== "function") continue;
@@ -18157,7 +18388,10 @@ ${addLineNumbers(fragment)}`);
             );
           }
         },
-        execute: (cmd2) => this._executeCmd(cmd2)
+        execute: (cmd2) => this._executeCmd(cmd2),
+        actions: {
+          get: (name) => this.definition.actions?.[name]
+        }
       };
       if (FLOW_CONTROL_HANDLERS[type]) {
         return FLOW_CONTROL_HANDLERS[type](params, ctx);
@@ -18962,6 +19196,9 @@ ${addLineNumbers(fragment)}`);
         },
         execute: function* () {
           return false;
+        },
+        actions: {
+          get: () => void 0
         }
       };
     }
@@ -19096,9 +19333,93 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-ui.ts
   var scene_ui_default = defineScene({
-    config: novel_config_default
+    config: novel_config_default,
+    actions: {
+      save: (ctx, vars) => {
+        try {
+          const data = ctx.novel.save();
+          localStorage.setItem("fumika-save", JSON.stringify(data));
+          console.log("[scene-ui] \uC800\uC7A5 \uC644\uB8CC");
+        } catch (e) {
+          console.warn("[scene-ui] \uC800\uC7A5 \uC2E4\uD328:", e);
+        }
+        ctx.execute({ type: "should be error" });
+      },
+      load: (ctx) => {
+        try {
+          const raw = localStorage.getItem("fumika-save");
+          if (raw) {
+            ctx.novel.loadSave(JSON.parse(raw));
+            console.log("[scene-ui] \uB85C\uB4DC \uC644\uB8CC");
+          } else {
+            console.warn("[scene-ui] \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C");
+          }
+        } catch (e) {
+          console.warn("[scene-ui] \uB85C\uB4DC \uC2E4\uD328:", e);
+        }
+      }
+    }
   })(() => [
-    { type: "overlay-text", action: "show", name: "test", preset: "caption", text: "\uD14C\uC2A4\uD2B8\uC785\uB2C8\uB2E4" }
+    // ── 사이드 패널 ──────────────────────────────────────
+    {
+      type: "element",
+      action: "show",
+      id: "panel",
+      kind: "rect",
+      position: { x: 0.95, y: 0.15 },
+      style: {
+        width: 80,
+        height: 120,
+        color: "rgba(0, 0, 0, 0.4)",
+        borderRadius: 8
+      },
+      children: [
+        // 저장 버튼
+        {
+          id: "btn_save",
+          kind: "rect",
+          position: { x: 0, y: 25 },
+          style: {
+            width: 60,
+            height: 28,
+            color: "rgba(255, 255, 255, 0.1)",
+            borderRadius: 4
+          },
+          hoverStyle: { color: "rgba(100, 140, 255, 0.5)" },
+          onClick: "save",
+          children: [
+            {
+              id: "btn_save_text",
+              kind: "text",
+              text: "\u{1F4BE} \uC800\uC7A5",
+              style: { fontSize: 13, color: "#ffffff" }
+            }
+          ]
+        },
+        // 로드 버튼
+        {
+          id: "btn_load",
+          kind: "rect",
+          position: { x: 0, y: -15 },
+          style: {
+            width: 60,
+            height: 28,
+            color: "rgba(255, 255, 255, 0.1)",
+            borderRadius: 4
+          },
+          hoverStyle: { color: "rgba(100, 255, 140, 0.5)" },
+          onClick: "load",
+          children: [
+            {
+              id: "btn_load_text",
+              kind: "text",
+              text: "\u{1F4C2} \uB85C\uB4DC",
+              style: { fontSize: 13, color: "#ffffff" }
+            }
+          ]
+        }
+      ]
+    }
   ]);
 
   // example/scenes/common-initial.ts
