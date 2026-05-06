@@ -3936,7 +3936,15 @@
           e.stopImmediatePropagation();
           const action = _actionCache.get(actionName);
           if (action) {
-            action(ctx, ctx.scene.getVars());
+            const wrappedCtx = {
+              ...ctx,
+              execute: (cmd) => {
+                const gen = ctx.execute(cmd);
+                gen.next();
+                return gen;
+              }
+            };
+            action(wrappedCtx, ctx.scene.getVars());
           } else {
             console.warn(`[fumika] element onClick: action '${actionName}' not found`);
           }
@@ -19186,7 +19194,7 @@ ${addLineNumbers(fragment)}`);
           interpolateText: (t) => t,
           jumpToLabel: noop,
           hasLabel: () => false,
-          getVars: () => ({}),
+          getVars: () => ({ ...this.environments ?? {}, ...this.variables }),
           setGlobalVar: noop,
           setLocalVar: noop,
           loadScene: noop,

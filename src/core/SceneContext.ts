@@ -51,12 +51,10 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    * 세이브/로드 시 SaveData.states에 자동 포함됩니다.
    *
    * @example
-   * ```ts
    * // 저장
    * ctx.state.set('dialogue', { subIndex: 2, lines: [...] })
    * // 읽기 (로드 후 복원 시에도 사용)
    * const saved = ctx.state.get('dialogue')
-   * ```
    */
   state: {
     /** 이름으로 직렬화 가능한 데이터를 저장합니다 */
@@ -91,20 +89,16 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    * 무시하고 caller가 별도의 값을 반환해도 됩니다.
    *
    * @example side-effect 목적 (반환값 무시)
-   * ```ts
    * export const myHandler = defineCmd<{ name: string }>((cmd, ctx) => {
    *   ctx.execute({ type: 'character', name: cmd.name, image: 'normal', position: 'center' })
    *   ctx.execute({ type: 'screen-flash', color: '#ffffff', duration: 200 })
    *   return true // caller 자신은 즉시 완료
    * })
-   * ```
    *
    * @example 반환값 전파
-   * ```ts
    * export const myHandler = defineCmd<{ text: string }>((cmd, ctx) => {
    *   return ctx.execute({ type: 'dialogue', text: `${cmd.name} 등장!` })
    * })
-   * ```
    */
   execute: (cmd: DialogueEntry<any, any, any>) => Generator<CommandResult, CommandResult, any>
   /**

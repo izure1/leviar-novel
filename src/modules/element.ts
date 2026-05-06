@@ -300,7 +300,18 @@ elementModule.defineView((ctx, data, setState) => {
         e.stopImmediatePropagation()
         const action = _actionCache.get(actionName)
         if (action) {
-          action(ctx, ctx.scene.getVars())
+          // action 내부에서 ctx.execute()가 Generator를 소비하도록
+          // execute를 래핑한 ctx를 전달
+          const wrappedCtx: SceneContext = {
+            ...ctx,
+            execute: (cmd) => {
+              const gen = ctx.execute(cmd)
+              // Generator body를 즉시 실행 (첫 번째 yield/return까지)
+              gen.next()
+              return gen
+            },
+          }
+          action(wrappedCtx, ctx.scene.getVars())
         } else {
           console.warn(`[fumika] element onClick: action '${actionName}' not found`)
         }

@@ -933,7 +933,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         interpolateText: (t: string) => t,
         jumpToLabel: noop as any,
         hasLabel: () => false,
-        getVars: () => ({}),
+        getVars: () => ({ ...(this.environments ?? {}) as object, ...this.variables as object }),
         setGlobalVar: noop as any,
         setLocalVar: noop as any,
         loadScene: noop as any,
