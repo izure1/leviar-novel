@@ -159,13 +159,17 @@ type _BuiltinEntryUnion<TConfig, TVars, TLocalVars> = {
 /**
  * 사용자 정의 모듈 명령어 유니온.
  * `config.modules`에 등록된 각 모듈의 TCmd 스키마로부터 생성됩니다.
+ *
+ * `BuiltinCmdMap` 키는 제외합니다. 내장 모듈은 `_BuiltinEntryUnion`에서
+ * `TConfig`가 전파된 상태로 이미 포함되므로, `CustomCmd`에서 중복 생성하면
+ * `TConfig = any`로 인해 `AssetKeysOf` 등이 `string`으로 풀려 타입 체크가 무력화됩니다.
  */
 export type CustomCmd<TConfig, TVars = any, TLocalVars = any> = {
-  [K in keyof ModulesOf<TConfig> & string]:
+  [K in Exclude<keyof ModulesOf<TConfig> & string, keyof BuiltinCmdMap<TConfig, TVars, TLocalVars>>]:
   ModulesOf<TConfig>[K] extends NovelModule<infer TSchema>
   ? ResolvableProps<TSchema & { type: K } & _StepBase, TVars, TLocalVars>
   : never
-}[keyof ModulesOf<TConfig> & string]
+}[Exclude<keyof ModulesOf<TConfig> & string, keyof BuiltinCmdMap<TConfig, TVars, TLocalVars>>]
 
 // ─── 최종 타입 ───────────────────────────────────────────────
 

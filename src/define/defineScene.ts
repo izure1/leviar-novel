@@ -329,4 +329,3 @@ export function defineScene<
     } as any
   }
 }
-

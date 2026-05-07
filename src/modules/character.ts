@@ -23,7 +23,7 @@ export type CharacterCmd<TConfig = any> = {
     /** 캐릭터의 위치 프리셋입니다. */
     position?: CharacterPositionPreset
     /** 표시할 캐릭터 이미지의 키입니다. */
-    image?: ImageKeysOf<TConfig, Name> | (string & {})
+    image?: ImageKeysOf<TConfig, Name>
     /** 캐릭터 등장 시 카메라를 해당 캐릭터에 포커스할지 여부입니다. */
     focus?: boolean | PointsOf<TConfig, Name> | (string & {})
     /** 등장 애니메이션의 지속 시간(ms)입니다. */
