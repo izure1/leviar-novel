@@ -1211,6 +1211,7 @@
             height: btnH,
             zIndex: defaultBtnStyle.zIndex ?? 501,
             pointerEvents: true,
+            cursor: "pointer",
             opacity: defaultBtnStyle.opacity ?? 1
           };
           const btnObj = ctx.world.createRectangle({
@@ -3204,7 +3205,8 @@
             width: bw,
             height: BTN_H,
             zIndex: 603,
-            pointerEvents: true
+            pointerEvents: true,
+            cursor: "pointer"
           };
           const btnObj = ctx.world.createRectangle({
             style: btnStyle,
@@ -3594,7 +3596,8 @@
           borderWidth: 1,
           borderRadius: "2%",
           zIndex: Z_INDEX.DIALOG_BOX + 2,
-          pointerEvents: true
+          pointerEvents: true,
+          cursor: "text"
         },
         transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
       });
@@ -3638,7 +3641,8 @@
           width: bw,
           height: BTN_H,
           zIndex: Z_INDEX.DIALOG_BOX + 3,
-          pointerEvents: true
+          pointerEvents: true,
+          cursor: "pointer"
         };
         const btnHoverStyleDef = { ...btnHoverCfg, ...btn.hoverStyle ?? {} };
         const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: Z_INDEX.DIALOG_BOX + 4, pointerEvents: false };
@@ -12807,7 +12811,8 @@ ${addLineNumbers(fragment)}`);
       letterSpacing: partial?.letterSpacing ?? 0,
       gradient: partial?.gradient,
       gradientType: partial?.gradientType,
-      borderRadius: partial?.borderRadius
+      borderRadius: partial?.borderRadius,
+      cursor: partial?.cursor
     };
   }
   function makeTrackedProxy(target, emitter, eventName, delegatedKeys) {
@@ -17144,6 +17149,8 @@ ${addLineNumbers(fragment)}`);
         if (this.debugMode) {
           this.renderer.debugHoveredIds = hitIds;
         }
+        const topCursor = hits.find((o) => o.style.cursor)?.style.cursor;
+        canvas.style.cursor = topCursor ?? "";
         for (const obj of hits) {
           if (!this._mouseOver.has(obj.attribute.id)) {
             this._mouseOver.add(obj.attribute.id);
@@ -17165,6 +17172,7 @@ ${addLineNumbers(fragment)}`);
         }
       });
       canvas.addEventListener("mouseleave", (e) => {
+        canvas.style.cursor = "";
         const wrapped = wrapMouseEvent(e);
         for (const id of Array.from(this._mouseOver)) {
           const obj = Array.from(this.objects).find((o) => o.attribute.id === id);
@@ -19391,6 +19399,17 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/scenes/scene-ui.ts
+  var UI_BUTTON_STYLE = {
+    fontSize: 22,
+    fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center",
+    textShadowBlur: 1,
+    textShadowOffsetX: 1,
+    textShadowOffsetY: 1,
+    textShadowColor: "rgba(0, 0, 0, 1)",
+    cursor: "pointer"
+  };
   var scene_ui_default = defineScene({
     config: novel_config_default,
     actions: {
@@ -19426,14 +19445,7 @@ ${addLineNumbers(fragment)}`);
           text: "\uC800\uC7A5\uD558\uAE30",
           position: { x: -120, y: 0 },
           style: {
-            fontSize: 22,
-            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-            color: "rgba(255, 255, 255, 0.6)",
-            textAlign: "center",
-            textShadowBlur: 1,
-            textShadowOffsetX: 1,
-            textShadowOffsetY: 1,
-            textShadowColor: "rgba(0, 0, 0, 1)"
+            ...UI_BUTTON_STYLE
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "save"
@@ -19445,14 +19457,7 @@ ${addLineNumbers(fragment)}`);
           text: "\uBD88\uB7EC\uC624\uAE30",
           position: { x: 0, y: 0 },
           style: {
-            fontSize: 22,
-            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-            color: "rgba(255, 255, 255, 0.6)",
-            textAlign: "center",
-            textShadowBlur: 1,
-            textShadowOffsetX: 1,
-            textShadowOffsetY: 1,
-            textShadowColor: "rgba(0, 0, 0, 1)"
+            ...UI_BUTTON_STYLE
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "load"
@@ -19464,14 +19469,7 @@ ${addLineNumbers(fragment)}`);
           text: "\uC804\uCCB4\uD654\uBA74",
           position: { x: 120, y: 0 },
           style: {
-            fontSize: 22,
-            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-            color: "rgba(255, 255, 255, 0.6)",
-            textAlign: "center",
-            textShadowBlur: 1,
-            textShadowOffsetX: 1,
-            textShadowOffsetY: 1,
-            textShadowColor: "rgba(0, 0, 0, 1)"
+            ...UI_BUTTON_STYLE
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "fullscreen"

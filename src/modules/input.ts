@@ -128,6 +128,10 @@ export interface InputSchema {
   _buttons: InputButton[]
   /** @internal 완료 콜백 (value: 입력값, buttonIndex: 클릭된 버튼 인덱스) */
   _resolve: ((value: string, buttonIndex: number) => void) | null
+  /** @internal 커스텀 UI 태그 */
+  _uiTags?: string[]
+  /** @internal 커스텀 UI 숨김 태그 */
+  _hideTags?: string[]
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -238,6 +242,10 @@ export interface InputCmd<TConfig = any, _TLocalVars = any> {
    * multiline=false이면 엔터 키도 첫 번째 버튼과 동일한 효과입니다.
    */
   buttons?: InputButton[]
+  /** UI 억제 시스템을 위한 태그 목록. 없으면 기본값(['input', 'default-ui']) 사용 */
+  uiTags?: string[]
+  /** 해당 UI 활성화 시 억제(숨김)할 대상 태그 목록. 없으면 기본값(['default-ui']) 사용 */
+  hideTags?: string[]
 }
 
 // ─── InputHook ────────────────────────────────────────────────
@@ -534,6 +542,7 @@ inputModule.defineView((ctx, data, setState) => {
         borderRadius: '2%',
         zIndex: Z_INDEX.DIALOG_BOX + 2,
         pointerEvents: true,
+        cursor: 'text'
       },
       transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } },
     })
@@ -591,6 +600,7 @@ inputModule.defineView((ctx, data, setState) => {
         height: BTN_H,
         zIndex: Z_INDEX.DIALOG_BOX + 3,
         pointerEvents: true,
+        cursor: 'pointer',
       }
       const btnHoverStyleDef: Partial<Style> = { ...btnHoverCfg, ...(btn.hoverStyle ?? {}) }
       const txtStyleDef: Partial<Style> = { ...btnTxtCfg, ...(btn.textStyle ?? {}), zIndex: Z_INDEX.DIALOG_BOX + 4, pointerEvents: false }
@@ -723,8 +733,8 @@ inputModule.defineView((ctx, data, setState) => {
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    uiTags: ['input', 'default-ui'],
-    hideTags: ['default-ui'],
+    uiTags: data._uiTags ?? ['input', 'default-ui'],
+    hideTags: data._hideTags ?? ['default-ui'],
 
     onCleanup: () => {
       _destroyHiddenInput()
@@ -806,6 +816,8 @@ inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
     _buttons: buttons,
     _resolve: resolve,
     _value: '',
+    _uiTags: cmd.uiTags ?? _state._uiTags ?? ['input', 'default-ui'],
+    _hideTags: cmd.hideTags ?? _state._hideTags ?? ['default-ui'],
   })
 
   while (!_resolved) {

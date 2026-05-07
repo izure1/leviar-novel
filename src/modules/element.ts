@@ -92,6 +92,8 @@ export interface ElementCmdBase<TConfig = any> {
   duration?: number
   /** UI 억제 시스템을 위한 태그 목록. 없으면 빈 배열([]) */
   uiTags?: string[]
+  /** 해당 UI 활성화 시 억제(숨김)할 대상 태그 목록. 없으면 빈 배열([]) */
+  hideTags?: string[]
 }
 
 export type ElementCmd<TConfig = any> =
@@ -120,6 +122,7 @@ export interface ElementSchema {
   _elements: Record<string, ElementEntry>
   _lastDuration?: number
   _uiTags?: string[]
+  _hideTags?: string[]
 }
 
 // ─── children → flat 변환 ─────────────────────────────────────
@@ -351,6 +354,7 @@ elementModule.defineView((ctx, data, setState) => {
 
   return {
     uiTags: data._uiTags ?? [],
+    hideTags: data._hideTags ?? [],
     show: (duration) => {
       for (const [id, entry] of Object.entries(_elementEntries)) {
         if (!entry.parent && _elementObjs[id]) {
@@ -437,8 +441,9 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   // show 액션일 경우 cmd.uiTags를 적용하고 없으면 빈 배열로 덮어씁니다.
   const nextUiTags = cmd.action === 'show' ? (cmd.uiTags ?? []) : state._uiTags
+  const nextHideTags = cmd.action === 'show' ? (cmd.hideTags ?? []) : state._hideTags
 
-  setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags })
+  setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags, _hideTags: nextHideTags })
   return true // 항상 즉시 완료 (블로킹 안 함)
 })
 

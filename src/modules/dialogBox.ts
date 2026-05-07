@@ -104,6 +104,10 @@ export interface DialogBoxSchema {
   _resolve: ((index: number) => void) | null
   _duration: number
   _persist: boolean
+  /** @internal 커스텀 UI 태그 */
+  _uiTags?: string[]
+  /** @internal 커스텀 UI 숨김 태그 */
+  _hideTags?: string[]
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -197,6 +201,10 @@ export interface DialogBoxCmd<TConfig = any, TLocalVars = Record<never, never>> 
    * false(기본)이면 오버레이 클릭 시 -1 인덱스로 resolve되고 닫힘.
    */
   persist?: boolean
+  /** UI 억제 시스템을 위한 태그 목록. 없으면 기본값(['dialogBox', 'default-ui']) 사용 */
+  uiTags?: string[]
+  /** 해당 UI 활성화 시 억제(숨김)할 대상 태그 목록. 없으면 기본값(['default-ui']) 사용 */
+  hideTags?: string[]
   /**
    * 버튼 목록. 1개 이상 필수.
    * - `text`: 버튼 레이블
@@ -479,6 +487,7 @@ dialogBoxModule.defineView((ctx, data, setState) => {
           height: BTN_H,
           zIndex: 603,
           pointerEvents: true,
+          cursor: 'pointer',
         }
 
         const btnObj = ctx.world.createRectangle({
@@ -541,8 +550,8 @@ dialogBoxModule.defineView((ctx, data, setState) => {
     },
 
     // ─── 입력 역할 선언 ────────────────────────────────
-    uiTags: ['dialogBox', 'default-ui'],
-    hideTags: ['default-ui'],
+    uiTags: data._uiTags ?? ['dialogBox', 'default-ui'],
+    hideTags: data._hideTags ?? ['default-ui'],
 
     onCleanup: () => {
       _clearDynamic()
@@ -625,6 +634,8 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     _resolve: resolve,
     _duration: duration,
     _persist: persist,
+    _uiTags: cmd.uiTags ?? _state._uiTags ?? ['dialogBox', 'default-ui'],
+    _hideTags: cmd.hideTags ?? _state._hideTags ?? ['default-ui'],
   })
 
   while (_resolved === false) {
