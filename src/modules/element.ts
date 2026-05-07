@@ -347,17 +347,18 @@ elementModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: () => {
+    uiTags: ['element', 'default-ui'],
+    show: (duration) => {
       for (const [id, entry] of Object.entries(_elementEntries)) {
         if (!entry.parent && _elementObjs[id]) {
-          _elementObjs[id].fadeIn(200, 'easeOut')
+          _elementObjs[id].fadeIn(duration, 'easeOut')
         }
       }
     },
-    hide: () => {
+    hide: (duration) => {
       for (const [id, entry] of Object.entries(_elementEntries)) {
         if (!entry.parent && _elementObjs[id]) {
-          _elementObjs[id].fadeOut(200, 'easeIn')
+          _elementObjs[id].fadeOut(duration, 'easeIn')
         }
       }
     },

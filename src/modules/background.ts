@@ -129,8 +129,8 @@ backgroundModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (dur = 250) => { },
-    hide: (dur = 300) => { },
+    show: () => { },
+    hide: () => { },
     onCleanup: () => {
       if (_bgObj) { _bgObj.remove({ child: true }); _bgObj = null }
     },

@@ -11,9 +11,9 @@ import type { SetStateFn } from '../define/defineCmdUI'
  */
 export interface UIRuntimeEntry<TSchema = any> {
   /** UI 요소를 페이드인하여 표시합니다 */
-  show(duration?: number): void
+  show(duration: number): void
   /** UI 요소를 페이드아웃하여 숨깁니다 */
-  hide(duration?: number): void
+  hide(duration: number): void
   /**
    * 공유 data가 변경될 때 반응형으로 호출됩니다.
    * 스타일 적용, 텍스트 재렌더 등 UI 갱신 로직을 구현하세요.
@@ -28,17 +28,17 @@ export interface UIRuntimeEntry<TSchema = any> {
   // ─── 입력 역할 선언 ──────────────────────────────────────
 
   /**
-   * 이 UI 엔트리의 그룹 식별자.
-   * 다른 엔트리의 `hideGroups`에 이 값이 포함되면 `hide()`가 호출됩니다.
-   * @example 'dialogue'
+   * 이 UI 엔트리의 태그 목록.
+   * 다른 엔트리의 `hideTags`에 이 태그 중 하나라도 포함되면 `hide()`가 호출됩니다.
+   * @example ['dialogue', 'default-ui']
    */
-  uiGroup?: string
+  uiTags?: string[]
   /**
-   * 이 엔트리의 step이 활성화될 때 숨길 다른 엔트리들의 `uiGroup` 목록.
-   * Novel 코어가 해당 group의 엔트리에 `hide()`를 직접 호출합니다.
-   * @example ['dialogue']
+   * 이 엔트리의 step이 활성화될 때 숨길 다른 엔트리들의 `uiTags` 목록.
+   * Novel 코어가 일치하는 태그를 가진 엔트리에 `hide()`를 직접 호출합니다.
+   * @example ['default-ui']
    */
-  hideGroups?: string[]
+  hideTags?: string[]
 
   /**
    * `novel.next()` 호출 시 진행 가능 여부를 판단합니다.

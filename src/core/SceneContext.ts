@@ -72,9 +72,9 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
     /** 이름으로 UIRuntimeEntry를 조회합니다 */
     get(name: string): UIRuntimeEntry | undefined
     /** 등록된 UI를 페이드인하여 표시합니다 */
-    show(name: string, duration?: number): void
+    show(name: string, duration: number): void
     /** 등록된 UI를 페이드아웃하여 숨깁니다 */
-    hide(name: string, duration?: number): void
+    hide(name: string, duration: number): void
   }
   /**
    * 현재 ctx 컨텍스트 위에서 다른 커맨드를 즉시 실행합니다.

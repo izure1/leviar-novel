@@ -944,16 +944,16 @@
       const resolvedSpeaker = resolved.speaker;
       const resolvedText = resolved.text;
       _isActive = true;
-      bgObj.fadeIn(200, "easeOut");
+      bgObj.fadeIn(250, "easeOut");
       speakerObj.attribute.text = resolvedSpeaker ?? "";
-      speakerObj.fadeIn(200, "easeOut");
+      speakerObj.fadeIn(250, "easeOut");
       if (immediate || speed === 0) {
         _isTyping = false;
         _fullText = resolvedText;
         _activeTx?.stop?.();
         _activeTx = null;
         textObj.attribute.text = resolvedText;
-        textObj.fadeIn(200, "easeOut");
+        textObj.fadeIn(250, "easeOut");
       } else {
         const spd = speed ?? 30;
         _isTyping = true;
@@ -964,7 +964,7 @@
         }
         const anim = textObj.transition(resolvedText, spd);
         _activeTx = anim;
-        textObj.fadeIn(200, "easeOut");
+        textObj.fadeIn(250, "easeOut");
         if (anim && typeof anim.on === "function") {
           anim.on("end", () => {
             _isTyping = false;
@@ -981,11 +981,11 @@
       _renderText(spkName, txt, void 0, true);
     }
     return {
-      show: (dur = 250) => {
+      show: (duration) => {
         if (_isActive) {
-          bgObj.fadeIn(dur, "easeOut");
-          speakerObj.fadeIn(dur, "easeOut");
-          textObj.fadeIn(dur, "easeOut");
+          bgObj.fadeIn(duration, "easeOut");
+          speakerObj.fadeIn(duration, "easeOut");
+          textObj.fadeIn(duration, "easeOut");
         }
       },
       onCleanup: () => {
@@ -996,15 +996,15 @@
         speakerObj.remove({ child: true });
         textObj.remove({ child: true });
       },
-      hide: (dur = 300) => {
+      hide: (duration) => {
         if (_isActive) {
-          bgObj.fadeOut(dur, "easeIn");
-          speakerObj.fadeOut(dur, "easeIn");
-          textObj.fadeOut(dur, "easeIn");
+          bgObj.fadeOut(duration, "easeIn");
+          speakerObj.fadeOut(duration, "easeIn");
+          textObj.fadeOut(duration, "easeIn");
         }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiGroup: "dialogue",
+      uiTags: ["dialogue", "default-ui"],
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1153,19 +1153,20 @@
       });
       _btnObjs = [];
     };
-    const _hide = () => {
-      bgObj.fadeOut(200, "easeIn");
+    const _hide = (duration) => {
+      bgObj.fadeOut(duration, "easeIn");
       _clearButtons();
     };
     return {
-      show: () => {
-        if (_btnObjs.length > 0) bgObj.fadeIn(200, "easeOut");
+      show: (duration) => {
+        if (_btnObjs.length > 0) bgObj.fadeIn(duration, "easeOut");
       },
-      hide: () => {
-        if (_btnObjs.length > 0) bgObj.fadeOut(200, "easeIn");
+      hide: (duration) => {
+        if (_btnObjs.length > 0) bgObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      hideGroups: ["dialogue"],
+      uiTags: ["choice", "default-ui"],
+      hideTags: ["default-ui"],
       /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
@@ -1173,7 +1174,7 @@
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
       _onChoices: (choices, onSelect) => {
-        bgObj.fadeIn(200, "easeOut");
+        bgObj.fadeIn(250, "easeOut");
         _clearButtons();
         const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE_STYLE.button;
         const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE_STYLE.buttonHover;
@@ -1290,7 +1291,7 @@
       yield false;
     }
     const item = selected;
-    entry?._hide();
+    entry?._hide(250);
     if (item.var) {
       const vars = resolveVarResolvable(item.var, ctx.scene.getVars());
       if (vars) {
@@ -1389,9 +1390,9 @@
       _bgParallax = data._parallax;
     }
     return {
-      show: (dur = 250) => {
+      show: () => {
       },
-      hide: (dur = 300) => {
+      hide: () => {
       },
       onCleanup: () => {
         if (_bgObj) {
@@ -3246,14 +3247,15 @@
       overlayObj.fadeOut(duration, "easeIn");
     };
     return {
-      show: (duration = 200) => {
+      show: (duration) => {
         if (_currentResolve) overlayObj.fadeIn(duration, "easeOut");
       },
-      hide: (duration = 200) => {
+      hide: (duration) => {
         if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      hideGroups: ["dialogue"],
+      uiTags: ["dialogBox", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _clearDynamic();
         overlayObj.remove({ child: true });
@@ -3725,22 +3727,24 @@
           _hiddenEl.focus({ preventScroll: true });
         }
       });
-      overlayObj.fadeIn(200, "easeOut");
+      overlayObj.fadeIn(250, "easeOut");
     };
-    const _hide = (duration = 200) => {
+    const _hide = (duration = 250) => {
       _currentResolve = null;
       _destroyHiddenInput();
       _textObj = null;
       overlayObj.fadeOut(duration, "easeIn");
     };
     return {
-      show: (dur = 200) => {
-        if (_isActive) overlayObj.fadeIn(dur, "easeOut");
+      show: (duration) => {
+        if (_isActive) overlayObj.fadeIn(duration, "easeOut");
       },
-      hide: (dur = 200) => {
-        if (_isActive) overlayObj.fadeOut(dur, "easeIn");
+      hide: (duration) => {
+        if (_isActive) overlayObj.fadeOut(duration, "easeIn");
       },
-      hideGroups: ["dialogue"],
+      // ─── 입력 역할 선언 ─────────────────────────────────
+      uiTags: ["input", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
@@ -3977,17 +3981,18 @@
       _addElement(entry, true);
     }
     return {
-      show: () => {
+      uiTags: ["element", "default-ui"],
+      show: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
-            _elementObjs[id].fadeIn(200, "easeOut");
+            _elementObjs[id].fadeIn(duration, "easeOut");
           }
         }
       },
-      hide: () => {
+      hide: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
-            _elementObjs[id].fadeOut(200, "easeIn");
+            _elementObjs[id].fadeOut(duration, "easeIn");
           }
         }
       },
@@ -18804,7 +18809,7 @@ ${addLineNumbers(fragment)}`);
     /**
      * hideable:true 로 등록된 모든 UI 요소를 숨깁니다.
      */
-    hideUI(duration) {
+    hideUI(duration = 250) {
       for (const entry of this._uiRegistry.values()) {
         entry.hide(duration);
       }
@@ -18812,12 +18817,16 @@ ${addLineNumbers(fragment)}`);
     /**
      * hideUI()로 숨겼던 UI 요소를 다시 표시합니다.
      */
-    showUI(duration) {
+    showUI(duration = 250) {
       const stepType = this._currentScene?.getCurrentStepType();
       const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
-      const suppressedGroups = activeEntry?.hideGroups ?? [];
+      const suppressedTags = activeEntry?.hideTags ?? [];
       for (const entry of this._uiRegistry.values()) {
-        if (entry.uiGroup && suppressedGroups.includes(entry.uiGroup)) {
+        if (entry === activeEntry) {
+          entry.show(duration);
+          continue;
+        }
+        if (entry.uiTags && entry.uiTags.some((tag) => suppressedTags.includes(tag))) {
           continue;
         }
         entry.show(duration);
@@ -19007,7 +19016,7 @@ ${addLineNumbers(fragment)}`);
       const stepType = this._currentScene.getCurrentStepType();
       const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
       if (activeEntry) {
-        this._suppressUIs(activeEntry.hideGroups);
+        this._suppressUIs(activeEntry);
         this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
         return;
       }
@@ -19104,13 +19113,15 @@ ${addLineNumbers(fragment)}`);
       this._syncUIState();
     }
     /**
-     * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
+     * `hideTags`에 나열된 태그를 하나라도 가진 엔트리에 `hide()`를 직접 호출합니다. (자기 자신 제외)
      */
-    _suppressUIs(groups) {
-      if (!groups?.length) return;
+    _suppressUIs(activeEntry) {
+      if (!activeEntry || !activeEntry.hideTags?.length) return;
+      const tags = activeEntry.hideTags;
       for (const entry of this._uiRegistry.values()) {
-        if (entry.uiGroup && groups.includes(entry.uiGroup)) {
-          entry.hide();
+        if (entry === activeEntry) continue;
+        if (entry.uiTags && entry.uiTags.some((tag) => tags.includes(tag))) {
+          entry.hide(250);
         }
       }
     }

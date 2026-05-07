@@ -180,21 +180,22 @@ choiceModule.defineView((ctx, data, setState) => {
     _btnObjs = []
   }
 
-  const _hide = () => {
-    bgObj.fadeOut(200, 'easeIn')
+  const _hide = (duration: number) => {
+    bgObj.fadeOut(duration, 'easeIn')
     _clearButtons()
   }
 
   return {
-    show: () => {
-      if (_btnObjs.length > 0) bgObj.fadeIn(200, 'easeOut')
+    show: (duration) => {
+      if (_btnObjs.length > 0) bgObj.fadeIn(duration, 'easeOut')
     },
-    hide: () => {
-      if (_btnObjs.length > 0) bgObj.fadeOut(200, 'easeIn')
+    hide: (duration) => {
+      if (_btnObjs.length > 0) bgObj.fadeOut(duration, 'easeIn')
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    hideGroups: ['dialogue'],
+    uiTags: ['choice', 'default-ui'],
+    hideTags: ['default-ui'],
 
     /** 씬 전환 시 오브젝트 즉시 제거 */
     onCleanup: () => {
@@ -204,7 +205,7 @@ choiceModule.defineView((ctx, data, setState) => {
 
     // ─── 모듈 내부 전용 ─────────────────────────────────
     _onChoices: (choices: ResolvedChoiceItem[], onSelect: (i: number) => void) => {
-      bgObj.fadeIn(200, 'easeOut')
+      bgObj.fadeIn(250, 'easeOut')
       _clearButtons()
 
       const defaultBtnStyle = (cfg.button ?? DEFAULT_CHOICE_STYLE.button) as Partial<Style>
@@ -359,7 +360,7 @@ choiceModule.defineCommand(function* (cmd, ctx) {
   const item = selected as ResolvedChoiceItem
 
   // 선택지 숨기기
-  entry?._hide()
+  entry?._hide(250)
 
   // var 설정
   if (item.var) {

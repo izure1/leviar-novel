@@ -262,11 +262,11 @@ dialogueModule.defineView((ctx, data, setState) => {
     _isActive = true
 
     // 배경 페이드인
-    bgObj.fadeIn(200, 'easeOut')
+    bgObj.fadeIn(250, 'easeOut')
 
     // 화자
     speakerObj.attribute.text = resolvedSpeaker ?? ''
-    speakerObj.fadeIn(200, 'easeOut')
+    speakerObj.fadeIn(250, 'easeOut')
 
     // 대사 — 즉시 or 타이핑
     if (immediate || speed === 0) {
@@ -275,7 +275,7 @@ dialogueModule.defineView((ctx, data, setState) => {
       _activeTx?.stop?.()
       _activeTx = null
       textObj.attribute.text = resolvedText
-      textObj.fadeIn(200, 'easeOut')
+      textObj.fadeIn(250, 'easeOut')
     } else {
       const spd = speed ?? 30
       _isTyping = true
@@ -286,7 +286,7 @@ dialogueModule.defineView((ctx, data, setState) => {
       }
       const anim = textObj.transition(resolvedText, spd)
       _activeTx = anim
-      textObj.fadeIn(200, 'easeOut')
+      textObj.fadeIn(250, 'easeOut')
       if (anim && typeof anim.on === 'function') {
         anim.on('end', () => {
           _isTyping = false
@@ -306,11 +306,11 @@ dialogueModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (dur = 250) => {
+    show: (duration) => {
       if (_isActive) {
-        bgObj.fadeIn(dur, 'easeOut')
-        speakerObj.fadeIn(dur, 'easeOut')
-        textObj.fadeIn(dur, 'easeOut')
+        bgObj.fadeIn(duration, 'easeOut')
+        speakerObj.fadeIn(duration, 'easeOut')
+        textObj.fadeIn(duration, 'easeOut')
       }
     },
     onCleanup: () => {
@@ -321,16 +321,16 @@ dialogueModule.defineView((ctx, data, setState) => {
       speakerObj.remove({ child: true })
       textObj.remove({ child: true })
     },
-    hide: (dur = 300) => {
+    hide: (duration) => {
       if (_isActive) {
-        bgObj.fadeOut(dur, 'easeIn')
-        speakerObj.fadeOut(dur, 'easeIn')
-        textObj.fadeOut(dur, 'easeIn')
+        bgObj.fadeOut(duration, 'easeIn')
+        speakerObj.fadeOut(duration, 'easeIn')
+        textObj.fadeOut(duration, 'easeIn')
       }
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    uiGroup: 'dialogue',
+    uiTags: ['dialogue', 'default-ui'],
 
     /**
      * novel.next() 호출 시 타이핑 완성 여부 판단.

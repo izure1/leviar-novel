@@ -454,7 +454,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /**
    * hideable:true 로 등록된 모든 UI 요소를 숨깁니다.
    */
-  hideUI(duration?: number): void {
+  hideUI(duration = 250): void {
     for (const entry of this._uiRegistry.values()) {
       entry.hide(duration)
     }
@@ -463,13 +463,17 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /**
    * hideUI()로 숨겼던 UI 요소를 다시 표시합니다.
    */
-  showUI(duration?: number): void {
+  showUI(duration = 250): void {
     const stepType = this._currentScene?.getCurrentStepType()
     const activeEntry = stepType ? this._uiRegistry.get(stepType) : undefined
-    const suppressedGroups = activeEntry?.hideGroups ?? []
+    const suppressedTags = activeEntry?.hideTags ?? []
 
     for (const entry of this._uiRegistry.values()) {
-      if (entry.uiGroup && suppressedGroups.includes(entry.uiGroup)) {
+      if (entry === activeEntry) {
+        entry.show(duration)
+        continue
+      }
+      if (entry.uiTags && entry.uiTags.some(tag => suppressedTags.includes(tag))) {
         continue
       }
       entry.show(duration)
@@ -697,7 +701,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     // stepType에 해당하는 UI 엔트리 직접 조회 → hideGroups 발동
     const activeEntry = stepType ? this._uiRegistry.get(stepType) : undefined
     if (activeEntry) {
-      this._suppressUIs(activeEntry.hideGroups)
+      this._suppressUIs(activeEntry)
       this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'
       return
     }
@@ -828,13 +832,15 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   }
 
   /**
-   * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
+   * `hideTags`에 나열된 태그를 하나라도 가진 엔트리에 `hide()`를 직접 호출합니다. (자기 자신 제외)
    */
-  private _suppressUIs(groups?: string[]): void {
-    if (!groups?.length) return
+  private _suppressUIs(activeEntry?: UIRuntimeEntry): void {
+    if (!activeEntry || !activeEntry.hideTags?.length) return
+    const tags = activeEntry.hideTags
     for (const entry of this._uiRegistry.values()) {
-      if (entry.uiGroup && groups.includes(entry.uiGroup)) {
-        entry.hide()
+      if (entry === activeEntry) continue
+      if (entry.uiTags && entry.uiTags.some(tag => tags.includes(tag))) {
+        entry.hide(250)
       }
     }
   }

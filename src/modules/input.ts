@@ -704,10 +704,10 @@ inputModule.defineView((ctx, data, setState) => {
       }
     })
 
-    overlayObj.fadeIn(200, 'easeOut')
+    overlayObj.fadeIn(250, 'easeOut')
   }
 
-  const _hide = (duration = 200) => {
+  const _hide = (duration = 250) => {
     _currentResolve = null
     _destroyHiddenInput()
     _textObj = null
@@ -715,14 +715,16 @@ inputModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (dur = 200) => {
-      if (_isActive) overlayObj.fadeIn(dur, 'easeOut')
+    show: (duration) => {
+      if (_isActive) overlayObj.fadeIn(duration, 'easeOut')
     },
-    hide: (dur = 200) => {
-      if (_isActive) overlayObj.fadeOut(dur, 'easeIn')
+    hide: (duration) => {
+      if (_isActive) overlayObj.fadeOut(duration, 'easeIn')
     },
 
-    hideGroups: ['dialogue'],
+    // ─── 입력 역할 선언 ─────────────────────────────────
+    uiTags: ['input', 'default-ui'],
+    hideTags: ['default-ui'],
 
     onCleanup: () => {
       _destroyHiddenInput()

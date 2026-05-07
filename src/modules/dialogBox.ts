@@ -533,15 +533,16 @@ dialogBoxModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (duration = 200) => {
+    show: (duration) => {
       if (_currentResolve) overlayObj.fadeIn(duration, 'easeOut')
     },
-    hide: (duration = 200) => {
+    hide: (duration) => {
       if (_currentResolve) overlayObj.fadeOut(duration, 'easeIn')
     },
 
     // ─── 입력 역할 선언 ────────────────────────────────
-    hideGroups: ['dialogue'],
+    uiTags: ['dialogBox', 'default-ui'],
+    hideTags: ['default-ui'],
 
     onCleanup: () => {
       _clearDynamic()
