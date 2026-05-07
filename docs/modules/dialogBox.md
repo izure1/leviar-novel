@@ -17,6 +17,8 @@
 | **`buttons`** | `object[]` | 필수 | 하단에 배치할 버튼들의 구성 객체 목록 |
 | **`persist`** | `boolean` | `false` | `true`면 창 밖의 여백을 클릭해도 창이 닫히지 않고 강제 선택을 요구함 |
 | **`duration`** | `number` | `300` | 창이 나타나고 사라지는 페이드 애니메이션 시간(ms) |
+| **`uiTags`** | `string[]` | `['dialogBox', 'default-ui']` | 이 모듈의 UI 태그 목록입니다. |
+| **`hideTags`** | `string[]` | `['default-ui']` | 알림창 활성화 시 함께 숨길 대상 태그 목록입니다. |
 
 ### 2. Buttons 객체 구성
 
@@ -73,3 +75,4 @@ export default defineScene({
 
 *   **[알림창 상태 (DialogBox State)](./state/dialogBox.md)**: 알림창 배경 및 버튼 레이아웃 제어
 *   **[알림창 훅 (DialogBox Hooks)](./hooks/dialogBox.md)**: 알림창 렌더링 전 제목 수정 및 클릭 이벤트 제어
+*   **[UI 태그 및 억제 시스템](../ui-tags.md)**: 알림창 노출 시 주변 UI를 숨기는 자동화 설정

@@ -12,6 +12,8 @@
 | :--- | :--- | :---: | :--- |
 | **`type`** | `'choices'` | 필수 | 커맨드 타입 |
 | **`choices`** | `ChoiceItem[]` | 필수 | 화면에 제시할 선택지들의 객체 배열 |
+| **`uiTags`** | `string[]` | `['choice', 'default-ui']` | 이 모듈의 UI 태그 목록입니다. |
+| **`hideTags`** | `string[]` | `['default-ui']` | 선택지 활성화 시 함께 숨길 대상 태그 목록입니다. |
 
 ### 2. ChoiceItem 요소 상세
 
@@ -69,3 +71,4 @@ export default defineScene({
 
 *   **[선택지 상태 (Choices State)](./state/choices.md)**: 선택지 버튼의 레이아웃과 디자인 변경 방법
 *   **[선택지 훅 (Choices Hooks)](./hooks/choices.md)**: 선택 이벤트 발생 시 텍스트 조작 및 로깅 기법
+*   **[UI 태그 및 억제 시스템](../ui-tags.md)**: 선택지 활성화 시 다른 UI를 숨기는 메커니즘 상세

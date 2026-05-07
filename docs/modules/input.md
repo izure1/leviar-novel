@@ -16,6 +16,8 @@
 | **`label`** | `string` | (없음) | 입력창 바로 위에 띄워줄 안내 문구 |
 | **`multiline`** | `boolean` | `false` | 여러 줄을 입력할 수 있게 텍스트 영역을 키울지 여부 |
 | **`buttons`** | `InputButton[]` | (없음) | 입력창 하단에 배치할 버튼들의 구성 객체 목록 |
+| **`uiTags`** | `string[]` | `['input', 'default-ui']` | 이 모듈의 UI 태그 목록입니다. |
+| **`hideTags`** | `string[]` | `['default-ui']` | 입력창 활성화 시 함께 숨길 대상 태그 목록입니다. |
 
 ### 2. InputButton 객체 구성
 
@@ -80,3 +82,4 @@ export default defineScene({
 
 *   **[입력창 상태 (Input State)](./state/input.md)**: 입력창 배경, 커서 및 폰트 스타일 제어
 *   **[입력 훅 (Input Hooks)](./hooks/input.md)**: 사용자가 입력한 텍스트의 유효성 검사 및 보정
+*   **[UI 태그 및 억제 시스템](../ui-tags.md)**: 입력창 활성화 시 주변 UI를 자동으로 가리는 방법

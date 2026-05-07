@@ -15,6 +15,8 @@
 | **`text`** | `string \| string[]` | 필수 | 출력할 텍스트 대사. 배열로 넣으면 줄 단위로 클릭 대기가 걸림 |
 | **`speaker`** | `string` | (없음) | 화자의 식별자 키. 누락 시 이름창이 지워지며 나레이션 처리됨 |
 | **`speed`** | `number` | `30` | 글자가 한 글자씩 쳐지는 속도(ms). 값이 0이면 한 번에 즉시 출력됨 |
+| **`uiTags`** | `string[]` | `['dialogue', 'default-ui']` | 이 모듈의 UI 태그 목록입니다. |
+| **`hideTags`** | `string[]` | `[]` | 대화창 활성화 시 함께 숨길 대상 태그 목록입니다. |
 
 ## 핵심 예제 (Main Example)
 
@@ -55,3 +57,4 @@ export default defineScene({ config })(() => [
 
 *   **[대화창 상태 (Dialogue State)](./state/dialogue.md)**: 대화창의 시각적 디자인 및 여백 레이아웃 커스텀
 *   **[대화 훅 (Dialogue Hooks)](./hooks/dialogue.md)**: 대사 출력 중 보이스 재생 및 실시간 텍스트 가로채기
+*   **[UI 태그 및 억제 시스템](../ui-tags.md)**: 대화창의 그룹화 및 가시성 제어 시스템
