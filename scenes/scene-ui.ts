@@ -1,6 +1,19 @@
+import type { Style } from 'leviar'
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { save, load } from '../main'
+
+const UI_BUTTON_STYLE: Partial<Style> = {
+  fontSize: 22,
+  fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
+  color: 'rgba(255, 255, 255, 0.6)',
+  textAlign: 'center',
+  textShadowBlur: 1,
+  textShadowOffsetX: 1,
+  textShadowOffsetY: 1,
+  textShadowColor: 'rgba(0, 0, 0, 1)',
+  cursor: 'pointer',
+}
 
 export default defineScene({
   config,
@@ -36,14 +49,7 @@ export default defineScene({
         text: '저장하기',
         position: { x: -120, y: 0 },
         style: {
-          fontSize: 22,
-          fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
-          color: 'rgba(255, 255, 255, 0.6)',
-          textAlign: 'center',
-          textShadowBlur: 1,
-          textShadowOffsetX: 1,
-          textShadowOffsetY: 1,
-          textShadowColor: 'rgba(0, 0, 0, 1)'
+          ...UI_BUTTON_STYLE,
         },
         hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
         onClick: 'save',
@@ -55,14 +61,7 @@ export default defineScene({
         text: '불러오기',
         position: { x: 0, y: 0 },
         style: {
-          fontSize: 22,
-          fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
-          color: 'rgba(255, 255, 255, 0.6)',
-          textAlign: 'center',
-          textShadowBlur: 1,
-          textShadowOffsetX: 1,
-          textShadowOffsetY: 1,
-          textShadowColor: 'rgba(0, 0, 0, 1)'
+          ...UI_BUTTON_STYLE,
         },
         hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
         onClick: 'load',
@@ -74,14 +73,7 @@ export default defineScene({
         text: '전체화면',
         position: { x: 120, y: 0 },
         style: {
-          fontSize: 22,
-          fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
-          color: 'rgba(255, 255, 255, 0.6)',
-          textAlign: 'center',
-          textShadowBlur: 1,
-          textShadowOffsetX: 1,
-          textShadowOffsetY: 1,
-          textShadowColor: 'rgba(0, 0, 0, 1)'
+          ...UI_BUTTON_STYLE,
         },
         hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
         onClick: 'fullscreen',

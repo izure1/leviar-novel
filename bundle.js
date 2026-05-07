@@ -1004,7 +1004,8 @@
         }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: ["dialogue", "default-ui"],
+      uiTags: data._uiTags ?? ["dialogue", "default-ui"],
+      hideTags: data._hideTags ?? [],
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1069,7 +1070,9 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines]
+        _lines: [...lines],
+        _uiTags: cmd.uiTags ?? state._uiTags ?? ["dialogue", "default-ui"],
+        _hideTags: cmd.hideTags ?? state._hideTags ?? []
       });
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
@@ -1165,8 +1168,8 @@
         if (_btnObjs.length > 0) bgObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: ["choice", "default-ui"],
-      hideTags: ["default-ui"],
+      uiTags: data._uiTags ?? ["choice", "default-ui"],
+      hideTags: data._hideTags ?? ["default-ui"],
       /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
@@ -1211,6 +1214,7 @@
             height: btnH,
             zIndex: defaultBtnStyle.zIndex ?? 501,
             pointerEvents: true,
+            cursor: "pointer",
             opacity: defaultBtnStyle.opacity ?? 1
           };
           const btnObj = ctx.world.createRectangle({
@@ -1262,8 +1266,12 @@
       _hide
     };
   });
-  choiceModule.defineCommand(function* (cmd, ctx) {
+  choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     const entry = ctx.ui.get(choiceModule.__key);
+    setState({
+      _uiTags: cmd.uiTags ?? state._uiTags ?? ["choice", "default-ui"],
+      _hideTags: cmd.hideTags ?? state._hideTags ?? ["default-ui"]
+    });
     if (!entry) {
       console.warn("[fumika] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
@@ -3204,7 +3212,8 @@
             width: bw,
             height: BTN_H,
             zIndex: 603,
-            pointerEvents: true
+            pointerEvents: true,
+            cursor: "pointer"
           };
           const btnObj = ctx.world.createRectangle({
             style: btnStyle,
@@ -3254,8 +3263,8 @@
         if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      uiTags: ["dialogBox", "default-ui"],
-      hideTags: ["default-ui"],
+      uiTags: data._uiTags ?? ["dialogBox", "default-ui"],
+      hideTags: data._hideTags ?? ["default-ui"],
       onCleanup: () => {
         _clearDynamic();
         overlayObj.remove({ child: true });
@@ -3317,7 +3326,9 @@
       _buttons: finalCmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
-      _persist: persist
+      _persist: persist,
+      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["dialogBox", "default-ui"],
+      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
     });
     while (_resolved === false) {
       yield false;
@@ -3594,7 +3605,8 @@
           borderWidth: 1,
           borderRadius: "2%",
           zIndex: Z_INDEX.DIALOG_BOX + 2,
-          pointerEvents: true
+          pointerEvents: true,
+          cursor: "text"
         },
         transform: { position: { x: (PADDING_L - PADDING_R) / 2, y: cursorY, z: 0 } }
       });
@@ -3638,7 +3650,8 @@
           width: bw,
           height: BTN_H,
           zIndex: Z_INDEX.DIALOG_BOX + 3,
-          pointerEvents: true
+          pointerEvents: true,
+          cursor: "pointer"
         };
         const btnHoverStyleDef = { ...btnHoverCfg, ...btn.hoverStyle ?? {} };
         const txtStyleDef = { ...btnTxtCfg, ...btn.textStyle ?? {}, zIndex: Z_INDEX.DIALOG_BOX + 4, pointerEvents: false };
@@ -3743,8 +3756,8 @@
         if (_isActive) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: ["input", "default-ui"],
-      hideTags: ["default-ui"],
+      uiTags: data._uiTags ?? ["input", "default-ui"],
+      hideTags: data._hideTags ?? ["default-ui"],
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
@@ -3802,7 +3815,9 @@
       _multiline: openData.multiline,
       _buttons: buttons,
       _resolve: resolve,
-      _value: ""
+      _value: "",
+      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["input", "default-ui"],
+      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
     });
     while (!_resolved) {
       yield false;
@@ -3982,6 +3997,7 @@
     }
     return {
       uiTags: data._uiTags ?? [],
+      hideTags: data._hideTags ?? [],
       show: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
@@ -4050,7 +4066,8 @@
       for (const id of toRemove) delete newElements[id];
     }
     const nextUiTags = cmd.action === "show" ? cmd.uiTags ?? [] : state._uiTags;
-    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags });
+    const nextHideTags = cmd.action === "show" ? cmd.hideTags ?? [] : state._hideTags;
+    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags, _hideTags: nextHideTags });
     return true;
   });
   var element_default = elementModule;
@@ -12807,7 +12824,8 @@ ${addLineNumbers(fragment)}`);
       letterSpacing: partial?.letterSpacing ?? 0,
       gradient: partial?.gradient,
       gradientType: partial?.gradientType,
-      borderRadius: partial?.borderRadius
+      borderRadius: partial?.borderRadius,
+      cursor: partial?.cursor
     };
   }
   function makeTrackedProxy(target, emitter, eventName, delegatedKeys) {
@@ -17144,6 +17162,8 @@ ${addLineNumbers(fragment)}`);
         if (this.debugMode) {
           this.renderer.debugHoveredIds = hitIds;
         }
+        const topCursor = hits.find((o) => o.style.cursor)?.style.cursor;
+        canvas.style.cursor = topCursor ?? "";
         for (const obj of hits) {
           if (!this._mouseOver.has(obj.attribute.id)) {
             this._mouseOver.add(obj.attribute.id);
@@ -17165,6 +17185,7 @@ ${addLineNumbers(fragment)}`);
         }
       });
       canvas.addEventListener("mouseleave", (e) => {
+        canvas.style.cursor = "";
         const wrapped = wrapMouseEvent(e);
         for (const id of Array.from(this._mouseOver)) {
           const obj = Array.from(this.objects).find((o) => o.attribute.id === id);
@@ -19391,6 +19412,17 @@ ${addLineNumbers(fragment)}`);
   });
 
   // example/scenes/scene-ui.ts
+  var UI_BUTTON_STYLE = {
+    fontSize: 22,
+    fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center",
+    textShadowBlur: 1,
+    textShadowOffsetX: 1,
+    textShadowOffsetY: 1,
+    textShadowColor: "rgba(0, 0, 0, 1)",
+    cursor: "pointer"
+  };
   var scene_ui_default = defineScene({
     config: novel_config_default,
     actions: {
@@ -19426,14 +19458,7 @@ ${addLineNumbers(fragment)}`);
           text: "\uC800\uC7A5\uD558\uAE30",
           position: { x: -120, y: 0 },
           style: {
-            fontSize: 22,
-            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-            color: "rgba(255, 255, 255, 0.6)",
-            textAlign: "center",
-            textShadowBlur: 1,
-            textShadowOffsetX: 1,
-            textShadowOffsetY: 1,
-            textShadowColor: "rgba(0, 0, 0, 1)"
+            ...UI_BUTTON_STYLE
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "save"
@@ -19445,14 +19470,7 @@ ${addLineNumbers(fragment)}`);
           text: "\uBD88\uB7EC\uC624\uAE30",
           position: { x: 0, y: 0 },
           style: {
-            fontSize: 22,
-            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-            color: "rgba(255, 255, 255, 0.6)",
-            textAlign: "center",
-            textShadowBlur: 1,
-            textShadowOffsetX: 1,
-            textShadowOffsetY: 1,
-            textShadowColor: "rgba(0, 0, 0, 1)"
+            ...UI_BUTTON_STYLE
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "load"
@@ -19464,14 +19482,7 @@ ${addLineNumbers(fragment)}`);
           text: "\uC804\uCCB4\uD654\uBA74",
           position: { x: 120, y: 0 },
           style: {
-            fontSize: 22,
-            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-            color: "rgba(255, 255, 255, 0.6)",
-            textAlign: "center",
-            textShadowBlur: 1,
-            textShadowOffsetX: 1,
-            textShadowOffsetY: 1,
-            textShadowColor: "rgba(0, 0, 0, 1)"
+            ...UI_BUTTON_STYLE
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "fullscreen"
