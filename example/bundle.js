@@ -1004,7 +1004,8 @@
         }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: ["dialogue", "default-ui"],
+      uiTags: data._uiTags ?? ["dialogue", "default-ui"],
+      hideTags: data._hideTags ?? [],
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1069,7 +1070,9 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines]
+        _lines: [...lines],
+        _uiTags: cmd.uiTags ?? state._uiTags ?? ["dialogue", "default-ui"],
+        _hideTags: cmd.hideTags ?? state._hideTags ?? []
       });
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
@@ -1165,8 +1168,8 @@
         if (_btnObjs.length > 0) bgObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: ["choice", "default-ui"],
-      hideTags: ["default-ui"],
+      uiTags: data._uiTags ?? ["choice", "default-ui"],
+      hideTags: data._hideTags ?? ["default-ui"],
       /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
@@ -1263,8 +1266,12 @@
       _hide
     };
   });
-  choiceModule.defineCommand(function* (cmd, ctx) {
+  choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     const entry = ctx.ui.get(choiceModule.__key);
+    setState({
+      _uiTags: cmd.uiTags ?? state._uiTags ?? ["choice", "default-ui"],
+      _hideTags: cmd.hideTags ?? state._hideTags ?? ["default-ui"]
+    });
     if (!entry) {
       console.warn("[fumika] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
@@ -3256,8 +3263,8 @@
         if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      uiTags: ["dialogBox", "default-ui"],
-      hideTags: ["default-ui"],
+      uiTags: data._uiTags ?? ["dialogBox", "default-ui"],
+      hideTags: data._hideTags ?? ["default-ui"],
       onCleanup: () => {
         _clearDynamic();
         overlayObj.remove({ child: true });
@@ -3319,7 +3326,9 @@
       _buttons: finalCmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
-      _persist: persist
+      _persist: persist,
+      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["dialogBox", "default-ui"],
+      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
     });
     while (_resolved === false) {
       yield false;
@@ -3747,8 +3756,8 @@
         if (_isActive) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: ["input", "default-ui"],
-      hideTags: ["default-ui"],
+      uiTags: data._uiTags ?? ["input", "default-ui"],
+      hideTags: data._hideTags ?? ["default-ui"],
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
@@ -3806,7 +3815,9 @@
       _multiline: openData.multiline,
       _buttons: buttons,
       _resolve: resolve,
-      _value: ""
+      _value: "",
+      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["input", "default-ui"],
+      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
     });
     while (!_resolved) {
       yield false;
@@ -3986,6 +3997,7 @@
     }
     return {
       uiTags: data._uiTags ?? [],
+      hideTags: data._hideTags ?? [],
       show: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
@@ -4054,7 +4066,8 @@
       for (const id of toRemove) delete newElements[id];
     }
     const nextUiTags = cmd.action === "show" ? cmd.uiTags ?? [] : state._uiTags;
-    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags });
+    const nextHideTags = cmd.action === "show" ? cmd.hideTags ?? [] : state._hideTags;
+    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags, _hideTags: nextHideTags });
     return true;
   });
   var element_default = elementModule;
