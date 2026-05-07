@@ -324,18 +324,13 @@ characterModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: () => { /* 개별 캐릭터는 _charObjs 관리 */ },
+    show: () => { },
+    hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_charObjs)) {
         obj.remove({ child: true })
       }
       Object.keys(_charObjs).forEach(k => delete _charObjs[k])
-    },
-    hide: () => {
-      for (const obj of Object.values(_charObjs)) {
-        // child(part)는 base opacity 상속 → base만 fadeOut
-        obj.fadeOut(300, 'easeIn')
-      }
     },
     getObj: (name: string) => _charObjs[name],
     onUpdate: (_ctx, d: CharacterSchema, _setState) => {

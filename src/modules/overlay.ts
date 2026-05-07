@@ -346,17 +346,13 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
 
   return {
     show: () => { },
+    hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_overlayObjs)) {
         obj.remove()
       }
       Object.keys(_overlayObjs).forEach(k => delete _overlayObjs[k])
       Object.keys(_overlayEntries).forEach(k => delete _overlayEntries[k])
-    },
-    hide: () => {
-      for (const obj of Object.values(_overlayObjs)) {
-        obj?.fadeOut?.(300, 'easeIn')
-      }
     },
     getObj: (name: string) => _overlayObjs[name] as any | undefined,
     onUpdate: (_ctx: SceneContext, state: OverlaySchema, _setState: SetStateFn<OverlaySchema>) => {

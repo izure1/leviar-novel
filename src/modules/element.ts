@@ -347,8 +347,20 @@ elementModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: () => { },
-    hide: () => { },
+    show: () => {
+      for (const [id, entry] of Object.entries(_elementEntries)) {
+        if (!entry.parent && _elementObjs[id]) {
+          _elementObjs[id].fadeIn(200, 'easeOut')
+        }
+      }
+    },
+    hide: () => {
+      for (const [id, entry] of Object.entries(_elementEntries)) {
+        if (!entry.parent && _elementObjs[id]) {
+          _elementObjs[id].fadeOut(200, 'easeIn')
+        }
+      }
+    },
     onCleanup: () => {
       for (const obj of Object.values(_elementObjs)) {
         obj.remove({ child: true })

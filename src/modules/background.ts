@@ -129,8 +129,8 @@ backgroundModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (dur = 250) => { _bgObj?.fadeIn?.(dur, 'easeOut') },
-    hide: (dur = 300) => { _bgObj?.fadeOut?.(dur, 'easeIn') },
+    show: (dur = 250) => { },
+    hide: (dur = 300) => { },
     onCleanup: () => {
       if (_bgObj) { _bgObj.remove({ child: true }); _bgObj = null }
     },

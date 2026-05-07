@@ -155,16 +155,12 @@ moodModule.defineView((ctx, data, setState) => {
 
   return {
     show: () => { },
+    hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_moodObjs)) {
         obj.remove()
       }
       Object.keys(_moodObjs).forEach(k => delete _moodObjs[k])
-    },
-    hide: () => {
-      for (const obj of Object.values(_moodObjs)) {
-        obj.fadeOut(300, 'easeIn')
-      }
     },
     // flicker용 오브젝트 접근
     getObj: (mood: string) => _moodObjs[mood],

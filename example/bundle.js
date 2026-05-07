@@ -1376,10 +1376,8 @@
     }
     return {
       show: (dur = 250) => {
-        _bgObj?.fadeIn?.(dur, "easeOut");
       },
       hide: (dur = 300) => {
-        _bgObj?.fadeOut?.(dur, "easeIn");
       },
       onCleanup: () => {
         if (_bgObj) {
@@ -1726,16 +1724,13 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_charObjs)) {
           obj.remove({ child: true });
         }
         Object.keys(_charObjs).forEach((k2) => delete _charObjs[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_charObjs)) {
-          obj.fadeOut(300, "easeIn");
-        }
       },
       getObj: (name) => _charObjs[name],
       onUpdate: (_ctx, d2, _setState) => {
@@ -1980,16 +1975,13 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_moodObjs)) {
           obj.remove();
         }
         Object.keys(_moodObjs).forEach((k2) => delete _moodObjs[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_moodObjs)) {
-          obj.fadeOut(300, "easeIn");
-        }
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
@@ -2181,16 +2173,13 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_effectObjs)) {
           obj.remove();
         }
         Object.keys(_effectObjs).forEach((k2) => delete _effectObjs[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_effectObjs)) {
-          obj.fadeOut(300, "easeIn");
-        }
       },
       onUpdate: (_ctx, state, _setState) => {
         const newTypes = new Set(Object.keys(state._activeEffects));
@@ -2368,17 +2357,14 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_overlayObjs)) {
           obj.remove();
         }
         Object.keys(_overlayObjs).forEach((k2) => delete _overlayObjs[k2]);
         Object.keys(_overlayEntries).forEach((k2) => delete _overlayEntries[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_overlayObjs)) {
-          obj?.fadeOut?.(300, "easeIn");
-        }
       },
       getObj: (name) => _overlayObjs[name],
       onUpdate: (_ctx, state, _setState) => {
@@ -3977,8 +3963,18 @@
     }
     return {
       show: () => {
+        for (const [id, entry] of Object.entries(_elementEntries)) {
+          if (!entry.parent && _elementObjs[id]) {
+            _elementObjs[id].fadeIn(200, "easeOut");
+          }
+        }
       },
       hide: () => {
+        for (const [id, entry] of Object.entries(_elementEntries)) {
+          if (!entry.parent && _elementObjs[id]) {
+            _elementObjs[id].fadeOut(200, "easeIn");
+          }
+        }
       },
       onCleanup: () => {
         for (const obj of Object.values(_elementObjs)) {
@@ -21269,6 +21265,7 @@ ${addLineNumbers(fragment)}`);
       return state;
     });
     novel.start("scene-start");
+    console.log(novel);
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");
     const btnLoad = document.getElementById("btn-load");

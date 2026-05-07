@@ -139,6 +139,7 @@ async function main() {
 
   // ── 시작
   novel.start('scene-start')
+  console.log(novel)
 
   // =============================================================
   // 컨트롤 버튼 연결

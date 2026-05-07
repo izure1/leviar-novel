@@ -136,16 +136,12 @@ effectModule.defineView((ctx, data, setState) => {
 
   return {
     show: () => { },
+    hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_effectObjs)) {
         obj.remove()
       }
       Object.keys(_effectObjs).forEach(k => delete _effectObjs[k])
-    },
-    hide: () => {
-      for (const obj of Object.values(_effectObjs)) {
-        obj.fadeOut(300, 'easeIn')
-      }
     },
     onUpdate: (_ctx, state, _setState) => {
       const newTypes = new Set(Object.keys(state._activeEffects))
