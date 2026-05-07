@@ -203,7 +203,6 @@ export const DEFAULT_INPUT_LAYOUT: Required<InputLayout> = {
  * 텍스트 기입 입력창을 표시하고 변수에 저장합니다.
  *
  * @example
- * ```ts
  * // 단일 줄 입력 (엔터로 완료)
  * { type: 'input', to: 'playerName', label: '이름을 입력하세요' }
  *
@@ -215,7 +214,6 @@ export const DEFAULT_INPUT_LAYOUT: Required<InputLayout> = {
  *   label: '메모를 입력하세요',
  *   buttons: [{ text: '완료' }, { text: '취소' }]
  * }
- * ```
  */
 export interface InputCmd<TConfig = any, _TLocalVars = any> {
   /**

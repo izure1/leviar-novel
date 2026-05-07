@@ -386,7 +386,6 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
  * 텍스트 오버레이 모듈.
  *
  * @example
- * ```ts
  * // 텍스트 표시 (name 필수)
  * { type: 'overlay-text', action: 'show', name: 'chapter', text: '제 1장', preset: 'title' }
  *
@@ -395,7 +394,6 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
  *
  * // 숨기기
  * { type: 'overlay-text', action: 'hide', name: 'chapter' }
- * ```
  */
 const overlayTextModule = define<OverlayTextCmd, OverlaySchema>({
   _overlays: {},
@@ -431,7 +429,6 @@ overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
  * 이미지 오버레이 모듈.
  *
  * @example
- * ```ts
  * // 이미지 표시 (name, src 필수)
  * { type: 'overlay-image', action: 'show', name: 'logo', src: 'cg-logo', x: 0.5, y: 0.3, width: 400 }
  *
@@ -440,7 +437,6 @@ overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
  *
  * // 숨기기
  * { type: 'overlay-image', action: 'hide', name: 'logo' }
- * ```
  */
 const overlayImageModule = define<OverlayImageCmd<any>, OverlaySchema>({
   _overlays: {},
@@ -488,10 +484,8 @@ export function addOverlay(ctx: any, text: string, preset: OverlayPreset = 'capt
  * 오버레이 오브젝트에 흔들림 등 연출 효과를 재생한다.
  *
  * @example
- * ```ts
  * { type: 'overlay-effect', name: 'logo', preset: 'shake', duration: 500, intensity: 5, repeat: 3 }
  * { type: 'overlay-effect', name: 'logo', preset: 'reset' }
- * ```
  */
 export interface OverlayEffectCmd {
   /** 효과를 적용할 오버레이의 name입니다. */

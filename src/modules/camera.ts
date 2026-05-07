@@ -30,9 +30,7 @@ export interface CameraPanCmd {
  * 카메라 흔들림 등 연출 효과를 재생한다
  *
  * @example
- * ```ts
  * { type: 'camera-effect', preset: 'shake', duration: 500, intensity: 5, repeat: 3 }
- * ```
  */
 export interface CameraEffectCmd {
   /** 연출 효과의 프리셋 이름입니다. */
@@ -119,7 +117,7 @@ export function panCamera(ctx: SceneContext, position: PanPreset, duration?: num
 function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: number, intensity?: number, repeat: number = 1) {
   const offsetObj = ctx.renderer.camOffsetObj
   if (!offsetObj) return
-  
+
   // renderer state 기반의 stateKey 동작 모방
   const objWrapper = {
     transform: offsetObj.transform,

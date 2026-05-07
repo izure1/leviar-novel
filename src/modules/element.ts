@@ -45,7 +45,6 @@ export type ElementChild<TConfig = any> =
  * `children`으로 계층 구조를 구성하며, `onClick`으로 씬 액션을 바인딩합니다.
  *
  * @example
- * ```ts
  * {
  *   type: 'element',
  *   action: 'show',
@@ -67,7 +66,6 @@ export type ElementChild<TConfig = any> =
  *     }
  *   ]
  * }
- * ```
  */
 export interface ElementCmdBase<TConfig = any> {
   /** 요소 고유 식별자 */

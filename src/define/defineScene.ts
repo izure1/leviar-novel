@@ -22,14 +22,12 @@ export type InitialOf<TModules> = {
  * `defineScene` 외부에서 `initial` 데이터를 공통 모듈로 분리할 때 사용하는 타입 추론 헬퍼입니다.
  * 
  * @example
- * ```ts
  * import config from '../novel.config'
  * import { defineInitial } from 'fumika'
  * 
  * export const commonInitial = defineInitial(config)({
  *   dialogue: { text: { fontSize: 18 } }
  * })
- * ```
  */
 export function defineInitial<
   TConfig extends NovelConfig<any, any, any, any, any> & { modules?: Record<string, NovelModule<any>> }
@@ -251,14 +249,12 @@ type _SceneOptions<
    * element의 onClick에서 이름 문자열로 참조하여 호출됩니다.
    *
    * @example
-   * ```ts
    * actions: {
    *   save: (ctx) => {
    *     const data = ctx.novel.save()
    *     localStorage.setItem('save', JSON.stringify(data))
    *   }
    * }
-   * ```
    */
   actions?: Record<string, (ctx: SceneContext, vars: TVars & TLocalVars & EnvironmentsOf<TConfig>) => void>
 }
@@ -279,7 +275,6 @@ type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
  * 두 번째 인자(함수)에 흐름제어 builder가 주입됩니다.
  *
  * @example
- * ```ts
  * export default defineScene({ config, variables: { _tries: 0 } })(
  *   ({ label, goto, next, call, condition, set }) => [
  *     label('start'),
@@ -293,7 +288,6 @@ type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
  *     next('scene-b'),
  *   ]
  * )
- * ```
  */
 export function defineScene<
   TVars extends Record<string, any>,

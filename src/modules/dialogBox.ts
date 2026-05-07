@@ -174,7 +174,6 @@ export const DEFAULT_DIALOG_BOX_STYLE: Required<Pick<
  * 커스텀 버튼 대화상자를 표시합니다.
  *
  * @example
- * ```ts
  * // alert
  * { type: 'dialogBox', title: '알림', content: '저장되었습니다.', buttons: [{ text: '확인' }] }
  *
@@ -183,7 +182,6 @@ export const DEFAULT_DIALOG_BOX_STYLE: Required<Pick<
  *
  * // 등장 시간 커스텀
  * { type: 'dialogBox', title: '..', duration: 500, buttons: [...] }
- * ```
  */
 export interface DialogBoxCmd<TConfig = any, TLocalVars = Record<never, never>> {
   /** 대화상자 제목 */

@@ -115,11 +115,9 @@ function resolveSpeaker(speakerKey: string | undefined, charDefs: CharDefs): str
  * 대사 또는 나레이션 출력
  *
  * @example
- * ```ts
  * { type: 'dialogue', speaker: 'hero', text: 'Hello world!', speed: 50 }
  * // 또는 나레이션
  * { type: 'dialogue', text: ['첫 번째 줄', '두 번째 줄'] }
- * ```
  */
 export interface DialogueCmd<TConfig = any> {
   /**
@@ -142,13 +140,11 @@ export interface DialogueCmd<TConfig = any> {
  * 대화 모듈. `novel.config`의 `modules: { 'dialogue': dialogueModule }` 형태로 등록합니다.
  *
  * @example
- * ```ts
  * // novel.config.ts
  * modules: { 'dialogue': dialogueModule }
  *
  * // scene (initial 사용)
  * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
- * ```
  */
 const dialogueModule = define<DialogueCmd<any>, DialogueSchema, DialogueHook>({
   style: undefined,

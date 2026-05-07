@@ -44,11 +44,6 @@ export default defineScene({
     children: [
       // 저장 버튼
       {
-        id: 'asdf',
-        kind: 'image',
-        image: 'should be error',
-      },
-      {
         id: 'btn_save',
         kind: 'rect',
         position: { x: 0, y: 25 },

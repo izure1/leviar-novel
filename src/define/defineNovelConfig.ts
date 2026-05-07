@@ -63,7 +63,6 @@ export type BuiltinModules = typeof BUILTIN_MODULES
  * 자동으로 등록됩니다. 커스텀 모듈만 `modules`에 추가하면 됩니다.
  *
  * @example
- * ```ts
  * export default defineNovelConfig({
  *   width: ..., // default: canvas width
  *   height: ..., // default: canvas height
@@ -77,7 +76,6 @@ export type BuiltinModules = typeof BUILTIN_MODULES
  *     'test-cmd': testModule,
  *   },
  * })
- * ```
  */
 export function defineNovelConfig<
   TVars extends Record<string, any>,

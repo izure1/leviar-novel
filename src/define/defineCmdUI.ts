@@ -107,12 +107,10 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
      * `novel.boot()` 호출 시 실행됩니다.
      *
      * @example
-     * ```ts
      * myModule.onBoot(async (world) => {
      *   await world.loader.load({ myAsset: '/path/to/asset.png' })
      *   world.particleManager.create('explosion', { ... })
      * })
-     * ```
      */
     onBoot(callback: BootCallback): NovelModule<TCmd, TSchema, THook>
   }
@@ -128,7 +126,6 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
  * - `.hooker`: 이 모듈의 훅 시스템 (`IHookallSync<THook>`).
  *
  * @example
- * ```ts
  * // 모듈 정의
  * const myModule = define<MyCmd, MySchema, MyHook>({ ... })
  *
@@ -137,7 +134,6 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
  *
  * // 훅 구독 (외부)
  * defineHook(config)({ 'my:event': (val, ...params) => val })
- * ```
  */
 
 export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>, THook extends ListenerSignature<THook> = DefaultHook>(schema?: TSchema): NovelModule<TCmd, TSchema, THook> {
@@ -266,8 +262,8 @@ type ModuleHooksUnion<TModules extends Record<string, NovelModule<any, any, any>
 export type AllHooksOf<TConfig> =
   TConfig extends { modules?: infer TMods }
   ? [TMods] extends [Record<string, NovelModule<any, any, any>>]
-    ? NovelHookRef & UnionToIntersection<ModuleHooksUnion<TMods>>
-    : NovelHookRef
+  ? NovelHookRef & UnionToIntersection<ModuleHooksUnion<TMods>>
+  : NovelHookRef
   : NovelHookRef
 
 /**
@@ -326,7 +322,6 @@ export type SceneHookMap<TConfig> = {
  * `NovelHook`에서 자동으로 추론됩니다.
  *
  * @example
- * ```ts
  * defineScene({
  *   config,
  *   hooks: defineHook(config)({
@@ -338,7 +333,6 @@ export type SceneHookMap<TConfig> = {
  *     }
  *   }),
  * }, [ ... ])
- * ```
  *
  * @param config - `defineNovelConfig()`로 생성된 NovelConfig
  * @returns 훅 맵을 받는 함수를 반환합니다.

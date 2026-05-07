@@ -91,13 +91,11 @@ export interface CallStackFrame {
  * `useHookallSync(novel.hooker)` 또는 `ctx.novel.hooker`로 구독합니다.
  *
  * @example
- * ```ts
  * useHookallSync<NovelHook>(novel.hooker)
  *   .onBefore('novel:next', (value) => {
  *     console.log('next called')
  *     return value
  *   })
- * ```
  */
 export interface NovelHook {
   /** novel.save() 호출 시 방출. initialValue = 저장될 SaveData */
@@ -172,12 +170,10 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
    * 통합 훅 프록시. `novel:*` 키 는 내부 Novel 훅으로, 구모듈 훅은 해당 모듈의 `hooker`로 라우팅합니다.
    * 
    * @example
-   * ```ts
    * // novel 레벨 훅
    * novel.hooker.onBefore('novel:next', (v) => v)
    * // 모듈 훅 (dialogue모듈의 DialogueHook)
    * novel.hooker.onBefore('dialogue:text', (v) => v)
-   * ```
    */
   // @ts-ignore — AllModuleHooksOf<TConfig>는 조건부 타입이라 ListenerSignature<M> 제약을 TS가 검증 불가. 런타임 정상.
   readonly hooker!: IHookallSync<NovelHook & AllModuleHooksOf<TConfig>>
@@ -325,11 +321,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
    * `load()` 이후, `start()` 이전에 한 번 호출하십시오.
    *
    * @example
-   * ```ts
    * await novel.load()
    * await novel.boot()
    * novel.start('scene-intro')
-   * ```
    */
   async boot(): Promise<void> {
     for (const module of this._modules.values()) {

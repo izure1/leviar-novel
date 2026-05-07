@@ -96,7 +96,6 @@ export const DEFAULT_CHOICE_LAYOUT: Required<ChoiceLayout> = {
  * 선택지를 표시하고 분기한다
  *
  * @example
- * ```ts
  * {
  *   type: 'choices',
  *   choices: [
@@ -105,7 +104,6 @@ export const DEFAULT_CHOICE_LAYOUT: Required<ChoiceLayout> = {
  *     { text: '도망친다', goto: 'run_away_label' }
  *   ]
  * }
- * ```
  */
 export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
   /** 사용자에게 제공될 선택지 목록입니다. */

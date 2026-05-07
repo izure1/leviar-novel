@@ -8,9 +8,7 @@ export type BackgroundFitPreset = 'stretch' | 'contain' | 'cover' | 'inherit'
  * 배경을 전환한다 
  * 
  * @example
- * ```ts
  * { type: 'background', name: 'classroom', duration: 1500, fit: 'cover' }
- * ```
  */
 export interface BackgroundCmd<TConfig = any> {
   /** 전환할 배경 이미지의 에셋 키(config.backgrounds에 정의됨)입니다. */

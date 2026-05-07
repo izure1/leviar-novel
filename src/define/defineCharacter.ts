@@ -17,15 +17,10 @@ type Exact<T, Shape> = T extends Shape
 /**
  * 캐릭터를 정의하는 헬퍼 함수입니다.
  *
- * ```ts
- * defineCharacter(def)
- * ```
- *
  * - `emotions` 키: `bases.*.points` 키에서 추론, 허용 외 키 → 타입 오류
  * - `emotions` 값: `string`
  *
  * @example
- * ```ts
  * export default defineCharacter({
  *   name: '후미카',
  *   bases: {
@@ -36,7 +31,6 @@ type Exact<T, Shape> = T extends Shape
  *     smile:  { face: '...', invalid: '...' },         // ❌ 타입 오류
  *   }
  * })
- * ```
  */
 export function defineCharacter<
   const TBases extends Record<string, CharBaseDef>,

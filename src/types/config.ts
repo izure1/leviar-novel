@@ -12,7 +12,6 @@ import type { Novel } from '../core/Novel'
  * `points`에 감정 파트를 배치할 앵커 좌표를 기록합니다.
  *
  * @example
- * ```ts
  * const base: CharBaseDef = {
  *   src: 'girl_normal',
  *   width: 560,
@@ -22,7 +21,6 @@ import type { Novel } from '../core/Novel'
  *     mouth: { x: 0.5, y: 0.22, width: 120 },
  *   }
  * }
- * ```
  */
 export interface CharBaseDef {
   /** 베이스 이미지 에셋 키 */
@@ -50,7 +48,6 @@ export interface CharBaseDef {
  * 단일 캐릭터 정의: bases(신체) + emotions(표정 파트) 분리 구조.
  *
  * @example
- * ```ts
  * const heroDef: CharDef = {
  *   name: '히어로',
  *   bases: {
@@ -61,7 +58,6 @@ export interface CharBaseDef {
  *     angry:  { eyes: 'hero_eyes_angry'  },
  *   }
  * }
- * ```
  */
 export interface CharDef {
   /** 캐릭터 표시용 이름 (대사창 등에 사용) */
@@ -82,12 +78,10 @@ export type CharDefs = Record<string, CharDef>
  * 단일 배경 이미지 정의 
  * 
  * @example
- * ```ts
  * const skyBg: BgDef = {
  *   src: 'sky_img',
  *   parallax: true // 카메라 이동 시 원근감 적용
  * }
- * ```
  */
 export interface BgDef {
   /** 
@@ -108,12 +102,10 @@ export type BgDefs = Record<string, BgDef>
  * 특수 효과(날씨, 파티클 등)의 상세 속성 정의입니다. 미지정 속성은 Renderer 내부 폴백 값을 따릅니다. 
  * 
  * @example
- * ```ts
  * const rainEffect: EffectDef = {
  *   clip: { interval: 2, lifespan: 60, size: [[2, 2], [2, 2]] },
  *   particle: { attribute: { src: 'raindrop', strictPhysics: true } }
  * }
- * ```
  */
 export interface EffectDef {
   /** 
@@ -166,7 +158,6 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
  * 게임 내 모든 변수, 씬, 캐릭터, 배경, 효과, 모듈 및 폴백 규칙을 정의합니다.
  * 
  * @example
- * ```ts
  * const config: NovelConfig<MyVars, MyScenes, MyChars, MyBgs> = {
  *   variables: { score: 0, flags: [] },
  *   scenes: ['intro', 'chapter1'],
@@ -175,7 +166,6 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
  *   assets: { hero_img: './assets/hero.png' },
  *   modules: { 'dialogue': dialogueModule, 'character': characterModule },
  * }
- * ```
  */
 export interface NovelConfig<
   TVars extends Record<string, any>,
@@ -230,13 +220,11 @@ export interface NovelConfig<
    * `define()`으로 생성된 모듈을 등록하세요.
    *
    * @example
-   * ```ts
    * modules: {
    *   'dialogue': dialogueModule,
    *   'choices':  choiceModule,
    *   'background': backgroundModule,
    * }
-   * ```
    */
   modules?: TModules
   /**
@@ -245,12 +233,10 @@ export interface NovelConfig<
    * 키는 반드시 `$`로 시작해야 합니다.
    *
    * @example
-   * ```ts
    * environments: {
    *   $textSpeed: 'normal',
    *   $seenEnding: false,
    * }
-   * ```
    */
   environments?: TEnvs
 }
@@ -264,13 +250,11 @@ export type { NovelModule, NovelModuleMeta } from '../define/defineCmdUI'
  * Novel 인스턴스를 생성할 때 전달하는 초기화 옵션 객체입니다.
  * 
  * @example
- * ```ts
  * const option: NovelOption = {
  *   canvas: document.getElementById('game-canvas') as HTMLCanvasElement,
  *   width: 1920,
  *   height: 1080
  * }
- * ```
  */
 export interface NovelOption {
   /** 엔진을 마운트할 대상 HTML 엘리먼트입니다. 캔버스와 UI가 이 엘리먼트 내부에 생성됩니다. */
@@ -285,10 +269,8 @@ export interface NovelOption {
  * `NovelConfig`에서 캐릭터 키(`characters`의 key) 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * import config from './novel.config'
  * type CharKey = CharacterKeysOf<typeof config>
- * ```
  */
 export type CharacterKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
@@ -299,9 +281,7 @@ export type CharacterKeysOf<TConfig> =
  * `NovelConfig`에서 특정 캐릭터의 이미지 키 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * type AriImg = ImageKeysOf<typeof config, 'arisiero'>  // 'normal' | 'smile'
- * ```
  */
 type _BasesKeysOf<TConfig, TCharKey extends string> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
@@ -326,9 +306,7 @@ type _EmotionsKeysOf<TConfig, TCharKey extends string> =
  * `'base:emotion'` 형태의 템플릿 리터럴 타입을 반환합니다.
  *
  * @example
- * ```ts
  * type FumikaImg = ImageKeysOf<typeof config, 'fumika'>  // 'normal:normal' | 'normal:smile' | ...
- * ```
  */
 export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
   `${_BasesKeysOf<TConfig, TCharKey>}:${_EmotionsKeysOf<TConfig, TCharKey>}`
@@ -337,9 +315,7 @@ export type ImageKeysOf<TConfig, TCharKey extends CharacterKeysOf<TConfig>> =
  * `NovelConfig`에서 에셋 키(`assets`의 key) 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * type Asset = AssetKeysOf<typeof config>  // 'bg_floor' | 'girl_normal' | ...
- * ```
  */
 export type AssetKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, infer TAssets, any, any, any>
@@ -350,9 +326,7 @@ export type AssetKeysOf<TConfig> =
  * `NovelConfig`에서 배경 키(`backgrounds`의 key) 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * type BgKey = BackgroundKeysOf<typeof config>  // 'bg-floor' | 'bg-library' | ...
- * ```
  */
 export type BackgroundKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, infer TBgs, any, any, any, any>
@@ -363,9 +337,7 @@ export type BackgroundKeysOf<TConfig> =
  * `NovelConfig`에서 씬 이름(`scenes`의 원소) 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * type Scene = SceneNamesOf<typeof config>  // 'scene-intro' | 'scene-a' | ...
- * ```
  */
 export type SceneNamesOf<TConfig> =
   TConfig extends NovelConfig<any, infer TScenes, any, any, any, any, any, any>
@@ -378,13 +350,11 @@ export type SceneNamesOf<TConfig> =
  * - `{ scene, preserve }`: preserve가 true이면 현재씬의 렌더러 추적 오브젝트를 파기하지 않고 다음 씬을 시작합니다.
  *
  * @example
- * ```ts
  * // 단순 전환
  * next: 'scene-b'
  *
  * // preserve 모드 (배경·캐릭터·무드·파티클 유지)
  * next: { scene: 'scene-b', preserve: true }
- * ```
  */
 export type SceneNextTarget<TConfig> =
   | SceneNamesOf<TConfig>
@@ -394,9 +364,7 @@ export type SceneNextTarget<TConfig> =
  * `NovelConfig`에서 전역 변수 타입(`vars`)을 추출합니다.
  *
  * @example
- * ```ts
  * type Vars = VariablesOf<typeof config>  // { likeability: number; metHeroine: boolean; ... }
- * ```
  */
 export type VariablesOf<TConfig> =
   TConfig extends NovelConfig<infer TVars, any, any, any, any, any, any, any>
@@ -408,9 +376,7 @@ export type VariablesOf<TConfig> =
  * `character-focus`의 `point` 자동완성에 사용됩니다.
  *
  * @example
- * ```ts
  * type AriPoints = PointsOf<typeof config, 'arisiero'>  // 'face' | 'chest'
- * ```
  */
 export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = CharacterKeysOf<TConfig>> =
   TConfig extends NovelConfig<any, any, infer TChars, any, any, any, any, any>
@@ -427,9 +393,7 @@ export type PointsOf<TConfig, TName extends CharacterKeysOf<TConfig> = Character
  * `NovelConfig`에서 모듈 맵(`modules`)을 추출합니다.
  *
  * @example
- * ```ts
  * type Mods = ModulesOf<typeof config>  // { 'dialogue': NovelModule<...>, ... }
- * ```
  */
 export type ModulesOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods, any>
@@ -440,9 +404,7 @@ export type ModulesOf<TConfig> =
  * `NovelConfig`에서 모듈 키(`modules`의 key) 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * type ModKey = ModuleKeysOf<typeof config>  // 'dialogue' | 'choices' | 'background'
- * ```
  */
 export type ModuleKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, any, infer TMods, any>
@@ -453,9 +415,7 @@ export type ModuleKeysOf<TConfig> =
  * `NovelConfig`에서 오디오 키(`audios`의 key) 유니온을 추출합니다.
  *
  * @example
- * ```ts
  * type AudioKey = AudioKeysOf<typeof config>  // 'bgm-01' | 'sfx-02' | ...
- * ```
  */
 export type AudioKeysOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, infer TAudios, any, any>
@@ -466,9 +426,7 @@ export type AudioKeysOf<TConfig> =
  * `NovelConfig`에서 환경변수 타입(`environments`)을 추출합니다.
  *
  * @example
- * ```ts
  * type Envs = EnvironmentsOf<typeof config>  // { $textSpeed: string; $seenEnding: boolean; ... }
- * ```
  */
 export type EnvironmentsOf<TConfig> =
   TConfig extends NovelConfig<any, any, any, any, any, any, any, infer TEnvs>

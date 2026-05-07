@@ -35,12 +35,10 @@ type _ReturnOf<T> = T extends any
  * - **함수 반환값**: `_ReturnOf<T>` 적용 → escape 제거, 리터럴/keyof만 허용
  *
  * @example
- * ```ts
  * // 정적 값 (임의 string도 허용)
  * { type: 'character', name: 'arisiero' }
  * // 동적 함수 (config에 정의된 key만 허용)
  * { type: 'character', name: ({ likeability }) => likeability >= 10 ? 'arisiero' : 'hero' }
- * ```
  */
 export type Resolvable<T, TVars = any, TLocalVars = any> =
   T | ((variables: TVars & TLocalVars) => _ReturnOf<T>)
@@ -64,8 +62,8 @@ export type ResolvableItem<T, TVars, TLocalVars> =
  */
 export type ResolvableProps<TCmd, TVars = any, TLocalVars = any> = TCmd extends any ? {
   [K in keyof TCmd]: K extends 'type' | 'skip'
-    ? TCmd[K]
-    : Resolvable<TCmd[K], TVars, TLocalVars>
+  ? TCmd[K]
+  : Resolvable<TCmd[K], TVars, TLocalVars>
 } : never
 
 // ─── 런타임 resolve 헬퍼 ────────────────────────────────────
@@ -105,15 +103,12 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  * - `false` / `void`: 사용자 입력 대기. 입력 시 해당 커맨드가 **다시 실행**됨
  *
  * @example 단순 완료
- * ```ts
  * export const myHandler = defineCmd<{ message: string }>((cmd, ctx) => {
  *   ctx.callbacks.onDialogue(undefined, cmd.message)
  *   return false // 입력 대기
  * })
- * ```
  *
  * @example 여러 줄 대사 (재실행 방식)
- * ```ts
  * export const multiLineHandler = defineCmd<{ lines: string[] }>((cmd, ctx) => {
  *   const index = ctx.scene.getTextSubIndex()
  *   if (index >= cmd.lines.length) return true // 완료
@@ -121,15 +116,12 @@ function resolveParams(params: Record<string, any>, ctx: SceneContext): Record<s
  *   ctx.scene.setTextSubIndex(index + 1)
  *   return false // 다음 입력 시 재실행 → 다음 줄
  * })
- * ```
  *
  * @example ctx.execute로 다른 커맨드 실행
- * ```ts
  * export const showCharacterHandler = defineCmd<{ name: string }>((cmd, ctx) => {
  *   ctx.execute({ type: 'character', name: cmd.name, image: 'normal', position: 'center' })
  *   return ctx.execute({ type: 'dialogue', text: `${cmd.name} 등장!` })
  * })
- * ```
  */
 export function defineCmd<TCmd>(
   handler: (cmd: Omit<TCmd, 'type'>, ctx: SceneContext) => CommandResult

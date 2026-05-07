@@ -11,7 +11,6 @@ import type { VariablesOf } from './config'
  * 반환 객체의 키가 `_` 접두사이면 지역 변수, 아니면 전역 변수로 처리됩니다.
  *
  * @example
- * ```ts
  * // 정적 객체 (값 타입 검사됨)
  * var: { useHeroineVoice: true }
  *
@@ -20,7 +19,6 @@ import type { VariablesOf } from './config'
  *   likeability: likeability + (_isAnnoyed ? -5 : 5),
  *   _isAnnoyed: false,
  * })
- * ```
  */
 export type VarResolvable<TConfig, TLocalVars = Record<never, never>> =
   | Partial<VariablesOf<TConfig> & TLocalVars>
@@ -34,7 +32,6 @@ export type VarResolvable<TConfig, TLocalVars = Record<never, never>> =
  * - `undefined`이면 `undefined`를 반환합니다.
  *
  * @example
- * ```ts
  * const varVal = resolveVarResolvable(selected.var, ctx.scene.getVars())
  * if (varVal) {
  *   for (const [key, value] of Object.entries(varVal)) {
@@ -42,7 +39,6 @@ export type VarResolvable<TConfig, TLocalVars = Record<never, never>> =
  *     else ctx.scene.setGlobalVar(key, value)
  *   }
  * }
- * ```
  */
 export function resolveVarResolvable(
   val: VarResolvable<any, any> | undefined,
