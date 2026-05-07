@@ -811,18 +811,17 @@
   var Z_INDEX = {
     BACKGROUND: 0,
     CHARACTER_NORMAL: 100,
-    CHARACTER_HIGHLIGHT: 110,
-    ENVIRONMENT: 200,
+    EFFECT: 200,
     MOOD: 200,
     LIGHT: 210,
-    TRANSITION: 300,
+    FADE: 300,
     UI_BASE: 400,
     OVERLAY_WHISPER: 500,
     OVERLAY_CAPTION: 510,
     OVERLAY_TITLE: 520,
+    ELEMENT: 550,
     UI_HELPERS: 600,
-    DIALOG_BOX: 700,
-    CHARACTER_CUTIN: 800
+    DIALOG_BOX: 700
   };
 
   // src/modules/dialogue.ts
@@ -935,6 +934,7 @@
     let _activeTx = null;
     let _prevLines = null;
     let _prevSubIndex = -1;
+    let _isActive = false;
     const _renderText = (speaker, text, speed, immediate = false) => {
       const resolved = dialogueModule.hooker.trigger(
         "dialogue:text-render",
@@ -943,16 +943,17 @@
       );
       const resolvedSpeaker = resolved.speaker;
       const resolvedText = resolved.text;
-      bgObj.fadeIn(200, "easeOut");
+      _isActive = true;
+      bgObj.fadeIn(250, "easeOut");
       speakerObj.attribute.text = resolvedSpeaker ?? "";
-      speakerObj.fadeIn(200, "easeOut");
+      speakerObj.fadeIn(250, "easeOut");
       if (immediate || speed === 0) {
         _isTyping = false;
         _fullText = resolvedText;
         _activeTx?.stop?.();
         _activeTx = null;
         textObj.attribute.text = resolvedText;
-        textObj.fadeIn(200, "easeOut");
+        textObj.fadeIn(250, "easeOut");
       } else {
         const spd = speed ?? 30;
         _isTyping = true;
@@ -963,7 +964,7 @@
         }
         const anim = textObj.transition(resolvedText, spd);
         _activeTx = anim;
-        textObj.fadeIn(200, "easeOut");
+        textObj.fadeIn(250, "easeOut");
         if (anim && typeof anim.on === "function") {
           anim.on("end", () => {
             _isTyping = false;
@@ -980,23 +981,30 @@
       _renderText(spkName, txt, void 0, true);
     }
     return {
-      show: (dur = 250) => {
-        bgObj.fadeIn(dur, "easeOut");
+      show: (duration) => {
+        if (_isActive) {
+          bgObj.fadeIn(duration, "easeOut");
+          speakerObj.fadeIn(duration, "easeOut");
+          textObj.fadeIn(duration, "easeOut");
+        }
       },
       onCleanup: () => {
+        _isActive = false;
         _activeTx?.stop?.();
         _activeTx = null;
         bgObj.remove({ child: true });
         speakerObj.remove({ child: true });
         textObj.remove({ child: true });
       },
-      hide: (dur = 300) => {
-        bgObj.fadeOut(dur, "easeIn");
-        speakerObj.fadeOut(dur, "easeIn");
-        textObj.fadeOut(dur, "easeIn");
+      hide: (duration) => {
+        if (_isActive) {
+          bgObj.fadeOut(duration, "easeIn");
+          speakerObj.fadeOut(duration, "easeIn");
+          textObj.fadeOut(duration, "easeIn");
+        }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiGroup: "dialogue",
+      uiTags: ["dialogue", "default-ui"],
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1081,7 +1089,7 @@
   // src/modules/choice.ts
   var DEFAULT_CHOICE_STYLE = {
     bg: {
-      color: "rgba(0,0,0,0.6)"
+      color: "rgba(0,0,0,0.1)"
     },
     button: {
       color: "rgba(30,30,60,0.85)",
@@ -1131,12 +1139,13 @@
         width: w,
         height: h,
         zIndex: Z_INDEX.UI_HELPERS,
-        opacity: 0,
+        display: "none",
         pointerEvents: true
       },
       transform: { position: toLocal(w / 2, h / 2) }
     });
     ctx.world.camera?.addChild(bgObj);
+    bgObj.fadeOut(0);
     let _btnObjs = [];
     const _clearButtons = () => {
       _btnObjs.forEach((obj) => {
@@ -1144,16 +1153,20 @@
       });
       _btnObjs = [];
     };
+    const _hide = (duration) => {
+      bgObj.fadeOut(duration, "easeIn");
+      _clearButtons();
+    };
     return {
-      show: () => {
-        bgObj.fadeIn(200, "easeOut");
+      show: (duration) => {
+        if (_btnObjs.length > 0) bgObj.fadeIn(duration, "easeOut");
       },
-      hide: () => {
-        bgObj.fadeOut(200, "easeIn");
-        _clearButtons();
+      hide: (duration) => {
+        if (_btnObjs.length > 0) bgObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      hideGroups: ["dialogue"],
+      uiTags: ["choice", "default-ui"],
+      hideTags: ["default-ui"],
       /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
@@ -1161,7 +1174,7 @@
       },
       // ─── 모듈 내부 전용 ─────────────────────────────────
       _onChoices: (choices, onSelect) => {
-        bgObj.fadeIn(200, "easeOut");
+        bgObj.fadeIn(250, "easeOut");
         _clearButtons();
         const defaultBtnStyle = cfg.button ?? DEFAULT_CHOICE_STYLE.button;
         const defaultHoverStyle = cfg.buttonHover ?? DEFAULT_CHOICE_STYLE.buttonHover;
@@ -1202,7 +1215,7 @@
           };
           const btnObj = ctx.world.createRectangle({
             style: btnStyle,
-            transform: { position: toLocal(w / 2, cy) }
+            transform: { position: { x: 0, y: -(cy - h / 2), z: 0 } }
           });
           const textStyle = {
             ...defaultTextStyle,
@@ -1239,13 +1252,14 @@
             onSelect(i);
           });
           btnObj.addChild(txtObj);
-          ctx.world.camera?.addChild(btnObj);
+          bgObj.addChild(btnObj);
           _btnObjs.push(btnObj);
         });
       },
       onUpdate: (_ctx, state, _setState) => {
         Object.assign(cfg, state);
-      }
+      },
+      _hide
     };
   });
   choiceModule.defineCommand(function* (cmd, ctx) {
@@ -1277,7 +1291,7 @@
       yield false;
     }
     const item = selected;
-    entry?.hide?.();
+    entry?._hide(250);
     if (item.var) {
       const vars = resolveVarResolvable(item.var, ctx.scene.getVars());
       if (vars) {
@@ -1376,11 +1390,9 @@
       _bgParallax = data._parallax;
     }
     return {
-      show: (dur = 250) => {
-        _bgObj?.fadeIn?.(dur, "easeOut");
+      show: () => {
       },
-      hide: (dur = 300) => {
-        _bgObj?.fadeOut?.(dur, "easeIn");
+      hide: () => {
       },
       onCleanup: () => {
         if (_bgObj) {
@@ -1727,16 +1739,13 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_charObjs)) {
           obj.remove({ child: true });
         }
         Object.keys(_charObjs).forEach((k2) => delete _charObjs[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_charObjs)) {
-          obj.fadeOut(300, "easeIn");
-        }
       },
       getObj: (name) => _charObjs[name],
       onUpdate: (_ctx, d2, _setState) => {
@@ -1893,7 +1902,7 @@
   var MOOD_PRESETS = {
     day: { color: "rgba(255,230,180,0.1)", vignette: "rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
     night: { color: "rgba(10,15,60,0.5)", vignette: "rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
-    dawn: { color: "rgba(25,35,70,0.4)", vignette: "rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
+    dawn: { color: "rgba(25,35,130,0.4)", vignette: "rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
     sunset: { color: "rgba(255,120,50,0.25)", vignette: "rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
     foggy: { color: "rgba(200,210,220,0.4)", vignette: "rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%", blendMode: "screen" },
     sepia: { color: "rgba(160,110,50,0.3)", vignette: "rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
@@ -1981,16 +1990,13 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_moodObjs)) {
           obj.remove();
         }
         Object.keys(_moodObjs).forEach((k2) => delete _moodObjs[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_moodObjs)) {
-          obj.fadeOut(300, "easeIn");
-        }
       },
       // flicker용 오브젝트 접근
       getObj: (mood) => _moodObjs[mood],
@@ -2182,16 +2188,13 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_effectObjs)) {
           obj.remove();
         }
         Object.keys(_effectObjs).forEach((k2) => delete _effectObjs[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_effectObjs)) {
-          obj.fadeOut(300, "easeIn");
-        }
       },
       onUpdate: (_ctx, state, _setState) => {
         const newTypes = new Set(Object.keys(state._activeEffects));
@@ -2369,17 +2372,14 @@
     return {
       show: () => {
       },
+      hide: () => {
+      },
       onCleanup: () => {
         for (const obj of Object.values(_overlayObjs)) {
           obj.remove();
         }
         Object.keys(_overlayObjs).forEach((k2) => delete _overlayObjs[k2]);
         Object.keys(_overlayEntries).forEach((k2) => delete _overlayEntries[k2]);
-      },
-      hide: () => {
-        for (const obj of Object.values(_overlayObjs)) {
-          obj?.fadeOut?.(300, "easeIn");
-        }
       },
       getObj: (name) => _overlayObjs[name],
       onUpdate: (_ctx, state, _setState) => {
@@ -2510,7 +2510,7 @@
           width: w,
           height: h,
           opacity: 0,
-          zIndex: Z_INDEX.TRANSITION,
+          zIndex: Z_INDEX.FADE,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -2584,7 +2584,7 @@
           width: w * 2,
           height: h * 2,
           opacity: 0,
-          zIndex: Z_INDEX.TRANSITION + 1,
+          zIndex: Z_INDEX.FADE + 1,
           pointerEvents: false
         },
         transform: { position: { x: 0, y: 0, z: 10 } }
@@ -2815,9 +2815,9 @@
   } }));
   uiModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.action === "show") {
-      ctx.ui.show(cmd.name, cmd.duration);
+      ctx.ui.show(cmd.name, cmd.duration ?? 250);
     } else {
-      ctx.ui.hide(cmd.name, cmd.duration);
+      ctx.ui.hide(cmd.name, cmd.duration ?? 250);
     }
     return true;
   });
@@ -3247,14 +3247,15 @@
       overlayObj.fadeOut(duration, "easeIn");
     };
     return {
-      show: (duration = 200) => {
-        overlayObj.fadeIn(duration, "easeOut");
+      show: (duration) => {
+        if (_currentResolve) overlayObj.fadeIn(duration, "easeOut");
       },
-      hide: (duration = 200) => {
-        _hide(duration);
+      hide: (duration) => {
+        if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      hideGroups: ["dialogue"],
+      uiTags: ["dialogBox", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _clearDynamic();
         overlayObj.remove({ child: true });
@@ -3271,7 +3272,8 @@
             state
           );
         }
-      }
+      },
+      _hide
     };
   });
   dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
@@ -3287,7 +3289,7 @@
     const resolve = (i) => {
       if (_resolved) return;
       _resolved = true;
-      entry.hide?.(duration);
+      entry._hide(duration);
       const selectedObj = i >= 0 ? finalCmd.buttons[i] : void 0;
       const selectData = dialogBoxModule.hooker.trigger(
         "dialogBox:select",
@@ -3725,22 +3727,24 @@
           _hiddenEl.focus({ preventScroll: true });
         }
       });
-      overlayObj.fadeIn(200, "easeOut");
+      overlayObj.fadeIn(250, "easeOut");
     };
-    const _hide = (duration = 200) => {
+    const _hide = (duration = 250) => {
       _currentResolve = null;
       _destroyHiddenInput();
       _textObj = null;
       overlayObj.fadeOut(duration, "easeIn");
     };
     return {
-      show: (dur = 200) => {
-        overlayObj.fadeIn(dur, "easeOut");
+      show: (duration) => {
+        if (_isActive) overlayObj.fadeIn(duration, "easeOut");
       },
-      hide: (dur = 200) => {
-        _hide(dur);
+      hide: (duration) => {
+        if (_isActive) overlayObj.fadeOut(duration, "easeIn");
       },
-      hideGroups: ["dialogue"],
+      // ─── 입력 역할 선언 ─────────────────────────────────
+      uiTags: ["input", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
@@ -3808,6 +3812,249 @@
   });
   var input_default = inputModule;
 
+  // src/modules/element.ts
+  function flattenChildren(parentId, children, out) {
+    if (!children) return;
+    for (const child of children) {
+      out[child.id] = {
+        id: child.id,
+        kind: child.kind,
+        text: "text" in child ? child.text : void 0,
+        image: "image" in child ? child.image : void 0,
+        position: child.position ?? { x: 0, y: 0 },
+        parent: parentId,
+        style: child.style,
+        hoverStyle: child.hoverStyle,
+        pivot: child.pivot,
+        rotation: child.rotation,
+        onClick: child.onClick
+      };
+      flattenChildren(child.id, child.children, out);
+    }
+  }
+  function collectDescendants(id, elements) {
+    const result = /* @__PURE__ */ new Set([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const [eid, entry] of Object.entries(elements)) {
+        if (entry.parent && result.has(entry.parent) && !result.has(eid)) {
+          result.add(eid);
+          changed = true;
+        }
+      }
+    }
+    return result;
+  }
+  function topoSort(entries) {
+    const byId = new Map(entries.map((e) => [e.id, e]));
+    const sorted = [];
+    const visited = /* @__PURE__ */ new Set();
+    const visit = (entry) => {
+      if (visited.has(entry.id)) return;
+      if (entry.parent && byId.has(entry.parent)) {
+        visit(byId.get(entry.parent));
+      }
+      visited.add(entry.id);
+      sorted.push(entry);
+    };
+    for (const entry of entries) visit(entry);
+    return sorted;
+  }
+  var _actionCache = /* @__PURE__ */ new Map();
+  var elementModule = define2({
+    _elements: {}
+  });
+  elementModule.defineView((ctx, data, setState) => {
+    const _elementObjs = {};
+    const _elementEntries = {};
+    const cam = ctx.world.camera;
+    const w = ctx.renderer.width;
+    const h = ctx.renderer.height;
+    const toLocal = (nx, ny) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(nx * w, ny * h) : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const KIND_CREATORS = {
+      rect: (entry) => ctx.world.createRectangle({
+        style: {
+          zIndex: Z_INDEX.ELEMENT,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
+          ...entry.pivot ? { pivot: entry.pivot } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      }),
+      text: (entry) => ctx.world.createText({
+        attribute: { text: entry.text ?? "" },
+        style: {
+          zIndex: Z_INDEX.ELEMENT + 1,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
+          ...entry.pivot ? { pivot: entry.pivot } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      }),
+      image: (entry) => ctx.world.createImage({
+        attribute: { src: entry.image ?? "" },
+        style: {
+          zIndex: Z_INDEX.ELEMENT,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
+          ...entry.pivot ? { pivot: entry.pivot } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      })
+    };
+    const _addElement = (entry, immediate = false, duration) => {
+      if (_elementObjs[entry.id]) return;
+      const creator = KIND_CREATORS[entry.kind];
+      if (!creator) return;
+      const obj = creator(entry);
+      if (entry.parent && _elementObjs[entry.parent]) {
+        _elementObjs[entry.parent].addChild(obj);
+      } else {
+        cam?.addChild(obj);
+      }
+      if (entry.hoverStyle) {
+        const mergedHoverStyle = { ...entry.hoverStyle };
+        const normalStyleProps = Object.fromEntries(
+          Object.keys(mergedHoverStyle).map((key) => [key, entry.style?.[key]])
+        );
+        obj.on("mouseover", () => {
+          obj.animate({ style: mergedHoverStyle }, 150);
+        });
+        obj.on("mouseout", () => {
+          obj.animate({ style: normalStyleProps }, 150);
+        });
+      }
+      if (entry.onClick) {
+        const actionName = entry.onClick;
+        obj.on("click", (e) => {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          const action = _actionCache.get(actionName);
+          if (action) {
+            const wrappedCtx = {
+              ...ctx,
+              execute: (cmd) => {
+                const gen = ctx.execute(cmd);
+                gen.next();
+                return gen;
+              }
+            };
+            action(wrappedCtx, ctx.scene.getVars());
+          } else {
+            console.warn(`[fumika] element onClick: action '${actionName}' not found`);
+          }
+        });
+      }
+      _elementObjs[entry.id] = obj;
+      _elementEntries[entry.id] = entry;
+      if (!immediate) {
+        obj.style.opacity = 0;
+        ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, "easeOut");
+      }
+    };
+    const _removeElement = (id, duration, immediate = false) => {
+      const obj = _elementObjs[id];
+      if (!obj) return;
+      delete _elementObjs[id];
+      delete _elementEntries[id];
+      const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200);
+      if (dur > 0) {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeIn", () => {
+          obj.remove({ child: true });
+        });
+      } else {
+        obj.remove({ child: true });
+      }
+    };
+    const sorted = topoSort(Object.values(data._elements));
+    for (const entry of sorted) {
+      _addElement(entry, true);
+    }
+    return {
+      uiTags: data._uiTags ?? [],
+      show: (duration) => {
+        for (const [id, entry] of Object.entries(_elementEntries)) {
+          if (!entry.parent && _elementObjs[id]) {
+            _elementObjs[id].fadeIn(duration, "easeOut");
+          }
+        }
+      },
+      hide: (duration) => {
+        for (const [id, entry] of Object.entries(_elementEntries)) {
+          if (!entry.parent && _elementObjs[id]) {
+            _elementObjs[id].fadeOut(duration, "easeIn");
+          }
+        }
+      },
+      onCleanup: () => {
+        for (const obj of Object.values(_elementObjs)) {
+          obj.remove({ child: true });
+        }
+        for (const key of Object.keys(_elementObjs)) delete _elementObjs[key];
+        for (const key of Object.keys(_elementEntries)) delete _elementEntries[key];
+      },
+      onUpdate: (_ctx, state, _setState) => {
+        const dur = state._lastDuration;
+        const newKeys = new Set(Object.keys(state._elements));
+        for (const key of Object.keys(_elementObjs)) {
+          if (!newKeys.has(key)) _removeElement(key, dur);
+        }
+        const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
+        const sortedAdd = topoSort(toAdd);
+        for (const entry of sortedAdd) {
+          _addElement(entry, false, dur);
+        }
+      }
+    };
+  });
+  function cacheOnClickActions(cmd, ctx) {
+    if (cmd.onClick) {
+      const action = ctx.actions.get(cmd.onClick);
+      if (action) _actionCache.set(cmd.onClick, action);
+    }
+    if (cmd.children) {
+      for (const child of cmd.children) {
+        cacheOnClickActions(child, ctx);
+      }
+    }
+  }
+  elementModule.defineCommand(function* (cmd, ctx, state, setState) {
+    const newElements = { ...state._elements };
+    if (cmd.action === "show") {
+      cacheOnClickActions(cmd, ctx);
+      newElements[cmd.id] = {
+        id: cmd.id,
+        kind: cmd.kind,
+        text: "text" in cmd ? cmd.text : void 0,
+        image: "image" in cmd ? cmd.image : void 0,
+        position: cmd.position ?? { x: 0.5, y: 0.5 },
+        style: cmd.style,
+        hoverStyle: cmd.hoverStyle,
+        pivot: cmd.pivot,
+        rotation: cmd.rotation,
+        onClick: cmd.onClick
+      };
+      flattenChildren(cmd.id, cmd.children, newElements);
+    } else {
+      const toRemove = collectDescendants(cmd.id, newElements);
+      for (const id of toRemove) delete newElements[id];
+    }
+    const nextUiTags = cmd.action === "show" ? cmd.uiTags ?? [] : state._uiTags;
+    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags });
+    return true;
+  });
+  var element_default = elementModule;
+
   // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
@@ -3832,7 +4079,8 @@
     "control": control_default,
     "audio": audio_default,
     "dialogBox": dialogBox_default,
-    "input": input_default
+    "input": input_default,
+    "element": element_default
   };
   function defineNovelConfig(config) {
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
@@ -3943,7 +4191,8 @@
       variables = {},
       next,
       initial,
-      hooks
+      hooks,
+      actions
     } = options;
     return (factory) => {
       const builders = _createBuilders();
@@ -3955,7 +4204,8 @@
         localVars: variables,
         nextScene: next,
         initial,
-        hooks
+        hooks,
+        actions
       };
     };
   }
@@ -17862,7 +18112,8 @@ ${addLineNumbers(fragment)}`);
     "screen-wipe": (p, c) => screenWipeModule.__handler(p, c),
     "ui": (p, c) => ui_default.__handler(p, c),
     "control": (p, c) => control_default.__handler(p, c),
-    "audio": (p, c) => audio_default.__handler(p, c)
+    "audio": (p, c) => audio_default.__handler(p, c),
+    "element": (p, c) => element_default.__handler(p, c)
   };
   var DialogueScene = class {
     renderer;
@@ -17925,10 +18176,6 @@ ${addLineNumbers(fragment)}`);
       }
       this._executeNext();
     }
-    /**
-     * `definition.initial`에 정의된 데이터로 등록된 모듈의 View를 만듭니다.
-     * `novel.config.modules`에 등록된 모듈의 `__viewBuilder`를 키로 찾아 호출합니다.
-     */
     /**
      * 모듈 View를 초기화합니다.
      *
@@ -17998,7 +18245,10 @@ ${addLineNumbers(fragment)}`);
             );
           }
         },
-        execute: (cmd) => this._executeCmd(cmd)
+        execute: (cmd) => this._executeCmd(cmd),
+        actions: {
+          get: (name) => this.definition.actions?.[name]
+        }
       };
       for (const [moduleKey, module] of Object.entries(modules)) {
         if (typeof module.__viewBuilder !== "function") continue;
@@ -18163,7 +18413,10 @@ ${addLineNumbers(fragment)}`);
             );
           }
         },
-        execute: (cmd2) => this._executeCmd(cmd2)
+        execute: (cmd2) => this._executeCmd(cmd2),
+        actions: {
+          get: (name) => this.definition.actions?.[name]
+        }
       };
       if (FLOW_CONTROL_HANDLERS[type]) {
         return FLOW_CONTROL_HANDLERS[type](params, ctx);
@@ -18319,18 +18572,18 @@ ${addLineNumbers(fragment)}`);
     _modules = /* @__PURE__ */ new Map();
     /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
     _uiRegistry = /* @__PURE__ */ new Map();
+    /** _suppressUIs에 의해 임시로 숨겨진 엔트리 목록 */
+    _suppressedEntries = /* @__PURE__ */ new Set();
     /** Novel 전용 훅 시스템 (novel:* 이벤트 전용) */
     _novelHooker = useHookallSync({});
     /**
      * 통합 훅 프록시. `novel:*` 키 는 내부 Novel 훅으로, 구모듈 훅은 해당 모듈의 `hooker`로 라우팅합니다.
      * 
      * @example
-     * ```ts
      * // novel 레벨 훅
      * novel.hooker.onBefore('novel:next', (v) => v)
      * // 모듈 훅 (dialogue모듈의 DialogueHook)
      * novel.hooker.onBefore('dialogue:text', (v) => v)
-     * ```
      */
     // @ts-ignore — AllModuleHooksOf<TConfig>는 조건부 타입이라 ListenerSignature<M> 제약을 TS가 검증 불가. 런타임 정상.
     hooker;
@@ -18458,11 +18711,9 @@ ${addLineNumbers(fragment)}`);
      * `load()` 이후, `start()` 이전에 한 번 호출하십시오.
      *
      * @example
-     * ```ts
      * await novel.load()
      * await novel.boot()
      * novel.start('scene-intro')
-     * ```
      */
     async boot() {
       for (const module of this._modules.values()) {
@@ -18503,6 +18754,7 @@ ${addLineNumbers(fragment)}`);
           this._renderer.restoreState(prevState);
         }
         this._uiRegistry.clear();
+        this._suppressedEntries.clear();
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18518,6 +18770,7 @@ ${addLineNumbers(fragment)}`);
       for (const entry of this._uiRegistry.values()) {
         entry.onCleanup();
       }
+      this._suppressedEntries.clear();
     }
     // ─── 스킵 기능 ───────────────────────────────────────────────
     /** 현재 스킵(빠른 감기) 중인지 여부 */
@@ -18561,7 +18814,7 @@ ${addLineNumbers(fragment)}`);
     /**
      * hideable:true 로 등록된 모든 UI 요소를 숨깁니다.
      */
-    hideUI(duration) {
+    hideUI(duration = 250) {
       for (const entry of this._uiRegistry.values()) {
         entry.hide(duration);
       }
@@ -18569,8 +18822,18 @@ ${addLineNumbers(fragment)}`);
     /**
      * hideUI()로 숨겼던 UI 요소를 다시 표시합니다.
      */
-    showUI(duration) {
+    showUI(duration = 250) {
+      const stepType = this._currentScene?.getCurrentStepType();
+      const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
+      const suppressedTags = activeEntry?.hideTags ?? [];
       for (const entry of this._uiRegistry.values()) {
+        if (entry === activeEntry) {
+          entry.show(duration);
+          continue;
+        }
+        if (entry.uiTags && entry.uiTags.some((tag) => suppressedTags.includes(tag))) {
+          continue;
+        }
         entry.show(duration);
       }
     }
@@ -18640,6 +18903,7 @@ ${addLineNumbers(fragment)}`);
         this._stateStore.set(k2, v2);
       }
       this._uiRegistry.clear();
+      this._suppressedEntries.clear();
       this._renderer.clear();
       this._renderer.restoreState(resolvedData.rendererState);
       this._callStack.length = 0;
@@ -18757,11 +19021,7 @@ ${addLineNumbers(fragment)}`);
       if (!(this._currentScene instanceof DialogueScene)) return;
       const stepType = this._currentScene.getCurrentStepType();
       const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
-      if (activeEntry) {
-        this._suppressUIs(activeEntry.hideGroups);
-        this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
-        return;
-      }
+      this._suppressUIs(activeEntry);
       this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
     }
     /**
@@ -18840,9 +19100,11 @@ ${addLineNumbers(fragment)}`);
           this._stateStore.set(k2, v2);
         }
         this._uiRegistry.clear();
+        this._suppressedEntries.clear();
         this._rebuildModuleViews();
       } else {
         this._uiRegistry.clear();
+        this._suppressedEntries.clear();
         this._rebuildModuleViews();
       }
       const callbacks = this._buildCallbacks();
@@ -18855,15 +19117,31 @@ ${addLineNumbers(fragment)}`);
       this._syncUIState();
     }
     /**
-     * `hideGroups`에 나열된 uiGroup을 가진 엔트리에 `hide()`를 직접 호출합니다.
+     * `hideTags`에 나열된 태그를 하나라도 가진 엔트리에 `hide()`를 직접 호출합니다. (자기 자신 제외)
+     * 이전에 숨겼던 엔트리가 더 이상 대상이 아니면 다시 `show()`를 호출하여 복구합니다.
      */
-    _suppressUIs(groups) {
-      if (!groups?.length) return;
-      for (const entry of this._uiRegistry.values()) {
-        if (entry.uiGroup && groups.includes(entry.uiGroup)) {
-          entry.hide();
+    _suppressUIs(activeEntry) {
+      const nextSuppressed = /* @__PURE__ */ new Set();
+      const tags = activeEntry?.hideTags ?? [];
+      if (activeEntry && tags.length > 0) {
+        for (const entry of this._uiRegistry.values()) {
+          if (entry === activeEntry) continue;
+          if (entry.uiTags && entry.uiTags.some((tag) => tags.includes(tag))) {
+            nextSuppressed.add(entry);
+          }
         }
       }
+      for (const entry of this._suppressedEntries) {
+        if (!nextSuppressed.has(entry)) {
+          entry.show(250);
+        }
+      }
+      for (const entry of nextSuppressed) {
+        if (!this._suppressedEntries.has(entry)) {
+          entry.hide(250);
+        }
+      }
+      this._suppressedEntries = nextSuppressed;
     }
     // ─── 전체화면 ─────────────────────────────────────────────
     /** 현재 전체화면 모드인지 확인합니다. */
@@ -18958,7 +19236,7 @@ ${addLineNumbers(fragment)}`);
           interpolateText: (t) => t,
           jumpToLabel: noop,
           hasLabel: () => false,
-          getVars: () => ({}),
+          getVars: () => ({ ...this.environments ?? {}, ...this.variables }),
           setGlobalVar: noop,
           setLocalVar: noop,
           loadScene: noop,
@@ -18966,8 +19244,17 @@ ${addLineNumbers(fragment)}`);
           callScene: noop
           // rebuild ctx에서는 callScene 호출 없음
         },
-        execute: function* () {
-          return false;
+        execute: (cmd) => {
+          const scene = this._currentScene;
+          if (scene && scene instanceof DialogueScene) {
+            return scene._executeCmd(cmd);
+          }
+          return (function* () {
+            return false;
+          })();
+        },
+        actions: {
+          get: () => void 0
         }
       };
     }
@@ -19037,11 +19324,15 @@ ${addLineNumbers(fragment)}`);
       useHeroineVoice: true,
       username: ""
     },
+    environments: {
+      $bgmVolume: 1
+    },
     modules: {
       "test-cmd": testModule,
       "debug": debugModule
     },
     scenes: [
+      "scene-ui",
       "scene-start",
       "scene-game",
       "scene-food",
@@ -19098,6 +19389,96 @@ ${addLineNumbers(fragment)}`);
       }
     }
   });
+
+  // example/scenes/scene-ui.ts
+  var scene_ui_default = defineScene({
+    config: novel_config_default,
+    actions: {
+      save: (ctx, vars) => {
+        save(ctx.novel);
+      },
+      load: (ctx) => {
+        load(ctx.novel);
+      },
+      fullscreen(ctx, vars) {
+        ctx.novel.toggleFullscreen();
+      }
+    }
+  })(() => [
+    // ── 하단 패널 (우측 하단) ─────────────────────────────
+    {
+      type: "element",
+      action: "show",
+      id: "panel",
+      kind: "rect",
+      position: { x: 0.85, y: 0.95 },
+      style: {
+        width: 180,
+        height: 40,
+        color: "rgba(0, 0, 0, 0)"
+        // 투명 컨테이너
+      },
+      children: [
+        // 저장 버튼 (텍스트)
+        {
+          id: "btn_save",
+          kind: "text",
+          text: "\uC800\uC7A5\uD558\uAE30",
+          position: { x: -120, y: 0 },
+          style: {
+            fontSize: 22,
+            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+            textShadowBlur: 1,
+            textShadowOffsetX: 1,
+            textShadowOffsetY: 1,
+            textShadowColor: "rgba(0, 0, 0, 1)"
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "save"
+        },
+        // 로드 버튼 (텍스트)
+        {
+          id: "btn_load",
+          kind: "text",
+          text: "\uBD88\uB7EC\uC624\uAE30",
+          position: { x: 0, y: 0 },
+          style: {
+            fontSize: 22,
+            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+            textShadowBlur: 1,
+            textShadowOffsetX: 1,
+            textShadowOffsetY: 1,
+            textShadowColor: "rgba(0, 0, 0, 1)"
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "load"
+        },
+        // 전체화면 버튼
+        {
+          id: "btn_fullscreen",
+          kind: "text",
+          text: "\uC804\uCCB4\uD654\uBA74",
+          position: { x: 120, y: 0 },
+          style: {
+            fontSize: 22,
+            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+            textShadowBlur: 1,
+            textShadowOffsetX: 1,
+            textShadowOffsetY: 1,
+            textShadowColor: "rgba(0, 0, 0, 1)"
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "fullscreen"
+        }
+      ]
+    }
+  ]);
 
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
@@ -19252,6 +19633,8 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
+    // 공용 ui를 보여줍니다.
+    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -20366,7 +20749,8 @@ ${addLineNumbers(fragment)}`);
       scene: "scene-bug",
       preserve: true
     }
-  })(({ label, goto }) => [
+  })(({ label, goto, call }) => [
+    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
@@ -20672,7 +21056,8 @@ ${addLineNumbers(fragment)}`);
     initial: commonInitial,
     // 씬 5개 종료 후 처음으로 롤백
     next: "scene-start"
-  })(({ label, goto }) => [
+  })(({ label, goto, call }) => [
+    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },
@@ -20829,6 +21214,37 @@ ${addLineNumbers(fragment)}`);
     el.className = `toast toast-${type} show`;
     setTimeout(() => el.classList.remove("show"), 2200);
   }
+  function save(novel) {
+    try {
+      const data = novel.save();
+      const env = novel.saveEnv();
+      console.log(data, env);
+      localStorage.setItem("fumika-save", JSON.stringify(data));
+      localStorage.setItem("fumika-env", JSON.stringify(env));
+      showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("\u26A0 \uC800\uC7A5 \uC2E4\uD328: \uB300\uD654 \uC52C\uC5D0\uC11C\uB9CC \uAC00\uB2A5", "error");
+    }
+  }
+  function load(novel) {
+    const raw = localStorage.getItem("fumika-save");
+    const rawEnv = localStorage.getItem("fumika-env");
+    if (!raw) {
+      showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
+      return;
+    }
+    try {
+      const data = JSON.parse(raw);
+      const env = JSON.parse(rawEnv || "{}");
+      novel.loadSave(data);
+      novel.loadEnv(env);
+      showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
+    }
+  }
   async function main() {
     const element = document.getElementById("wrapper");
     const player = new U();
@@ -20890,6 +21306,7 @@ ${addLineNumbers(fragment)}`);
     const novel = new Novel(novel_config_default, {
       element,
       scenes: {
+        "scene-ui": scene_ui_default,
         "scene-start": scene_start_default,
         "scene-game": scene_game_default,
         "scene-food": scene_food_default,
@@ -20929,6 +21346,7 @@ ${addLineNumbers(fragment)}`);
       return state;
     });
     novel.start("scene-start");
+    console.log(novel);
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");
     const btnLoad = document.getElementById("btn-load");
@@ -20953,36 +21371,11 @@ ${addLineNumbers(fragment)}`);
     }, 300);
     btnSave.addEventListener("click", (e) => {
       e.stopPropagation();
-      try {
-        const data = novel.save();
-        const env = novel.saveEnv();
-        console.log(data, env);
-        localStorage.setItem("fumika-save", JSON.stringify(data));
-        localStorage.setItem("fumika-env", JSON.stringify(env));
-        showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
-      } catch (e2) {
-        console.error(e2);
-        showToast("\u26A0 \uC800\uC7A5 \uC2E4\uD328: \uB300\uD654 \uC52C\uC5D0\uC11C\uB9CC \uAC00\uB2A5", "error");
-      }
+      save(novel);
     });
     btnLoad.addEventListener("click", (e) => {
       e.stopPropagation();
-      const raw = localStorage.getItem("fumika-save");
-      const rawEnv = localStorage.getItem("fumika-env");
-      if (!raw) {
-        showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
-        return;
-      }
-      try {
-        const data = JSON.parse(raw);
-        const env = JSON.parse(rawEnv || "{}");
-        novel.loadSave(data);
-        novel.loadEnv(env);
-        showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
-      } catch (e2) {
-        console.error(e2);
-        showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
-      }
+      load(novel);
     });
     btnFullscreen.addEventListener("click", async (e) => {
       e.stopPropagation();

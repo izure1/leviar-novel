@@ -43,11 +43,15 @@ export default defineNovelConfig({
     useHeroineVoice: true,
     username: '',
   },
+  environments: {
+    $bgmVolume: 1,
+  },
   modules: {
     'test-cmd': testModule,
     'debug': debugModule,
   },
   scenes: [
+    'scene-ui',
     'scene-start',
     'scene-game',
     'scene-food',
