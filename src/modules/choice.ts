@@ -60,7 +60,7 @@ export interface ChoiceSchema {
 
 export const DEFAULT_CHOICE_STYLE: ChoiceSchema = {
   bg: {
-    color: 'rgba(0,0,0,0.6)',
+    color: 'rgba(0,0,0,0.1)',
   },
   button: {
     color: 'rgba(30,30,60,0.85)',
@@ -163,12 +163,13 @@ choiceModule.defineView((ctx, data, setState) => {
       width: w,
       height: h,
       zIndex: Z_INDEX.UI_HELPERS,
-      opacity: 0,
+      display: 'none',
       pointerEvents: true,
     },
     transform: { position: toLocal(w / 2, h / 2) },
   })
   ctx.world.camera?.addChild(bgObj)
+  bgObj.fadeOut(0)
 
   let _btnObjs: any[] = []
 
@@ -179,11 +180,17 @@ choiceModule.defineView((ctx, data, setState) => {
     _btnObjs = []
   }
 
+  const _hide = () => {
+    bgObj.fadeOut(200, 'easeIn')
+    _clearButtons()
+  }
+
   return {
-    show: () => { bgObj.fadeIn(200, 'easeOut') },
+    show: () => {
+      if (_btnObjs.length > 0) bgObj.fadeIn(200, 'easeOut')
+    },
     hide: () => {
-      bgObj.fadeOut(200, 'easeIn')
-      _clearButtons()
+      if (_btnObjs.length > 0) bgObj.fadeOut(200, 'easeIn')
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
@@ -254,7 +261,7 @@ choiceModule.defineView((ctx, data, setState) => {
 
         const btnObj = ctx.world.createRectangle({
           style: btnStyle,
-          transform: { position: toLocal(w / 2, cy) }
+          transform: { position: { x: 0, y: -(cy - h / 2), z: 0 } }
         })
 
         const textStyle: Partial<Style> = {
@@ -298,13 +305,14 @@ choiceModule.defineView((ctx, data, setState) => {
         })
 
         btnObj.addChild(txtObj)
-        ctx.world.camera?.addChild(btnObj)
+        bgObj.addChild(btnObj)
         _btnObjs.push(btnObj)
       })
     },
     onUpdate: (_ctx, state, _setState) => {
       Object.assign(cfg, state)
     },
+    _hide,
   }
 })
 
@@ -351,7 +359,7 @@ choiceModule.defineCommand(function* (cmd, ctx) {
   const item = selected as ResolvedChoiceItem
 
   // 선택지 숨기기
-  entry?.hide?.()
+  entry?._hide()
 
   // var 설정
   if (item.var) {

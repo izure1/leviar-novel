@@ -715,8 +715,12 @@ inputModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (dur = 200) => { overlayObj.fadeIn(dur, 'easeOut') },
-    hide: (dur = 200) => { _hide(dur) },
+    show: (dur = 200) => {
+      if (_isActive) overlayObj.fadeIn(dur, 'easeOut')
+    },
+    hide: (dur = 200) => {
+      if (_isActive) overlayObj.fadeOut(dur, 'easeIn')
+    },
 
     hideGroups: ['dialogue'],
 

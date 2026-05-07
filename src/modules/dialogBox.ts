@@ -533,8 +533,12 @@ dialogBoxModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (duration = 200) => { overlayObj.fadeIn(duration, 'easeOut') },
-    hide: (duration = 200) => { _hide(duration) },
+    show: (duration = 200) => {
+      if (_currentResolve) overlayObj.fadeIn(duration, 'easeOut')
+    },
+    hide: (duration = 200) => {
+      if (_currentResolve) overlayObj.fadeOut(duration, 'easeIn')
+    },
 
     // ─── 입력 역할 선언 ────────────────────────────────
     hideGroups: ['dialogue'],
@@ -557,6 +561,7 @@ dialogBoxModule.defineView((ctx, data, setState) => {
         )
       }
     },
+    _hide,
   }
 })
 
@@ -580,8 +585,8 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
 
   const resolve = (i: number) => {
     if (_resolved) return
-    _resolved = true
-    entry.hide?.(duration)
+    _resolved = true;
+    (entry as any)._hide(duration)
 
     const selectedObj = i >= 0 ? finalCmd.buttons[i] : undefined
 

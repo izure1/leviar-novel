@@ -1080,7 +1080,7 @@
   // src/modules/choice.ts
   var DEFAULT_CHOICE_STYLE = {
     bg: {
-      color: "rgba(0,0,0,0.6)"
+      color: "rgba(0,0,0,0.1)"
     },
     button: {
       color: "rgba(30,30,60,0.85)",
@@ -1130,12 +1130,13 @@
         width: w,
         height: h,
         zIndex: Z_INDEX.UI_HELPERS,
-        opacity: 0,
+        display: "none",
         pointerEvents: true
       },
       transform: { position: toLocal(w / 2, h / 2) }
     });
     ctx.world.camera?.addChild(bgObj);
+    bgObj.fadeOut(0);
     let _btnObjs = [];
     const _clearButtons = () => {
       _btnObjs.forEach((obj) => {
@@ -1143,13 +1144,16 @@
       });
       _btnObjs = [];
     };
+    const _hide = () => {
+      bgObj.fadeOut(200, "easeIn");
+      _clearButtons();
+    };
     return {
       show: () => {
-        bgObj.fadeIn(200, "easeOut");
+        if (_btnObjs.length > 0) bgObj.fadeIn(200, "easeOut");
       },
       hide: () => {
-        bgObj.fadeOut(200, "easeIn");
-        _clearButtons();
+        if (_btnObjs.length > 0) bgObj.fadeOut(200, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
       hideGroups: ["dialogue"],
@@ -1201,7 +1205,7 @@
           };
           const btnObj = ctx.world.createRectangle({
             style: btnStyle,
-            transform: { position: toLocal(w / 2, cy) }
+            transform: { position: { x: 0, y: -(cy - h / 2), z: 0 } }
           });
           const textStyle = {
             ...defaultTextStyle,
@@ -1238,13 +1242,14 @@
             onSelect(i);
           });
           btnObj.addChild(txtObj);
-          ctx.world.camera?.addChild(btnObj);
+          bgObj.addChild(btnObj);
           _btnObjs.push(btnObj);
         });
       },
       onUpdate: (_ctx, state, _setState) => {
         Object.assign(cfg, state);
-      }
+      },
+      _hide
     };
   });
   choiceModule.defineCommand(function* (cmd, ctx) {
@@ -1276,7 +1281,7 @@
       yield false;
     }
     const item = selected;
-    entry?.hide?.();
+    entry?._hide();
     if (item.var) {
       const vars = resolveVarResolvable(item.var, ctx.scene.getVars());
       if (vars) {
@@ -3233,10 +3238,10 @@
     };
     return {
       show: (duration = 200) => {
-        overlayObj.fadeIn(duration, "easeOut");
+        if (_currentResolve) overlayObj.fadeIn(duration, "easeOut");
       },
       hide: (duration = 200) => {
-        _hide(duration);
+        if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
       hideGroups: ["dialogue"],
@@ -3256,7 +3261,8 @@
             state
           );
         }
-      }
+      },
+      _hide
     };
   });
   dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
@@ -3272,7 +3278,7 @@
     const resolve = (i) => {
       if (_resolved) return;
       _resolved = true;
-      entry.hide?.(duration);
+      entry._hide(duration);
       const selectedObj = i >= 0 ? finalCmd.buttons[i] : void 0;
       const selectData = dialogBoxModule.hooker.trigger(
         "dialogBox:select",
@@ -3720,10 +3726,10 @@
     };
     return {
       show: (dur = 200) => {
-        overlayObj.fadeIn(dur, "easeOut");
+        if (_isActive) overlayObj.fadeIn(dur, "easeOut");
       },
       hide: (dur = 200) => {
-        _hide(dur);
+        if (_isActive) overlayObj.fadeOut(dur, "easeIn");
       },
       hideGroups: ["dialogue"],
       onCleanup: () => {
