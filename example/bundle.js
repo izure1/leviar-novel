@@ -18813,7 +18813,13 @@ ${addLineNumbers(fragment)}`);
      * hideUI()로 숨겼던 UI 요소를 다시 표시합니다.
      */
     showUI(duration) {
+      const stepType = this._currentScene?.getCurrentStepType();
+      const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
+      const suppressedGroups = activeEntry?.hideGroups ?? [];
       for (const entry of this._uiRegistry.values()) {
+        if (entry.uiGroup && suppressedGroups.includes(entry.uiGroup)) {
+          continue;
+        }
         entry.show(duration);
       }
     }
