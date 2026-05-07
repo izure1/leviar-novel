@@ -243,6 +243,7 @@ dialogueModule.defineView((ctx, data, setState) => {
   // 반응형 중복 렌더 방지: 이전 lines 참조 및 서브 인덱스를 추적
   let _prevLines: string[] | null = null
   let _prevSubIndex: number = -1
+  let _isActive = false
 
   const _renderText = (
     speaker: string | undefined,
@@ -258,6 +259,7 @@ dialogueModule.defineView((ctx, data, setState) => {
     )
     const resolvedSpeaker = resolved.speaker
     const resolvedText = resolved.text
+    _isActive = true
 
     // 배경 페이드인
     bgObj.fadeIn(200, 'easeOut')
@@ -304,8 +306,15 @@ dialogueModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    show: (dur = 250) => { bgObj.fadeIn(dur, 'easeOut') },
+    show: (dur = 250) => {
+      if (_isActive) {
+        bgObj.fadeIn(dur, 'easeOut')
+        speakerObj.fadeIn(dur, 'easeOut')
+        textObj.fadeIn(dur, 'easeOut')
+      }
+    },
     onCleanup: () => {
+      _isActive = false
       _activeTx?.stop?.()
       _activeTx = null
       bgObj.remove({ child: true })
@@ -313,9 +322,11 @@ dialogueModule.defineView((ctx, data, setState) => {
       textObj.remove({ child: true })
     },
     hide: (dur = 300) => {
-      bgObj.fadeOut(dur, 'easeIn')
-      speakerObj.fadeOut(dur, 'easeIn')
-      textObj.fadeOut(dur, 'easeIn')
+      if (_isActive) {
+        bgObj.fadeOut(dur, 'easeIn')
+        speakerObj.fadeOut(dur, 'easeIn')
+        textObj.fadeOut(dur, 'easeIn')
+      }
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────

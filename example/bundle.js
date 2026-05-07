@@ -934,6 +934,7 @@
     let _activeTx = null;
     let _prevLines = null;
     let _prevSubIndex = -1;
+    let _isActive = false;
     const _renderText = (speaker, text, speed, immediate = false) => {
       const resolved = dialogueModule.hooker.trigger(
         "dialogue:text-render",
@@ -942,6 +943,7 @@
       );
       const resolvedSpeaker = resolved.speaker;
       const resolvedText = resolved.text;
+      _isActive = true;
       bgObj.fadeIn(200, "easeOut");
       speakerObj.attribute.text = resolvedSpeaker ?? "";
       speakerObj.fadeIn(200, "easeOut");
@@ -980,9 +982,14 @@
     }
     return {
       show: (dur = 250) => {
-        bgObj.fadeIn(dur, "easeOut");
+        if (_isActive) {
+          bgObj.fadeIn(dur, "easeOut");
+          speakerObj.fadeIn(dur, "easeOut");
+          textObj.fadeIn(dur, "easeOut");
+        }
       },
       onCleanup: () => {
+        _isActive = false;
         _activeTx?.stop?.();
         _activeTx = null;
         bgObj.remove({ child: true });
@@ -990,9 +997,11 @@
         textObj.remove({ child: true });
       },
       hide: (dur = 300) => {
-        bgObj.fadeOut(dur, "easeIn");
-        speakerObj.fadeOut(dur, "easeIn");
-        textObj.fadeOut(dur, "easeIn");
+        if (_isActive) {
+          bgObj.fadeOut(dur, "easeIn");
+          speakerObj.fadeOut(dur, "easeIn");
+          textObj.fadeOut(dur, "easeIn");
+        }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
       uiGroup: "dialogue",
