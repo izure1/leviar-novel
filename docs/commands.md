@@ -73,6 +73,7 @@ export default defineScene({ config })(({ set, condition }) => [
 *   **[`dialogBox`](./modules/dialogBox.md)**: 확인/취소 등의 시스템 알림창 노출.  
 *   **[`input`](./modules/input.md)**: 플레이어의 텍스트 입력을 받아 변수에 저장.  
 *   **[`ui`](./modules/ui.md)**: UI 숨기기/보이기 제어.  
+*   **[`element`](./modules/element.md)**: 즉석 커스텀 UI 및 인터랙티브 요소 배치.
 
 ---
 

@@ -9,16 +9,9 @@ import { define } from '../define/defineCmdUI'
 
 export type ElementKind = 'rect' | 'text' | 'image'
 
-/** children 내부에서 사용하는 자식 요소 정의 (action, type 불필요) */
-export interface ElementChild {
+export interface ElementChildBase<TConfig = any> {
   /** 요소 고유 식별자 */
   id: string
-  /** 요소 종류 */
-  kind: ElementKind
-  /** 텍스트 내용 (kind: 'text') */
-  text?: string
-  /** 이미지 에셋 키 (kind: 'image') */
-  image?: string
   /** 부모 기준 픽셀 오프셋 위치 */
   position?: { x: number; y: number }
   /** 기본 스타일 (Leviar Style) */
@@ -32,8 +25,15 @@ export interface ElementChild {
   /** 클릭 시 실행할 액션 이름 (defineScene의 actions에서 조회) */
   onClick?: string
   /** 자식 요소 배열 */
-  children?: ElementChild[]
+  children?: ElementChild<TConfig>[]
 }
+
+type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never
+
+export type ElementChild<TConfig = any> =
+  | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'rect' }>
+  | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'text'; /** 텍스트 내용 */ text: string }>
+  | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'image'; /** 이미지 에셋 키 */ image: AssetKeysOf<TConfig> }>
 
 /**
  * 범용 UI 요소를 화면에 배치한다.
@@ -69,21 +69,13 @@ export interface ElementChild {
  * }
  * ```
  */
-export interface ElementCmd<TConfig = any> {
-  /** 수행할 동작 */
-  action: 'show' | 'hide'
+export interface ElementCmdBase<TConfig = any> {
   /** 요소 고유 식별자 */
   id: string
-  /** 요소 종류 (show 시 필수) */
-  kind?: ElementKind
-  /** 텍스트 내용 (kind: 'text') */
-  text?: string
-  /** 이미지 에셋 키 (kind: 'image') */
-  image?: AssetKeysOf<TConfig>
   /**
    * 화면 내 위치.
    * - parent 없음 (루트): 0~1 정규화 좌표. { x: 0, y: 0 } = 좌상단
-   * - parent 있음 (자식): 부모 중심 기준 픽셀 오프셋 (Leviar 좌표계)
+   * - parent 있음 (자식): 부모 중심 기준 정규화/픽셀(Leviar 좌표계) 오프셋
    */
   position?: { x: number; y: number }
   /** 기본 스타일 (Leviar Style) */
@@ -97,10 +89,16 @@ export interface ElementCmd<TConfig = any> {
   /** 클릭 시 실행할 액션 이름 (defineScene의 actions에서 조회) */
   onClick?: string
   /** 자식 요소 배열 */
-  children?: ElementChild[]
+  children?: ElementChild<TConfig>[]
   /** show/hide 페이드 시간(ms). 기본 200 */
   duration?: number
 }
+
+export type ElementCmd<TConfig = any> =
+  | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'rect' }>
+  | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'text'; /** 텍스트 내용 */ text: string }>
+  | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'image'; /** 이미지 에셋 키 */ image: AssetKeysOf<TConfig> }>
+  | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'hide' }>
 
 // ─── 내부 엔트리 (직렬화 가능한 상태) ─────────────────────────
 
@@ -135,8 +133,8 @@ function flattenChildren(
     out[child.id] = {
       id: child.id,
       kind: child.kind,
-      text: child.text,
-      image: child.image,
+      text: 'text' in child ? child.text : undefined,
+      image: 'image' in child ? child.image : undefined,
       position: child.position ?? { x: 0, y: 0 },
       parent: parentId,
       style: child.style,
@@ -406,8 +404,8 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
     newElements[cmd.id] = {
       id: cmd.id,
       kind: cmd.kind!,
-      text: cmd.text,
-      image: cmd.image as string | undefined,
+      text: 'text' in cmd ? cmd.text : undefined,
+      image: 'image' in cmd ? (cmd.image as string | undefined) : undefined,
       position: cmd.position ?? { x: 0.5, y: 0.5 },
       style: cmd.style,
       hoverStyle: cmd.hoverStyle,

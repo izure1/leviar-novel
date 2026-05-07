@@ -12,8 +12,6 @@ export default defineScene({
       } catch (e) {
         console.warn('[scene-ui] 저장 실패:', e)
       }
-      console.log(vars.$bgmVolume)
-      ctx.execute({ type: 'dialogue', text: '테스트 문자열' })
     },
     load: (ctx) => {
       try {
@@ -45,6 +43,11 @@ export default defineScene({
     },
     children: [
       // 저장 버튼
+      {
+        id: 'asdf',
+        kind: 'image',
+        image: 'should be error',
+      },
       {
         id: 'btn_save',
         kind: 'rect',

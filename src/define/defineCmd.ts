@@ -62,11 +62,11 @@ export type ResolvableItem<T, TVars, TLocalVars> =
  * `type` 키를 제외한 모든 Cmd 속성을 Resolvable로 변환합니다.
  * 배열 속성(예: choices[])의 원소 내부 속성에도 재귀 적용됩니다.
  */
-export type ResolvableProps<TCmd, TVars = any, TLocalVars = any> = {
+export type ResolvableProps<TCmd, TVars = any, TLocalVars = any> = TCmd extends any ? {
   [K in keyof TCmd]: K extends 'type' | 'skip'
     ? TCmd[K]
     : Resolvable<TCmd[K], TVars, TLocalVars>
-}
+} : never
 
 // ─── 런타임 resolve 헬퍼 ────────────────────────────────────
 

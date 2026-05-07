@@ -3814,8 +3814,8 @@
       out[child.id] = {
         id: child.id,
         kind: child.kind,
-        text: child.text,
-        image: child.image,
+        text: "text" in child ? child.text : void 0,
+        image: "image" in child ? child.image : void 0,
         position: child.position ?? { x: 0, y: 0 },
         parent: parentId,
         style: child.style,
@@ -4019,8 +4019,8 @@
       newElements[cmd.id] = {
         id: cmd.id,
         kind: cmd.kind,
-        text: cmd.text,
-        image: cmd.image,
+        text: "text" in cmd ? cmd.text : void 0,
+        image: "image" in cmd ? cmd.image : void 0,
         position: cmd.position ?? { x: 0.5, y: 0.5 },
         style: cmd.style,
         hoverStyle: cmd.hoverStyle,
@@ -19360,8 +19360,6 @@ ${addLineNumbers(fragment)}`);
         } catch (e) {
           console.warn("[scene-ui] \uC800\uC7A5 \uC2E4\uD328:", e);
         }
-        console.log(vars.$bgmVolume);
-        ctx.execute({ type: "dialogue", text: "\uD14C\uC2A4\uD2B8 \uBB38\uC790\uC5F4" });
       },
       load: (ctx) => {
         try {
@@ -19393,6 +19391,11 @@ ${addLineNumbers(fragment)}`);
       },
       children: [
         // 저장 버튼
+        {
+          id: "asdf",
+          kind: "image",
+          image: "should be error"
+        },
         {
           id: "btn_save",
           kind: "rect",
