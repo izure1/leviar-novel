@@ -17,9 +17,9 @@ uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {}, hide: () => {
 
 uiModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'show') {
-    ctx.ui.show(cmd.name, cmd.duration)
+    ctx.ui.show(cmd.name, cmd.duration ?? 250)
   } else {
-    ctx.ui.hide(cmd.name, cmd.duration)
+    ctx.ui.hide(cmd.name, cmd.duration ?? 250)
   }
   return true
 })

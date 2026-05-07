@@ -63,6 +63,39 @@ function showToast(msg: string, type: 'success' | 'error' | 'info' = 'success'):
 // Novel 초기화
 // =============================================================
 
+export function save(novel: Novel<any>): void {
+  try {
+    const data = novel.save()
+    const env = novel.saveEnv()
+    console.log(data, env)
+    localStorage.setItem('fumika-save', JSON.stringify(data))
+    localStorage.setItem('fumika-env', JSON.stringify(env))
+    showToast('💾 저장 완료!', 'success')
+  } catch (e) {
+    console.error(e)
+    showToast('⚠ 저장 실패: 대화 씬에서만 가능', 'error')
+  }
+}
+
+export function load(novel: Novel<any>): void {
+  const raw = localStorage.getItem('fumika-save')
+  const rawEnv = localStorage.getItem('fumika-env')
+  if (!raw) {
+    showToast('📂 저장 데이터 없음', 'info')
+    return
+  }
+  try {
+    const data = JSON.parse(raw)
+    const env = JSON.parse(rawEnv || '{}')
+    novel.loadSave(data)
+    novel.loadEnv(env)
+    showToast('📂 불러오기 완료!', 'success')
+  } catch (e) {
+    console.error(e)
+    showToast('⚠ 불러오기 실패', 'error')
+  }
+}
+
 async function main() {
   const element = document.getElementById('wrapper') as HTMLDivElement
 
@@ -175,38 +208,13 @@ async function main() {
   // Save 버튼
   btnSave.addEventListener('click', (e) => {
     e.stopPropagation()
-    try {
-      const data = novel.save()
-      const env = novel.saveEnv()
-      console.log(data, env)
-      localStorage.setItem('fumika-save', JSON.stringify(data))
-      localStorage.setItem('fumika-env', JSON.stringify(env))
-      showToast('💾 저장 완료!', 'success')
-    } catch (e) {
-      console.error(e)
-      showToast('⚠ 저장 실패: 대화 씬에서만 가능', 'error')
-    }
+    save(novel)
   })
 
   // Load 버튼
   btnLoad.addEventListener('click', (e) => {
     e.stopPropagation()
-    const raw = localStorage.getItem('fumika-save')
-    const rawEnv = localStorage.getItem('fumika-env')
-    if (!raw) {
-      showToast('📂 저장 데이터 없음', 'info')
-      return
-    }
-    try {
-      const data = JSON.parse(raw)
-      const env = JSON.parse(rawEnv || '{}')
-      novel.loadSave(data)
-      novel.loadEnv(env)
-      showToast('📂 불러오기 완료!', 'success')
-    } catch (e) {
-      console.error(e)
-      showToast('⚠ 불러오기 실패', 'error')
-    }
+    load(novel)
   })
 
   // Fullscreen 버튼

@@ -1902,7 +1902,7 @@
   var MOOD_PRESETS = {
     day: { color: "rgba(255,230,180,0.1)", vignette: "rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
     night: { color: "rgba(10,15,60,0.5)", vignette: "rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
-    dawn: { color: "rgba(25,35,70,0.4)", vignette: "rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
+    dawn: { color: "rgba(25,35,130,0.4)", vignette: "rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
     sunset: { color: "rgba(255,120,50,0.25)", vignette: "rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
     foggy: { color: "rgba(200,210,220,0.4)", vignette: "rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%", blendMode: "screen" },
     sepia: { color: "rgba(160,110,50,0.3)", vignette: "rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
@@ -2815,9 +2815,9 @@
   } }));
   uiModule.defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.action === "show") {
-      ctx.ui.show(cmd.name, cmd.duration);
+      ctx.ui.show(cmd.name, cmd.duration ?? 250);
     } else {
-      ctx.ui.hide(cmd.name, cmd.duration);
+      ctx.ui.hide(cmd.name, cmd.duration ?? 250);
     }
     return true;
   });
@@ -3981,7 +3981,7 @@
       _addElement(entry, true);
     }
     return {
-      uiTags: ["element", "default-ui"],
+      uiTags: data._uiTags ?? [],
       show: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
@@ -4049,7 +4049,8 @@
       const toRemove = collectDescendants(cmd.id, newElements);
       for (const id of toRemove) delete newElements[id];
     }
-    setState({ _elements: newElements, _lastDuration: cmd.duration });
+    const nextUiTags = cmd.action === "show" ? cmd.uiTags ?? [] : state._uiTags;
+    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags });
     return true;
   });
   var element_default = elementModule;
@@ -19394,86 +19395,86 @@ ${addLineNumbers(fragment)}`);
     config: novel_config_default,
     actions: {
       save: (ctx, vars) => {
-        try {
-          const data = ctx.novel.save();
-          localStorage.setItem("fumika-save", JSON.stringify(data));
-          console.log("[scene-ui] \uC800\uC7A5 \uC644\uB8CC");
-        } catch (e) {
-          console.warn("[scene-ui] \uC800\uC7A5 \uC2E4\uD328:", e);
-        }
+        save(ctx.novel);
       },
       load: (ctx) => {
-        try {
-          const raw = localStorage.getItem("fumika-save");
-          if (raw) {
-            ctx.novel.loadSave(JSON.parse(raw));
-            console.log("[scene-ui] \uB85C\uB4DC \uC644\uB8CC");
-          } else {
-            console.warn("[scene-ui] \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C");
-          }
-        } catch (e) {
-          console.warn("[scene-ui] \uB85C\uB4DC \uC2E4\uD328:", e);
-        }
+        load(ctx.novel);
+      },
+      fullscreen(ctx, vars) {
+        ctx.novel.toggleFullscreen();
       }
     }
   })(() => [
-    // ── 사이드 패널 ──────────────────────────────────────
+    // ── 하단 패널 (우측 하단) ─────────────────────────────
     {
       type: "element",
       action: "show",
       id: "panel",
       kind: "rect",
-      position: { x: 0.95, y: 0.15 },
+      position: { x: 0.85, y: 0.95 },
       style: {
-        width: 80,
-        height: 120,
-        color: "rgba(0, 0, 0, 0.4)",
-        borderRadius: 8
+        width: 180,
+        height: 40,
+        color: "rgba(0, 0, 0, 0)"
+        // 투명 컨테이너
       },
       children: [
-        // 저장 버튼
+        // 저장 버튼 (텍스트)
         {
           id: "btn_save",
-          kind: "rect",
-          position: { x: 0, y: 25 },
+          kind: "text",
+          text: "\uC800\uC7A5\uD558\uAE30",
+          position: { x: -120, y: 0 },
           style: {
-            width: 60,
-            height: 28,
-            color: "rgba(255, 255, 255, 0.1)",
-            borderRadius: 4
+            fontSize: 22,
+            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+            textShadowBlur: 1,
+            textShadowOffsetX: 1,
+            textShadowOffsetY: 1,
+            textShadowColor: "rgba(0, 0, 0, 1)"
           },
-          hoverStyle: { color: "rgba(100, 140, 255, 0.5)" },
-          onClick: "save",
-          children: [
-            {
-              id: "btn_save_text",
-              kind: "text",
-              text: "\u{1F4BE} \uC800\uC7A5",
-              style: { fontSize: 13, color: "#ffffff" }
-            }
-          ]
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "save"
         },
-        // 로드 버튼
+        // 로드 버튼 (텍스트)
         {
           id: "btn_load",
-          kind: "rect",
-          position: { x: 0, y: -15 },
+          kind: "text",
+          text: "\uBD88\uB7EC\uC624\uAE30",
+          position: { x: 0, y: 0 },
           style: {
-            width: 60,
-            height: 28,
-            color: "rgba(255, 255, 255, 0.1)",
-            borderRadius: 4
+            fontSize: 22,
+            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+            textShadowBlur: 1,
+            textShadowOffsetX: 1,
+            textShadowOffsetY: 1,
+            textShadowColor: "rgba(0, 0, 0, 1)"
           },
-          hoverStyle: { color: "rgba(100, 255, 140, 0.5)" },
-          onClick: "load",
-          children: [
-            {
-              id: "btn_load_text",
-              kind: "text",
-              text: "\u{1F4C2} \uB85C\uB4DC",
-              style: { fontSize: 13, color: "#ffffff" }
-            }
-          ]
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "load"
+        },
+        // 전체화면 버튼
+        {
+          id: "btn_fullscreen",
+          kind: "text",
+          text: "\uC804\uCCB4\uD654\uBA74",
+          position: { x: 120, y: 0 },
+          style: {
+            fontSize: 22,
+            fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+            textShadowBlur: 1,
+            textShadowOffsetX: 1,
+            textShadowOffsetY: 1,
+            textShadowColor: "rgba(0, 0, 0, 1)"
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "fullscreen"
         }
       ]
     }
@@ -21213,6 +21214,37 @@ ${addLineNumbers(fragment)}`);
     el.className = `toast toast-${type} show`;
     setTimeout(() => el.classList.remove("show"), 2200);
   }
+  function save(novel) {
+    try {
+      const data = novel.save();
+      const env = novel.saveEnv();
+      console.log(data, env);
+      localStorage.setItem("fumika-save", JSON.stringify(data));
+      localStorage.setItem("fumika-env", JSON.stringify(env));
+      showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("\u26A0 \uC800\uC7A5 \uC2E4\uD328: \uB300\uD654 \uC52C\uC5D0\uC11C\uB9CC \uAC00\uB2A5", "error");
+    }
+  }
+  function load(novel) {
+    const raw = localStorage.getItem("fumika-save");
+    const rawEnv = localStorage.getItem("fumika-env");
+    if (!raw) {
+      showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
+      return;
+    }
+    try {
+      const data = JSON.parse(raw);
+      const env = JSON.parse(rawEnv || "{}");
+      novel.loadSave(data);
+      novel.loadEnv(env);
+      showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
+    }
+  }
   async function main() {
     const element = document.getElementById("wrapper");
     const player = new U();
@@ -21339,36 +21371,11 @@ ${addLineNumbers(fragment)}`);
     }, 300);
     btnSave.addEventListener("click", (e) => {
       e.stopPropagation();
-      try {
-        const data = novel.save();
-        const env = novel.saveEnv();
-        console.log(data, env);
-        localStorage.setItem("fumika-save", JSON.stringify(data));
-        localStorage.setItem("fumika-env", JSON.stringify(env));
-        showToast("\u{1F4BE} \uC800\uC7A5 \uC644\uB8CC!", "success");
-      } catch (e2) {
-        console.error(e2);
-        showToast("\u26A0 \uC800\uC7A5 \uC2E4\uD328: \uB300\uD654 \uC52C\uC5D0\uC11C\uB9CC \uAC00\uB2A5", "error");
-      }
+      save(novel);
     });
     btnLoad.addEventListener("click", (e) => {
       e.stopPropagation();
-      const raw = localStorage.getItem("fumika-save");
-      const rawEnv = localStorage.getItem("fumika-env");
-      if (!raw) {
-        showToast("\u{1F4C2} \uC800\uC7A5 \uB370\uC774\uD130 \uC5C6\uC74C", "info");
-        return;
-      }
-      try {
-        const data = JSON.parse(raw);
-        const env = JSON.parse(rawEnv || "{}");
-        novel.loadSave(data);
-        novel.loadEnv(env);
-        showToast("\u{1F4C2} \uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC!", "success");
-      } catch (e2) {
-        console.error(e2);
-        showToast("\u26A0 \uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328", "error");
-      }
+      load(novel);
     });
     btnFullscreen.addEventListener("click", async (e) => {
       e.stopPropagation();

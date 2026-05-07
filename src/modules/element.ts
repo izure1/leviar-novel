@@ -90,6 +90,8 @@ export interface ElementCmdBase<TConfig = any> {
   children?: ElementChild<TConfig>[]
   /** show/hide 페이드 시간(ms). 기본 200 */
   duration?: number
+  /** UI 억제 시스템을 위한 태그 목록. 없으면 빈 배열([]) */
+  uiTags?: string[]
 }
 
 export type ElementCmd<TConfig = any> =
@@ -117,6 +119,7 @@ export interface ElementEntry {
 export interface ElementSchema {
   _elements: Record<string, ElementEntry>
   _lastDuration?: number
+  _uiTags?: string[]
 }
 
 // ─── children → flat 변환 ─────────────────────────────────────
@@ -347,7 +350,7 @@ elementModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    uiTags: ['element', 'default-ui'],
+    uiTags: data._uiTags ?? [],
     show: (duration) => {
       for (const [id, entry] of Object.entries(_elementEntries)) {
         if (!entry.parent && _elementObjs[id]) {
@@ -432,7 +435,10 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
     for (const id of toRemove) delete newElements[id]
   }
 
-  setState({ _elements: newElements, _lastDuration: cmd.duration })
+  // show 액션일 경우 cmd.uiTags를 적용하고 없으면 빈 배열로 덮어씁니다.
+  const nextUiTags = cmd.action === 'show' ? (cmd.uiTags ?? []) : state._uiTags
+
+  setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags })
   return true // 항상 즉시 완료 (블로킹 안 함)
 })
 

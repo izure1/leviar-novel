@@ -40,7 +40,7 @@ export type MoodCmd =
 const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
   day: { color: 'rgba(255,230,180,0.1)', vignette: 'rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%', blendMode: 'screen' },
   night: { color: 'rgba(10,15,60,0.5)', vignette: 'rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%', blendMode: 'multiply' },
-  dawn: { color: 'rgba(25,35,70,0.4)', vignette: 'rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%', blendMode: 'multiply' },
+  dawn: { color: 'rgba(25,35,130,0.4)', vignette: 'rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%', blendMode: 'multiply' },
   sunset: { color: 'rgba(255,120,50,0.25)', vignette: 'rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%', blendMode: 'screen' },
   foggy: { color: 'rgba(200,210,220,0.4)', vignette: 'rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%', blendMode: 'screen' },
   sepia: { color: 'rgba(160,110,50,0.3)', vignette: 'rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%', blendMode: 'multiply' },

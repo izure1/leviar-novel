@@ -1,90 +1,90 @@
 import config from '../novel.config'
 import { defineScene } from '../../src'
+import { save, load } from '../main'
 
 export default defineScene({
   config,
   actions: {
     save: (ctx, vars) => {
-      try {
-        const data = ctx.novel.save()
-        localStorage.setItem('fumika-save', JSON.stringify(data))
-        console.log('[scene-ui] 저장 완료')
-      } catch (e) {
-        console.warn('[scene-ui] 저장 실패:', e)
-      }
+      save(ctx.novel)
     },
     load: (ctx) => {
-      try {
-        const raw = localStorage.getItem('fumika-save')
-        if (raw) {
-          ctx.novel.loadSave(JSON.parse(raw))
-          console.log('[scene-ui] 로드 완료')
-        } else {
-          console.warn('[scene-ui] 저장 데이터 없음')
-        }
-      } catch (e) {
-        console.warn('[scene-ui] 로드 실패:', e)
-      }
+      load(ctx.novel)
     },
+    fullscreen(ctx, vars) {
+      ctx.novel.toggleFullscreen()
+    }
   },
 })(() => [
-  // ── 사이드 패널 ──────────────────────────────────────
+  // ── 하단 패널 (우측 하단) ─────────────────────────────
   {
     type: 'element',
     action: 'show',
     id: 'panel',
     kind: 'rect',
-    position: { x: 0.95, y: 0.15 },
+    position: { x: 0.85, y: 0.95 },
     style: {
-      width: 80,
-      height: 120,
-      color: 'rgba(0, 0, 0, 0.4)',
-      borderRadius: 8,
+      width: 180,
+      height: 40,
+      color: 'rgba(0, 0, 0, 0)', // 투명 컨테이너
     },
     children: [
-      // 저장 버튼
+      // 저장 버튼 (텍스트)
       {
         id: 'btn_save',
-        kind: 'rect',
-        position: { x: 0, y: 25 },
+        kind: 'text',
+        text: '저장하기',
+        position: { x: -120, y: 0 },
         style: {
-          width: 60,
-          height: 28,
-          color: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: 4,
+          fontSize: 22,
+          fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
+          color: 'rgba(255, 255, 255, 0.6)',
+          textAlign: 'center',
+          textShadowBlur: 1,
+          textShadowOffsetX: 1,
+          textShadowOffsetY: 1,
+          textShadowColor: 'rgba(0, 0, 0, 1)'
         },
-        hoverStyle: { color: 'rgba(100, 140, 255, 0.5)' },
+        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
         onClick: 'save',
-        children: [
-          {
-            id: 'btn_save_text',
-            kind: 'text',
-            text: '💾 저장',
-            style: { fontSize: 13, color: '#ffffff' },
-          }
-        ]
       },
-      // 로드 버튼
+      // 로드 버튼 (텍스트)
       {
         id: 'btn_load',
-        kind: 'rect',
-        position: { x: 0, y: -15 },
+        kind: 'text',
+        text: '불러오기',
+        position: { x: 0, y: 0 },
         style: {
-          width: 60,
-          height: 28,
-          color: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: 4,
+          fontSize: 22,
+          fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
+          color: 'rgba(255, 255, 255, 0.6)',
+          textAlign: 'center',
+          textShadowBlur: 1,
+          textShadowOffsetX: 1,
+          textShadowOffsetY: 1,
+          textShadowColor: 'rgba(0, 0, 0, 1)'
         },
-        hoverStyle: { color: 'rgba(100, 255, 140, 0.5)' },
+        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
         onClick: 'load',
-        children: [
-          {
-            id: 'btn_load_text',
-            kind: 'text',
-            text: '📂 로드',
-            style: { fontSize: 13, color: '#ffffff' },
-          }
-        ]
+      },
+      // 전체화면 버튼
+      {
+        id: 'btn_fullscreen',
+        kind: 'text',
+        text: '전체화면',
+        position: { x: 120, y: 0 },
+        style: {
+          fontSize: 22,
+          fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
+          color: 'rgba(255, 255, 255, 0.6)',
+          textAlign: 'center',
+          textShadowBlur: 1,
+          textShadowOffsetX: 1,
+          textShadowOffsetY: 1,
+          textShadowColor: 'rgba(0, 0, 0, 1)'
+        },
+        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
+        onClick: 'fullscreen',
       },
     ]
   },
