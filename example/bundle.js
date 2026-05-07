@@ -18571,6 +18571,8 @@ ${addLineNumbers(fragment)}`);
     _modules = /* @__PURE__ */ new Map();
     /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
     _uiRegistry = /* @__PURE__ */ new Map();
+    /** _suppressUIs에 의해 임시로 숨겨진 엔트리 목록 */
+    _suppressedEntries = /* @__PURE__ */ new Set();
     /** Novel 전용 훅 시스템 (novel:* 이벤트 전용) */
     _novelHooker = useHookallSync({});
     /**
@@ -18751,6 +18753,7 @@ ${addLineNumbers(fragment)}`);
           this._renderer.restoreState(prevState);
         }
         this._uiRegistry.clear();
+        this._suppressedEntries.clear();
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -18766,6 +18769,7 @@ ${addLineNumbers(fragment)}`);
       for (const entry of this._uiRegistry.values()) {
         entry.onCleanup();
       }
+      this._suppressedEntries.clear();
     }
     // ─── 스킵 기능 ───────────────────────────────────────────────
     /** 현재 스킵(빠른 감기) 중인지 여부 */
@@ -18898,6 +18902,7 @@ ${addLineNumbers(fragment)}`);
         this._stateStore.set(k2, v2);
       }
       this._uiRegistry.clear();
+      this._suppressedEntries.clear();
       this._renderer.clear();
       this._renderer.restoreState(resolvedData.rendererState);
       this._callStack.length = 0;
@@ -19015,11 +19020,7 @@ ${addLineNumbers(fragment)}`);
       if (!(this._currentScene instanceof DialogueScene)) return;
       const stepType = this._currentScene.getCurrentStepType();
       const activeEntry = stepType ? this._uiRegistry.get(stepType) : void 0;
-      if (activeEntry) {
-        this._suppressUIs(activeEntry);
-        this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
-        return;
-      }
+      this._suppressUIs(activeEntry);
       this._inputMode = this._currentScene.isWaitingInput ? "advance" : "block";
     }
     /**
@@ -19098,9 +19099,11 @@ ${addLineNumbers(fragment)}`);
           this._stateStore.set(k2, v2);
         }
         this._uiRegistry.clear();
+        this._suppressedEntries.clear();
         this._rebuildModuleViews();
       } else {
         this._uiRegistry.clear();
+        this._suppressedEntries.clear();
         this._rebuildModuleViews();
       }
       const callbacks = this._buildCallbacks();
@@ -19114,16 +19117,30 @@ ${addLineNumbers(fragment)}`);
     }
     /**
      * `hideTags`에 나열된 태그를 하나라도 가진 엔트리에 `hide()`를 직접 호출합니다. (자기 자신 제외)
+     * 이전에 숨겼던 엔트리가 더 이상 대상이 아니면 다시 `show()`를 호출하여 복구합니다.
      */
     _suppressUIs(activeEntry) {
-      if (!activeEntry || !activeEntry.hideTags?.length) return;
-      const tags = activeEntry.hideTags;
-      for (const entry of this._uiRegistry.values()) {
-        if (entry === activeEntry) continue;
-        if (entry.uiTags && entry.uiTags.some((tag) => tags.includes(tag))) {
+      const nextSuppressed = /* @__PURE__ */ new Set();
+      const tags = activeEntry?.hideTags ?? [];
+      if (activeEntry && tags.length > 0) {
+        for (const entry of this._uiRegistry.values()) {
+          if (entry === activeEntry) continue;
+          if (entry.uiTags && entry.uiTags.some((tag) => tags.includes(tag))) {
+            nextSuppressed.add(entry);
+          }
+        }
+      }
+      for (const entry of this._suppressedEntries) {
+        if (!nextSuppressed.has(entry)) {
+          entry.show(250);
+        }
+      }
+      for (const entry of nextSuppressed) {
+        if (!this._suppressedEntries.has(entry)) {
           entry.hide(250);
         }
       }
+      this._suppressedEntries = nextSuppressed;
     }
     // ─── 전체화면 ─────────────────────────────────────────────
     /** 현재 전체화면 모드인지 확인합니다. */

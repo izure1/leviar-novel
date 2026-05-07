@@ -163,6 +163,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /** UI 런타임 레지스트리 — scene 실행 중 view 빌더가 등록 */
   private readonly _uiRegistry: Map<string, UIRuntimeEntry> = new Map()
 
+  /** _suppressUIs에 의해 임시로 숨겨진 엔트리 목록 */
+  private _suppressedEntries: Set<UIRuntimeEntry> = new Set()
+
   /** Novel 전용 훅 시스템 (novel:* 이벤트 전용) */
   private readonly _novelHooker: IHookallSync<NovelHook> = useHookallSync<NovelHook>({})
 
@@ -381,6 +384,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       }
       // UI 레지스트리 초기화 (새 씬에서 view 빌더가 재등록)
       this._uiRegistry.clear()
+      this._suppressedEntries.clear()
     }
     // preserve=true 시: 추적 오브젝트, state 맵 모두 유지
 
@@ -403,6 +407,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     for (const entry of this._uiRegistry.values()) {
       entry.onCleanup()
     }
+    this._suppressedEntries.clear()
   }
 
   // ─── 스킵 기능 ───────────────────────────────────────────────
@@ -568,6 +573,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     // 렌더러 초기화 + 상태 복원
     this._uiRegistry.clear()
+    this._suppressedEntries.clear()
     this._renderer.clear()
     this._renderer.restoreState(resolvedData.rendererState)
 
@@ -698,13 +704,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const stepType = this._currentScene.getCurrentStepType()
 
-    // stepType에 해당하는 UI 엔트리 직접 조회 → hideGroups 발동
+    // stepType에 해당하는 UI 엔트리 직접 조회 → hideTags 발동
     const activeEntry = stepType ? this._uiRegistry.get(stepType) : undefined
-    if (activeEntry) {
-      this._suppressUIs(activeEntry)
-      this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'
-      return
-    }
+    this._suppressUIs(activeEntry)
 
     this._inputMode = this._currentScene.isWaitingInput ? 'advance' : 'block'
   }
@@ -810,10 +812,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       }
 
       this._uiRegistry.clear()
+      this._suppressedEntries.clear()
       this._rebuildModuleViews()
     } else {
       // preserve=true, restore=false: uiRegistry만 재빌드 (현재 렌더러/stateStore 유지)
       this._uiRegistry.clear()
+      this._suppressedEntries.clear()
       this._rebuildModuleViews()
     }
 
@@ -833,16 +837,36 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   /**
    * `hideTags`에 나열된 태그를 하나라도 가진 엔트리에 `hide()`를 직접 호출합니다. (자기 자신 제외)
+   * 이전에 숨겼던 엔트리가 더 이상 대상이 아니면 다시 `show()`를 호출하여 복구합니다.
    */
   private _suppressUIs(activeEntry?: UIRuntimeEntry): void {
-    if (!activeEntry || !activeEntry.hideTags?.length) return
-    const tags = activeEntry.hideTags
-    for (const entry of this._uiRegistry.values()) {
-      if (entry === activeEntry) continue
-      if (entry.uiTags && entry.uiTags.some(tag => tags.includes(tag))) {
+    const nextSuppressed = new Set<UIRuntimeEntry>()
+    const tags = activeEntry?.hideTags ?? []
+
+    if (activeEntry && tags.length > 0) {
+      for (const entry of this._uiRegistry.values()) {
+        if (entry === activeEntry) continue
+        if (entry.uiTags && entry.uiTags.some(tag => tags.includes(tag))) {
+          nextSuppressed.add(entry)
+        }
+      }
+    }
+
+    // 이전에 숨겨졌으나 이번엔 대상이 아닌 경우 복구
+    for (const entry of this._suppressedEntries) {
+      if (!nextSuppressed.has(entry)) {
+        entry.show(250)
+      }
+    }
+
+    // 새로 숨겨져야 할 대상 숨김
+    for (const entry of nextSuppressed) {
+      if (!this._suppressedEntries.has(entry)) {
         entry.hide(250)
       }
     }
+
+    this._suppressedEntries = nextSuppressed
   }
 
   // ─── 전체화면 ─────────────────────────────────────────────
