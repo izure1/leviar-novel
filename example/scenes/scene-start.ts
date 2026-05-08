@@ -13,25 +13,6 @@ export default defineScene({
     preserve: true,
   },
 })(({ label, goto, call, condition, set }) => [
-  {
-    type: 'dialogBox',
-    title: '음성 제어',
-    content: '히로인의 음성 합성 기능을 사용하시겠습니까?',
-    buttons: [
-      {
-        text: '예',
-        var: { useHeroineVoice: true }
-      },
-      {
-        text: '아니오',
-        var: { useHeroineVoice: false }
-      }
-    ]
-  },
-
-  // 공용 ui를 보여줍니다.
-  // call('scene-ui', { preserve: true, restore: false }),
-
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },
   { type: 'mood', mood: 'day', intensity: 0.5, duration: 0 },

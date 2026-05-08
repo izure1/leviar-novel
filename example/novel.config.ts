@@ -51,6 +51,7 @@ export default defineNovelConfig({
     'debug': debugModule,
   },
   scenes: [
+    'scene-title',
     'scene-ui',
     'scene-start',
     'scene-game',

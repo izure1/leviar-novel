@@ -9,6 +9,7 @@ import {
 import { Novel } from '../src'
 import config from './novel.config'
 
+import sceneTitle from './scenes/scene-title'
 import sceneUI from './scenes/scene-ui'
 import sceneStart from './scenes/scene-start'
 import sceneGame from './scenes/scene-game'
@@ -123,6 +124,7 @@ async function main() {
   const novel = new Novel(config, {
     element,
     scenes: {
+      'scene-title': sceneTitle,
       'scene-ui': sceneUI,
       'scene-start': sceneStart,
       'scene-game': sceneGame,
@@ -171,7 +173,7 @@ async function main() {
   })
 
   // ── 시작
-  novel.start('scene-ui')
+  novel.start('scene-title')
   console.log(novel)
 
   // =============================================================

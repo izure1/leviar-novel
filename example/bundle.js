@@ -19517,6 +19517,7 @@ ${addLineNumbers(fragment)}`);
       "debug": debugModule
     },
     scenes: [
+      "scene-title",
       "scene-ui",
       "scene-start",
       "scene-game",
@@ -19700,6 +19701,29 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
+  // example/scenes/scene-title.ts
+  var scene_title_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial
+  })(({ call }) => [
+    {
+      type: "dialogBox",
+      title: "\uC74C\uC131 \uC81C\uC5B4",
+      content: "\uD788\uB85C\uC778\uC758 \uC74C\uC131 \uD569\uC131 \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+      buttons: [
+        {
+          text: "\uC608",
+          var: { useHeroineVoice: true }
+        },
+        {
+          text: "\uC544\uB2C8\uC624",
+          var: { useHeroineVoice: false }
+        }
+      ]
+    },
+    call("scene-ui", { preserve: true, restore: true })
+  ]);
+
   // example/scenes/scene-ui.ts
   var UI_BUTTON_STYLE = {
     fontSize: 22,
@@ -19714,7 +19738,6 @@ ${addLineNumbers(fragment)}`);
   };
   var scene_ui_default = defineScene({
     config: novel_config_default,
-    initial: commonInitial,
     actions: {
       save: (ctx, vars) => {
         save(ctx.novel);
@@ -19819,11 +19842,6 @@ ${addLineNumbers(fragment)}`);
       ease: "easeOutBounce",
       duration: 2500
     },
-    {
-      type: "control",
-      action: "disable",
-      duration: 3e3
-    },
     label("start"),
     call("scene-start", { preserve: true, restore: true }),
     call("scene-outside", { preserve: true, restore: true }),
@@ -19843,23 +19861,6 @@ ${addLineNumbers(fragment)}`);
       preserve: true
     }
   })(({ label, goto, call, condition, set: set6 }) => [
-    {
-      type: "dialogBox",
-      title: "\uC74C\uC131 \uC81C\uC5B4",
-      content: "\uD788\uB85C\uC778\uC758 \uC74C\uC131 \uD569\uC131 \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
-      buttons: [
-        {
-          text: "\uC608",
-          var: { useHeroineVoice: true }
-        },
-        {
-          text: "\uC544\uB2C8\uC624",
-          var: { useHeroineVoice: false }
-        }
-      ]
-    },
-    // 공용 ui를 보여줍니다.
-    // call('scene-ui', { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -21512,6 +21513,7 @@ ${addLineNumbers(fragment)}`);
     const novel = new Novel(novel_config_default, {
       element,
       scenes: {
+        "scene-title": scene_title_default,
         "scene-ui": scene_ui_default,
         "scene-start": scene_start_default,
         "scene-game": scene_game_default,
@@ -21551,7 +21553,7 @@ ${addLineNumbers(fragment)}`);
       }
       return state;
     });
-    novel.start("scene-ui");
+    novel.start("scene-title");
     console.log(novel);
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");

@@ -2,7 +2,6 @@ import type { Style } from 'leviar'
 import config from '../novel.config'
 import { defineScene } from '../../src'
 import { save, load } from '../main'
-import { commonInitial } from './common-initial'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
   fontSize: 22,
@@ -18,7 +17,6 @@ const UI_BUTTON_STYLE: Partial<Style> = {
 
 export default defineScene({
   config,
-  initial: commonInitial,
   actions: {
     save: (ctx, vars) => {
       save(ctx.novel)
@@ -32,7 +30,7 @@ export default defineScene({
     log(ctx, vars) {
       console.log(ctx, vars)
     }
-  },
+  }
 })(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
   {
@@ -123,12 +121,6 @@ export default defineScene({
     rotation: 360,
     ease: 'easeOutBounce',
     duration: 2500,
-  },
-
-  {
-    type: 'control',
-    action: 'disable',
-    duration: 3000,
   },
 
   label('start'),
