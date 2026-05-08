@@ -4,14 +4,11 @@ import { commonInitial } from './common-initial'
 
 export default defineScene({
   config,
-  initial: commonInitial,
   next: {
     scene: 'scene-bug',
     preserve: true,
   },
 })(({ label, goto, call }) => [
-  call('scene-ui', { preserve: true, restore: false }),
-
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'park', duration: 1000 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 0 },
@@ -46,7 +43,7 @@ export default defineScene({
     type: 'dialogue',
     text: '방구석에만 박혀있다가는 정말로 곰팡이가 피어오를 것 같았기 때문이다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', duration: 800 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', focus: 'face', duration: 800 },
   { type: 'mood', mood: 'day', intensity: 1, duration: 800, flicker: 'candle' },
   {
     type: 'dialogue',

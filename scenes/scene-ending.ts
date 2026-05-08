@@ -4,13 +4,7 @@ import { commonInitial } from './common-initial'
 
 export default defineScene({
   config,
-  initial: commonInitial,
-  // 씬 5개 종료 후 처음으로 롤백
-  next: 'scene-start',
 })(({ label, goto, call }) => [
-
-  call('scene-ui', { preserve: true, restore: false }),
-
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
   { type: 'mood', mood: 'sunset', intensity: 0.8, duration: 0 },
@@ -24,7 +18,7 @@ export default defineScene({
     type: 'dialogue',
     text: '다사다난했던 하루가 끝을 향해 가고 있다.'
   },
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', duration: 1000 },
+  { type: 'character', action: 'show', name: 'fumika', image: 'normal:normal', position: 'center', focus: 'face', duration: 1000 },
   {
     type: 'dialogue',
     speaker: 'fumika',

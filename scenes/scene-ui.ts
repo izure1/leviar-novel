@@ -26,9 +26,12 @@ export default defineScene({
     },
     fullscreen(ctx, vars) {
       ctx.novel.toggleFullscreen()
+    },
+    log(ctx, vars) {
+      console.log(ctx, vars)
     }
-  },
-})(() => [
+  }
+})(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
   {
     type: 'element',
@@ -80,4 +83,49 @@ export default defineScene({
       },
     ]
   },
+
+  // 사이드바
+  {
+    type: 'element',
+    action: 'show',
+    id: 'sidebar',
+    kind: 'rect',
+    uiTags: ['default-ui'],
+    position: { x: 0.9, y: 0.05 },
+    style: {
+      width: 200,
+      height: 600,
+    },
+    children: [
+      {
+        kind: 'text',
+        action: 'show',
+        id: 'text_like',
+        text: '<style color="rgb(255, 0, 0)">♥</style> {{ likeability }}',
+        position: { x: 0, y: 0 },
+        style: {
+          ...UI_BUTTON_STYLE,
+          color: 'rgb(255, 255, 255)'
+        },
+        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
+        onClick: 'log',
+      },
+    ]
+  },
+
+  {
+    type: 'element',
+    id: 'sidebar',
+    action: 'show',
+    kind: 'rect',
+    rotation: 360,
+    ease: 'easeOutBounce',
+    duration: 2500,
+  },
+
+  label('start'),
+  call('scene-start', { preserve: true, restore: true }),
+  call('scene-outside', { preserve: true, restore: true }),
+  call('scene-ending', { preserve: true, restore: true }),
+  goto('start')
 ])

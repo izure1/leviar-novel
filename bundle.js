@@ -1004,8 +1004,8 @@
         }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: data._uiTags ?? ["dialogue", "default-ui"],
-      hideTags: data._hideTags ?? [],
+      uiTags: ["dialogue", "default-ui"],
+      hideTags: [],
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1070,9 +1070,7 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines],
-        _uiTags: cmd.uiTags ?? state._uiTags ?? ["dialogue", "default-ui"],
-        _hideTags: cmd.hideTags ?? state._hideTags ?? []
+        _lines: [...lines]
       });
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
@@ -1168,8 +1166,8 @@
         if (_btnObjs.length > 0) bgObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: data._uiTags ?? ["choice", "default-ui"],
-      hideTags: data._hideTags ?? ["default-ui"],
+      uiTags: ["choice", "default-ui"],
+      hideTags: ["default-ui"],
       /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
@@ -1268,10 +1266,6 @@
   });
   choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     const entry = ctx.ui.get(choiceModule.__key);
-    setState({
-      _uiTags: cmd.uiTags ?? state._uiTags ?? ["choice", "default-ui"],
-      _hideTags: cmd.hideTags ?? state._hideTags ?? ["default-ui"]
-    });
     if (!entry) {
       console.warn("[fumika] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
@@ -1625,7 +1619,7 @@
     function getLoadedImage(key) {
       return ctx.renderer.world.loader.assets[key];
     }
-    const _updateEmotionParts = (baseObj, baseDef, emotionDef, dur) => {
+    const _updateEmotionParts = (baseObj, baseDef, emotionDef, dur, ease = "easeInOutQuad") => {
       if (!baseDef.points) return;
       if (!baseObj._partObjs) baseObj._partObjs = {};
       const baseSrc = baseDef.src ?? (baseObj._currentBaseKey ?? "");
@@ -1648,7 +1642,7 @@
               existingPart.attribute.src = partSrc;
             }
           }
-          ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, "easeInOutQuad");
+          ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, ease);
         } else {
           const partNaturalW = getLoadedImage(partSrc)?.naturalWidth;
           const partWidth = point.width ?? (partNaturalW !== void 0 ? Math.round(partNaturalW * scale2) : void 0);
@@ -1672,7 +1666,7 @@
         }
       }
     };
-    const _showCharacter = (name, position, imageKey, duration, immediate = false) => {
+    const _showCharacter = (name, position, imageKey, duration, ease = "easeInOutQuad", immediate = false) => {
       const charDefs = ctx.renderer.config.characters;
       const def = charDefs[name];
       if (!def) return;
@@ -1691,7 +1685,7 @@
       const baseWidth = baseDef.width ?? 500;
       const existing = _charObjs[name];
       if (existing) {
-        ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, "easeInOutQuad");
+        ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, ease);
         if (baseKey !== existing._currentBaseKey) {
           if (dur > 0 && typeof existing.transition === "function") {
             existing.transition(src, dur);
@@ -1702,7 +1696,7 @@
           existing._currentBaseKey = baseKey;
         }
         if (emotionKey !== existing._currentEmotionKey || baseKey !== existing._currentBaseKey) {
-          _updateEmotionParts(existing, baseDef, emotionDef, dur);
+          _updateEmotionParts(existing, baseDef, emotionDef, dur, ease);
           existing._currentEmotionKey = emotionKey;
         }
         return;
@@ -1725,13 +1719,13 @@
         ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur);
       }
     };
-    const _removeCharacter = (name, duration) => {
+    const _removeCharacter = (name, duration, ease = "easeInOutQuad") => {
       const obj = _charObjs[name];
       if (obj) {
         delete _charObjs[name];
         const dur = ctx.renderer.dur(duration ?? 400);
         if (dur > 0) {
-          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
             obj.remove({ child: true });
             obj._partObjs = {};
           });
@@ -1742,7 +1736,7 @@
       }
     };
     for (const [name, info] of Object.entries(data._characters)) {
-      _showCharacter(name, info.position, info.imageKey, void 0, true);
+      _showCharacter(name, info.position, info.imageKey, void 0, "easeInOutQuad", true);
     }
     return {
       show: () => {
@@ -1758,14 +1752,15 @@
       getObj: (name) => _charObjs[name],
       onUpdate: (_ctx, d2, _setState) => {
         const dur = d2._lastDuration;
+        const ease = d2._lastEase ?? "easeInOutQuad";
         const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
           if (!newNames.has(name)) {
-            _removeCharacter(name, dur);
+            _removeCharacter(name, dur, ease);
           }
         }
         for (const [name, info] of Object.entries(d2._characters)) {
-          _showCharacter(name, info.position, info.imageKey, dur);
+          _showCharacter(name, info.position, info.imageKey, dur, ease);
         }
       }
     };
@@ -1783,7 +1778,7 @@
       const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
       const resolvedKey = showCmd.image ?? `${allBaseKeys[0]}:${allEmotionKeys[0]}`;
       newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
-      setState({ _characters: newChars, _lastDuration: cmd.duration });
+      setState({ _characters: newChars, _lastDuration: cmd.duration, _lastEase: showCmd.ease });
       if (showCmd.focus) {
         const focusType = typeof showCmd.focus === "string" ? showCmd.focus : void 0;
         const focusDuration = showCmd.duration ?? 800;
@@ -1801,7 +1796,7 @@
             requestAnimationFrame(checkSize);
             yield false;
           }
-          const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, "inherit", focusDuration);
+          const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, "inherit", focusDuration, showCmd.ease);
           for (const c of cmds) {
             const res = ctx.execute(c);
             if (res && typeof res.next === "function") {
@@ -1812,12 +1807,12 @@
       }
     } else {
       delete newChars[cmd.name];
-      setState({ _characters: newChars, _lastDuration: cmd.duration });
+      setState({ _characters: newChars, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     }
     return true;
   });
   var character_default = characterModule;
-  function _calcFocusCommands(name, target, def, focusType, fit = "inherit", duration = 800) {
+  function _calcFocusCommands(name, target, def, focusType, fit = "inherit", duration = 800, ease) {
     if (!target) return [];
     const activeBaseKey = target._currentBaseKey ?? Object.keys(def.bases)[0];
     const baseDef = def.bases[activeBaseKey];
@@ -1829,8 +1824,8 @@
     const panX = targetX + charW * (fp.x - 0.5);
     const panY = charH * (0.5 - fp.y);
     return [
-      { type: "camera-pan", position: "center", duration, x: panX, y: panY },
-      { type: "camera-zoom", preset: fit, duration }
+      { type: "camera-pan", position: "center", duration, ease, x: panX, y: panY },
+      { type: "camera-zoom", preset: fit, duration, ease }
     ];
   }
   var characterFocusModule = define2({ _unused: void 0 });
@@ -1860,7 +1855,7 @@
       requestAnimationFrame(checkSize);
       yield false;
     }
-    const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
+    const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800, cmd.ease);
     for (const c of cmds) {
       const res = ctx.execute(c);
       if (res && typeof res.next === "function") {
@@ -2726,7 +2721,7 @@
     down: { x: 0, y: -200, duration: 1e3 },
     center: { x: 0, y: 0, duration: 1e3 }
   };
-  function zoomCamera(ctx, preset, duration) {
+  function zoomCamera(ctx, preset, duration, ease = "easeInOutQuad") {
     const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
     ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
     const cfg = ZOOM_PRESETS[resolvedPreset];
@@ -2735,10 +2730,10 @@
     const targetZ = focalLength * (1 - 1 / cfg.scale);
     if (ctx.renderer.camBaseObj) {
       const dur = ctx.renderer.dur(duration ?? cfg.duration);
-      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, ease);
     }
   }
-  function panCamera(ctx, position, duration, customX, customY) {
+  function panCamera(ctx, position, duration, customX, customY, ease = "easeInOutQuad") {
     if (position === "inherit") return;
     const resolvedPreset = position;
     ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
@@ -2765,7 +2760,7 @@
       const dur = ctx.renderer.dur(finalDur);
       ctx.renderer.animate(ctx.renderer.camBaseObj, {
         transform: { position: { x: targetX, y: targetY } }
-      }, dur, "easeInOutQuad");
+      }, dur, ease);
     }
   }
   function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
@@ -2790,7 +2785,7 @@
   cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolved = cmd.preset === "inherit" ? state._lastPreset : cmd.preset;
     setState({ _lastPreset: resolved });
-    zoomCamera(ctx, resolved, cmd.duration);
+    zoomCamera(ctx, resolved, cmd.duration, cmd.ease);
     return true;
   });
   var cameraPanModule = define2({ _lastPreset: "center" });
@@ -2801,7 +2796,7 @@
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolved = cmd.position === "inherit" ? state._lastPreset : cmd.position;
     setState({ _lastPreset: resolved });
-    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y);
+    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y, cmd.ease);
     return true;
   });
   var cameraEffectModule = define2({ _lastPreset: "shake" });
@@ -3263,8 +3258,8 @@
         if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      uiTags: data._uiTags ?? ["dialogBox", "default-ui"],
-      hideTags: data._hideTags ?? ["default-ui"],
+      uiTags: ["dialogBox", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _clearDynamic();
         overlayObj.remove({ child: true });
@@ -3326,9 +3321,7 @@
       _buttons: finalCmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
-      _persist: persist,
-      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["dialogBox", "default-ui"],
-      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
+      _persist: persist
     });
     while (_resolved === false) {
       yield false;
@@ -3756,8 +3749,8 @@
         if (_isActive) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: data._uiTags ?? ["input", "default-ui"],
-      hideTags: data._hideTags ?? ["default-ui"],
+      uiTags: ["input", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
@@ -3815,9 +3808,7 @@
       _multiline: openData.multiline,
       _buttons: buttons,
       _resolve: resolve,
-      _value: "",
-      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["input", "default-ui"],
-      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
+      _value: ""
     });
     while (!_resolved) {
       yield false;
@@ -3831,6 +3822,7 @@
   function flattenChildren(parentId, children, out) {
     if (!children) return;
     for (const child of children) {
+      if (out[child.id]) continue;
       out[child.id] = {
         id: child.id,
         kind: child.kind,
@@ -3841,6 +3833,7 @@
         style: child.style,
         hoverStyle: child.hoverStyle,
         pivot: child.pivot,
+        scale: child.scale,
         rotation: child.rotation,
         onClick: child.onClick
       };
@@ -3876,6 +3869,40 @@
     for (const entry of entries) visit(entry);
     return sorted;
   }
+  function mergePoint(previous, next, fallback) {
+    return {
+      x: next?.x ?? previous?.x ?? fallback.x,
+      y: next?.y ?? previous?.y ?? fallback.y
+    };
+  }
+  function mergeScale(previous, next) {
+    if (next === void 0) return previous;
+    if (typeof next === "number") return next;
+    const previousObject = typeof previous === "number" ? { x: previous, y: previous, z: 1 } : previous;
+    return {
+      x: next.x ?? previousObject?.x ?? 1,
+      y: next.y ?? previousObject?.y ?? 1,
+      z: next.z ?? previousObject?.z ?? 1
+    };
+  }
+  function mergeElementEntry(previous, next) {
+    if (!previous) return next;
+    return {
+      ...previous,
+      kind: next.kind,
+      text: next.text ?? previous.text,
+      image: next.image ?? previous.image,
+      position: mergePoint(previous.position, next.position, { x: 0.5, y: 0.5 }),
+      style: next.style ? { ...previous.style, ...next.style } : previous.style,
+      hoverStyle: next.hoverStyle ? { ...previous.hoverStyle, ...next.hoverStyle } : previous.hoverStyle,
+      pivot: next.pivot ? mergePoint(previous.pivot, next.pivot, { x: 0.5, y: 0.5 }) : previous.pivot,
+      scale: mergeScale(previous.scale, next.scale),
+      rotation: next.rotation ?? previous.rotation,
+      onClick: next.onClick ?? previous.onClick,
+      uiTags: next.uiTags ?? previous.uiTags,
+      hideTags: next.hideTags ?? previous.hideTags
+    };
+  }
   var _actionCache = /* @__PURE__ */ new Map();
   var elementModule = define2({
     _elements: {}
@@ -3887,6 +3914,16 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (nx, ny) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(nx * w, ny * h) : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const resolvePosition = (entry) => entry.parent ? { x: entry.position.x ?? 0, y: entry.position.y ?? 0, z: 0 } : toLocal(entry.position.x ?? 0.5, entry.position.y ?? 0.5);
+    const resolvePivot = (pivot) => {
+      if (pivot === void 0) return void 0;
+      return { x: pivot.x ?? 0.5, y: pivot.y ?? 0.5 };
+    };
+    const resolveScale = (scale2) => {
+      if (scale2 === void 0) return void 0;
+      if (typeof scale2 === "number") return { x: scale2, y: scale2, z: 1 };
+      return { x: scale2.x ?? 1, y: scale2.y ?? 1, z: scale2.z ?? 1 };
+    };
     const KIND_CREATORS = {
       rect: (entry) => ctx.world.createRectangle({
         style: {
@@ -3895,8 +3932,22 @@
           ...entry.style
         },
         transform: {
-          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
-          ...entry.pivot ? { pivot: entry.pivot } : {},
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      }),
+      ellipse: (entry) => ctx.world.createEllipse({
+        style: {
+          zIndex: Z_INDEX.ELEMENT,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
           ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
         }
       }),
@@ -3908,8 +3959,9 @@
           ...entry.style
         },
         transform: {
-          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
-          ...entry.pivot ? { pivot: entry.pivot } : {},
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
           ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
         }
       }),
@@ -3921,13 +3973,27 @@
           ...entry.style
         },
         transform: {
-          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
-          ...entry.pivot ? { pivot: entry.pivot } : {},
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
           ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
         }
       })
     };
-    const _addElement = (entry, immediate = false, duration) => {
+    const _registerRootElement = (entry) => {
+      if (entry.parent) return;
+      const obj = _elementObjs[entry.id];
+      if (!obj) return;
+      ctx.ui.register(`element:${entry.id}`, {
+        uiTags: entry.uiTags ?? [],
+        hideTags: entry.hideTags ?? [],
+        show: (dur) => obj.fadeIn(dur, "easeOut"),
+        hide: (dur) => obj.fadeOut(dur, "easeIn"),
+        onCleanup: () => {
+        }
+      });
+    };
+    const _addElement = (entry, immediate = false, duration, ease = "easeOut") => {
       if (_elementObjs[entry.id]) return;
       const creator = KIND_CREATORS[entry.kind];
       if (!creator) return;
@@ -3972,32 +4038,76 @@
       }
       _elementObjs[entry.id] = obj;
       _elementEntries[entry.id] = entry;
+      _registerRootElement(entry);
       if (!immediate) {
         obj.style.opacity = 0;
-        ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, "easeOut");
+        ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, ease);
       }
     };
-    const _removeElement = (id, duration, immediate = false) => {
+    const _removeElement = (id, duration, immediate = false, ease = "easeIn") => {
       const obj = _elementObjs[id];
       if (!obj) return;
       delete _elementObjs[id];
       delete _elementEntries[id];
       const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200);
       if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeIn", () => {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
           obj.remove({ child: true });
         });
       } else {
         obj.remove({ child: true });
       }
     };
+    const _updateElement = (entry, duration, ease = "easeInOutQuad") => {
+      const obj = _elementObjs[entry.id];
+      const previous = _elementEntries[entry.id];
+      if (!obj || !previous) return;
+      if (previous.kind !== entry.kind || previous.parent !== entry.parent) {
+        _removeElement(entry.id, duration);
+        _addElement(entry, false, duration);
+        return;
+      }
+      const dur = ctx.renderer.dur(duration ?? 200);
+      const transform = {
+        position: resolvePosition(entry)
+      };
+      if (entry.rotation !== void 0) transform.rotation = { z: entry.rotation };
+      if (entry.scale !== void 0) transform.scale = resolveScale(entry.scale);
+      if (entry.pivot && obj.transform?.pivot) Object.assign(obj.transform.pivot, resolvePivot(entry.pivot));
+      if (entry.kind === "text" && obj.attribute && obj.attribute.text !== entry.text) {
+        if (dur > 0 && typeof obj.transition === "function") {
+          obj.transition(entry.text ?? "", dur);
+        } else {
+          obj.attribute.text = entry.text ?? "";
+        }
+      }
+      if (entry.kind === "image" && obj.attribute && obj.attribute.src !== entry.image) {
+        if (dur > 0 && typeof obj.transition === "function") {
+          obj.transition(entry.image ?? "", dur);
+        } else {
+          obj.attribute.src = entry.image ?? "";
+        }
+      }
+      ctx.renderer.animate(
+        obj,
+        {
+          ...entry.style ? { style: entry.style } : {},
+          transform
+        },
+        dur,
+        ease
+      );
+      _elementEntries[entry.id] = entry;
+      _registerRootElement(entry);
+    };
     const sorted = topoSort(Object.values(data._elements));
     for (const entry of sorted) {
       _addElement(entry, true);
     }
     return {
-      uiTags: data._uiTags ?? [],
-      hideTags: data._hideTags ?? [],
+      // 모듈 레벨 entry는 태그 없음 — 억제는 per-element entry가 담당
+      uiTags: [],
+      hideTags: [],
       show: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
@@ -4021,14 +4131,19 @@
       },
       onUpdate: (_ctx, state, _setState) => {
         const dur = state._lastDuration;
+        const ease = state._lastEase ?? "easeIn";
         const newKeys = new Set(Object.keys(state._elements));
         for (const key of Object.keys(_elementObjs)) {
-          if (!newKeys.has(key)) _removeElement(key, dur);
+          if (!newKeys.has(key)) _removeElement(key, dur, false, ease);
+        }
+        const toUpdate = Object.values(state._elements).filter((e) => _elementObjs[e.id]);
+        for (const entry of topoSort(toUpdate)) {
+          _updateElement(entry, dur, ease ?? "easeInOutQuad");
         }
         const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
         const sortedAdd = topoSort(toAdd);
         for (const entry of sortedAdd) {
-          _addElement(entry, false, dur);
+          _addElement(entry, false, dur, ease ?? "easeOut");
         }
       }
     };
@@ -4048,26 +4163,43 @@
     const newElements = { ...state._elements };
     if (cmd.action === "show") {
       cacheOnClickActions(cmd, ctx);
-      newElements[cmd.id] = {
+      const previous = newElements[cmd.id];
+      const nextEntry = {
         id: cmd.id,
         kind: cmd.kind,
         text: "text" in cmd ? cmd.text : void 0,
         image: "image" in cmd ? cmd.image : void 0,
-        position: cmd.position ?? { x: 0.5, y: 0.5 },
+        position: cmd.position ?? previous?.position ?? { x: 0.5, y: 0.5 },
         style: cmd.style,
         hoverStyle: cmd.hoverStyle,
         pivot: cmd.pivot,
+        scale: cmd.scale,
         rotation: cmd.rotation,
-        onClick: cmd.onClick
+        onClick: cmd.onClick,
+        uiTags: cmd.uiTags,
+        hideTags: cmd.hideTags
       };
+      newElements[cmd.id] = mergeElementEntry(previous, nextEntry);
       flattenChildren(cmd.id, cmd.children, newElements);
     } else {
       const toRemove = collectDescendants(cmd.id, newElements);
-      for (const id of toRemove) delete newElements[id];
+      for (const id of toRemove) {
+        if (!newElements[id]?.parent) {
+          ctx.ui.register(`element:${id}`, {
+            uiTags: [],
+            hideTags: [],
+            show: () => {
+            },
+            hide: () => {
+            },
+            onCleanup: () => {
+            }
+          });
+        }
+        delete newElements[id];
+      }
     }
-    const nextUiTags = cmd.action === "show" ? cmd.uiTags ?? [] : state._uiTags;
-    const nextHideTags = cmd.action === "show" ? cmd.hideTags ?? [] : state._hideTags;
-    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags, _hideTags: nextHideTags });
+    setState({ _elements: newElements, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     return true;
   });
   var element_default = elementModule;
@@ -18174,6 +18306,16 @@ ${addLineNumbers(fragment)}`);
     get _vars() {
       return { ...this.callbacks.getEnvironments(), ...this.callbacks.getGlobalVars(), ...this.localVars };
     }
+    _setLocalVar(name, value) {
+      const oldValue = this.localVars[name];
+      if (Object.is(oldValue, value)) return;
+      const payload = this.callbacks.getNovel().hooker.trigger(
+        "novel:var",
+        { name, oldValue, newValue: value },
+        (data) => data
+      );
+      this.localVars[name] = payload.newValue;
+    }
     _interpolateText(text) {
       return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
         try {
@@ -18244,7 +18386,7 @@ ${addLineNumbers(fragment)}`);
           getVars: () => this._vars,
           setGlobalVar: (key, value) => this.callbacks.setGlobalVar(key, value),
           setLocalVar: (key, value) => {
-            this.localVars[key] = value;
+            this._setLocalVar(key, value);
           },
           loadScene: (target) => {
             this._ended = true;
@@ -18412,7 +18554,7 @@ ${addLineNumbers(fragment)}`);
           getVars: () => this._vars,
           setGlobalVar: (key, value) => this.callbacks.setGlobalVar(key, value),
           setLocalVar: (key, value) => {
-            this.localVars[key] = value;
+            this._setLocalVar(key, value);
           },
           loadScene: (target) => {
             this._ended = true;
@@ -18717,6 +18859,28 @@ ${addLineNumbers(fragment)}`);
       };
       return proxy;
     }
+    _setGlobalVar(name, value) {
+      const oldValue = this.variables[name];
+      if (Object.is(oldValue, value)) return;
+      const payload = this._novelHooker.trigger(
+        "novel:var",
+        { name, oldValue, newValue: value },
+        (data) => data
+      );
+      const variables = this.variables;
+      variables[name] = payload.newValue;
+    }
+    _setEnvironment(name, value) {
+      const oldValue = this.environments[name];
+      if (Object.is(oldValue, value)) return;
+      const payload = this._novelHooker.trigger(
+        "novel:var",
+        { name, oldValue, newValue: value },
+        (data) => data
+      );
+      const environments = this.environments;
+      environments[name] = payload.newValue;
+    }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
     async load() {
       if (this._config.assets) {
@@ -18940,12 +19104,12 @@ ${addLineNumbers(fragment)}`);
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
-      scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
+      const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
+      scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._syncUIState();
     }
     /**
@@ -18969,11 +19133,11 @@ ${addLineNumbers(fragment)}`);
         getNovel: () => this,
         getGlobalVars: () => ({ ...this.variables }),
         setGlobalVar: (name, value) => {
-          this.variables[name] = value;
+          this._setGlobalVar(name, value);
         },
         getEnvironments: () => ({ ...this.environments ?? {} }),
         setEnvironment: (name, value) => {
-          this.environments[name] = value;
+          this._setEnvironment(name, value);
         },
         loadScene: (target) => {
           this.loadScene(target);
@@ -19130,11 +19294,11 @@ ${addLineNumbers(fragment)}`);
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
+      scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
       this._syncUIState();
     }
     /**
@@ -19225,7 +19389,7 @@ ${addLineNumbers(fragment)}`);
           setGlobalVar: noop,
           getEnvironments: () => ({ ...this.environments ?? {} }),
           setEnvironment: (name, value) => {
-            this.environments[name] = value;
+            this._setEnvironment(name, value);
           },
           loadScene: noop,
           callScene: noop,
@@ -19353,6 +19517,7 @@ ${addLineNumbers(fragment)}`);
       "debug": debugModule
     },
     scenes: [
+      "scene-title",
       "scene-ui",
       "scene-start",
       "scene-game",
@@ -19410,86 +19575,6 @@ ${addLineNumbers(fragment)}`);
       }
     }
   });
-
-  // example/scenes/scene-ui.ts
-  var UI_BUTTON_STYLE = {
-    fontSize: 22,
-    fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-    color: "rgba(255, 255, 255, 0.6)",
-    textAlign: "center",
-    textShadowBlur: 1,
-    textShadowOffsetX: 1,
-    textShadowOffsetY: 1,
-    textShadowColor: "rgba(0, 0, 0, 1)",
-    cursor: "pointer"
-  };
-  var scene_ui_default = defineScene({
-    config: novel_config_default,
-    actions: {
-      save: (ctx, vars) => {
-        save(ctx.novel);
-      },
-      load: (ctx) => {
-        load(ctx.novel);
-      },
-      fullscreen(ctx, vars) {
-        ctx.novel.toggleFullscreen();
-      }
-    }
-  })(() => [
-    // ── 하단 패널 (우측 하단) ─────────────────────────────
-    {
-      type: "element",
-      action: "show",
-      id: "panel",
-      kind: "rect",
-      position: { x: 0.85, y: 0.95 },
-      style: {
-        width: 180,
-        height: 40,
-        color: "rgba(0, 0, 0, 0)"
-        // 투명 컨테이너
-      },
-      children: [
-        // 저장 버튼 (텍스트)
-        {
-          id: "btn_save",
-          kind: "text",
-          text: "\uC800\uC7A5\uD558\uAE30",
-          position: { x: -120, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "save"
-        },
-        // 로드 버튼 (텍스트)
-        {
-          id: "btn_load",
-          kind: "text",
-          text: "\uBD88\uB7EC\uC624\uAE30",
-          position: { x: 0, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "load"
-        },
-        // 전체화면 버튼
-        {
-          id: "btn_fullscreen",
-          kind: "text",
-          text: "\uC804\uCCB4\uD654\uBA74",
-          position: { x: 120, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "fullscreen"
-        }
-      ]
-    }
-  ]);
 
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
@@ -19616,19 +19701,11 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
-  // example/scenes/scene-start.ts
-  var scene_start_default = defineScene({
+  // example/scenes/scene-title.ts
+  var scene_title_default = defineScene({
     config: novel_config_default,
-    variables: {
-      _isAnnoyed: false,
-      _inputRepeatCount: 0
-    },
-    initial: commonInitial,
-    next: {
-      scene: "scene-game",
-      preserve: true
-    }
-  })(({ label, goto, call, condition, set: set6 }) => [
+    initial: commonInitial
+  })(({ call }) => [
     {
       type: "dialogBox",
       title: "\uC74C\uC131 \uC81C\uC5B4",
@@ -19644,8 +19721,146 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
-    // 공용 ui를 보여줍니다.
-    call("scene-ui", { preserve: true, restore: false }),
+    call("scene-ui", { preserve: true, restore: true })
+  ]);
+
+  // example/scenes/scene-ui.ts
+  var UI_BUTTON_STYLE = {
+    fontSize: 22,
+    fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center",
+    textShadowBlur: 1,
+    textShadowOffsetX: 1,
+    textShadowOffsetY: 1,
+    textShadowColor: "rgba(0, 0, 0, 1)",
+    cursor: "pointer"
+  };
+  var scene_ui_default = defineScene({
+    config: novel_config_default,
+    actions: {
+      save: (ctx, vars) => {
+        save(ctx.novel);
+      },
+      load: (ctx) => {
+        load(ctx.novel);
+      },
+      fullscreen(ctx, vars) {
+        ctx.novel.toggleFullscreen();
+      },
+      log(ctx, vars) {
+        console.log(ctx, vars);
+      }
+    }
+  })(({ label, goto, call }) => [
+    // ── 하단 패널 (우측 하단) ─────────────────────────────
+    {
+      type: "element",
+      action: "show",
+      id: "panel",
+      kind: "rect",
+      position: { x: 0.85, y: 0.95 },
+      style: {
+        width: 180,
+        height: 40,
+        color: "rgba(0, 0, 0, 0)"
+        // 투명 컨테이너
+      },
+      children: [
+        // 저장 버튼 (텍스트)
+        {
+          id: "btn_save",
+          kind: "text",
+          text: "\uC800\uC7A5\uD558\uAE30",
+          position: { x: -120, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "save"
+        },
+        // 로드 버튼 (텍스트)
+        {
+          id: "btn_load",
+          kind: "text",
+          text: "\uBD88\uB7EC\uC624\uAE30",
+          position: { x: 0, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "load"
+        },
+        // 전체화면 버튼
+        {
+          id: "btn_fullscreen",
+          kind: "text",
+          text: "\uC804\uCCB4\uD654\uBA74",
+          position: { x: 120, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "fullscreen"
+        }
+      ]
+    },
+    // 사이드바
+    {
+      type: "element",
+      action: "show",
+      id: "sidebar",
+      kind: "rect",
+      uiTags: ["default-ui"],
+      position: { x: 0.9, y: 0.05 },
+      style: {
+        width: 200,
+        height: 600
+      },
+      children: [
+        {
+          kind: "text",
+          action: "show",
+          id: "text_like",
+          text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
+          position: { x: 0, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE,
+            color: "rgb(255, 255, 255)"
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "log"
+        }
+      ]
+    },
+    {
+      type: "element",
+      id: "sidebar",
+      action: "show",
+      kind: "rect",
+      rotation: 360,
+      ease: "easeOutBounce",
+      duration: 2500
+    },
+    label("start"),
+    call("scene-start", { preserve: true, restore: true }),
+    call("scene-outside", { preserve: true, restore: true }),
+    call("scene-ending", { preserve: true, restore: true }),
+    goto("start")
+  ]);
+
+  // example/scenes/scene-start.ts
+  var scene_start_default = defineScene({
+    config: novel_config_default,
+    variables: {
+      _isAnnoyed: false,
+      _inputRepeatCount: 0
+    },
+    next: {
+      scene: "scene-game",
+      preserve: true
+    }
+  })(({ label, goto, call, condition, set: set6 }) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -20055,7 +20270,6 @@ ${addLineNumbers(fragment)}`);
     variables: {
       _gameScore: 0
     },
-    initial: commonInitial,
     next: {
       scene: "scene-food",
       preserve: true
@@ -20221,7 +20435,6 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-food.ts
   var scene_food_default = defineScene({
     config: novel_config_default,
-    initial: commonInitial,
     next: {
       scene: "scene-stream",
       preserve: true
@@ -20367,9 +20580,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-stream.ts
   var scene_stream_default = defineScene({
-    config: novel_config_default,
-    initial: commonInitial,
-    next: "scene-outside"
+    config: novel_config_default
   })(({ label, goto }) => [
     {
       type: "mood",
@@ -20755,13 +20966,11 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-outside.ts
   var scene_outside_default = defineScene({
     config: novel_config_default,
-    initial: commonInitial,
     next: {
       scene: "scene-bug",
       preserve: true
     }
   })(({ label, goto, call }) => [
-    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
@@ -20795,7 +21004,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uBC29\uAD6C\uC11D\uC5D0\uB9CC \uBC15\uD600\uC788\uB2E4\uAC00\uB294 \uC815\uB9D0\uB85C \uACF0\uD321\uC774\uAC00 \uD53C\uC5B4\uC624\uB97C \uAC83 \uAC19\uC558\uAE30 \uB54C\uBB38\uC774\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", focus: "face", duration: 800 },
     { type: "mood", mood: "day", intensity: 1, duration: 800, flicker: "candle" },
     {
       type: "dialogue",
@@ -20907,9 +21116,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-bug.ts
   var scene_bug_default = defineScene({
-    config: novel_config_default,
-    initial: commonInitial,
-    next: "scene-ending"
+    config: novel_config_default
   })(({ label, goto }) => [
     {
       type: "dialogue",
@@ -21037,14 +21244,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-sub.ts
   var scene_sub_default = defineScene({
-    config: novel_config_default,
-    variables: {},
-    initial: {
-      dialogue: {
-        bg: { color: "rgba(0, 0, 50, 0.8)" }
-        // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
-      }
-    }
+    config: novel_config_default
   })(({}) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 300 },
     { type: "audio", action: "pause", name: "bgm", duration: 500 },
@@ -21063,12 +21263,8 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-ending.ts
   var scene_ending_default = defineScene({
-    config: novel_config_default,
-    initial: commonInitial,
-    // 씬 5개 종료 후 처음으로 롤백
-    next: "scene-start"
+    config: novel_config_default
   })(({ label, goto, call }) => [
-    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },
@@ -21081,7 +21277,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB2E4\uC0AC\uB2E4\uB09C\uD588\uB358 \uD558\uB8E8\uAC00 \uB05D\uC744 \uD5A5\uD574 \uAC00\uACE0 \uC788\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", duration: 1e3 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", focus: "face", duration: 1e3 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -21317,6 +21513,7 @@ ${addLineNumbers(fragment)}`);
     const novel = new Novel(novel_config_default, {
       element,
       scenes: {
+        "scene-title": scene_title_default,
         "scene-ui": scene_ui_default,
         "scene-start": scene_start_default,
         "scene-game": scene_game_default,
@@ -21356,7 +21553,7 @@ ${addLineNumbers(fragment)}`);
       }
       return state;
     });
-    novel.start("scene-start");
+    novel.start("scene-title");
     console.log(novel);
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");

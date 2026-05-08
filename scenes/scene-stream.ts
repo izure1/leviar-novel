@@ -3,9 +3,7 @@ import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
 
 export default defineScene({
-  config,
-  initial: commonInitial,
-  next: 'scene-outside',
+  config
 })(({ label, goto }) => [
   {
     type: 'mood',
