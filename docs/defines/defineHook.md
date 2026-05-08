@@ -35,6 +35,13 @@ export default defineScene({
         console.log('다음 씬으로 넘어갑니다.')
         return value
       }
+    },
+    // 변수 변경 시마다 실행되는 훅입니다
+    'novel:var': {
+      onBefore: (payload) => {
+        console.log(`변수 ${payload.name} 변경 시도: ${payload.oldValue} -> ${payload.newValue}`)
+        return payload
+      }
     }
   })
 })(({ set }) => [
