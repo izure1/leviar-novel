@@ -7,19 +7,24 @@ import { define } from '../define/defineCmdUI'
 
 // ─── 타입 정의 ───────────────────────────────────────────────
 
-export type ElementKind = 'rect' | 'text' | 'image'
+export type ElementKind = 'rect' | 'ellipse' | 'text' | 'image'
+export type ElementPosition = { x?: number; y?: number }
+export type ElementPivot = { x?: number; y?: number }
+export type ElementScale = number | { x?: number; y?: number; z?: number }
 
 export interface ElementChildBase<TConfig = any> {
   /** 요소 고유 식별자 */
   id: string
   /** 부모 기준 픽셀 오프셋 위치 */
-  position?: { x: number; y: number }
+  position?: ElementPosition
   /** 기본 스타일 (Leviar Style) */
   style?: Partial<Style>
   /** 호버 시 스타일 (기본 스타일에 merge, mouseout 시 복귀) */
   hoverStyle?: Partial<Style>
   /** 피벗 (0~1 정규화). 기본 { x: 0.5, y: 0.5 } */
-  pivot?: { x: number; y: number }
+  pivot?: ElementPivot
+  /** 스케일 배율. number면 x/y에 같은 값을 적용 */
+  scale?: ElementScale
   /** 회전 각도 (degree) */
   rotation?: number
   /** 클릭 시 실행할 액션 이름 (defineScene의 actions에서 조회) */
@@ -32,6 +37,7 @@ type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never
 
 export type ElementChild<TConfig = any> =
   | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'rect' }>
+  | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'ellipse' }>
   | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'text'; /** 텍스트 내용 */ text: string }>
   | Expand<ElementChildBase<TConfig> & { /** 요소 종류 */ kind: 'image'; /** 이미지 에셋 키 */ image: AssetKeysOf<TConfig> }>
 
@@ -75,13 +81,15 @@ export interface ElementCmdBase<TConfig = any> {
    * - parent 없음 (루트): 0~1 정규화 좌표. { x: 0, y: 0 } = 좌상단
    * - parent 있음 (자식): 부모 중심 기준 정규화/픽셀(Leviar 좌표계) 오프셋
    */
-  position?: { x: number; y: number }
+  position?: ElementPosition
   /** 기본 스타일 (Leviar Style) */
   style?: Partial<Style>
   /** 호버 시 스타일 (기본 스타일에 merge, mouseout 시 복귀) */
   hoverStyle?: Partial<Style>
   /** 피벗 (0~1 정규화) */
-  pivot?: { x: number; y: number }
+  pivot?: ElementPivot
+  /** 스케일 배율. number면 x/y에 같은 값을 적용 */
+  scale?: ElementScale
   /** 회전 각도 (degree) */
   rotation?: number
   /** 클릭 시 실행할 액션 이름 (defineScene의 actions에서 조회) */
@@ -98,6 +106,7 @@ export interface ElementCmdBase<TConfig = any> {
 
 export type ElementCmd<TConfig = any> =
   | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'rect' }>
+  | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'ellipse' }>
   | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'text'; /** 텍스트 내용 */ text: string }>
   | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'show'; /** 요소 종류 */ kind: 'image'; /** 이미지 에셋 키 */ image: AssetKeysOf<TConfig> }>
   | Expand<ElementCmdBase<TConfig> & { /** 수행할 동작 */ action: 'hide' }>
@@ -109,11 +118,12 @@ export interface ElementEntry {
   kind: ElementKind
   text?: string
   image?: string
-  position: { x: number; y: number }
+  position: ElementPosition
   parent?: string
   style?: Partial<Style>
   hoverStyle?: Partial<Style>
-  pivot?: { x: number; y: number }
+  pivot?: ElementPivot
+  scale?: ElementScale
   rotation?: number
   onClick?: string
   /** 이 요소의 UI 억제 태그 목록 */
@@ -136,6 +146,8 @@ function flattenChildren(
 ): void {
   if (!children) return
   for (const child of children) {
+    if (out[child.id]) continue
+
     out[child.id] = {
       id: child.id,
       kind: child.kind,
@@ -146,6 +158,7 @@ function flattenChildren(
       style: child.style,
       hoverStyle: child.hoverStyle,
       pivot: child.pivot,
+      scale: child.scale,
       rotation: child.rotation,
       onClick: child.onClick,
     }
@@ -192,6 +205,58 @@ function topoSort(entries: ElementEntry[]): ElementEntry[] {
   return sorted
 }
 
+function mergePoint<T extends ElementPosition | ElementPivot>(
+  previous: T | undefined,
+  next: T | undefined,
+  fallback: Required<T>
+): Required<T> {
+  return {
+    x: next?.x ?? previous?.x ?? fallback.x,
+    y: next?.y ?? previous?.y ?? fallback.y,
+  } as Required<T>
+}
+
+function mergeScale(
+  previous: ElementScale | undefined,
+  next: ElementScale | undefined
+): ElementScale | undefined {
+  if (next === undefined) return previous
+  if (typeof next === 'number') return next
+
+  const previousObject = typeof previous === 'number'
+    ? { x: previous, y: previous, z: 1 }
+    : previous
+
+  return {
+    x: next.x ?? previousObject?.x ?? 1,
+    y: next.y ?? previousObject?.y ?? 1,
+    z: next.z ?? previousObject?.z ?? 1,
+  }
+}
+
+function mergeElementEntry(
+  previous: ElementEntry | undefined,
+  next: ElementEntry
+): ElementEntry {
+  if (!previous) return next
+
+  return {
+    ...previous,
+    kind: next.kind,
+    text: next.text ?? previous.text,
+    image: next.image ?? previous.image,
+    position: mergePoint(previous.position, next.position, { x: 0.5, y: 0.5 }),
+    style: next.style ? { ...previous.style, ...next.style } : previous.style,
+    hoverStyle: next.hoverStyle ? { ...previous.hoverStyle, ...next.hoverStyle } : previous.hoverStyle,
+    pivot: next.pivot ? mergePoint(previous.pivot, next.pivot, { x: 0.5, y: 0.5 }) : previous.pivot,
+    scale: mergeScale(previous.scale, next.scale),
+    rotation: next.rotation ?? previous.rotation,
+    onClick: next.onClick ?? previous.onClick,
+    uiTags: next.uiTags ?? previous.uiTags,
+    hideTags: next.hideTags ?? previous.hideTags,
+  }
+}
+
 // ─── 모듈 레벨 액션 캐시 (view 재빌드 후에도 유지) ────────────
 
 const _actionCache = new Map<string, (ctx: SceneContext, vars: Record<string, any>) => void>()
@@ -216,6 +281,22 @@ elementModule.defineView((ctx, data, setState) => {
       ? cam.canvasToLocal(nx * w, ny * h)
       : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
+  const resolvePosition = (entry: ElementEntry) =>
+    entry.parent
+      ? { x: entry.position.x ?? 0, y: entry.position.y ?? 0, z: 0 }
+      : toLocal(entry.position.x ?? 0.5, entry.position.y ?? 0.5)
+
+  const resolvePivot = (pivot: ElementEntry['pivot']) => {
+    if (pivot === undefined) return undefined
+    return { x: pivot.x ?? 0.5, y: pivot.y ?? 0.5 }
+  }
+
+  const resolveScale = (scale: ElementEntry['scale']) => {
+    if (scale === undefined) return undefined
+    if (typeof scale === 'number') return { x: scale, y: scale, z: 1 }
+    return { x: scale.x ?? 1, y: scale.y ?? 1, z: scale.z ?? 1 }
+  }
+
   // ─── 요소 생성 ─────────────────────────────────────────────
 
   const KIND_CREATORS: Record<ElementKind, (entry: ElementEntry) => any> = {
@@ -226,10 +307,22 @@ elementModule.defineView((ctx, data, setState) => {
         ...entry.style,
       },
       transform: {
-        position: entry.parent
-          ? { x: entry.position.x, y: entry.position.y, z: 0 }
-          : toLocal(entry.position.x, entry.position.y),
-        ...(entry.pivot ? { pivot: entry.pivot } : {}),
+        position: resolvePosition(entry),
+        ...(entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {}),
+        ...(entry.scale !== undefined ? { scale: resolveScale(entry.scale) } : {}),
+        ...(entry.rotation !== undefined ? { rotation: { z: entry.rotation } } : {}),
+      },
+    }),
+    ellipse: (entry) => ctx.world.createEllipse({
+      style: {
+        zIndex: Z_INDEX.ELEMENT,
+        pointerEvents: true,
+        ...entry.style,
+      },
+      transform: {
+        position: resolvePosition(entry),
+        ...(entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {}),
+        ...(entry.scale !== undefined ? { scale: resolveScale(entry.scale) } : {}),
         ...(entry.rotation !== undefined ? { rotation: { z: entry.rotation } } : {}),
       },
     }),
@@ -241,10 +334,9 @@ elementModule.defineView((ctx, data, setState) => {
         ...entry.style,
       },
       transform: {
-        position: entry.parent
-          ? { x: entry.position.x, y: entry.position.y, z: 0 }
-          : toLocal(entry.position.x, entry.position.y),
-        ...(entry.pivot ? { pivot: entry.pivot } : {}),
+        position: resolvePosition(entry),
+        ...(entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {}),
+        ...(entry.scale !== undefined ? { scale: resolveScale(entry.scale) } : {}),
         ...(entry.rotation !== undefined ? { rotation: { z: entry.rotation } } : {}),
       },
     }),
@@ -256,10 +348,9 @@ elementModule.defineView((ctx, data, setState) => {
         ...entry.style,
       },
       transform: {
-        position: entry.parent
-          ? { x: entry.position.x, y: entry.position.y, z: 0 }
-          : toLocal(entry.position.x, entry.position.y),
-        ...(entry.pivot ? { pivot: entry.pivot } : {}),
+        position: resolvePosition(entry),
+        ...(entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {}),
+        ...(entry.scale !== undefined ? { scale: resolveScale(entry.scale) } : {}),
         ...(entry.rotation !== undefined ? { rotation: { z: entry.rotation } } : {}),
       },
     }),
@@ -364,6 +455,56 @@ elementModule.defineView((ctx, data, setState) => {
     }
   }
 
+  const _updateElement = (entry: ElementEntry, duration?: number) => {
+    const obj = _elementObjs[entry.id]
+    const previous = _elementEntries[entry.id]
+    if (!obj || !previous) return
+
+    if (previous.kind !== entry.kind || previous.parent !== entry.parent) {
+      _removeElement(entry.id, duration)
+      _addElement(entry, false, duration)
+      return
+    }
+
+    const dur = ctx.renderer.dur(duration ?? 200)
+    const transform: Record<string, any> = {
+      position: resolvePosition(entry),
+    }
+
+    if (entry.rotation !== undefined) transform.rotation = { z: entry.rotation }
+    if (entry.scale !== undefined) transform.scale = resolveScale(entry.scale)
+    if (entry.pivot && obj.transform?.pivot) Object.assign(obj.transform.pivot, resolvePivot(entry.pivot))
+
+    if (entry.kind === 'text' && obj.attribute && obj.attribute.text !== entry.text) {
+      if (dur > 0 && typeof obj.transition === 'function') {
+        obj.transition(entry.text ?? '', dur)
+      } else {
+        obj.attribute.text = entry.text ?? ''
+      }
+    }
+
+    if (entry.kind === 'image' && obj.attribute && obj.attribute.src !== entry.image) {
+      if (dur > 0 && typeof obj.transition === 'function') {
+        obj.transition(entry.image ?? '', dur)
+      } else {
+        obj.attribute.src = entry.image ?? ''
+      }
+    }
+
+    ctx.renderer.animate(
+      obj,
+      {
+        ...(entry.style ? { style: entry.style } : {}),
+        transform,
+      },
+      dur,
+      'easeInOutQuad'
+    )
+
+    _elementEntries[entry.id] = entry
+    _registerRootElement(entry)
+  }
+
   // ─── 초기 복원 (세이브 로드 시) ─────────────────────────────
 
   const sorted = topoSort(Object.values(data._elements))
@@ -406,6 +547,11 @@ elementModule.defineView((ctx, data, setState) => {
       }
 
       // 추가된 항목 (토폴로지 순)
+      const toUpdate = Object.values(state._elements).filter(e => _elementObjs[e.id])
+      for (const entry of topoSort(toUpdate)) {
+        _updateElement(entry, dur)
+      }
+
       const toAdd = Object.values(state._elements).filter(e => !_elementObjs[e.id])
       const sortedAdd = topoSort(toAdd)
       for (const entry of sortedAdd) {
@@ -437,20 +583,23 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
   if (cmd.action === 'show') {
     cacheOnClickActions(cmd, ctx)
 
-    newElements[cmd.id] = {
+    const previous = newElements[cmd.id]
+    const nextEntry: ElementEntry = {
       id: cmd.id,
       kind: cmd.kind!,
       text: 'text' in cmd ? cmd.text : undefined,
       image: 'image' in cmd ? (cmd.image as string | undefined) : undefined,
-      position: cmd.position ?? { x: 0.5, y: 0.5 },
+      position: cmd.position ?? previous?.position ?? { x: 0.5, y: 0.5 },
       style: cmd.style,
       hoverStyle: cmd.hoverStyle,
       pivot: cmd.pivot,
+      scale: cmd.scale,
       rotation: cmd.rotation,
       onClick: cmd.onClick,
       uiTags: cmd.uiTags,
       hideTags: cmd.hideTags,
     }
+    newElements[cmd.id] = mergeElementEntry(previous, nextEntry)
     flattenChildren(cmd.id, cmd.children, newElements)
   } else {
     // hide: 해당 id + 자식 연쇄 삭제 + per-element entry 비활성화

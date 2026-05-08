@@ -33,7 +33,7 @@ export default defineScene({
       console.log(ctx, vars)
     }
   },
-})(({ call }) => [
+})(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
   {
     type: 'element',
@@ -115,7 +115,24 @@ export default defineScene({
     ]
   },
 
+  {
+    type: 'element',
+    id: 'sidebar',
+    action: 'show',
+    kind: 'rect',
+    rotation: 360,
+    duration: 2500,
+  },
+
+  {
+    type: 'control',
+    action: 'disable',
+    duration: 3000,
+  },
+
+  label('start'),
   call('scene-start', { preserve: true, restore: true }),
   call('scene-outside', { preserve: true, restore: true }),
   call('scene-ending', { preserve: true, restore: true }),
+  goto('start')
 ])

@@ -3821,6 +3821,7 @@
   function flattenChildren(parentId, children, out) {
     if (!children) return;
     for (const child of children) {
+      if (out[child.id]) continue;
       out[child.id] = {
         id: child.id,
         kind: child.kind,
@@ -3831,6 +3832,7 @@
         style: child.style,
         hoverStyle: child.hoverStyle,
         pivot: child.pivot,
+        scale: child.scale,
         rotation: child.rotation,
         onClick: child.onClick
       };
@@ -3866,6 +3868,40 @@
     for (const entry of entries) visit(entry);
     return sorted;
   }
+  function mergePoint(previous, next, fallback) {
+    return {
+      x: next?.x ?? previous?.x ?? fallback.x,
+      y: next?.y ?? previous?.y ?? fallback.y
+    };
+  }
+  function mergeScale(previous, next) {
+    if (next === void 0) return previous;
+    if (typeof next === "number") return next;
+    const previousObject = typeof previous === "number" ? { x: previous, y: previous, z: 1 } : previous;
+    return {
+      x: next.x ?? previousObject?.x ?? 1,
+      y: next.y ?? previousObject?.y ?? 1,
+      z: next.z ?? previousObject?.z ?? 1
+    };
+  }
+  function mergeElementEntry(previous, next) {
+    if (!previous) return next;
+    return {
+      ...previous,
+      kind: next.kind,
+      text: next.text ?? previous.text,
+      image: next.image ?? previous.image,
+      position: mergePoint(previous.position, next.position, { x: 0.5, y: 0.5 }),
+      style: next.style ? { ...previous.style, ...next.style } : previous.style,
+      hoverStyle: next.hoverStyle ? { ...previous.hoverStyle, ...next.hoverStyle } : previous.hoverStyle,
+      pivot: next.pivot ? mergePoint(previous.pivot, next.pivot, { x: 0.5, y: 0.5 }) : previous.pivot,
+      scale: mergeScale(previous.scale, next.scale),
+      rotation: next.rotation ?? previous.rotation,
+      onClick: next.onClick ?? previous.onClick,
+      uiTags: next.uiTags ?? previous.uiTags,
+      hideTags: next.hideTags ?? previous.hideTags
+    };
+  }
   var _actionCache = /* @__PURE__ */ new Map();
   var elementModule = define2({
     _elements: {}
@@ -3877,6 +3913,16 @@
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
     const toLocal = (nx, ny) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(nx * w, ny * h) : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const resolvePosition = (entry) => entry.parent ? { x: entry.position.x ?? 0, y: entry.position.y ?? 0, z: 0 } : toLocal(entry.position.x ?? 0.5, entry.position.y ?? 0.5);
+    const resolvePivot = (pivot) => {
+      if (pivot === void 0) return void 0;
+      return { x: pivot.x ?? 0.5, y: pivot.y ?? 0.5 };
+    };
+    const resolveScale = (scale2) => {
+      if (scale2 === void 0) return void 0;
+      if (typeof scale2 === "number") return { x: scale2, y: scale2, z: 1 };
+      return { x: scale2.x ?? 1, y: scale2.y ?? 1, z: scale2.z ?? 1 };
+    };
     const KIND_CREATORS = {
       rect: (entry) => ctx.world.createRectangle({
         style: {
@@ -3885,8 +3931,22 @@
           ...entry.style
         },
         transform: {
-          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
-          ...entry.pivot ? { pivot: entry.pivot } : {},
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
+          ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
+        }
+      }),
+      ellipse: (entry) => ctx.world.createEllipse({
+        style: {
+          zIndex: Z_INDEX.ELEMENT,
+          pointerEvents: true,
+          ...entry.style
+        },
+        transform: {
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
           ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
         }
       }),
@@ -3898,8 +3958,9 @@
           ...entry.style
         },
         transform: {
-          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
-          ...entry.pivot ? { pivot: entry.pivot } : {},
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
           ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
         }
       }),
@@ -3911,8 +3972,9 @@
           ...entry.style
         },
         transform: {
-          position: entry.parent ? { x: entry.position.x, y: entry.position.y, z: 0 } : toLocal(entry.position.x, entry.position.y),
-          ...entry.pivot ? { pivot: entry.pivot } : {},
+          position: resolvePosition(entry),
+          ...entry.pivot ? { pivot: resolvePivot(entry.pivot) } : {},
+          ...entry.scale !== void 0 ? { scale: resolveScale(entry.scale) } : {},
           ...entry.rotation !== void 0 ? { rotation: { z: entry.rotation } } : {}
         }
       })
@@ -3995,6 +4057,48 @@
         obj.remove({ child: true });
       }
     };
+    const _updateElement = (entry, duration) => {
+      const obj = _elementObjs[entry.id];
+      const previous = _elementEntries[entry.id];
+      if (!obj || !previous) return;
+      if (previous.kind !== entry.kind || previous.parent !== entry.parent) {
+        _removeElement(entry.id, duration);
+        _addElement(entry, false, duration);
+        return;
+      }
+      const dur = ctx.renderer.dur(duration ?? 200);
+      const transform = {
+        position: resolvePosition(entry)
+      };
+      if (entry.rotation !== void 0) transform.rotation = { z: entry.rotation };
+      if (entry.scale !== void 0) transform.scale = resolveScale(entry.scale);
+      if (entry.pivot && obj.transform?.pivot) Object.assign(obj.transform.pivot, resolvePivot(entry.pivot));
+      if (entry.kind === "text" && obj.attribute && obj.attribute.text !== entry.text) {
+        if (dur > 0 && typeof obj.transition === "function") {
+          obj.transition(entry.text ?? "", dur);
+        } else {
+          obj.attribute.text = entry.text ?? "";
+        }
+      }
+      if (entry.kind === "image" && obj.attribute && obj.attribute.src !== entry.image) {
+        if (dur > 0 && typeof obj.transition === "function") {
+          obj.transition(entry.image ?? "", dur);
+        } else {
+          obj.attribute.src = entry.image ?? "";
+        }
+      }
+      ctx.renderer.animate(
+        obj,
+        {
+          ...entry.style ? { style: entry.style } : {},
+          transform
+        },
+        dur,
+        "easeInOutQuad"
+      );
+      _elementEntries[entry.id] = entry;
+      _registerRootElement(entry);
+    };
     const sorted = topoSort(Object.values(data._elements));
     for (const entry of sorted) {
       _addElement(entry, true);
@@ -4030,6 +4134,10 @@
         for (const key of Object.keys(_elementObjs)) {
           if (!newKeys.has(key)) _removeElement(key, dur);
         }
+        const toUpdate = Object.values(state._elements).filter((e) => _elementObjs[e.id]);
+        for (const entry of topoSort(toUpdate)) {
+          _updateElement(entry, dur);
+        }
         const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
         const sortedAdd = topoSort(toAdd);
         for (const entry of sortedAdd) {
@@ -4053,20 +4161,23 @@
     const newElements = { ...state._elements };
     if (cmd.action === "show") {
       cacheOnClickActions(cmd, ctx);
-      newElements[cmd.id] = {
+      const previous = newElements[cmd.id];
+      const nextEntry = {
         id: cmd.id,
         kind: cmd.kind,
         text: "text" in cmd ? cmd.text : void 0,
         image: "image" in cmd ? cmd.image : void 0,
-        position: cmd.position ?? { x: 0.5, y: 0.5 },
+        position: cmd.position ?? previous?.position ?? { x: 0.5, y: 0.5 },
         style: cmd.style,
         hoverStyle: cmd.hoverStyle,
         pivot: cmd.pivot,
+        scale: cmd.scale,
         rotation: cmd.rotation,
         onClick: cmd.onClick,
         uiTags: cmd.uiTags,
         hideTags: cmd.hideTags
       };
+      newElements[cmd.id] = mergeElementEntry(previous, nextEntry);
       flattenChildren(cmd.id, cmd.children, newElements);
     } else {
       const toRemove = collectDescendants(cmd.id, newElements);
@@ -19616,7 +19727,7 @@ ${addLineNumbers(fragment)}`);
         console.log(ctx, vars);
       }
     }
-  })(({ call }) => [
+  })(({ label, goto, call }) => [
     // ── 하단 패널 (우측 하단) ─────────────────────────────
     {
       type: "element",
@@ -19697,9 +19808,24 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
+    {
+      type: "element",
+      id: "sidebar",
+      action: "show",
+      kind: "rect",
+      rotation: 360,
+      duration: 2500
+    },
+    {
+      type: "control",
+      action: "disable",
+      duration: 3e3
+    },
+    label("start"),
     call("scene-start", { preserve: true, restore: true }),
     call("scene-outside", { preserve: true, restore: true }),
-    call("scene-ending", { preserve: true, restore: true })
+    call("scene-ending", { preserve: true, restore: true }),
+    goto("start")
   ]);
 
   // example/scenes/scene-start.ts
