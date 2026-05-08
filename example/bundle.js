@@ -1619,7 +1619,7 @@
     function getLoadedImage(key) {
       return ctx.renderer.world.loader.assets[key];
     }
-    const _updateEmotionParts = (baseObj, baseDef, emotionDef, dur) => {
+    const _updateEmotionParts = (baseObj, baseDef, emotionDef, dur, ease = "easeInOutQuad") => {
       if (!baseDef.points) return;
       if (!baseObj._partObjs) baseObj._partObjs = {};
       const baseSrc = baseDef.src ?? (baseObj._currentBaseKey ?? "");
@@ -1642,7 +1642,7 @@
               existingPart.attribute.src = partSrc;
             }
           }
-          ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, "easeInOutQuad");
+          ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, ease);
         } else {
           const partNaturalW = getLoadedImage(partSrc)?.naturalWidth;
           const partWidth = point.width ?? (partNaturalW !== void 0 ? Math.round(partNaturalW * scale2) : void 0);
@@ -1666,7 +1666,7 @@
         }
       }
     };
-    const _showCharacter = (name, position, imageKey, duration, immediate = false) => {
+    const _showCharacter = (name, position, imageKey, duration, ease = "easeInOutQuad", immediate = false) => {
       const charDefs = ctx.renderer.config.characters;
       const def = charDefs[name];
       if (!def) return;
@@ -1685,7 +1685,7 @@
       const baseWidth = baseDef.width ?? 500;
       const existing = _charObjs[name];
       if (existing) {
-        ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, "easeInOutQuad");
+        ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, ease);
         if (baseKey !== existing._currentBaseKey) {
           if (dur > 0 && typeof existing.transition === "function") {
             existing.transition(src, dur);
@@ -1696,7 +1696,7 @@
           existing._currentBaseKey = baseKey;
         }
         if (emotionKey !== existing._currentEmotionKey || baseKey !== existing._currentBaseKey) {
-          _updateEmotionParts(existing, baseDef, emotionDef, dur);
+          _updateEmotionParts(existing, baseDef, emotionDef, dur, ease);
           existing._currentEmotionKey = emotionKey;
         }
         return;
@@ -1719,13 +1719,13 @@
         ctx.renderer.animate(obj, { style: { opacity: 1 } }, dur);
       }
     };
-    const _removeCharacter = (name, duration) => {
+    const _removeCharacter = (name, duration, ease = "easeInOutQuad") => {
       const obj = _charObjs[name];
       if (obj) {
         delete _charObjs[name];
         const dur = ctx.renderer.dur(duration ?? 400);
         if (dur > 0) {
-          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
             obj.remove({ child: true });
             obj._partObjs = {};
           });
@@ -1736,7 +1736,7 @@
       }
     };
     for (const [name, info] of Object.entries(data._characters)) {
-      _showCharacter(name, info.position, info.imageKey, void 0, true);
+      _showCharacter(name, info.position, info.imageKey, void 0, "easeInOutQuad", true);
     }
     return {
       show: () => {
@@ -1752,14 +1752,15 @@
       getObj: (name) => _charObjs[name],
       onUpdate: (_ctx, d2, _setState) => {
         const dur = d2._lastDuration;
+        const ease = d2._lastEase ?? "easeInOutQuad";
         const newNames = new Set(Object.keys(d2._characters));
         for (const name of Object.keys(_charObjs)) {
           if (!newNames.has(name)) {
-            _removeCharacter(name, dur);
+            _removeCharacter(name, dur, ease);
           }
         }
         for (const [name, info] of Object.entries(d2._characters)) {
-          _showCharacter(name, info.position, info.imageKey, dur);
+          _showCharacter(name, info.position, info.imageKey, dur, ease);
         }
       }
     };
@@ -1777,7 +1778,7 @@
       const resolvedPosition = !showCmd.position || showCmd.position === "inherit" ? existingState?.position ?? "center" : showCmd.position;
       const resolvedKey = showCmd.image ?? `${allBaseKeys[0]}:${allEmotionKeys[0]}`;
       newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey };
-      setState({ _characters: newChars, _lastDuration: cmd.duration });
+      setState({ _characters: newChars, _lastDuration: cmd.duration, _lastEase: showCmd.ease });
       if (showCmd.focus) {
         const focusType = typeof showCmd.focus === "string" ? showCmd.focus : void 0;
         const focusDuration = showCmd.duration ?? 800;
@@ -1795,7 +1796,7 @@
             requestAnimationFrame(checkSize);
             yield false;
           }
-          const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, "inherit", focusDuration);
+          const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, "inherit", focusDuration, showCmd.ease);
           for (const c of cmds) {
             const res = ctx.execute(c);
             if (res && typeof res.next === "function") {
@@ -1806,12 +1807,12 @@
       }
     } else {
       delete newChars[cmd.name];
-      setState({ _characters: newChars, _lastDuration: cmd.duration });
+      setState({ _characters: newChars, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     }
     return true;
   });
   var character_default = characterModule;
-  function _calcFocusCommands(name, target, def, focusType, fit = "inherit", duration = 800) {
+  function _calcFocusCommands(name, target, def, focusType, fit = "inherit", duration = 800, ease) {
     if (!target) return [];
     const activeBaseKey = target._currentBaseKey ?? Object.keys(def.bases)[0];
     const baseDef = def.bases[activeBaseKey];
@@ -1823,8 +1824,8 @@
     const panX = targetX + charW * (fp.x - 0.5);
     const panY = charH * (0.5 - fp.y);
     return [
-      { type: "camera-pan", position: "center", duration, x: panX, y: panY },
-      { type: "camera-zoom", preset: fit, duration }
+      { type: "camera-pan", position: "center", duration, ease, x: panX, y: panY },
+      { type: "camera-zoom", preset: fit, duration, ease }
     ];
   }
   var characterFocusModule = define2({ _unused: void 0 });
@@ -1854,7 +1855,7 @@
       requestAnimationFrame(checkSize);
       yield false;
     }
-    const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800);
+    const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800, cmd.ease);
     for (const c of cmds) {
       const res = ctx.execute(c);
       if (res && typeof res.next === "function") {
@@ -2720,7 +2721,7 @@
     down: { x: 0, y: -200, duration: 1e3 },
     center: { x: 0, y: 0, duration: 1e3 }
   };
-  function zoomCamera(ctx, preset, duration) {
+  function zoomCamera(ctx, preset, duration, ease = "easeInOutQuad") {
     const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
     ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
     const cfg = ZOOM_PRESETS[resolvedPreset];
@@ -2729,10 +2730,10 @@
     const targetZ = focalLength * (1 - 1 / cfg.scale);
     if (ctx.renderer.camBaseObj) {
       const dur = ctx.renderer.dur(duration ?? cfg.duration);
-      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, "easeInOutQuad");
+      ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, ease);
     }
   }
-  function panCamera(ctx, position, duration, customX, customY) {
+  function panCamera(ctx, position, duration, customX, customY, ease = "easeInOutQuad") {
     if (position === "inherit") return;
     const resolvedPreset = position;
     ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
@@ -2759,7 +2760,7 @@
       const dur = ctx.renderer.dur(finalDur);
       ctx.renderer.animate(ctx.renderer.camBaseObj, {
         transform: { position: { x: targetX, y: targetY } }
-      }, dur, "easeInOutQuad");
+      }, dur, ease);
     }
   }
   function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
@@ -2784,7 +2785,7 @@
   cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolved = cmd.preset === "inherit" ? state._lastPreset : cmd.preset;
     setState({ _lastPreset: resolved });
-    zoomCamera(ctx, resolved, cmd.duration);
+    zoomCamera(ctx, resolved, cmd.duration, cmd.ease);
     return true;
   });
   var cameraPanModule = define2({ _lastPreset: "center" });
@@ -2795,7 +2796,7 @@
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolved = cmd.position === "inherit" ? state._lastPreset : cmd.position;
     setState({ _lastPreset: resolved });
-    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y);
+    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y, cmd.ease);
     return true;
   });
   var cameraEffectModule = define2({ _lastPreset: "shake" });
@@ -3992,7 +3993,7 @@
         }
       });
     };
-    const _addElement = (entry, immediate = false, duration) => {
+    const _addElement = (entry, immediate = false, duration, ease = "easeOut") => {
       if (_elementObjs[entry.id]) return;
       const creator = KIND_CREATORS[entry.kind];
       if (!creator) return;
@@ -4040,24 +4041,24 @@
       _registerRootElement(entry);
       if (!immediate) {
         obj.style.opacity = 0;
-        ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, "easeOut");
+        ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, ease);
       }
     };
-    const _removeElement = (id, duration, immediate = false) => {
+    const _removeElement = (id, duration, immediate = false, ease = "easeIn") => {
       const obj = _elementObjs[id];
       if (!obj) return;
       delete _elementObjs[id];
       delete _elementEntries[id];
       const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200);
       if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeIn", () => {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
           obj.remove({ child: true });
         });
       } else {
         obj.remove({ child: true });
       }
     };
-    const _updateElement = (entry, duration) => {
+    const _updateElement = (entry, duration, ease = "easeInOutQuad") => {
       const obj = _elementObjs[entry.id];
       const previous = _elementEntries[entry.id];
       if (!obj || !previous) return;
@@ -4094,7 +4095,7 @@
           transform
         },
         dur,
-        "easeInOutQuad"
+        ease
       );
       _elementEntries[entry.id] = entry;
       _registerRootElement(entry);
@@ -4130,18 +4131,19 @@
       },
       onUpdate: (_ctx, state, _setState) => {
         const dur = state._lastDuration;
+        const ease = state._lastEase ?? "easeIn";
         const newKeys = new Set(Object.keys(state._elements));
         for (const key of Object.keys(_elementObjs)) {
-          if (!newKeys.has(key)) _removeElement(key, dur);
+          if (!newKeys.has(key)) _removeElement(key, dur, false, ease);
         }
         const toUpdate = Object.values(state._elements).filter((e) => _elementObjs[e.id]);
         for (const entry of topoSort(toUpdate)) {
-          _updateElement(entry, dur);
+          _updateElement(entry, dur, ease ?? "easeInOutQuad");
         }
         const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
         const sortedAdd = topoSort(toAdd);
         for (const entry of sortedAdd) {
-          _addElement(entry, false, dur);
+          _addElement(entry, false, dur, ease ?? "easeOut");
         }
       }
     };
@@ -4197,7 +4199,7 @@
         delete newElements[id];
       }
     }
-    setState({ _elements: newElements, _lastDuration: cmd.duration });
+    setState({ _elements: newElements, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     return true;
   });
   var element_default = elementModule;
@@ -19814,6 +19816,7 @@ ${addLineNumbers(fragment)}`);
       action: "show",
       kind: "rect",
       rotation: 360,
+      ease: "easeOutBounce",
       duration: 2500
     },
     {

@@ -121,6 +121,7 @@ export default defineScene({
     action: 'show',
     kind: 'rect',
     rotation: 360,
+    ease: 'easeOutBounce',
     duration: 2500,
   },
 

@@ -1,7 +1,7 @@
 import type { CharDef, CharDefs, CharBaseDef, CharacterKeysOf, ImageKeysOf, PointsOf } from '../types/config'
 import type { ZoomPreset, CameraPanCmd, CameraZoomCmd, CameraEffectPreset } from './camera'
 import { playMotionEffect } from '../core/motion'
-import type { LeviarObject } from 'leviar'
+import type { LeviarObject, EasingType } from 'leviar'
 import type { CommandResult } from '../core/SceneContext'
 import type { SceneContext } from '../core/SceneContext'
 import { Z_INDEX } from '../constants/render'
@@ -28,6 +28,8 @@ export type CharacterCmd<TConfig = any> = {
     focus?: boolean | PointsOf<TConfig, Name> | (string & {})
     /** 등장 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 등장 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
   | {
     /** 캐릭터에 수행할 동작입니다. ('remove') */
@@ -36,6 +38,8 @@ export type CharacterCmd<TConfig = any> = {
     name: Name
     /** 퇴장 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 퇴장 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
 }[CharacterKeysOf<TConfig>]
 
@@ -50,6 +54,8 @@ export type CharacterFocusCmd<TConfig = any> = {
     zoom?: ZoomPreset
     /** 포커스 이동 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 포커스 이동 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
 }[CharacterKeysOf<TConfig>]
 
@@ -62,6 +68,8 @@ export type CharacterHighlightCmd<TConfig = any> = {
     action: 'on' | 'off'
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 전환 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
 }[CharacterKeysOf<TConfig>]
 
@@ -86,6 +94,8 @@ export interface CharacterSchema {
   _characters: Record<string, { position: string; imageKey: string }>
   /** @internal 최근 전환 애니메이션 지속 시간 (ms) */
   _lastDuration?: number
+  /** @internal 최근 전환 애니메이션 이징 함수 이름 */
+  _lastEase?: string
 }
 
 // ─── 위치/포커스 헬퍼 ────────────────────────────────────────
@@ -158,7 +168,8 @@ characterModule.defineView((ctx, data, setState) => {
     baseObj: CharacterRenderObj,
     baseDef: CharBaseDef,
     emotionDef: Record<string, string>,
-    dur: number
+    dur: number,
+    ease: EasingType = 'easeInOutQuad'
   ) => {
     if (!baseDef.points) return
     if (!baseObj._partObjs) baseObj._partObjs = {}
@@ -194,7 +205,7 @@ characterModule.defineView((ctx, data, setState) => {
             existingPart.attribute.src = partSrc
           }
         }
-        ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, 'easeInOutQuad')
+        ctx.renderer.animate(existingPart, { transform: { position: { x: localX, y: localY } } }, dur, ease)
       } else {
         // 파트 너비: point.width 우선, 없으면 loader.assets에서 naturalWidth × scale
         const partNaturalW = getLoadedImage(partSrc)?.naturalWidth
@@ -231,6 +242,7 @@ characterModule.defineView((ctx, data, setState) => {
     position: string,
     imageKey: string,
     duration?: number,
+    ease: EasingType = 'easeInOutQuad',
     immediate = false
   ) => {
     const charDefs = ctx.renderer.config.characters as CharDefs
@@ -255,7 +267,7 @@ characterModule.defineView((ctx, data, setState) => {
 
     const existing = _charObjs[name]
     if (existing) {
-      ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, 'easeInOutQuad')
+      ctx.renderer.animate(existing, { transform: { position: { x: xPos } } }, dur, ease)
 
       // base 교체
       if (baseKey !== existing._currentBaseKey) {
@@ -270,7 +282,7 @@ characterModule.defineView((ctx, data, setState) => {
 
       // emotion 파트 교체
       if (emotionKey !== existing._currentEmotionKey || baseKey !== existing._currentBaseKey) {
-        _updateEmotionParts(existing, baseDef, emotionDef, dur)
+        _updateEmotionParts(existing, baseDef, emotionDef, dur, ease)
         existing._currentEmotionKey = emotionKey
       }
       return
@@ -299,7 +311,7 @@ characterModule.defineView((ctx, data, setState) => {
     }
   }
 
-  const _removeCharacter = (name: string, duration?: number) => {
+  const _removeCharacter = (name: string, duration?: number, ease: EasingType = 'easeInOutQuad') => {
     const obj = _charObjs[name]
     if (obj) {
       delete _charObjs[name]
@@ -307,7 +319,7 @@ characterModule.defineView((ctx, data, setState) => {
 
       if (dur > 0) {
         // base opacity 0으로 → child(part)도 자동 fade out
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
           obj.remove({ child: true })
           obj._partObjs = {}
         })
@@ -320,7 +332,7 @@ characterModule.defineView((ctx, data, setState) => {
 
   // 복원: 저장된 캐릭터들 즉시 렌더
   for (const [name, info] of Object.entries(data._characters)) {
-    _showCharacter(name, info.position, info.imageKey, undefined, true)
+    _showCharacter(name, info.position, info.imageKey, undefined, 'easeInOutQuad', true)
   }
 
   return {
@@ -335,14 +347,15 @@ characterModule.defineView((ctx, data, setState) => {
     getObj: (name: string) => _charObjs[name],
     onUpdate: (_ctx, d: CharacterSchema, _setState) => {
       const dur = d._lastDuration
+      const ease = (d._lastEase ?? 'easeInOutQuad') as EasingType
       const newNames = new Set(Object.keys(d._characters))
       for (const name of Object.keys(_charObjs)) {
         if (!newNames.has(name)) {
-          _removeCharacter(name, dur)
+          _removeCharacter(name, dur, ease)
         }
       }
       for (const [name, info] of Object.entries(d._characters)) {
-        _showCharacter(name, info.position, info.imageKey, dur)
+        _showCharacter(name, info.position, info.imageKey, dur, ease)
       }
     },
   }
@@ -367,7 +380,7 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
     const resolvedKey = showCmd.image ?? `${allBaseKeys[0]}:${allEmotionKeys[0]}`
 
     newChars[showCmd.name] = { position: resolvedPosition, imageKey: resolvedKey as string }
-    setState({ _characters: newChars, _lastDuration: cmd.duration })
+    setState({ _characters: newChars, _lastDuration: cmd.duration, _lastEase: showCmd.ease })
 
     // focus 처리 (view의 getObj 사용)
     // state.characters 변경 → proxy microtask로 update() 예약됨
@@ -390,7 +403,7 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
           requestAnimationFrame(checkSize)
           yield false
         }
-        const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, 'inherit', focusDuration)
+        const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, 'inherit', focusDuration, showCmd.ease)
         for (const c of cmds) {
           const res = ctx.execute(c)
           if (res && typeof (res as Generator).next === 'function') {
@@ -401,7 +414,7 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
     }
   } else {
     delete newChars[cmd.name]
-    setState({ _characters: newChars, _lastDuration: cmd.duration })
+    setState({ _characters: newChars, _lastDuration: cmd.duration, _lastEase: cmd.ease })
   }
 
   return true
@@ -417,7 +430,8 @@ function _calcFocusCommands(
   def: CharDef,
   focusType?: string,
   fit: ZoomPreset = 'inherit',
-  duration: number = 800
+  duration: number = 800,
+  ease?: EasingType
 ): [(CameraPanCmd & { type: 'camera-pan' }), (CameraZoomCmd & { type: 'camera-zoom' })] | [] {
   if (!target) return []
   const activeBaseKey = target._currentBaseKey ?? Object.keys(def.bases)[0]
@@ -433,8 +447,8 @@ function _calcFocusCommands(
   const panY = charH * (0.5 - fp.y)
 
   return [
-    { type: 'camera-pan', position: 'center', duration, x: panX, y: panY },
-    { type: 'camera-zoom', preset: fit, duration }
+    { type: 'camera-pan', position: 'center', duration, ease, x: panX, y: panY },
+    { type: 'camera-zoom', preset: fit, duration, ease }
   ]
 }
 
@@ -468,7 +482,7 @@ characterFocusModule.defineCommand(function* (cmd, ctx) {
     requestAnimationFrame(checkSize)
     yield false
   }
-  const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800)
+  const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800, cmd.ease)
   for (const c of cmds) {
     const res = ctx.execute(c)
     if (res && typeof (res as Generator).next === 'function') {

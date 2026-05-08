@@ -1,5 +1,6 @@
 import type { SceneContext } from '../core/SceneContext'
 import { define } from '../define/defineCmdUI'
+import type { EasingType } from 'leviar'
 import { playMotionEffect, type MotionEffectPreset } from '../core/motion'
 
 export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
@@ -12,6 +13,8 @@ export interface CameraZoomCmd {
   preset: ZoomPreset
   /** 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
+  /** 애니메이션의 이징 함수 이름입니다. */
+  ease?: EasingType
 }
 
 /** 카메라를 패닝한다 */
@@ -24,6 +27,8 @@ export interface CameraPanCmd {
   x?: number
   /** 커스텀 Y 좌표입니다. */
   y?: number
+  /** 애니메이션의 이징 함수 이름입니다. */
+  ease?: EasingType
 }
 
 /**
@@ -64,7 +69,7 @@ export { MOTION_EFFECT_PRESETS as CAMERA_EFFECT_PRESETS } from '../core/motion'
 
 // ─── 공유 헬퍼 ───────────────────────────────────────────────
 
-export function zoomCamera(ctx: SceneContext, preset: ZoomPreset, duration?: number) {
+export function zoomCamera(ctx: SceneContext, preset: ZoomPreset, duration?: number, ease: EasingType = 'easeInOutQuad') {
   const resolvedPreset = preset === 'inherit' ? ctx.renderer.state.get('_lastZoomPreset') ?? 'reset' : preset
   ctx.renderer.state.set('_lastZoomPreset', resolvedPreset)
   const cfg = ZOOM_PRESETS[resolvedPreset as Exclude<ZoomPreset, 'inherit'>]
@@ -75,11 +80,11 @@ export function zoomCamera(ctx: SceneContext, preset: ZoomPreset, duration?: num
 
   if (ctx.renderer.camBaseObj) {
     const dur = ctx.renderer.dur(duration ?? cfg.duration)
-    ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, 'easeInOutQuad')
+    ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, ease)
   }
 }
 
-export function panCamera(ctx: SceneContext, position: PanPreset, duration?: number, customX?: number, customY?: number) {
+export function panCamera(ctx: SceneContext, position: PanPreset, duration?: number, customX?: number, customY?: number, ease: EasingType = 'easeInOutQuad') {
   if (position === 'inherit') return
 
   const resolvedPreset = position
@@ -110,7 +115,7 @@ export function panCamera(ctx: SceneContext, position: PanPreset, duration?: num
     const dur = ctx.renderer.dur(finalDur)
     ctx.renderer.animate(ctx.renderer.camBaseObj, {
       transform: { position: { x: targetX, y: targetY } }
-    }, dur, 'easeInOutQuad')
+    }, dur, ease)
   }
 }
 
@@ -139,7 +144,7 @@ cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide
 cameraZoomModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolved = cmd.preset === 'inherit' ? state._lastPreset : cmd.preset
   setState({ _lastPreset: resolved as string })
-  zoomCamera(ctx, resolved as ZoomPreset, cmd.duration)
+  zoomCamera(ctx, resolved as ZoomPreset, cmd.duration, cmd.ease)
   return true
 })
 
@@ -156,7 +161,7 @@ cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide:
 cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
   const resolved = cmd.position === 'inherit' ? state._lastPreset : cmd.position
   setState({ _lastPreset: resolved as string })
-  panCamera(ctx, resolved as PanPreset, cmd.duration, cmd.x, cmd.y)
+  panCamera(ctx, resolved as PanPreset, cmd.duration, cmd.x, cmd.y, cmd.ease)
   return true
 })
 

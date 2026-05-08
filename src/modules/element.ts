@@ -1,4 +1,4 @@
-import type { Style } from 'leviar'
+import type { Style, EasingType } from 'leviar'
 import type { AssetKeysOf } from '../types/config'
 import type { SceneContext } from '../core/SceneContext'
 import type { SetStateFn } from '../define/defineCmdUI'
@@ -98,6 +98,8 @@ export interface ElementCmdBase<TConfig = any> {
   children?: ElementChild<TConfig>[]
   /** show/hide 페이드 시간(ms). 기본 200 */
   duration?: number
+  /** 애니메이션의 이징 함수 이름입니다. */
+  ease?: EasingType
   /** UI 억제 시스템을 위한 태그 목록. 없으면 빈 배열([]) */
   uiTags?: string[]
   /** 해당 UI 활성화 시 억제(숨김)할 대상 태그 목록. 없으면 빈 배열([]) */
@@ -135,6 +137,7 @@ export interface ElementEntry {
 export interface ElementSchema {
   _elements: Record<string, ElementEntry>
   _lastDuration?: number
+  _lastEase?: string
 }
 
 // ─── children → flat 변환 ─────────────────────────────────────
@@ -371,7 +374,7 @@ elementModule.defineView((ctx, data, setState) => {
     })
   }
 
-  const _addElement = (entry: ElementEntry, immediate = false, duration?: number) => {
+  const _addElement = (entry: ElementEntry, immediate = false, duration?: number, ease: EasingType = 'easeOut') => {
     if (_elementObjs[entry.id]) return // 이미 존재
 
     const creator = KIND_CREATORS[entry.kind]
@@ -435,11 +438,11 @@ elementModule.defineView((ctx, data, setState) => {
 
     if (!immediate) {
       obj.style.opacity = 0
-      ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, 'easeOut')
+      ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, ease)
     }
   }
 
-  const _removeElement = (id: string, duration?: number, immediate = false) => {
+  const _removeElement = (id: string, duration?: number, immediate = false, ease: EasingType = 'easeIn') => {
     const obj = _elementObjs[id]
     if (!obj) return
     delete _elementObjs[id]
@@ -447,7 +450,7 @@ elementModule.defineView((ctx, data, setState) => {
 
     const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200)
     if (dur > 0) {
-      ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeIn', () => {
+      ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
         obj.remove({ child: true })
       })
     } else {
@@ -455,7 +458,7 @@ elementModule.defineView((ctx, data, setState) => {
     }
   }
 
-  const _updateElement = (entry: ElementEntry, duration?: number) => {
+  const _updateElement = (entry: ElementEntry, duration?: number, ease: EasingType = 'easeInOutQuad') => {
     const obj = _elementObjs[entry.id]
     const previous = _elementEntries[entry.id]
     if (!obj || !previous) return
@@ -498,7 +501,7 @@ elementModule.defineView((ctx, data, setState) => {
         transform,
       },
       dur,
-      'easeInOutQuad'
+      ease
     )
 
     _elementEntries[entry.id] = entry
@@ -539,23 +542,24 @@ elementModule.defineView((ctx, data, setState) => {
     },
     onUpdate: (_ctx: SceneContext, state: ElementSchema, _setState: SetStateFn<ElementSchema>) => {
       const dur = state._lastDuration
+      const ease = (state._lastEase ?? 'easeIn') as EasingType
       const newKeys = new Set(Object.keys(state._elements))
 
       // 제거된 항목
       for (const key of Object.keys(_elementObjs)) {
-        if (!newKeys.has(key)) _removeElement(key, dur)
+        if (!newKeys.has(key)) _removeElement(key, dur, false, ease)
       }
 
       // 추가된 항목 (토폴로지 순)
       const toUpdate = Object.values(state._elements).filter(e => _elementObjs[e.id])
       for (const entry of topoSort(toUpdate)) {
-        _updateElement(entry, dur)
+        _updateElement(entry, dur, ease ?? 'easeInOutQuad')
       }
 
       const toAdd = Object.values(state._elements).filter(e => !_elementObjs[e.id])
       const sortedAdd = topoSort(toAdd)
       for (const entry of sortedAdd) {
-        _addElement(entry, false, dur)
+        _addElement(entry, false, dur, ease ?? 'easeOut')
       }
     },
   }
@@ -619,7 +623,7 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
     }
   }
 
-  setState({ _elements: newElements, _lastDuration: cmd.duration })
+  setState({ _elements: newElements, _lastDuration: cmd.duration, _lastEase: cmd.ease })
 
   // show 후 per-element UIRuntimeEntry 등록
   // setState → onUpdate → _addElement 순으로 동기 실행되므로
