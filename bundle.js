@@ -1321,7 +1321,8 @@
     _fit: "cover",
     _lastDuration: 1e3,
     _parallax: true,
-    _isVideo: false
+    _isVideo: false,
+    _lastEase: void 0
   });
   backgroundModule.defineView((ctx, data, setState) => {
     let _bgObj = null;
@@ -1410,6 +1411,7 @@
         const src = def.src ?? state._key;
         const useParallax = def.parallax ?? true;
         const dur = ctx.renderer.dur(state._lastDuration);
+        const ease = state._lastEase ?? "easeInOutQuad";
         ctx.renderer.state.set("backgroundKey", state._key);
         if (_bgObj) {
           const sameParallax = _bgParallax === useParallax;
@@ -1428,7 +1430,7 @@
         _bgParallax = useParallax;
         _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, dur > 0 ? 0 : 1);
         if (dur > 0 && _bgObj) {
-          ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, "easeInOutQuad");
+          ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, ease);
         }
       }
     };
@@ -1443,7 +1445,8 @@
       _fit: fit,
       _lastDuration: cmd.duration ?? 1e3,
       _parallax: def.parallax ?? true,
-      _isVideo: cmd.isVideo ?? false
+      _isVideo: cmd.isVideo ?? false,
+      _lastEase: cmd.ease
     });
     return true;
   });
@@ -2259,7 +2262,7 @@
       const cy = ctx.renderer.height * ny;
       return cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(cx, cy) : { x: cx - ctx.renderer.width / 2, y: -(cy - ctx.renderer.height / 2), z: 100 };
     };
-    const _addTextOverlay = (entry, immediate = false, duration) => {
+    const _addTextOverlay = (entry, immediate = false, duration, ease = "easeOut") => {
       const { name, preset, text } = entry;
       const defaults = OVERLAY_PRESETS[preset];
       if (!defaults) return;
@@ -2290,9 +2293,9 @@
       ctx.renderer.world.camera?.addChild(textObj);
       _overlayObjs[name] = textObj;
       _overlayEntries[name] = entry;
-      if (!immediate) textObj.fadeIn(duration ?? 300, "easeOut");
+      if (!immediate) textObj.fadeIn(duration ?? 300, ease);
     };
-    const _addImageOverlay = (entry, immediate = false, duration) => {
+    const _addImageOverlay = (entry, immediate = false, duration, ease = "easeOut") => {
       const { name, src, x, y, width, height, fit = "contain", zIndex, opacity = 1 } = entry;
       const existing = _overlayObjs[name];
       if (existing) {
@@ -2344,17 +2347,17 @@
         checkFit();
       }
       if (!immediate) {
-        ctx.renderer.animate(imgObj, { style: { opacity } }, duration ?? 300, "easeOut");
+        ctx.renderer.animate(imgObj, { style: { opacity } }, duration ?? 300, ease);
       }
     };
-    const _removeOverlay = (key, duration, immediate = false) => {
+    const _removeOverlay = (key, duration, immediate = false, ease = "easeInOutQuad") => {
       const obj = _overlayObjs[key];
       if (obj) {
         delete _overlayObjs[key];
         delete _overlayEntries[key];
         const dur = immediate ? 0 : ctx.renderer.dur(duration);
         if (dur > 0) {
-          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeInOutQuad", () => {
+          ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
             obj.remove();
           });
         } else {
@@ -2362,11 +2365,11 @@
         }
       }
     };
-    const _addOverlay = (entry, immediate = false, duration) => {
+    const _addOverlay = (entry, immediate = false, duration, ease = "easeOut") => {
       if (entry.kind === "text") {
-        _addTextOverlay(entry, immediate, duration);
+        _addTextOverlay(entry, immediate, duration, ease);
       } else {
-        _addImageOverlay(entry, immediate, duration);
+        _addImageOverlay(entry, immediate, duration, ease);
       }
     };
     for (const entry of Object.values(data._overlays)) {
@@ -2387,16 +2390,17 @@
       getObj: (name) => _overlayObjs[name],
       onUpdate: (_ctx, state, _setState) => {
         const dur = state._lastDuration;
+        const ease = state._lastEase ?? "easeInOutQuad";
         const newKeys = new Set(Object.keys(state._overlays));
         for (const key of Object.keys(_overlayObjs)) {
-          if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600);
+          if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600, false, ease);
         }
         for (const [key, entry] of Object.entries(state._overlays)) {
           const prev = _overlayEntries[key];
           if (!_overlayObjs[key]) {
-            _addOverlay(entry, false, dur);
+            _addOverlay(entry, false, dur, state._lastEase ?? "easeOut");
           } else if (prev && !_isSameEntry(prev, entry)) {
-            _addOverlay(entry, false, dur);
+            _addOverlay(entry, false, dur, state._lastEase ?? "easeOut");
           }
         }
       }
@@ -2421,7 +2425,7 @@
     } else {
       delete newOverlays[cmd.name];
     }
-    setState({ _overlays: newOverlays, _lastDuration: cmd.duration });
+    setState({ _overlays: newOverlays, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     return true;
   });
   var overlayImageModule = define2({
@@ -2448,7 +2452,7 @@
     } else {
       delete newOverlays[cmd.name];
     }
-    setState({ _overlays: newOverlays, _lastDuration: cmd.duration });
+    setState({ _overlays: newOverlays, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     return true;
   });
   var overlayEffectModule = define2({ _unused: void 0 });
