@@ -3,8 +3,7 @@ import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
 
 export default defineScene({
-  config,
-  next: 'scene-ending',
+  config
 })(({ label, goto }) => [
   {
     type: 'dialogue',

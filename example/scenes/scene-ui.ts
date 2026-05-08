@@ -115,7 +115,7 @@ export default defineScene({
     ]
   },
 
-  call('scene-start', { preserve: true, restore: false }),
-  call('scene-outside', { preserve: true, restore: false }),
-  call('scene-ending', { preserve: true, restore: false }),
+  call('scene-start', { preserve: true, restore: true }),
+  call('scene-outside', { preserve: true, restore: true }),
+  call('scene-ending', { preserve: true, restore: true }),
 ])

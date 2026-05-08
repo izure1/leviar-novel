@@ -18991,12 +18991,12 @@ ${addLineNumbers(fragment)}`);
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
-      scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
+      const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
+      scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex);
       this._syncUIState();
     }
     /**
@@ -19181,11 +19181,11 @@ ${addLineNumbers(fragment)}`);
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
-      scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
+      scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
       this._syncUIState();
     }
     /**
@@ -19697,9 +19697,9 @@ ${addLineNumbers(fragment)}`);
         }
       ]
     },
-    call("scene-start", { preserve: true, restore: false }),
-    call("scene-outside", { preserve: true, restore: false }),
-    call("scene-ending", { preserve: true, restore: false })
+    call("scene-start", { preserve: true, restore: true }),
+    call("scene-outside", { preserve: true, restore: true }),
+    call("scene-ending", { preserve: true, restore: true })
   ]);
 
   // example/scenes/scene-start.ts
@@ -20874,7 +20874,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uBC29\uAD6C\uC11D\uC5D0\uB9CC \uBC15\uD600\uC788\uB2E4\uAC00\uB294 \uC815\uB9D0\uB85C \uACF0\uD321\uC774\uAC00 \uD53C\uC5B4\uC624\uB97C \uAC83 \uAC19\uC558\uAE30 \uB54C\uBB38\uC774\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", duration: 800 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", focus: "face", duration: 800 },
     { type: "mood", mood: "day", intensity: 1, duration: 800, flicker: "candle" },
     {
       type: "dialogue",
@@ -20986,8 +20986,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-bug.ts
   var scene_bug_default = defineScene({
-    config: novel_config_default,
-    next: "scene-ending"
+    config: novel_config_default
   })(({ label, goto }) => [
     {
       type: "dialogue",
@@ -21136,7 +21135,6 @@ ${addLineNumbers(fragment)}`);
   var scene_ending_default = defineScene({
     config: novel_config_default
   })(({ label, goto, call }) => [
-    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
     { type: "mood", mood: "sunset", intensity: 0.8, duration: 0 },
@@ -21149,7 +21147,7 @@ ${addLineNumbers(fragment)}`);
       type: "dialogue",
       text: "\uB2E4\uC0AC\uB2E4\uB09C\uD588\uB358 \uD558\uB8E8\uAC00 \uB05D\uC744 \uD5A5\uD574 \uAC00\uACE0 \uC788\uB2E4."
     },
-    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", duration: 1e3 },
+    { type: "character", action: "show", name: "fumika", image: "normal:normal", position: "center", focus: "face", duration: 1e3 },
     {
       type: "dialogue",
       speaker: "fumika",

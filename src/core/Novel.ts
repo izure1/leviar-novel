@@ -631,15 +631,15 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
 
     // 지역 변수 + cursor 복원
-    const subIndex = (resolvedData.states?.['dialogue'] as any)?.subIndex ?? 0
-    scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex)
-
     this._currentScene = scene
     this._currentSceneDef = def
     this._inputMode = 'block'
 
     // 새 씬 훅 등록
     def.hooks?._register(this)
+
+    const subIndex = (resolvedData.states?.['dialogue'] as any)?.subIndex ?? 0
+    scene.restoreState(resolvedData.cursor, resolvedData.localVars, subIndex)
 
     this._syncUIState()
   }
@@ -726,7 +726,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
         const next = (this._currentSceneDef as SceneDefinition<any, any, any, any, any>).nextScene
         if (next) { this.loadScene(next); return }
-        // nextScene 없음 — 콜 스택 확인
         if (this._callStack.length > 0) {
           this._resumeCallerScene()
           return
@@ -858,13 +857,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     // 호출자 씬 복원 (커서·localVars)
     const callbacks = this._buildCallbacks()
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
-    scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex)
-
     this._currentScene = scene
     this._currentSceneDef = def
     this._inputMode = 'block'
 
     def.hooks?._register(this)
+
+    scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex)
 
     this._syncUIState()
   }
