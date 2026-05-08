@@ -4,7 +4,6 @@ import { commonInitial } from './common-initial'
 
 export default defineScene({
   config,
-  initial: commonInitial,
   next: 'scene-ending',
 })(({ label, goto }) => [
   {

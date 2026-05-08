@@ -7,7 +7,6 @@ export default defineScene({
   variables: {
     _gameScore: 0,
   },
-  initial: commonInitial,
   next: {
     scene: 'scene-food',
     preserve: true,

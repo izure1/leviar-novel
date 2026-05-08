@@ -19462,117 +19462,6 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
-  // example/scenes/scene-ui.ts
-  var UI_BUTTON_STYLE = {
-    fontSize: 22,
-    fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
-    color: "rgba(255, 255, 255, 0.6)",
-    textAlign: "center",
-    textShadowBlur: 1,
-    textShadowOffsetX: 1,
-    textShadowOffsetY: 1,
-    textShadowColor: "rgba(0, 0, 0, 1)",
-    cursor: "pointer"
-  };
-  var scene_ui_default = defineScene({
-    config: novel_config_default,
-    actions: {
-      save: (ctx, vars) => {
-        save(ctx.novel);
-      },
-      load: (ctx) => {
-        load(ctx.novel);
-      },
-      fullscreen(ctx, vars) {
-        ctx.novel.toggleFullscreen();
-      },
-      log(ctx, vars) {
-        console.log(ctx, vars);
-      }
-    }
-  })(() => [
-    // ── 하단 패널 (우측 하단) ─────────────────────────────
-    {
-      type: "element",
-      action: "show",
-      id: "panel",
-      kind: "rect",
-      position: { x: 0.85, y: 0.95 },
-      style: {
-        width: 180,
-        height: 40,
-        color: "rgba(0, 0, 0, 0)"
-        // 투명 컨테이너
-      },
-      children: [
-        // 저장 버튼 (텍스트)
-        {
-          id: "btn_save",
-          kind: "text",
-          text: "\uC800\uC7A5\uD558\uAE30",
-          position: { x: -120, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "save"
-        },
-        // 로드 버튼 (텍스트)
-        {
-          id: "btn_load",
-          kind: "text",
-          text: "\uBD88\uB7EC\uC624\uAE30",
-          position: { x: 0, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "load"
-        },
-        // 전체화면 버튼
-        {
-          id: "btn_fullscreen",
-          kind: "text",
-          text: "\uC804\uCCB4\uD654\uBA74",
-          position: { x: 120, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "fullscreen"
-        }
-      ]
-    },
-    // 사이드바
-    {
-      type: "element",
-      action: "show",
-      id: "sidebar",
-      kind: "rect",
-      uiTags: ["default-ui"],
-      position: { x: 0.9, y: 0.05 },
-      style: {
-        width: 200,
-        height: 600
-      },
-      children: [
-        {
-          kind: "text",
-          action: "show",
-          id: "text_like",
-          text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
-          position: { x: 0, y: 0 },
-          style: {
-            ...UI_BUTTON_STYLE,
-            color: "rgb(255, 255, 255)"
-          },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "log"
-        }
-      ]
-    }
-  ]);
-
   // example/scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
     "debug": {
@@ -19698,6 +19587,121 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
+  // example/scenes/scene-ui.ts
+  var UI_BUTTON_STYLE = {
+    fontSize: 22,
+    fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center",
+    textShadowBlur: 1,
+    textShadowOffsetX: 1,
+    textShadowOffsetY: 1,
+    textShadowColor: "rgba(0, 0, 0, 1)",
+    cursor: "pointer"
+  };
+  var scene_ui_default = defineScene({
+    config: novel_config_default,
+    initial: commonInitial,
+    actions: {
+      save: (ctx, vars) => {
+        save(ctx.novel);
+      },
+      load: (ctx) => {
+        load(ctx.novel);
+      },
+      fullscreen(ctx, vars) {
+        ctx.novel.toggleFullscreen();
+      },
+      log(ctx, vars) {
+        console.log(ctx, vars);
+      }
+    }
+  })(({ call }) => [
+    // ── 하단 패널 (우측 하단) ─────────────────────────────
+    {
+      type: "element",
+      action: "show",
+      id: "panel",
+      kind: "rect",
+      position: { x: 0.85, y: 0.95 },
+      style: {
+        width: 180,
+        height: 40,
+        color: "rgba(0, 0, 0, 0)"
+        // 투명 컨테이너
+      },
+      children: [
+        // 저장 버튼 (텍스트)
+        {
+          id: "btn_save",
+          kind: "text",
+          text: "\uC800\uC7A5\uD558\uAE30",
+          position: { x: -120, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "save"
+        },
+        // 로드 버튼 (텍스트)
+        {
+          id: "btn_load",
+          kind: "text",
+          text: "\uBD88\uB7EC\uC624\uAE30",
+          position: { x: 0, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "load"
+        },
+        // 전체화면 버튼
+        {
+          id: "btn_fullscreen",
+          kind: "text",
+          text: "\uC804\uCCB4\uD654\uBA74",
+          position: { x: 120, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "fullscreen"
+        }
+      ]
+    },
+    // 사이드바
+    {
+      type: "element",
+      action: "show",
+      id: "sidebar",
+      kind: "rect",
+      uiTags: ["default-ui"],
+      position: { x: 0.9, y: 0.05 },
+      style: {
+        width: 200,
+        height: 600
+      },
+      children: [
+        {
+          kind: "text",
+          action: "show",
+          id: "text_like",
+          text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
+          position: { x: 0, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE,
+            color: "rgb(255, 255, 255)"
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "log"
+        }
+      ]
+    },
+    call("scene-start", { preserve: true, restore: false }),
+    call("scene-outside", { preserve: true, restore: false }),
+    call("scene-ending", { preserve: true, restore: false })
+  ]);
+
   // example/scenes/scene-start.ts
   var scene_start_default = defineScene({
     config: novel_config_default,
@@ -19705,7 +19709,6 @@ ${addLineNumbers(fragment)}`);
       _isAnnoyed: false,
       _inputRepeatCount: 0
     },
-    initial: commonInitial,
     next: {
       scene: "scene-game",
       preserve: true
@@ -19727,7 +19730,7 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     // 공용 ui를 보여줍니다.
-    call("scene-ui", { preserve: true, restore: false }),
+    // call('scene-ui', { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "floor", duration: 0 },
     { type: "mood", mood: "day", intensity: 0.5, duration: 0 },
@@ -20137,7 +20140,6 @@ ${addLineNumbers(fragment)}`);
     variables: {
       _gameScore: 0
     },
-    initial: commonInitial,
     next: {
       scene: "scene-food",
       preserve: true
@@ -20303,7 +20305,6 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-food.ts
   var scene_food_default = defineScene({
     config: novel_config_default,
-    initial: commonInitial,
     next: {
       scene: "scene-stream",
       preserve: true
@@ -20449,9 +20450,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-stream.ts
   var scene_stream_default = defineScene({
-    config: novel_config_default,
-    initial: commonInitial,
-    next: "scene-outside"
+    config: novel_config_default
   })(({ label, goto }) => [
     {
       type: "mood",
@@ -20837,13 +20836,11 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-outside.ts
   var scene_outside_default = defineScene({
     config: novel_config_default,
-    initial: commonInitial,
     next: {
       scene: "scene-bug",
       preserve: true
     }
   })(({ label, goto, call }) => [
-    call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "park", duration: 1e3 },
     { type: "mood", mood: "day", intensity: 1, duration: 0 },
@@ -20990,7 +20987,6 @@ ${addLineNumbers(fragment)}`);
   // example/scenes/scene-bug.ts
   var scene_bug_default = defineScene({
     config: novel_config_default,
-    initial: commonInitial,
     next: "scene-ending"
   })(({ label, goto }) => [
     {
@@ -21119,14 +21115,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-sub.ts
   var scene_sub_default = defineScene({
-    config: novel_config_default,
-    variables: {},
-    initial: {
-      dialogue: {
-        bg: { color: "rgba(0, 0, 50, 0.8)" }
-        // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
-      }
-    }
+    config: novel_config_default
   })(({}) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 300 },
     { type: "audio", action: "pause", name: "bgm", duration: 500 },
@@ -21145,10 +21134,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-ending.ts
   var scene_ending_default = defineScene({
-    config: novel_config_default,
-    initial: commonInitial,
-    // 씬 5개 종료 후 처음으로 롤백
-    next: "scene-start"
+    config: novel_config_default
   })(({ label, goto, call }) => [
     call("scene-ui", { preserve: true, restore: false }),
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
@@ -21438,7 +21424,7 @@ ${addLineNumbers(fragment)}`);
       }
       return state;
     });
-    novel.start("scene-start");
+    novel.start("scene-ui");
     console.log(novel);
     const btnSkip = document.getElementById("btn-skip");
     const btnSave = document.getElementById("btn-save");

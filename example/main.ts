@@ -171,7 +171,7 @@ async function main() {
   })
 
   // ── 시작
-  novel.start('scene-start')
+  novel.start('scene-ui')
   console.log(novel)
 
   // =============================================================

@@ -4,9 +4,6 @@ import { commonInitial } from './common-initial'
 
 export default defineScene({
   config,
-  initial: commonInitial,
-  // 씬 5개 종료 후 처음으로 롤백
-  next: 'scene-start',
 })(({ label, goto, call }) => [
 
   call('scene-ui', { preserve: true, restore: false }),

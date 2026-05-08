@@ -8,7 +8,6 @@ export default defineScene({
     _isAnnoyed: false,
     _inputRepeatCount: 0,
   },
-  initial: commonInitial,
   next: {
     scene: 'scene-game',
     preserve: true,
@@ -31,7 +30,7 @@ export default defineScene({
   },
 
   // 공용 ui를 보여줍니다.
-  call('scene-ui', { preserve: true, restore: false }),
+  // call('scene-ui', { preserve: true, restore: false }),
 
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'floor', duration: 0 },

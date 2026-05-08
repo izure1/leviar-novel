@@ -2,13 +2,7 @@ import config from '../novel.config'
 import { defineScene } from '../../src'
 
 export default defineScene({
-  config,
-  variables: {},
-  initial: {
-    dialogue: {
-      bg: { color: 'rgba(0, 0, 50, 0.8)' } // 서브씬 진입 시 대화창 배경색을 푸른색으로 변경하여 연출
-    }
-  }
+  config
 })(({ }) => [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 300 },
   { type: 'audio', action: 'pause', name: 'bgm', duration: 500 },
