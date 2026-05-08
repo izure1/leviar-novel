@@ -276,6 +276,7 @@ export type NovelHookRef = {
   'novel:load': (value: any) => any
   'novel:next': (value: boolean) => boolean
   'novel:scene': (value: string) => string
+  'novel:var': (payload: { name: string, oldValue: any, newValue: any }) => { name: string, oldValue: any, newValue: any }
 }
 
 // ─── SceneHookDescriptor ─────────────────────────────────────
@@ -294,19 +295,21 @@ export interface SceneHookDescriptor {
 
 // ─── defineHook ──────────────────────────────────────────────
 
+type HookReturn<T> = T extends (...args: any) => infer R ? R : never
+
 export type SceneHookMethods<TConfig, K extends keyof AllHooksOf<TConfig>> = {
   onBefore?: (
-    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
-  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+    value: HookReturn<AllHooksOf<TConfig>[K]>,
+  ) => HookReturn<AllHooksOf<TConfig>[K]>
   onAfter?: (
-    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
-  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+    value: HookReturn<AllHooksOf<TConfig>[K]>,
+  ) => HookReturn<AllHooksOf<TConfig>[K]>
   onceBefore?: (
-    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
-  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+    value: HookReturn<AllHooksOf<TConfig>[K]>,
+  ) => HookReturn<AllHooksOf<TConfig>[K]>
   onceAfter?: (
-    value: AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never,
-  ) => AllHooksOf<TConfig>[K] extends (...args: any) => infer R ? R : never
+    value: HookReturn<AllHooksOf<TConfig>[K]>,
+  ) => HookReturn<AllHooksOf<TConfig>[K]>
 }
 
 export type SceneHookMap<TConfig> = {

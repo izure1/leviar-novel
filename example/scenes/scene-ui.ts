@@ -26,6 +26,9 @@ export default defineScene({
     },
     fullscreen(ctx, vars) {
       ctx.novel.toggleFullscreen()
+    },
+    log(ctx, vars) {
+      console.log(ctx, vars)
     }
   },
 })(() => [
@@ -104,6 +107,8 @@ export default defineScene({
           ...UI_BUTTON_STYLE,
           color: 'rgb(255, 255, 255)'
         },
+        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
+        onClick: 'log',
       },
     ]
   }

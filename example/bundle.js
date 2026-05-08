@@ -18193,6 +18193,16 @@ ${addLineNumbers(fragment)}`);
     get _vars() {
       return { ...this.callbacks.getEnvironments(), ...this.callbacks.getGlobalVars(), ...this.localVars };
     }
+    _setLocalVar(name, value) {
+      const oldValue = this.localVars[name];
+      if (Object.is(oldValue, value)) return;
+      const payload = this.callbacks.getNovel().hooker.trigger(
+        "novel:var",
+        { name, oldValue, newValue: value },
+        (data) => data
+      );
+      this.localVars[name] = payload.newValue;
+    }
     _interpolateText(text) {
       return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
         try {
@@ -18263,7 +18273,7 @@ ${addLineNumbers(fragment)}`);
           getVars: () => this._vars,
           setGlobalVar: (key, value) => this.callbacks.setGlobalVar(key, value),
           setLocalVar: (key, value) => {
-            this.localVars[key] = value;
+            this._setLocalVar(key, value);
           },
           loadScene: (target) => {
             this._ended = true;
@@ -18431,7 +18441,7 @@ ${addLineNumbers(fragment)}`);
           getVars: () => this._vars,
           setGlobalVar: (key, value) => this.callbacks.setGlobalVar(key, value),
           setLocalVar: (key, value) => {
-            this.localVars[key] = value;
+            this._setLocalVar(key, value);
           },
           loadScene: (target) => {
             this._ended = true;
@@ -18736,6 +18746,28 @@ ${addLineNumbers(fragment)}`);
       };
       return proxy;
     }
+    _setGlobalVar(name, value) {
+      const oldValue = this.variables[name];
+      if (Object.is(oldValue, value)) return;
+      const payload = this._novelHooker.trigger(
+        "novel:var",
+        { name, oldValue, newValue: value },
+        (data) => data
+      );
+      const variables = this.variables;
+      variables[name] = payload.newValue;
+    }
+    _setEnvironment(name, value) {
+      const oldValue = this.environments[name];
+      if (Object.is(oldValue, value)) return;
+      const payload = this._novelHooker.trigger(
+        "novel:var",
+        { name, oldValue, newValue: value },
+        (data) => data
+      );
+      const environments = this.environments;
+      environments[name] = payload.newValue;
+    }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
     async load() {
       if (this._config.assets) {
@@ -18988,11 +19020,11 @@ ${addLineNumbers(fragment)}`);
         getNovel: () => this,
         getGlobalVars: () => ({ ...this.variables }),
         setGlobalVar: (name, value) => {
-          this.variables[name] = value;
+          this._setGlobalVar(name, value);
         },
         getEnvironments: () => ({ ...this.environments ?? {} }),
         setEnvironment: (name, value) => {
-          this.environments[name] = value;
+          this._setEnvironment(name, value);
         },
         loadScene: (target) => {
           this.loadScene(target);
@@ -19244,7 +19276,7 @@ ${addLineNumbers(fragment)}`);
           setGlobalVar: noop,
           getEnvironments: () => ({ ...this.environments ?? {} }),
           setEnvironment: (name, value) => {
-            this.environments[name] = value;
+            this._setEnvironment(name, value);
           },
           loadScene: noop,
           callScene: noop,
@@ -19453,6 +19485,9 @@ ${addLineNumbers(fragment)}`);
       },
       fullscreen(ctx, vars) {
         ctx.novel.toggleFullscreen();
+      },
+      log(ctx, vars) {
+        console.log(ctx, vars);
       }
     }
   })(() => [
@@ -19530,7 +19565,9 @@ ${addLineNumbers(fragment)}`);
           style: {
             ...UI_BUTTON_STYLE,
             color: "rgb(255, 255, 255)"
-          }
+          },
+          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
+          onClick: "log"
         }
       ]
     }

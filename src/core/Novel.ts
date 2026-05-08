@@ -84,6 +84,12 @@ export interface CallStackFrame {
   restore: boolean
 }
 
+export interface NovelVarHookPayload {
+  name: string
+  oldValue: any
+  newValue: any
+}
+
 // ─── NovelHook 타입 ──────────────────────────────────────────
 
 /**
@@ -106,6 +112,8 @@ export interface NovelHook {
   'novel:next': (value: boolean) => boolean
   /** novel.start() / loadScene() 호출 시 방출. initialValue = 씬 이름 */
   'novel:scene': (value: string) => string
+  /** 변수 값 변경 시 방출. initialValue = 변수 변경 payload */
+  'novel:var': (payload: NovelVarHookPayload) => NovelVarHookPayload
 }
 
 // =============================================================
@@ -304,6 +312,32 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         getHooker(cmd).trigger(cmd, initialValue, callback, ...params),
     }
     return proxy
+  }
+
+  private _setGlobalVar(name: string, value: any): void {
+    const oldValue = (this.variables as any)[name]
+    if (Object.is(oldValue, value)) return
+
+    const payload = this._novelHooker.trigger(
+      'novel:var',
+      { name, oldValue, newValue: value },
+      (data) => data
+    )
+    const variables = this.variables as any
+    variables[name] = payload.newValue
+  }
+
+  private _setEnvironment(name: string, value: any): void {
+    const oldValue = (this.environments as any)[name]
+    if (Object.is(oldValue, value)) return
+
+    const payload = this._novelHooker.trigger(
+      'novel:var',
+      { name, oldValue, newValue: value },
+      (data) => data
+    )
+    const environments = this.environments as any
+    environments[name] = payload.newValue
   }
 
   // ─── 에셋 로딩 ───────────────────────────────────────────────
@@ -633,9 +667,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     return {
       getNovel: () => this as any,
       getGlobalVars: () => ({ ...this.variables as object }),
-      setGlobalVar: (name, value) => { (this.variables as any)[name] = value },
+      setGlobalVar: (name, value) => { this._setGlobalVar(name, value) },
       getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
-      setEnvironment: (name, value) => { (this.environments as any)[name] = value },
+      setEnvironment: (name, value) => { this._setEnvironment(name, value) },
       loadScene: (target) => { this.loadScene(target) },
       callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore) => {
         this._callScene(name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore)
@@ -937,7 +971,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         getGlobalVars: () => ({}),
         setGlobalVar: noop as any,
         getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
-        setEnvironment: (name: string, value: any) => { (this.environments as any)[name] = value },
+        setEnvironment: (name: string, value: any) => { this._setEnvironment(name, value) },
         loadScene: noop as any,
         callScene: noop as any,
         captureRenderer: () => this._renderer.captureState(),

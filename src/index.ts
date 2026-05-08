@@ -112,7 +112,7 @@ export { default as elementModule } from './modules/element'
 
 // ─── 코어 클래스 ─────────────────────────────────────────────
 export { Novel } from './core/Novel'
-export type { SaveData, CallStackFrame, NovelHook, AllModuleHooksOf } from './core/Novel'
+export type { SaveData, CallStackFrame, NovelHook, NovelVarHookPayload, AllModuleHooksOf } from './core/Novel'
 export { Renderer } from './core/Renderer'
 export type { RendererOption, RendererState, CameraState } from './core/Renderer'
 export { AudioManager } from './core/AudioManager'
