@@ -73,10 +73,6 @@ export interface DialogueSchema {
   _speakerKey: string | undefined
   /** @internal 현재 타이핑 속도(ms) */
   _speed: number | undefined
-  /** @internal 커스텀 UI 태그 */
-  _uiTags?: string[]
-  /** @internal 커스텀 UI 숨김 태그 */
-  _hideTags?: string[]
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -136,10 +132,6 @@ export interface DialogueCmd<TConfig = any> {
    * 미지정 시 시스템 설정 속도 또는 기본값(예: 30ms)이 사용됩니다.
    */
   speed?: number
-  /** UI 억제 시스템을 위한 태그 목록. 없으면 기본값(['dialogue', 'default-ui']) 사용 */
-  uiTags?: string[]
-  /** 해당 UI 활성화 시 억제(숨김)할 대상 태그 목록. 없으면 빈 배열([]) */
-  hideTags?: string[]
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -338,8 +330,8 @@ dialogueModule.defineView((ctx, data, setState) => {
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    uiTags: data._uiTags ?? ['dialogue', 'default-ui'],
-    hideTags: data._hideTags ?? [],
+    uiTags: ['dialogue', 'default-ui'],
+    hideTags: [],
 
     /**
      * novel.next() 호출 시 타이핑 완성 여부 판단.
@@ -418,8 +410,6 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
       _speakerKey: cmd.speaker as string | undefined,
       _subIndex: index,
       _lines: [...lines],
-      _uiTags: cmd.uiTags ?? state._uiTags ?? ['dialogue', 'default-ui'],
-      _hideTags: cmd.hideTags ?? state._hideTags ?? [],
     })
 
     // 'dialogue:text-run' 훅 방출

@@ -116,13 +116,15 @@ export interface ElementEntry {
   pivot?: { x: number; y: number }
   rotation?: number
   onClick?: string
+  /** 이 요소의 UI 억제 태그 목록 */
+  uiTags?: string[]
+  /** 이 요소 활성화 시 숨길 UI 태그 목록 */
+  hideTags?: string[]
 }
 
 export interface ElementSchema {
   _elements: Record<string, ElementEntry>
   _lastDuration?: number
-  _uiTags?: string[]
-  _hideTags?: string[]
 }
 
 // ─── children → flat 변환 ─────────────────────────────────────
@@ -193,6 +195,9 @@ function topoSort(entries: ElementEntry[]): ElementEntry[] {
 // ─── 모듈 레벨 액션 캐시 (view 재빌드 후에도 유지) ────────────
 
 const _actionCache = new Map<string, (ctx: SceneContext, vars: Record<string, any>) => void>()
+
+/** 씬 내에서 활성화된 루트 요소 obj 참조 (defineCommand에서 UIRuntimeEntry 등록용) */
+const _sharedElementObjs = new Map<string, any>()
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
@@ -322,6 +327,8 @@ elementModule.defineView((ctx, data, setState) => {
 
     _elementObjs[entry.id] = obj
     _elementEntries[entry.id] = entry
+    // 루트 요소만 공유 참조에 저장 (defineCommand에서 UIRuntimeEntry 등록 용도)
+    if (!entry.parent) _sharedElementObjs.set(entry.id, obj)
 
     if (!immediate) {
       obj.style.opacity = 0
@@ -334,6 +341,7 @@ elementModule.defineView((ctx, data, setState) => {
     if (!obj) return
     delete _elementObjs[id]
     delete _elementEntries[id]
+    _sharedElementObjs.delete(id)
 
     const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200)
     if (dur > 0) {
@@ -353,8 +361,9 @@ elementModule.defineView((ctx, data, setState) => {
   }
 
   return {
-    uiTags: data._uiTags ?? [],
-    hideTags: data._hideTags ?? [],
+    // 모듈 레벨 entry는 태그 없음 — 억제는 per-element entry가 담당
+    uiTags: [],
+    hideTags: [],
     show: (duration) => {
       for (const [id, entry] of Object.entries(_elementEntries)) {
         if (!entry.parent && _elementObjs[id]) {
@@ -375,6 +384,7 @@ elementModule.defineView((ctx, data, setState) => {
       }
       for (const key of Object.keys(_elementObjs)) delete _elementObjs[key]
       for (const key of Object.keys(_elementEntries)) delete _elementEntries[key]
+      _sharedElementObjs.clear()
     },
     onUpdate: (_ctx: SceneContext, state: ElementSchema, _setState: SetStateFn<ElementSchema>) => {
       const dur = state._lastDuration
@@ -415,10 +425,8 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
   const newElements = { ...state._elements }
 
   if (cmd.action === 'show') {
-    // onClick actions를 캐시에 저장 (command ctx는 올바른 scene actions 보유)
     cacheOnClickActions(cmd, ctx)
 
-    // 루트 요소 등록
     newElements[cmd.id] = {
       id: cmd.id,
       kind: cmd.kind!,
@@ -430,21 +438,47 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
       pivot: cmd.pivot,
       rotation: cmd.rotation,
       onClick: cmd.onClick,
+      uiTags: cmd.uiTags,
+      hideTags: cmd.hideTags,
     }
-    // children flat 변환
     flattenChildren(cmd.id, cmd.children, newElements)
   } else {
-    // hide: 해당 id + 자식 연쇄 삭제
+    // hide: 해당 id + 자식 연쇄 삭제 + per-element entry 비활성화
     const toRemove = collectDescendants(cmd.id, newElements)
-    for (const id of toRemove) delete newElements[id]
+    for (const id of toRemove) {
+      if (!newElements[id]?.parent) {
+        // 루트 요소의 entry를 태그 없는 tombstone으로 덮어씌워 억제 시스템에서 제외
+        ctx.ui.register(`element:${id}`, {
+          uiTags: [],
+          hideTags: [],
+          show: () => { },
+          hide: () => { },
+          onCleanup: () => { },
+        })
+      }
+      delete newElements[id]
+    }
   }
 
-  // show 액션일 경우 cmd.uiTags를 적용하고 없으면 빈 배열로 덮어씁니다.
-  const nextUiTags = cmd.action === 'show' ? (cmd.uiTags ?? []) : state._uiTags
-  const nextHideTags = cmd.action === 'show' ? (cmd.hideTags ?? []) : state._hideTags
+  setState({ _elements: newElements, _lastDuration: cmd.duration })
 
-  setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags, _hideTags: nextHideTags })
-  return true // 항상 즉시 완료 (블로킹 안 함)
+  // show 후 per-element UIRuntimeEntry 등록
+  // setState → onUpdate → _addElement 순으로 동기 실행되므로
+  // 이 시점에 _sharedElementObjs에 obj가 존재합니다.
+  if (cmd.action === 'show') {
+    const obj = _sharedElementObjs.get(cmd.id)
+    if (obj) {
+      ctx.ui.register(`element:${cmd.id}`, {
+        uiTags: cmd.uiTags ?? [],
+        hideTags: cmd.hideTags ?? [],
+        show: (dur) => obj.fadeIn(dur, 'easeOut'),
+        hide: (dur) => obj.fadeOut(dur, 'easeIn'),
+        onCleanup: () => { },
+      })
+    }
+  }
+
+  return true
 })
 
 export default elementModule

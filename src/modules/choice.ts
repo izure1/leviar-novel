@@ -54,10 +54,6 @@ export interface ChoiceSchema {
   textHover?: Partial<Style>
   /** 내부 간격 레이아웃. `defineInitial`로 씬 전체에 적용 가능 */
   layout?: ChoiceLayout
-  /** @internal 커스텀 UI 태그 */
-  _uiTags?: string[]
-  /** @internal 커스텀 UI 숨김 태그 */
-  _hideTags?: string[]
 }
 
 // ─── 기본값 ──────────────────────────────────────────────────
@@ -121,10 +117,6 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
     /** 해당 선택지를 골랐을 때 변경할 전역 변수들의 키-값 쌍입니다. */
     var?: VarResolvable<TConfig, TLocalVars>
   }[]
-  /** UI 억제 시스템을 위한 태그 목록. 없으면 기본값(['choice', 'default-ui']) 사용 */
-  uiTags?: string[]
-  /** 해당 UI 활성화 시 억제(숨김)할 대상 태그 목록. 없으면 기본값(['default-ui']) 사용 */
-  hideTags?: string[]
 }
 
 // ─── ChoiceHook 타입 ───────────────────────────────────────────
@@ -202,8 +194,8 @@ choiceModule.defineView((ctx, data, setState) => {
     },
 
     // ─── 입력 역할 선언 ─────────────────────────────────
-    uiTags: data._uiTags ?? ['choice', 'default-ui'],
-    hideTags: data._hideTags ?? ['default-ui'],
+    uiTags: ['choice', 'default-ui'],
+    hideTags: ['default-ui'],
 
     /** 씬 전환 시 오브젝트 즉시 제거 */
     onCleanup: () => {
@@ -328,11 +320,6 @@ choiceModule.defineView((ctx, data, setState) => {
 
 choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
   const entry = ctx.ui.get(choiceModule.__key!) as any
-
-  setState({
-    _uiTags: cmd.uiTags ?? state._uiTags ?? ['choice', 'default-ui'],
-    _hideTags: cmd.hideTags ?? state._hideTags ?? ['default-ui']
-  })
 
   if (!entry) {
     console.warn('[fumika] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.')

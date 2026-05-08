@@ -16,8 +16,6 @@
 | **`label`** | `string` | (없음) | 입력창 바로 위에 띄워줄 안내 문구 |
 | **`multiline`** | `boolean` | `false` | 여러 줄을 입력할 수 있게 텍스트 영역을 키울지 여부 |
 | **`buttons`** | `InputButton[]` | (없음) | 입력창 하단에 배치할 버튼들의 구성 객체 목록 |
-| **`uiTags`** | `string[]` | `['input', 'default-ui']` | 이 모듈의 UI 태그 목록입니다. |
-| **`hideTags`** | `string[]` | `['default-ui']` | 입력창 활성화 시 함께 숨길 대상 태그 목록입니다. |
 
 ### 2. InputButton 객체 구성
 

@@ -1004,8 +1004,8 @@
         }
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: data._uiTags ?? ["dialogue", "default-ui"],
-      hideTags: data._hideTags ?? [],
+      uiTags: ["dialogue", "default-ui"],
+      hideTags: [],
       /**
        * novel.next() 호출 시 타이핑 완성 여부 판단.
        * - 타이핑 중: 즉시 완성 후 false 반환 (next() 중단)
@@ -1070,9 +1070,7 @@
         _speed: cmd.speed,
         _speakerKey: cmd.speaker,
         _subIndex: index,
-        _lines: [...lines],
-        _uiTags: cmd.uiTags ?? state._uiTags ?? ["dialogue", "default-ui"],
-        _hideTags: cmd.hideTags ?? state._hideTags ?? []
+        _lines: [...lines]
       });
       dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value);
       ctx.scene.setTextSubIndex(index + 1);
@@ -1168,8 +1166,8 @@
         if (_btnObjs.length > 0) bgObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: data._uiTags ?? ["choice", "default-ui"],
-      hideTags: data._hideTags ?? ["default-ui"],
+      uiTags: ["choice", "default-ui"],
+      hideTags: ["default-ui"],
       /** 씬 전환 시 오브젝트 즉시 제거 */
       onCleanup: () => {
         _clearButtons();
@@ -1268,10 +1266,6 @@
   });
   choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     const entry = ctx.ui.get(choiceModule.__key);
-    setState({
-      _uiTags: cmd.uiTags ?? state._uiTags ?? ["choice", "default-ui"],
-      _hideTags: cmd.hideTags ?? state._hideTags ?? ["default-ui"]
-    });
     if (!entry) {
       console.warn("[fumika] choices UI entry not found in registry. Ensure it is defined in novel.config.ts modules.");
     }
@@ -3263,8 +3257,8 @@
         if (_currentResolve) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ────────────────────────────────
-      uiTags: data._uiTags ?? ["dialogBox", "default-ui"],
-      hideTags: data._hideTags ?? ["default-ui"],
+      uiTags: ["dialogBox", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _clearDynamic();
         overlayObj.remove({ child: true });
@@ -3326,9 +3320,7 @@
       _buttons: finalCmd.buttons.map((b) => ({ text: b.text })),
       _resolve: resolve,
       _duration: duration,
-      _persist: persist,
-      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["dialogBox", "default-ui"],
-      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
+      _persist: persist
     });
     while (_resolved === false) {
       yield false;
@@ -3756,8 +3748,8 @@
         if (_isActive) overlayObj.fadeOut(duration, "easeIn");
       },
       // ─── 입력 역할 선언 ─────────────────────────────────
-      uiTags: data._uiTags ?? ["input", "default-ui"],
-      hideTags: data._hideTags ?? ["default-ui"],
+      uiTags: ["input", "default-ui"],
+      hideTags: ["default-ui"],
       onCleanup: () => {
         _destroyHiddenInput();
         _clearDynamic();
@@ -3815,9 +3807,7 @@
       _multiline: openData.multiline,
       _buttons: buttons,
       _resolve: resolve,
-      _value: "",
-      _uiTags: cmd.uiTags ?? _state._uiTags ?? ["input", "default-ui"],
-      _hideTags: cmd.hideTags ?? _state._hideTags ?? ["default-ui"]
+      _value: ""
     });
     while (!_resolved) {
       yield false;
@@ -3877,6 +3867,7 @@
     return sorted;
   }
   var _actionCache = /* @__PURE__ */ new Map();
+  var _sharedElementObjs = /* @__PURE__ */ new Map();
   var elementModule = define2({
     _elements: {}
   });
@@ -3972,6 +3963,7 @@
       }
       _elementObjs[entry.id] = obj;
       _elementEntries[entry.id] = entry;
+      if (!entry.parent) _sharedElementObjs.set(entry.id, obj);
       if (!immediate) {
         obj.style.opacity = 0;
         ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, "easeOut");
@@ -3982,6 +3974,7 @@
       if (!obj) return;
       delete _elementObjs[id];
       delete _elementEntries[id];
+      _sharedElementObjs.delete(id);
       const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200);
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeIn", () => {
@@ -3996,8 +3989,9 @@
       _addElement(entry, true);
     }
     return {
-      uiTags: data._uiTags ?? [],
-      hideTags: data._hideTags ?? [],
+      // 모듈 레벨 entry는 태그 없음 — 억제는 per-element entry가 담당
+      uiTags: [],
+      hideTags: [],
       show: (duration) => {
         for (const [id, entry] of Object.entries(_elementEntries)) {
           if (!entry.parent && _elementObjs[id]) {
@@ -4018,6 +4012,7 @@
         }
         for (const key of Object.keys(_elementObjs)) delete _elementObjs[key];
         for (const key of Object.keys(_elementEntries)) delete _elementEntries[key];
+        _sharedElementObjs.clear();
       },
       onUpdate: (_ctx, state, _setState) => {
         const dur = state._lastDuration;
@@ -4058,16 +4053,43 @@
         hoverStyle: cmd.hoverStyle,
         pivot: cmd.pivot,
         rotation: cmd.rotation,
-        onClick: cmd.onClick
+        onClick: cmd.onClick,
+        uiTags: cmd.uiTags,
+        hideTags: cmd.hideTags
       };
       flattenChildren(cmd.id, cmd.children, newElements);
     } else {
       const toRemove = collectDescendants(cmd.id, newElements);
-      for (const id of toRemove) delete newElements[id];
+      for (const id of toRemove) {
+        if (!newElements[id]?.parent) {
+          ctx.ui.register(`element:${id}`, {
+            uiTags: [],
+            hideTags: [],
+            show: () => {
+            },
+            hide: () => {
+            },
+            onCleanup: () => {
+            }
+          });
+        }
+        delete newElements[id];
+      }
     }
-    const nextUiTags = cmd.action === "show" ? cmd.uiTags ?? [] : state._uiTags;
-    const nextHideTags = cmd.action === "show" ? cmd.hideTags ?? [] : state._hideTags;
-    setState({ _elements: newElements, _lastDuration: cmd.duration, _uiTags: nextUiTags, _hideTags: nextHideTags });
+    setState({ _elements: newElements, _lastDuration: cmd.duration });
+    if (cmd.action === "show") {
+      const obj = _sharedElementObjs.get(cmd.id);
+      if (obj) {
+        ctx.ui.register(`element:${cmd.id}`, {
+          uiTags: cmd.uiTags ?? [],
+          hideTags: cmd.hideTags ?? [],
+          show: (dur) => obj.fadeIn(dur, "easeOut"),
+          hide: (dur) => obj.fadeOut(dur, "easeIn"),
+          onCleanup: () => {
+          }
+        });
+      }
+    }
     return true;
   });
   var element_default = elementModule;
@@ -19486,6 +19508,33 @@ ${addLineNumbers(fragment)}`);
           },
           hoverStyle: { color: "rgba(255, 255, 255, 1)" },
           onClick: "fullscreen"
+        }
+      ]
+    },
+    // 사이드바
+    {
+      type: "element",
+      action: "show",
+      id: "sidebar",
+      kind: "rect",
+      uiTags: ["default-ui"],
+      position: { x: 0.9, y: 0.1 },
+      style: {
+        width: 200,
+        height: 600,
+        color: "rgba(0, 0, 0, 0)"
+      },
+      children: [
+        {
+          kind: "text",
+          action: "show",
+          id: "text_like",
+          text: '<style color="rgb(255, 0, 0)">\u2665</style> : \uD638\uAC10\uB3C4',
+          position: { x: 0, y: 0 },
+          style: {
+            ...UI_BUTTON_STYLE,
+            color: "rgb(255, 255, 255)"
+          }
         }
       ]
     }

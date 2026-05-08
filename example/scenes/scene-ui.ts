@@ -80,4 +80,32 @@ export default defineScene({
       },
     ]
   },
+
+  // 사이드바
+  {
+    type: 'element',
+    action: 'show',
+    id: 'sidebar',
+    kind: 'rect',
+    uiTags: ['default-ui'],
+    position: { x: 0.9, y: 0.1 },
+    style: {
+      width: 200,
+      height: 600,
+      color: 'rgba(0, 0, 0, 0)',
+    },
+    children: [
+      {
+        kind: 'text',
+        action: 'show',
+        id: 'text_like',
+        text: '<style color="rgb(255, 0, 0)">♥</style> : 호감도',
+        position: { x: 0, y: 0 },
+        style: {
+          ...UI_BUTTON_STYLE,
+          color: 'rgb(255, 255, 255)'
+        },
+      },
+    ]
+  }
 ])

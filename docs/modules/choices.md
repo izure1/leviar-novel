@@ -12,8 +12,6 @@
 | :--- | :--- | :---: | :--- |
 | **`type`** | `'choices'` | 필수 | 커맨드 타입 |
 | **`choices`** | `ChoiceItem[]` | 필수 | 화면에 제시할 선택지들의 객체 배열 |
-| **`uiTags`** | `string[]` | `['choice', 'default-ui']` | 이 모듈의 UI 태그 목록입니다. |
-| **`hideTags`** | `string[]` | `['default-ui']` | 선택지 활성화 시 함께 숨길 대상 태그 목록입니다. |
 
 ### 2. ChoiceItem 요소 상세
 
