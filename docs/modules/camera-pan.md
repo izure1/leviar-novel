@@ -40,6 +40,7 @@ export default defineScene({ config })(() => [
 | **`x`** | `number` | `0` | 기준 위치에서의 X축 추가 이동 거리(px) |
 | **`y`** | `number` | `0` | 기준 위치에서의 Y축 추가 이동 거리(px) |
 | **`duration`** | `number` | `1000` | 카메라 이동에 걸리는 시간(ms) |
+| **`ease`** | `string` | `'easeInOutQuad'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 
 ## 주의 사항 (Edge Cases)
 

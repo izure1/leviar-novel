@@ -38,6 +38,7 @@ export default defineScene({ config })(() => [
 | **`type`** | `'camera-zoom'` | 필수 | 커맨드 타입 |
 | **`preset`** | `string` | 필수 | 줌 배율 프리셋 (`close-up`, `medium`, `wide`, `reset`) |
 | **`duration`** | `number` | 프리셋 기본값 | 확대/축소에 걸리는 시간(ms) |
+| **`ease`** | `string` | `'easeInOutQuad'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 
 ### 줌 프리셋 상세 (`ZoomPreset`)
 

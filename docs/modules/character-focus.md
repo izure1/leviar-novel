@@ -16,6 +16,7 @@
 | **`point`** | `string` | `'center'` | 포커스를 맞출 캐릭터 내부의 앵커 위치. (`novel.config.ts`의 캐릭터 `points` 객체 키) |
 | **`zoom`** | `string` | `'close-up'` | 적용할 [카메라 줌 프리셋](./camera-zoom.md) 이름 |
 | **`duration`** | `number` | 프리셋 기본값 | 카메라가 목적지까지 이동하는 데 걸리는 시간(ms) |
+| **`ease`** | `string` | `'easeInOutQuad'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 
 ## 핵심 예제 (Main Example)
 

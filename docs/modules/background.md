@@ -57,6 +57,7 @@ export default defineScene({ config })(() => [
 | **`name`** | `string` | 필수 | `config.backgrounds`에 등록한 배경의 고유 이름 |
 | **`fit`** | `string` | `'cover'` | 화면 맞춤 방식 (`cover`: 꽉 차게, `contain`: 비율 유지하며 꽉 차게) |
 | **`duration`** | `number` | `1000` | 다른 배경에서 전환 시 페이드 효과에 걸리는 시간(ms) |
+| **`ease`** | `string` | `'easeInOutQuad'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 | **`isVideo`** | `boolean` | `false` | 대상 에셋이 비디오 파일(.mp4 등)인 경우 `true`로 명시 |
 
 ## 주의 사항 (Edge Cases)

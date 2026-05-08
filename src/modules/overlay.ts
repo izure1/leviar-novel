@@ -1,4 +1,4 @@
-import type { Style } from 'leviar'
+import type { Style, EasingType } from 'leviar'
 import type { AssetKeysOf } from '../types/config'
 import type { CameraEffectPreset } from './camera'
 import { playMotionEffect } from '../core/motion'
@@ -69,6 +69,8 @@ export type OverlayTextCmd =
     preset?: OverlayPreset
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
   | {
     /** 수행할 동작입니다. (숨기기) */
@@ -77,6 +79,8 @@ export type OverlayTextCmd =
     name: string
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
 
 /** 이미지 오버레이를 표시하거나 숨긴다 */
@@ -110,6 +114,8 @@ export type OverlayImageCmd<TConfig = any> =
     opacity?: number
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
   | {
     /** 수행할 동작입니다. (숨기기) */
@@ -118,6 +124,8 @@ export type OverlayImageCmd<TConfig = any> =
     name: string
     /** 전환 애니메이션의 지속 시간(ms)입니다. */
     duration?: number
+    /** 애니메이션의 이징 함수 이름입니다. */
+    ease?: EasingType
   }
 
 // ─── 텍스트 프리셋 기본값 ────────────────────────────────────
@@ -143,6 +151,8 @@ export interface OverlaySchema {
   _overlays: Record<string, OverlayEntry>
   /** @internal 최근 전환 애니메이션 지속 시간 (ms) */
   _lastDuration?: number
+  /** @internal 최근 전환 애니메이션 이징 함수 이름 */
+  _lastEase?: string
 
   // ─── defineInitial로 커스텀 가능한 스타일 ────────────────
   /** 텍스트 오버레이 기본 스타일 오버라이드 */
@@ -208,7 +218,7 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
   }
 
   // ─── 텍스트 추가 ─────────────────────────────────────────
-  const _addTextOverlay = (entry: OverlayTextEntry, immediate = false, duration?: number) => {
+  const _addTextOverlay = (entry: OverlayTextEntry, immediate = false, duration?: number, ease: EasingType = 'easeOut') => {
     const { name, preset, text } = entry
     const defaults = OVERLAY_PRESETS[preset]
     if (!defaults) return
@@ -246,11 +256,11 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
     _overlayObjs[name] = textObj
     _overlayEntries[name] = entry
 
-    if (!immediate) textObj.fadeIn(duration ?? 300, 'easeOut')
+    if (!immediate) textObj.fadeIn(duration ?? 300, ease)
   }
 
   // ─── 이미지 추가 (0~1 정규화 좌표) ───────────────────────
-  const _addImageOverlay = (entry: OverlayImageEntry, immediate = false, duration?: number) => {
+  const _addImageOverlay = (entry: OverlayImageEntry, immediate = false, duration?: number, ease: EasingType = 'easeOut') => {
     const { name, src, x, y, width, height, fit = 'contain', zIndex, opacity = 1 } = entry
 
     // 동명 오버레이 존재 → transition() 호출
@@ -309,19 +319,19 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
     }
 
     if (!immediate) {
-      ctx.renderer.animate(imgObj, { style: { opacity } }, duration ?? 300, 'easeOut')
+      ctx.renderer.animate(imgObj, { style: { opacity } }, duration ?? 300, ease)
     }
   }
 
   // ─── 제거 ────────────────────────────────────────────────
-  const _removeOverlay = (key: string, duration: number, immediate = false) => {
+  const _removeOverlay = (key: string, duration: number, immediate = false, ease: EasingType = 'easeInOutQuad') => {
     const obj = _overlayObjs[key]
     if (obj) {
       delete _overlayObjs[key]
       delete _overlayEntries[key]
       const dur = immediate ? 0 : ctx.renderer.dur(duration)
       if (dur > 0) {
-        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, 'easeInOutQuad', () => {
+        ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, ease, () => {
           obj.remove()
         })
       } else {
@@ -331,11 +341,11 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
   }
 
   // ─── 오버레이 디스패치 ───────────────────────────────────
-  const _addOverlay = (entry: OverlayEntry, immediate = false, duration?: number) => {
+  const _addOverlay = (entry: OverlayEntry, immediate = false, duration?: number, ease: EasingType = 'easeOut') => {
     if (entry.kind === 'text') {
-      _addTextOverlay(entry, immediate, duration)
+      _addTextOverlay(entry, immediate, duration, ease)
     } else {
-      _addImageOverlay(entry, immediate, duration)
+      _addImageOverlay(entry, immediate, duration, ease)
     }
   }
 
@@ -357,19 +367,20 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
     getObj: (name: string) => _overlayObjs[name] as any | undefined,
     onUpdate: (_ctx: SceneContext, state: OverlaySchema, _setState: SetStateFn<OverlaySchema>) => {
       const dur = state._lastDuration
+      const ease = (state._lastEase ?? 'easeInOutQuad') as EasingType
       const newKeys = new Set(Object.keys(state._overlays))
       // 제거된 항목
       for (const key of Object.keys(_overlayObjs)) {
-        if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600)
+        if (!newKeys.has(key)) _removeOverlay(key, dur ?? 600, false, ease)
       }
       for (const [key, entry] of Object.entries(state._overlays)) {
         const prev = _overlayEntries[key]
         if (!_overlayObjs[key]) {
           // 신규 추가
-          _addOverlay(entry, false, dur)
+          _addOverlay(entry, false, dur, (state._lastEase ?? 'easeOut') as EasingType)
         } else if (prev && !_isSameEntry(prev, entry)) {
           // 엔트리 변경 → transition
-          _addOverlay(entry, false, dur)
+          _addOverlay(entry, false, dur, (state._lastEase ?? 'easeOut') as EasingType)
         }
       }
     },
@@ -415,7 +426,7 @@ overlayTextModule.defineCommand(function* (cmd, _ctx, state, setState) {
     delete newOverlays[cmd.name]
   }
 
-  setState({ _overlays: newOverlays, _lastDuration: cmd.duration })
+  setState({ _overlays: newOverlays, _lastDuration: cmd.duration, _lastEase: cmd.ease })
   return true
 })
 
@@ -463,7 +474,7 @@ overlayImageModule.defineCommand(function* (cmd, _ctx, state, setState) {
     delete newOverlays[cmd.name]
   }
 
-  setState({ _overlays: newOverlays, _lastDuration: cmd.duration })
+  setState({ _overlays: newOverlays, _lastDuration: cmd.duration, _lastEase: cmd.ease })
   return true
 })
 

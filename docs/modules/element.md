@@ -74,10 +74,11 @@ export default defineScene({
 | :--- | :--- | :--- |
 | **`action`** | `'show' \| 'hide'` | 요소를 표시할지 삭제할지 결정합니다. |
 | **`id`** | `string` | 요소의 고유 식별자입니다. 숨길 때 이 식별자가 필요합니다. |
-| **`kind`** | `'rect' \| 'text' \| 'image'` | (`show` 시 필수) 요소의 형태를 지정합니다. |
+| **`kind`** | `'rect' \| 'ellipse' \| 'text' \| 'image'` | (`show` 시 필수) 요소의 형태를 지정합니다. |
 | **`text`** | `string` | (`kind: 'text'` 전용) 표시할 문자열입니다. |
 | **`image`** | `string` | (`kind: 'image'` 전용) 에셋에 등록된 이미지 키값입니다. |
 | **`duration`** | `number` | 페이드인/아웃 애니메이션 시간(ms)입니다. 기본값 200. |
+| **`ease`** | `string` | 애니메이션의 [이징 함수 목록](../easing.md) 이름입니다. |
 | **`uiTags`** | `string[]` | 이 요소 인스턴스에 부여할 태그 목록입니다. 억제 시스템에서 식별자로 사용됩니다. |
 | **`hideTags`** | `string[]` | 이 요소가 활성화될 때 함께 숨길 대상 태그 목록입니다. |
 

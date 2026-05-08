@@ -17,6 +17,7 @@
 | **`text`** | `string` | 필수 | 화면에 보여줄 글자 내용 |
 | **`preset`** | `string` | `'caption'` | 폰트 스타일 (`title`: 중앙 큰 제목, `caption`: 하단 안내문, `whisper`: 작게 속삭임) |
 | **`duration`** | `number` | 프리셋 기본값 | 나타나거나 지워질 때 걸리는 시간(ms) |
+| **`ease`** | `string` | `'easeOut'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 
 ### 2. 이미지 오버레이 (`overlay-image`)
 
@@ -28,6 +29,8 @@
 | **`src`** | `string` | 필수 | 보여줄 에셋 이미지 키 |
 | **`x`, `y`** | `number` | `0.5` | 위치 비율 좌표 (`0.0` ~ `1.0`. `0.5`면 화면 한가운데를 뜻함) |
 | **`width`, `height`** | `number` | 원본 크기 | 이미지를 출력할 강제 크기(px) |
+| **`duration`** | `number` | `300` | 전환 애니메이션의 지속 시간(ms)입니다. |
+| **`ease`** | `string` | `'easeOut'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 
 ## 핵심 예제 (Main Example)
 

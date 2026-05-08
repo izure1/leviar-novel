@@ -17,6 +17,7 @@
 | **`image`** | `string` | (첫 이미지) | 표시할 이미지 키 (`base:emotion` 형식) |
 | **`focus`** | `boolean \| object` | `false` | 등장 시 카메라 포커스 연출 동시 적용 여부 |
 | **`duration`** | `number` | `0` | 등장, 퇴장, 상태 변경 시 페이드/애니메이션에 걸리는 시간(ms) |
+| **`ease`** | `string` | `'easeInOutQuad'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 
 ## 핵심 예제 (Main Example)
 

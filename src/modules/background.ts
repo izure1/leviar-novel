@@ -1,3 +1,4 @@
+import type { EasingType } from 'leviar'
 import type { BgDefs, BackgroundKeysOf } from '../types/config'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
@@ -19,6 +20,8 @@ export interface BackgroundCmd<TConfig = any> {
   duration?: number
   /** 대상 에셋을 비디오(video)로 처리할지 여부입니다. (기본값: false) */
   isVideo?: boolean
+  /** 애니메이션의 이징 함수 이름입니다. */
+  ease?: EasingType
 }
 
 // ─── 스키마 ──────────────────────────────────────────────────
@@ -34,6 +37,8 @@ export interface BackgroundSchema {
   _parallax: boolean
   /** @internal 비디오 여부 */
   _isVideo: boolean
+  /** @internal 최근 이징 함수 */
+  _lastEase?: string
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -47,6 +52,7 @@ const backgroundModule = define<BackgroundCmd<any>, BackgroundSchema>({
   _lastDuration: 1000,
   _parallax: true,
   _isVideo: false,
+  _lastEase: undefined,
 })
 
 backgroundModule.defineView((ctx, data, setState) => {
@@ -143,6 +149,7 @@ backgroundModule.defineView((ctx, data, setState) => {
       const src = def.src ?? state._key
       const useParallax = def.parallax ?? true
       const dur = ctx.renderer.dur(state._lastDuration)
+      const ease = (state._lastEase ?? 'easeInOutQuad') as EasingType
 
       ctx.renderer.state.set('backgroundKey', state._key)
 
@@ -150,6 +157,7 @@ backgroundModule.defineView((ctx, data, setState) => {
         const sameParallax = _bgParallax === useParallax
         if (sameParallax) {
           if (dur > 0 && typeof _bgObj.transition === 'function') {
+            // leviar의 transition은 현재 duration만 지원합니다.
             _bgObj.transition(src, dur)
           } else {
             if (_bgObj.attribute) _bgObj.attribute.src = src
@@ -165,7 +173,7 @@ backgroundModule.defineView((ctx, data, setState) => {
       _bgParallax = useParallax
       _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, dur > 0 ? 0 : 1)
       if (dur > 0 && _bgObj) {
-        ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, 'easeInOutQuad')
+        ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, ease)
       }
     },
   }
@@ -183,7 +191,8 @@ backgroundModule.defineCommand(function* (cmd, ctx, state, setState) {
     _fit: fit,
     _lastDuration: cmd.duration ?? 1000,
     _parallax: def.parallax ?? true,
-    _isVideo: cmd.isVideo ?? false
+    _isVideo: cmd.isVideo ?? false,
+    _lastEase: cmd.ease
   })
 
   return true
