@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineScene } from '../../src'
+import { defineHook, defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
@@ -88,18 +88,17 @@ export default defineScene({
     id: 'sidebar',
     kind: 'rect',
     uiTags: ['default-ui'],
-    position: { x: 0.9, y: 0.1 },
+    position: { x: 0.9, y: 0.05 },
     style: {
       width: 200,
       height: 600,
-      color: 'rgba(0, 0, 0, 0)',
     },
     children: [
       {
         kind: 'text',
         action: 'show',
         id: 'text_like',
-        text: '<style color="rgb(255, 0, 0)">♥</style> : 호감도',
+        text: '<style color="rgb(255, 0, 0)">♥</style> {{ likeability }}',
         position: { x: 0, y: 0 },
         style: {
           ...UI_BUTTON_STYLE,

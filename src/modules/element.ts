@@ -196,9 +196,6 @@ function topoSort(entries: ElementEntry[]): ElementEntry[] {
 
 const _actionCache = new Map<string, (ctx: SceneContext, vars: Record<string, any>) => void>()
 
-/** 씬 내에서 활성화된 루트 요소 obj 참조 (defineCommand에서 UIRuntimeEntry 등록용) */
-const _sharedElementObjs = new Map<string, any>()
-
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
 const elementModule = define<ElementCmd<any>, ElementSchema>({
@@ -268,6 +265,21 @@ elementModule.defineView((ctx, data, setState) => {
     }),
   }
 
+  const _registerRootElement = (entry: ElementEntry) => {
+    if (entry.parent) return
+
+    const obj = _elementObjs[entry.id]
+    if (!obj) return
+
+    ctx.ui.register(`element:${entry.id}`, {
+      uiTags: entry.uiTags ?? [],
+      hideTags: entry.hideTags ?? [],
+      show: (dur) => obj.fadeIn(dur, 'easeOut'),
+      hide: (dur) => obj.fadeOut(dur, 'easeIn'),
+      onCleanup: () => { },
+    })
+  }
+
   const _addElement = (entry: ElementEntry, immediate = false, duration?: number) => {
     if (_elementObjs[entry.id]) return // 이미 존재
 
@@ -328,7 +340,7 @@ elementModule.defineView((ctx, data, setState) => {
     _elementObjs[entry.id] = obj
     _elementEntries[entry.id] = entry
     // 루트 요소만 공유 참조에 저장 (defineCommand에서 UIRuntimeEntry 등록 용도)
-    if (!entry.parent) _sharedElementObjs.set(entry.id, obj)
+    _registerRootElement(entry)
 
     if (!immediate) {
       obj.style.opacity = 0
@@ -341,7 +353,6 @@ elementModule.defineView((ctx, data, setState) => {
     if (!obj) return
     delete _elementObjs[id]
     delete _elementEntries[id]
-    _sharedElementObjs.delete(id)
 
     const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200)
     if (dur > 0) {
@@ -384,7 +395,6 @@ elementModule.defineView((ctx, data, setState) => {
       }
       for (const key of Object.keys(_elementObjs)) delete _elementObjs[key]
       for (const key of Object.keys(_elementEntries)) delete _elementEntries[key]
-      _sharedElementObjs.clear()
     },
     onUpdate: (_ctx: SceneContext, state: ElementSchema, _setState: SetStateFn<ElementSchema>) => {
       const dur = state._lastDuration
@@ -465,19 +475,6 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
   // show 후 per-element UIRuntimeEntry 등록
   // setState → onUpdate → _addElement 순으로 동기 실행되므로
   // 이 시점에 _sharedElementObjs에 obj가 존재합니다.
-  if (cmd.action === 'show') {
-    const obj = _sharedElementObjs.get(cmd.id)
-    if (obj) {
-      ctx.ui.register(`element:${cmd.id}`, {
-        uiTags: cmd.uiTags ?? [],
-        hideTags: cmd.hideTags ?? [],
-        show: (dur) => obj.fadeIn(dur, 'easeOut'),
-        hide: (dur) => obj.fadeOut(dur, 'easeIn'),
-        onCleanup: () => { },
-      })
-    }
-  }
-
   return true
 })
 

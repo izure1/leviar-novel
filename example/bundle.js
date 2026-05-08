@@ -3867,7 +3867,6 @@
     return sorted;
   }
   var _actionCache = /* @__PURE__ */ new Map();
-  var _sharedElementObjs = /* @__PURE__ */ new Map();
   var elementModule = define2({
     _elements: {}
   });
@@ -3918,6 +3917,19 @@
         }
       })
     };
+    const _registerRootElement = (entry) => {
+      if (entry.parent) return;
+      const obj = _elementObjs[entry.id];
+      if (!obj) return;
+      ctx.ui.register(`element:${entry.id}`, {
+        uiTags: entry.uiTags ?? [],
+        hideTags: entry.hideTags ?? [],
+        show: (dur) => obj.fadeIn(dur, "easeOut"),
+        hide: (dur) => obj.fadeOut(dur, "easeIn"),
+        onCleanup: () => {
+        }
+      });
+    };
     const _addElement = (entry, immediate = false, duration) => {
       if (_elementObjs[entry.id]) return;
       const creator = KIND_CREATORS[entry.kind];
@@ -3963,7 +3975,7 @@
       }
       _elementObjs[entry.id] = obj;
       _elementEntries[entry.id] = entry;
-      if (!entry.parent) _sharedElementObjs.set(entry.id, obj);
+      _registerRootElement(entry);
       if (!immediate) {
         obj.style.opacity = 0;
         ctx.renderer.animate(obj, { style: { opacity: entry.style?.opacity ?? 1 } }, duration ?? 200, "easeOut");
@@ -3974,7 +3986,6 @@
       if (!obj) return;
       delete _elementObjs[id];
       delete _elementEntries[id];
-      _sharedElementObjs.delete(id);
       const dur = immediate ? 0 : ctx.renderer.dur(duration ?? 200);
       if (dur > 0) {
         ctx.renderer.animate(obj, { style: { opacity: 0 } }, dur, "easeIn", () => {
@@ -4012,7 +4023,6 @@
         }
         for (const key of Object.keys(_elementObjs)) delete _elementObjs[key];
         for (const key of Object.keys(_elementEntries)) delete _elementEntries[key];
-        _sharedElementObjs.clear();
       },
       onUpdate: (_ctx, state, _setState) => {
         const dur = state._lastDuration;
@@ -4077,19 +4087,6 @@
       }
     }
     setState({ _elements: newElements, _lastDuration: cmd.duration });
-    if (cmd.action === "show") {
-      const obj = _sharedElementObjs.get(cmd.id);
-      if (obj) {
-        ctx.ui.register(`element:${cmd.id}`, {
-          uiTags: cmd.uiTags ?? [],
-          hideTags: cmd.hideTags ?? [],
-          show: (dur) => obj.fadeIn(dur, "easeOut"),
-          hide: (dur) => obj.fadeOut(dur, "easeIn"),
-          onCleanup: () => {
-          }
-        });
-      }
-    }
     return true;
   });
   var element_default = elementModule;
@@ -19518,18 +19515,17 @@ ${addLineNumbers(fragment)}`);
       id: "sidebar",
       kind: "rect",
       uiTags: ["default-ui"],
-      position: { x: 0.9, y: 0.1 },
+      position: { x: 0.9, y: 0.05 },
       style: {
         width: 200,
-        height: 600,
-        color: "rgba(0, 0, 0, 0)"
+        height: 600
       },
       children: [
         {
           kind: "text",
           action: "show",
           id: "text_like",
-          text: '<style color="rgb(255, 0, 0)">\u2665</style> : \uD638\uAC10\uB3C4',
+          text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
           position: { x: 0, y: 0 },
           style: {
             ...UI_BUTTON_STYLE,
