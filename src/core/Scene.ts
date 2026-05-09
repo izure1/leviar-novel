@@ -127,6 +127,11 @@ export interface SceneCallbacks {
    * 애니메이션 onEnd 콜백 등에서 호출하여 yield false 상태를 resume 시킵니다.
    */
   advance(): void
+  /**
+   * 현재 활성 씬(하위씬 포함)에서 커맨드를 실행합니다.
+   * 상위씬의 hook에서 ctx.execute를 호출할 때 하위씬 기준으로 동작하도록 위임합니다.
+   */
+  executeCmd(cmd: any): Generator<CommandResult, CommandResult, any>
 }
 
 // =============================================================
@@ -292,7 +297,7 @@ export class DialogueScene {
           )
         }
       },
-      execute: (cmd) => this._executeCmd(cmd as any),
+      execute: (cmd) => this.callbacks.executeCmd(cmd as any),
       actions: {
         get: (name: string) => this.definition.actions?.[name],
       },
@@ -483,7 +488,7 @@ export class DialogueScene {
           )
         }
       },
-      execute: (cmd) => this._executeCmd(cmd as any),
+      execute: (cmd) => this.callbacks.executeCmd(cmd as any),
       actions: {
         get: (name: string) => this.definition.actions?.[name],
       },

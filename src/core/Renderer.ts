@@ -304,6 +304,7 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       getUIRegistry: () => new Map(),
       syncUIState: noop,
       advance: noop,
+      executeCmd: function* () { return false },
     },
     state: {
       set: noop as any,

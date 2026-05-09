@@ -196,6 +196,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   /** scene call 콜 스택 */
   private readonly _callStack: CallStackFrame[] = []
   /**
+   * callScene() 경로로 서브씬 진입 중임을 표시하는 플래그.
+   * true이면 loadScene / _loadPreserveSubScene이 부모씬 훅을 해제하지 않습니다.
+   */
+  private _callingSubScene: boolean = false
+  /**
    * 콜백 세대 카운터.
    * _buildCallbacks() 호출 시마다 증가하여 advance() 콜백이
    * 자신이 속한 씬에서만 발화되도록 보장합니다.
@@ -401,7 +406,24 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     // 이전 씬의 훅 해제
-    this._currentSceneDef?.hooks?._unregister(this)
+    // _callingSubScene=true(call 경로)일 때는 부모씬 훅을 유지합니다.
+    if (!this._callingSubScene) {
+      this._currentSceneDef?.hooks?._unregister(this)
+    }
+
+    // 하드 전환(loadScene 직접 호출)일 때 콜스택을 초기화합니다.
+    // 상위씬 훅에서 ctx.scene.loadScene을 호출하거나,
+    // 하위씬 내부에서 next 커맨드로 이탈할 때 잔여 call frame이 남지 않도록 합니다.
+    // _callingSubScene=true(= _callScene 내부에서 호출)는 제외합니다.
+    if (!this._callingSubScene && this._callStack.length > 0) {
+      // 아직 등록된 모든 조상씬 훅을 역순으로 해제
+      for (let i = this._callStack.length - 1; i >= 0; i--) {
+        const frame = this._callStack[i]
+        const ancestorDef = this._scenes.get(frame.sceneName)
+        ancestorDef?.hooks?._unregister(this)
+      }
+      this._callStack.length = 0
+    }
 
     const prevState: RendererState | null = (!preserve && this._currentScene)
       ? this._renderer.captureState()
@@ -689,6 +711,15 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
           this._syncUIState()
         }
       },
+      executeCmd: (cmd: any) => {
+        // 항상 현재 활성 씬 기준으로 커맨드를 실행합니다.
+        // 상위씬의 hook에서 ctx.execute를 호출해도 하위씬의 _executeCmd가 사용됩니다.
+        const active = this._currentScene
+        if (active instanceof DialogueScene) {
+          return (active as any)._executeCmd(cmd)
+        }
+        return (function* (): Generator<any, any, any> { return false })()
+      },
     }
   }
 
@@ -775,11 +806,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       restore,
     })
 
+    this._callingSubScene = true
     if (preserve) {
       this._loadPreserveSubScene(name)
     } else {
       this.loadScene(name)
     }
+    this._callingSubScene = false
   }
 
   /**
@@ -797,7 +830,10 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       return
     }
 
-    this._currentSceneDef?.hooks?._unregister(this)
+    // _callingSubScene=true(call 경로)일 때는 부모씬 훅을 유지합니다.
+    if (!this._callingSubScene) {
+      this._currentSceneDef?.hooks?._unregister(this)
+    }
     // preserve=true: 렌더러·stateStore·uiRegistry 전부 유지 (cleanupUI·clear 호출 안 함)
 
     const callbacks = this._buildCallbacks()
@@ -830,6 +866,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const needsFullRestore = !frame.preserve || frame.restore
 
+    // 서브씬 훅만 해제합니다. 부모씬 훅은 call 진입 시점에 유지되었으므로 이미 활성 상태입니다.
     this._currentSceneDef?.hooks?._unregister(this)
     this._cleanupUI()
     this.stopSkip()
@@ -861,7 +898,8 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._currentSceneDef = def
     this._inputMode = 'block'
 
-    def.hooks?._register(this)
+    // 부모씬 훅은 call 진입 시점부터 유지되어 이미 등록 상태입니다.
+    // 중복 등록을 방지하기 위해 _register를 생략합니다.
 
     scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex)
 
@@ -980,6 +1018,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         getUIRegistry: () => uiRegistry,
         syncUIState: noop,
         advance: noop,
+        executeCmd: (cmd: any) => {
+          const active = this._currentScene
+          if (active instanceof DialogueScene) {
+            return (active as any)._executeCmd(cmd)
+          }
+          return (function* (): Generator<any, any, any> { return false })()
+        },
       },
       state: {
         set: (name, data) => { stateStore.set(name, data) },

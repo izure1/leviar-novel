@@ -18587,7 +18587,7 @@ ${addLineNumbers(fragment)}`);
             );
           }
         },
-        execute: (cmd) => this._executeCmd(cmd),
+        execute: (cmd) => this.callbacks.executeCmd(cmd),
         actions: {
           get: (name) => this.definition.actions?.[name]
         }
@@ -18755,7 +18755,7 @@ ${addLineNumbers(fragment)}`);
             );
           }
         },
-        execute: (cmd2) => this._executeCmd(cmd2),
+        execute: (cmd2) => this.callbacks.executeCmd(cmd2),
         actions: {
           get: (name) => this.definition.actions?.[name]
         }
@@ -18936,6 +18936,11 @@ ${addLineNumbers(fragment)}`);
     /** scene call 콜 스택 */
     _callStack = [];
     /**
+     * callScene() 경로로 서브씬 진입 중임을 표시하는 플래그.
+     * true이면 loadScene / _loadPreserveSubScene이 부모씬 훅을 해제하지 않습니다.
+     */
+    _callingSubScene = false;
+    /**
      * 콜백 세대 카운터.
      * _buildCallbacks() 호출 시마다 증가하여 advance() 콜백이
      * 자신이 속한 씬에서만 발화되도록 보장합니다.
@@ -19108,7 +19113,17 @@ ${addLineNumbers(fragment)}`);
         console.error(`[fumika] \uC52C '${sceneName}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      this._currentSceneDef?.hooks?._unregister(this);
+      if (!this._callingSubScene) {
+        this._currentSceneDef?.hooks?._unregister(this);
+      }
+      if (!this._callingSubScene && this._callStack.length > 0) {
+        for (let i = this._callStack.length - 1; i >= 0; i--) {
+          const frame = this._callStack[i];
+          const ancestorDef = this._scenes.get(frame.sceneName);
+          ancestorDef?.hooks?._unregister(this);
+        }
+        this._callStack.length = 0;
+      }
       const prevState = !preserve && this._currentScene ? this._renderer.captureState() : null;
       this._currentScene = null;
       if (!preserve) {
@@ -19341,6 +19356,15 @@ ${addLineNumbers(fragment)}`);
             scene.advance();
             this._syncUIState();
           }
+        },
+        executeCmd: (cmd) => {
+          const active = this._currentScene;
+          if (active instanceof DialogueScene) {
+            return active._executeCmd(cmd);
+          }
+          return (function* () {
+            return false;
+          })();
         }
       };
     }
@@ -19409,11 +19433,13 @@ ${addLineNumbers(fragment)}`);
         preserve,
         restore
       });
+      this._callingSubScene = true;
       if (preserve) {
         this._loadPreserveSubScene(name);
       } else {
         this.loadScene(name);
       }
+      this._callingSubScene = false;
     }
     /**
      * preserve=true 서브씬 시작.
@@ -19429,7 +19455,9 @@ ${addLineNumbers(fragment)}`);
         console.error(`[fumika] \uC52C '${name}'\uC774 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      this._currentSceneDef?.hooks?._unregister(this);
+      if (!this._callingSubScene) {
+        this._currentSceneDef?.hooks?._unregister(this);
+      }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
@@ -19476,7 +19504,6 @@ ${addLineNumbers(fragment)}`);
       this._currentScene = scene;
       this._currentSceneDef = def;
       this._inputMode = "block";
-      def.hooks?._register(this);
       scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
       this._syncUIState();
     }
@@ -19578,7 +19605,16 @@ ${addLineNumbers(fragment)}`);
           getStateStore: () => stateStore,
           getUIRegistry: () => uiRegistry,
           syncUIState: noop,
-          advance: noop
+          advance: noop,
+          executeCmd: (cmd) => {
+            const active = this._currentScene;
+            if (active instanceof DialogueScene) {
+              return active._executeCmd(cmd);
+            }
+            return (function* () {
+              return false;
+            })();
+          }
         },
         state: {
           set: (name, data) => {
