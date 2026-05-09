@@ -132,6 +132,16 @@ export interface SceneCallbacks {
    * 상위씬의 hook에서 ctx.execute를 호출할 때 하위씬 기준으로 동작하도록 위임합니다.
    */
   executeCmd(cmd: any): Generator<CommandResult, CommandResult, any>
+  /**
+   * 현재 활성 씬(하위씬 포함)의 actions에서 이름으로 액션 콜백을 조회합니다.
+   * 훅의 ctx와 동일하게 항상 현재 활성씬 기준으로 반환됩니다.
+   */
+  getActiveActions(name: string): ((ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+  /**
+   * 현재 활성 씬의 지역 변수를 반환합니다.
+   * 클릭 핸들러 등 토소림 메서드에서 활성씬 기준 vars를 재구성할 때 사용합니다.
+   */
+  getActiveLocalVars(): Record<string, any>
 }
 
 // =============================================================
@@ -301,7 +311,7 @@ export class DialogueScene {
       },
       execute: (cmd) => this.callbacks.executeCmd(cmd as any),
       actions: {
-        get: (name: string) => this.definition.actions?.[name],
+        get: (name: string) => this.callbacks.getActiveActions(name),
       },
     }
 
@@ -492,7 +502,7 @@ export class DialogueScene {
       },
       execute: (cmd) => this.callbacks.executeCmd(cmd as any),
       actions: {
-        get: (name: string) => this.definition.actions?.[name],
+        get: (name: string) => this.callbacks.getActiveActions(name),
       },
     }
 

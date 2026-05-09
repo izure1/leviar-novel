@@ -19,7 +19,7 @@
 
 ```typescript
 // 모든 선택지 텍스트 끝에 확인 표식을 붙입니다
-novel.hooker.onBefore('choice:show', (state) => {
+novel.hooker.onBefore('choice:show', (state, ctx, vars) => {
   return {
     ...state,
     choices: state.choices.map(c => ({ ...c, text: c.text + ' [확인됨]' }))
@@ -31,7 +31,7 @@ novel.hooker.onBefore('choice:show', (state) => {
 
 ```typescript
 // 플레이어가 어떤 버튼을 골랐는지 로그 시스템에 기록합니다
-novel.hooker.onBefore('choice:select', (state) => {
+novel.hooker.onBefore('choice:select', (state, ctx, vars) => {
   console.log(`사용자가 선택한 항목: ${state.selected.text}`)
   return { ...state }
 })

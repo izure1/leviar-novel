@@ -3,7 +3,10 @@
 ## 개요 (Overview)
 
 `defineHook`은 특정 씬(Scene)이 진행되는 동안에만 작동하는 이벤트(Hook)를 정의할 때 사용합니다.  
-대사가 출력되기 직전에 글자를 바꾸거나, 다음 씬으로 넘어갈 때 특정 동작을 실행하는 등 엔진의 흐름에 개입할 수 있습니다.  
+대사가 출력되기 직전에 글자를 바꾸거나, 다음 씬으로 넘어갈 때 특정 동작을 실행하는 등 엔진의 흐름에 개입할 수 있습니다.
+
+모든 훅의 콜백 함수는 대상 데이터 외에도 현재 활성화된 씬의 컨텍스트(`ctx`)와 모든 변수 맵(`vars`)을 제공받아, 조건부 로직을 작성하기 용이합니다.
+
 
 ## 사전 준비 (Prerequisites)
 
@@ -23,7 +26,7 @@ export default defineScene({
   hooks: defineHook(config)({
     // 대사가 화면에 그려지기 전(text-run)에 실행됩니다
     'dialogue:text-run': {
-      onBefore: (state) => {
+      onBefore: (state, ctx, vars) => {
         console.log(`출력될 대사: ${state.text}`)
         // 수정한 상태를 반드시 반환해야 다음 단계로 정상 진행됩니다
         return state 
@@ -31,14 +34,14 @@ export default defineScene({
     },
     // 엔진의 씬 전환(next) 직후에 한 번만 실행되는 훅입니다
     'novel:next': {
-      onceAfter: (value) => {
+      onceAfter: (value, ctx, vars) => {
         console.log('다음 씬으로 넘어갑니다.')
         return value
       }
     },
     // 변수 변경 시마다 실행되는 훅입니다
     'novel:var': {
-      onBefore: (payload) => {
+      onBefore: (payload, ctx, vars) => {
         console.log(`변수 ${payload.name} 변경 시도: ${payload.oldValue} -> ${payload.newValue}`)
         return payload
       }

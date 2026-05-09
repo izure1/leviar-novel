@@ -727,6 +727,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       syncUIState: () => {},
       advance: () => {},
       executeCmd: () => (function* () { return false as const })(),
+      getActiveActions: (name) => this._currentScene instanceof DialogueScene
+        ? (this._currentScene as DialogueScene).definition.actions?.[name]
+        : undefined,
+      getActiveLocalVars: () => this._currentScene instanceof DialogueScene
+        ? (this._currentScene as DialogueScene).getLocalVars()
+        : {},
     }
 
     const ctx: SceneContext = {
@@ -803,6 +809,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         }
         return (function* (): Generator<any, any, any> { return false })()
       },
+      getActiveActions: (name) => this._currentScene instanceof DialogueScene
+        ? (this._currentScene as DialogueScene).definition.actions?.[name]
+        : undefined,
+      getActiveLocalVars: () => this._currentScene instanceof DialogueScene
+        ? (this._currentScene as DialogueScene).getLocalVars()
+        : {},
     }
   }
 
@@ -1108,6 +1120,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
           }
           return (function* (): Generator<any, any, any> { return false })()
         },
+        getActiveActions: (name) => this._currentScene instanceof DialogueScene
+          ? (this._currentScene as DialogueScene).definition.actions?.[name]
+          : undefined,
+        getActiveLocalVars: () => this._currentScene instanceof DialogueScene
+          ? (this._currentScene as DialogueScene).getLocalVars()
+          : {},
       },
       state: {
         set: (name, data) => { stateStore.set(name, data) },

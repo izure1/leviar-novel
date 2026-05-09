@@ -806,50 +806,6 @@
     };
     return module;
   }
-  function defineHook(config) {
-    return (hookMap) => {
-      const methodKeys = ["onBefore", "onAfter", "onceBefore", "onceAfter"];
-      const registrations = [];
-      for (const [key, methods] of Object.entries(hookMap)) {
-        if (!methods) continue;
-        for (const method of methodKeys) {
-          const cb = methods[method];
-          if (cb) {
-            registrations.push({ method, key, cb });
-          }
-        }
-      }
-      return {
-        _register(novel) {
-          for (const { method, key, cb } of registrations) {
-            if (key.startsWith("novel:")) {
-              novel.hooker[method](key, cb);
-            } else {
-              const moduleKey = key.split(":")[0];
-              const module = config.modules?.[moduleKey];
-              if (module?.hooker) {
-                module.hooker[method](key, cb);
-              }
-            }
-          }
-        },
-        _unregister(novel) {
-          for (const { method, key, cb } of registrations) {
-            const offMethod = method.includes("After") ? "offAfter" : "offBefore";
-            if (key.startsWith("novel:")) {
-              novel.hooker[offMethod](key, cb);
-            } else {
-              const moduleKey = key.split(":")[0];
-              const module = config.modules?.[moduleKey];
-              if (module?.hooker) {
-                module.hooker[offMethod](key, cb);
-              }
-            }
-          }
-        }
-      };
-    };
-  }
 
   // src/constants/render.ts
   var Z_INDEX = {
@@ -3962,7 +3918,6 @@
       hideTags: next.hideTags ?? previous.hideTags
     };
   }
-  var _actionCache = /* @__PURE__ */ new Map();
   var elementModule = define2({
     _elements: {}
   });
@@ -4079,17 +4034,30 @@
         obj.on("click", (e) => {
           e.stopPropagation();
           e.stopImmediatePropagation();
-          const action = _actionCache.get(actionName);
+          const action = ctx.callbacks.getActiveActions(actionName);
           if (action) {
-            const wrappedCtx = {
+            const activeLocalVars = ctx.callbacks.getActiveLocalVars();
+            const freshVars = {
+              ...ctx.callbacks.getEnvironments(),
+              ...ctx.callbacks.getGlobalVars(),
+              ...activeLocalVars
+            };
+            const activeCtx = {
               ...ctx,
+              globalVars: ctx.callbacks.getGlobalVars(),
+              localVars: activeLocalVars,
+              environments: ctx.callbacks.getEnvironments(),
+              scene: {
+                ...ctx.scene,
+                getVars: () => freshVars
+              },
               execute: (cmd) => {
-                const gen = ctx.execute(cmd);
+                const gen = ctx.callbacks.executeCmd(cmd);
                 gen.next();
                 return gen;
               }
             };
-            action(wrappedCtx, ctx.scene.getVars());
+            action(activeCtx, freshVars);
           } else {
             console.warn(`[fumika] element onClick: action '${actionName}' not found`);
           }
@@ -4207,21 +4175,20 @@
       }
     };
   });
-  function cacheOnClickActions(cmd, ctx) {
-    if (cmd.onClick) {
-      const action = ctx.actions.get(cmd.onClick);
-      if (action) _actionCache.set(cmd.onClick, action);
+  function warnIfActionsMissing(cmd, ctx) {
+    if (cmd.onClick && !ctx.callbacks.getActiveActions(cmd.onClick)) {
+      console.warn(`[fumika] element: action '${cmd.onClick}' not found in current scene`);
     }
     if (cmd.children) {
       for (const child of cmd.children) {
-        cacheOnClickActions(child, ctx);
+        warnIfActionsMissing(child, ctx);
       }
     }
   }
   elementModule.defineCommand(function* (cmd, ctx, state, setState) {
     const newElements = { ...state._elements };
     if (cmd.action === "show") {
-      cacheOnClickActions(cmd, ctx);
+      warnIfActionsMissing(cmd, ctx);
       const previous = newElements[cmd.id];
       const nextEntry = {
         id: cmd.id,
@@ -18677,7 +18644,7 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd) => this.callbacks.executeCmd(cmd),
         actions: {
-          get: (name) => this.definition.actions?.[name]
+          get: (name) => this.callbacks.getActiveActions(name)
         }
       };
       for (const [moduleKey, module] of Object.entries(modules)) {
@@ -18845,7 +18812,7 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd2) => this.callbacks.executeCmd(cmd2),
         actions: {
-          get: (name) => this.definition.actions?.[name]
+          get: (name) => this.callbacks.getActiveActions(name)
         }
       };
       if (FLOW_CONTROL_HANDLERS[type]) {
@@ -19456,7 +19423,9 @@ ${addLineNumbers(fragment)}`);
         },
         executeCmd: () => (function* () {
           return false;
-        })()
+        })(),
+        getActiveActions: (name) => this._currentScene instanceof DialogueScene ? this._currentScene.definition.actions?.[name] : void 0,
+        getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {}
       };
       const ctx = {
         novel: this,
@@ -19557,7 +19526,9 @@ ${addLineNumbers(fragment)}`);
           return (function* () {
             return false;
           })();
-        }
+        },
+        getActiveActions: (name) => this._currentScene instanceof DialogueScene ? this._currentScene.definition.actions?.[name] : void 0,
+        getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {}
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
@@ -19806,7 +19777,9 @@ ${addLineNumbers(fragment)}`);
             return (function* () {
               return false;
             })();
-          }
+          },
+          getActiveActions: (name) => this._currentScene instanceof DialogueScene ? this._currentScene.definition.actions?.[name] : void 0,
+          getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {}
         },
         state: {
           set: (name, data) => {
@@ -20150,16 +20123,11 @@ ${addLineNumbers(fragment)}`);
       },
       fullscreen(ctx, vars) {
         ctx.novel.toggleFullscreen();
+      },
+      log(ctx, vars) {
+        console.log(ctx, vars);
       }
-    },
-    hooks: defineHook(novel_config_default)({
-      "choice:show": {
-        onBefore: (value, ctx, vars) => {
-          console.log(ctx, vars);
-          return value;
-        }
-      }
-    })
+    }
   })(({ label, goto, call }) => [
     // ── 하단 패널 (우측 하단) ─────────────────────────────
     {

@@ -305,6 +305,8 @@ function _makeRestoreCtx(renderer: Renderer): SceneContext {
       syncUIState: noop,
       advance: noop,
       executeCmd: function* () { return false },
+      getActiveActions: () => undefined,
+      getActiveLocalVars: () => ({}),
     },
     state: {
       set: noop as any,

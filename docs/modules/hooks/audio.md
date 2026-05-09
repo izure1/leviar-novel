@@ -2,7 +2,10 @@
 
 ## 개요 (Overview)
 
-`audio` 모듈에서 발생하는 재생, 정지, 반복, 종료 이벤트를 감지하여 부가적인 연출을 실행하거나 시스템 로그를 남길 수 있는 훅입니다.  
+`audio` 모듈에서 발생하는 재생, 정지, 반복, 종료 이벤트를 감지하여 부가적인 연출을 실행하거나 시스템 로그를 남길 수 있는 훅입니다.
+
+모든 오디오 훅은 발생 시점의 현재 활성 씬(Scene)의 컨텍스트(`ctx`)와 변수 맵(`vars`)을 제공받습니다.
+
 
 ## 훅 이벤트 목록 (Events)
 
@@ -20,7 +23,7 @@
 
 ```typescript
 // 특정 BGM 재생 시 로그를 기록하고 이펙트를 실행합니다
-novel.hooker.onAfter('audio:play', (cmd) => {
+novel.hooker.onAfter('audio:play', (cmd, ctx, vars) => {
   if (cmd.name === 'bgm') {
     console.log(`배경음 재생 시작: ${cmd.src}`)
   }
@@ -34,7 +37,7 @@ novel.hooker.onAfter('audio:play', (cmd) => {
 
 ```typescript
 // 문 닫히는 효과음이 끝나면 다음 로직을 동기화합니다
-novel.hooker.onAfter('audio:end', (payload) => {
+novel.hooker.onAfter('audio:end', (payload, ctx, vars) => {
   if (payload.src === 'sfx_door_close') {
     console.log('문이 닫혔습니다')
   }

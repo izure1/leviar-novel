@@ -260,10 +260,6 @@ function mergeElementEntry(
   }
 }
 
-// ─── 모듈 레벨 액션 캐시 (view 재빌드 후에도 유지) ────────────
-
-const _actionCache = new Map<string, (ctx: SceneContext, vars: Record<string, any>) => void>()
-
 // ─── 모듈 정의 ───────────────────────────────────────────────
 
 const elementModule = define<ElementCmd<any>, ElementSchema>({
@@ -405,26 +401,36 @@ elementModule.defineView((ctx, data, setState) => {
       })
     }
 
-    // click 이벤트 바인딩 — 모듈 레벨 캐시에서 조회
+    // click 이벤트 바인딩 — 클릭 시점에 활성씬 기준 ctx/vars 재구성
     if (entry.onClick) {
       const actionName = entry.onClick
       obj.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         e.stopImmediatePropagation()
-        const action = _actionCache.get(actionName)
+        const action = ctx.callbacks.getActiveActions(actionName)
         if (action) {
-          // action 내부에서 ctx.execute()가 Generator를 소비하도록
-          // execute를 래핑한 ctx를 전달
-          const wrappedCtx: SceneContext = {
+          const activeLocalVars = ctx.callbacks.getActiveLocalVars()
+          const freshVars = {
+            ...ctx.callbacks.getEnvironments(),
+            ...ctx.callbacks.getGlobalVars(),
+            ...activeLocalVars,
+          }
+          const activeCtx: SceneContext = {
             ...ctx,
+            globalVars: ctx.callbacks.getGlobalVars() as any,
+            localVars: activeLocalVars as any,
+            environments: ctx.callbacks.getEnvironments(),
+            scene: {
+              ...ctx.scene,
+              getVars: () => freshVars as any,
+            },
             execute: (cmd) => {
-              const gen = ctx.execute(cmd)
-              // Generator body를 즉시 실행 (첫 번째 yield/return까지)
+              const gen = ctx.callbacks.executeCmd(cmd)
               gen.next()
               return gen
             },
           }
-          action(wrappedCtx, ctx.scene.getVars())
+          action(activeCtx, freshVars)
         } else {
           console.warn(`[fumika] element onClick: action '${actionName}' not found`)
         }
@@ -565,18 +571,17 @@ elementModule.defineView((ctx, data, setState) => {
   }
 })
 
-/** cmd + children에서 onClick 이름을 재귀적으로 수집하여 캐시에 저장 */
-function cacheOnClickActions(
+/** cmd + children에서 onClick 이름을 재귀적으로 확인하여 action 부재 시 경고 */
+function warnIfActionsMissing(
   cmd: { onClick?: string; children?: ElementChild[] },
   ctx: SceneContext
 ): void {
-  if (cmd.onClick) {
-    const action = ctx.actions.get(cmd.onClick)
-    if (action) _actionCache.set(cmd.onClick, action)
+  if (cmd.onClick && !ctx.callbacks.getActiveActions(cmd.onClick)) {
+    console.warn(`[fumika] element: action '${cmd.onClick}' not found in current scene`)
   }
   if (cmd.children) {
     for (const child of cmd.children) {
-      cacheOnClickActions(child, ctx)
+      warnIfActionsMissing(child, ctx)
     }
   }
 }
@@ -585,7 +590,7 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
   const newElements = { ...state._elements }
 
   if (cmd.action === 'show') {
-    cacheOnClickActions(cmd, ctx)
+    warnIfActionsMissing(cmd, ctx)
 
     const previous = newElements[cmd.id]
     const nextEntry: ElementEntry = {

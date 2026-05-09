@@ -27,15 +27,10 @@ export default defineScene({
     fullscreen(ctx, vars) {
       ctx.novel.toggleFullscreen()
     },
-  },
-  hooks: defineHook(config)({
-    'choice:show': {
-      onBefore: (value, ctx, vars) => {
-        console.log(ctx, vars)
-        return value
-      }
+    log(ctx, vars) {
+      console.log(ctx, vars)
     }
-  })
+  },
 })(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
   {

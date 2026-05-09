@@ -17,7 +17,7 @@
 
 ```typescript
 // 특정 상황에서 모든 알림창을 강제 선택 모드로 바꾸고 제목을 변경합니다
-novel.hooker.onBefore('dialogBox:show', (cmd) => {
+novel.hooker.onBefore('dialogBox:show', (cmd, ctx, vars) => {
   if (novel.variables.isUrgent) {
     return { ...cmd, persist: true, title: `[긴급] ${cmd.title}` }
   }
@@ -29,7 +29,7 @@ novel.hooker.onBefore('dialogBox:show', (cmd) => {
 
 ```typescript
 // 창이 어떻게 닫혔는지 판별하여 처리합니다
-novel.hooker.onAfter('dialogBox:select', (state) => {
+novel.hooker.onAfter('dialogBox:select', (state, ctx, vars) => {
   if (state.index === -1) {
     console.log('창 바깥쪽 바탕을 눌러서 닫았습니다')
   } else {
