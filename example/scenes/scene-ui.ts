@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineScene } from '../../src'
+import { defineHook, defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
@@ -27,10 +27,15 @@ export default defineScene({
     fullscreen(ctx, vars) {
       ctx.novel.toggleFullscreen()
     },
-    log(ctx, vars) {
-      console.log(ctx, vars)
+  },
+  hooks: defineHook(config)({
+    'choice:show': {
+      onBefore: (value, ctx, vars) => {
+        console.log(ctx, vars)
+        return value
+      }
     }
-  }
+  })
 })(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
   {

@@ -112,8 +112,12 @@ export interface NovelHook {
   'novel:next': (value: boolean) => boolean
   /** novel.start() / loadScene() 호출 시 방출. initialValue = 씬 이름 */
   'novel:scene': (value: string) => string
-  /** 변수 값 변경 시 방출. initialValue = 변수 변경 payload */
-  'novel:var': (payload: NovelVarHookPayload) => NovelVarHookPayload
+  /**
+   * 변수 값 변경 시 방출. 씨이 없으면 에러 발생 (novel.start() 이후 사용 가능).
+   * @param ctx - 변경이 발생한 시점의 SceneContext
+   * @param vars - 변경 시점의 통합 변수 맵 (env + global + local)
+   */
+  'novel:var': (payload: NovelVarHookPayload, ctx: SceneContext, vars: Record<string, any>) => NovelVarHookPayload
 }
 
 // =============================================================
@@ -260,6 +264,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     // AudioManager 초기화 — audioModule.hooker를 공유하여 audio:* 훅 라우팅 유지
     this.audio = new AudioManager(audioModule.hooker as IHookallSync<AudioHook>)
+    this.audio.setCtxProvider(() => this._makeCurrentCtxVars())
 
     this.variables = { ...(config.variables as object) } as TConfig['variables']
     this.environments = { ...(config.environments ?? {} as object) } as TConfig['environments']
@@ -323,10 +328,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const oldValue = (this.variables as any)[name]
     if (Object.is(oldValue, value)) return
 
+    const { ctx, vars } = this._makeCurrentCtxVars()
     const payload = this._novelHooker.trigger(
       'novel:var',
       { name, oldValue, newValue: value },
-      (data) => data
+      (data) => data,
+      ctx,
+      vars
     )
     const variables = this.variables as any
     variables[name] = payload.newValue
@@ -336,10 +344,13 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const oldValue = (this.environments as any)[name]
     if (Object.is(oldValue, value)) return
 
+    const { ctx, vars } = this._makeCurrentCtxVars()
     const payload = this._novelHooker.trigger(
       'novel:var',
       { name, oldValue, newValue: value },
-      (data) => data
+      (data) => data,
+      ctx,
+      vars
     )
     const environments = this.environments as any
     environments[name] = payload.newValue
@@ -683,6 +694,78 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   }
 
   // ─── 콜백 팩토리 ─────────────────────────────────────────────
+
+  /**
+   * 현재 활성 씨 기반으로 ctx/vars를 생성합니다.
+   * 율 시작 전 (novel.start() 이전)에 호출되면 에러를 발생합니다.
+   */
+  private _makeCurrentCtxVars(): { ctx: SceneContext; vars: Record<string, any> } {
+    const scene = this._currentScene
+    if (!(scene instanceof DialogueScene)) {
+      throw new Error('[fumika] Variable and audio operations require an active scene. Call novel.start() first.')
+    }
+
+    const globalVars = { ...(this.variables as object) }
+    const envVars = { ...(this.environments as object) }
+    const localVars = scene.getLocalVars()
+    const mergedVars = { ...envVars, ...globalVars, ...localVars }
+
+    // _buildCallbacks()는 _sceneGeneration을 증가시키므로 안정적 콜백 직접 구성
+    const stableCallbacks: SceneCallbacks = {
+      getNovel: () => this as any,
+      getGlobalVars: () => ({ ...this.variables as object }),
+      setGlobalVar: (n, v) => { this._setGlobalVar(n, v) },
+      getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
+      setEnvironment: (n, v) => { this._setEnvironment(n, v) },
+      loadScene: (target) => { this.loadScene(target) },
+      callScene: () => {},
+      captureRenderer: () => this._renderer.captureState(),
+      isSkipping: () => this._isSkipping,
+      disableInput: () => {},
+      getStateStore: () => this._stateStore,
+      getUIRegistry: () => this._uiRegistry,
+      syncUIState: () => {},
+      advance: () => {},
+      executeCmd: () => (function* () { return false as const })(),
+    }
+
+    const ctx: SceneContext = {
+      novel: this as any,
+      world: this._world as any,
+      renderer: this._renderer,
+      globalVars: globalVars as any,
+      localVars: localVars as any,
+      environments: envVars,
+      callbacks: stableCallbacks,
+      scene: {
+        getTextSubIndex: () => 0,
+        setTextSubIndex: () => {},
+        interpolateText: (text) => text,
+        jumpToLabel: () => {},
+        hasLabel: () => false,
+        getVars: () => mergedVars as any,
+        setGlobalVar: (key, value) => { this._setGlobalVar(key, value) },
+        setLocalVar: () => {},
+        loadScene: (target) => { this.loadScene(target) },
+        end: () => {},
+        callScene: () => {},
+      },
+      state: {
+        set: (n, data) => { this._stateStore.set(n, data) },
+        get: (n) => this._stateStore.get(n),
+      },
+      ui: {
+        register: (n, entry) => { this._uiRegistry.set(n, entry) },
+        get: (n) => this._uiRegistry.get(n),
+        show: (n, duration) => { this._uiRegistry.get(n)?.show?.(duration) },
+        hide: (n, duration) => { this._uiRegistry.get(n)?.hide?.(duration) },
+      },
+      execute: function* () { return false },
+      actions: { get: () => undefined },
+    }
+
+    return { ctx, vars: mergedVars }
+  }
 
   private _buildCallbacks(): SceneCallbacks {
     const gen = ++this._sceneGeneration

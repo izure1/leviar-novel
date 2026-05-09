@@ -276,7 +276,7 @@ export type NovelHookRef = {
   'novel:load': (value: any) => any
   'novel:next': (value: boolean) => boolean
   'novel:scene': (value: string) => string
-  'novel:var': (payload: { name: string, oldValue: any, newValue: any }) => { name: string, oldValue: any, newValue: any }
+  'novel:var': (payload: { name: string, oldValue: any, newValue: any }, ctx: SceneContext | undefined, vars: Record<string, any> | undefined) => { name: string, oldValue: any, newValue: any }
 }
 
 // ─── SceneHookDescriptor ─────────────────────────────────────
@@ -297,18 +297,25 @@ export interface SceneHookDescriptor {
 
 type HookReturn<T> = T extends (...args: any) => infer R ? R : never
 
+/** hookall HookallCallbackParams 추출 헬퍼 */
+type HookParams<T> = T extends (initialValue: any, ...params: infer R) => any ? R : never
+
 export type SceneHookMethods<TConfig, K extends keyof AllHooksOf<TConfig>> = {
   onBefore?: (
     value: HookReturn<AllHooksOf<TConfig>[K]>,
+    ...params: HookParams<AllHooksOf<TConfig>[K]>
   ) => HookReturn<AllHooksOf<TConfig>[K]>
   onAfter?: (
     value: HookReturn<AllHooksOf<TConfig>[K]>,
+    ...params: HookParams<AllHooksOf<TConfig>[K]>
   ) => HookReturn<AllHooksOf<TConfig>[K]>
   onceBefore?: (
     value: HookReturn<AllHooksOf<TConfig>[K]>,
+    ...params: HookParams<AllHooksOf<TConfig>[K]>
   ) => HookReturn<AllHooksOf<TConfig>[K]>
   onceAfter?: (
     value: HookReturn<AllHooksOf<TConfig>[K]>,
+    ...params: HookParams<AllHooksOf<TConfig>[K]>
   ) => HookReturn<AllHooksOf<TConfig>[K]>
 }
 

@@ -196,14 +196,16 @@ export class DialogueScene {
     return { ...this.callbacks.getEnvironments(), ...this.callbacks.getGlobalVars(), ...this.localVars }
   }
 
-  private _setLocalVar(name: string, value: any): void {
+  private _setLocalVar(name: string, value: any, ctx?: SceneContext): void {
     const oldValue = this.localVars[name]
     if (Object.is(oldValue, value)) return
 
     const payload = this.callbacks.getNovel().hooker.trigger(
       'novel:var',
       { name, oldValue, newValue: value },
-      (data: { name: string, oldValue: any, newValue: any }) => data
+      (data: { name: string, oldValue: any, newValue: any }) => data,
+      ctx,
+      ctx ? this._vars : undefined
     )
     this.localVars[name] = payload.newValue
   }
@@ -276,7 +278,7 @@ export class DialogueScene {
         hasLabel: (label: string) => this.labelIndex.has(label),
         getVars: () => this._vars,
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
-        setLocalVar: (key: string, value: any) => { this._setLocalVar(key, value) },
+        setLocalVar: (key: string, value: any) => { this._setLocalVar(key, value, ctx) },
         loadScene: (target: string | { scene: string; preserve: boolean }) => {
           this._ended = true
           this.callbacks.loadScene(target)
@@ -467,7 +469,7 @@ export class DialogueScene {
         hasLabel: (label: string) => this.labelIndex.has(label),
         getVars: () => this._vars,
         setGlobalVar: (key: string, value: any) => this.callbacks.setGlobalVar(key, value),
-        setLocalVar: (key: string, value: any) => { this._setLocalVar(key, value) },
+        setLocalVar: (key: string, value: any) => { this._setLocalVar(key, value, ctx) },
         loadScene: (target: string | { scene: string; preserve: boolean }) => {
           this._ended = true
           this.callbacks.loadScene(target)

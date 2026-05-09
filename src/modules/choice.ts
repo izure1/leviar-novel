@@ -123,9 +123,11 @@ export interface ChoiceCmd<TConfig = any, TLocalVars = any> {
 
 export type ResolvedChoiceItem = Omit<ChoiceCmd<any, any>['choices'][number], 'text'> & { text: string }
 
+import type { SceneContext } from '../core/SceneContext'
+
 export interface ChoiceHook {
-  'choice:show': (value: { choices: ResolvedChoiceItem[] }) => { choices: ResolvedChoiceItem[] }
-  'choice:select': (value: { index: number, selected: ResolvedChoiceItem }) => { index: number, selected: ResolvedChoiceItem }
+  'choice:show': (value: { choices: ResolvedChoiceItem[] }, ctx: SceneContext, vars: Record<string, any>) => { choices: ResolvedChoiceItem[] }
+  'choice:select': (value: { index: number, selected: ResolvedChoiceItem }, ctx: SceneContext, vars: Record<string, any>) => { index: number, selected: ResolvedChoiceItem }
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -335,7 +337,9 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
   const showData = choiceModule.hooker.trigger(
     'choice:show',
     { choices: resolvedChoices },
-    (value) => value
+    (value) => value,
+    ctx,
+    ctx.scene.getVars()
   )
 
   console.log('[fumika] choiceHandler: opening choices', showData.choices)
@@ -347,7 +351,9 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     const selectData = choiceModule.hooker.trigger(
       'choice:select',
       { index: i, selected: showData.choices[i] },
-      (value) => value
+      (value) => value,
+      ctx,
+      ctx.scene.getVars()
     )
     selected = selectData.selected ?? null
     ctx.callbacks.advance()

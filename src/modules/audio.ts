@@ -68,12 +68,16 @@ export interface AudioEventPayload {
   src: string
 }
 
+import type { SceneContext } from '../core/SceneContext'
+
 export interface AudioHook {
-  'audio:play': (cmd: AudioPlayCmd<any>) => AudioPlayCmd<any>
-  'audio:pause': (cmd: AudioPauseCmd) => AudioPauseCmd
-  'audio:stop': (cmd: AudioStopCmd) => AudioStopCmd
-  'audio:end': (payload: AudioEventPayload) => AudioEventPayload
-  'audio:repeat': (payload: AudioEventPayload) => AudioEventPayload
+  'audio:play': (cmd: AudioPlayCmd<any>, ctx: SceneContext, vars: Record<string, any>) => AudioPlayCmd<any>
+  'audio:pause': (cmd: AudioPauseCmd, ctx: SceneContext, vars: Record<string, any>) => AudioPauseCmd
+  'audio:stop': (cmd: AudioStopCmd, ctx: SceneContext, vars: Record<string, any>) => AudioStopCmd
+  /** 오디오 종료 시 방출. ctx/vars는 발생 시점의 현재 활성 씬 기준. */
+  'audio:end': (payload: AudioEventPayload, ctx: SceneContext, vars: Record<string, any>) => AudioEventPayload
+  /** 오디오 루프 시 방출. ctx/vars는 발생 시점의 현재 활성 씬 기준. */
+  'audio:repeat': (payload: AudioEventPayload, ctx: SceneContext, vars: Record<string, any>) => AudioEventPayload
 }
 
 // ─── 스키마 ──────────────────────────────────────────────────

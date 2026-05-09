@@ -244,14 +244,16 @@ export interface InputCmd<TConfig = any, _TLocalVars = any> {
 
 // ─── InputHook ────────────────────────────────────────────────
 
+import type { SceneContext } from '../core/SceneContext'
+
 export interface InputHook {
-  'input:open': (value: { label: string; multiline: boolean }) => { label: string; multiline: boolean }
+  'input:open': (value: { label: string; multiline: boolean }, ctx: SceneContext, vars: Record<string, any>) => { label: string; multiline: boolean }
   /**
    * 입력 완료/취소 시 방출됩니다.
    * - `cancelled: true`이면 취소 버튼이 클릭된 것입니다.
    * - cancelled인 경우 `text`는 빈 문자열이며, varName에 저장되지 않습니다.
    */
-  'input:submit': (value: { varName: string; text: string; buttonIndex: number; cancelled: boolean }) => { varName: string; text: string; buttonIndex: number; cancelled: boolean }
+  'input:submit': (value: { varName: string; text: string; buttonIndex: number; cancelled: boolean }, ctx: SceneContext, vars: Record<string, any>) => { varName: string; text: string; buttonIndex: number; cancelled: boolean }
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -767,7 +769,9 @@ inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
   const openData = inputModule.hooker.trigger(
     'input:open',
     { label: cmd.label ?? '', multiline: cmd.multiline ?? false },
-    (v) => v
+    (v) => v,
+    ctx,
+    ctx.scene.getVars()
   )
 
   const buttons: InputButton[] = cmd.buttons?.length
@@ -787,7 +791,9 @@ inputModule.defineCommand(function* (cmd, ctx, _state, setState) {
     const submitData = inputModule.hooker.trigger(
       'input:submit',
       { varName: cmd.to as string, text: value, buttonIndex, cancelled: isCancelled },
-      (v) => v
+      (v) => v,
+      ctx,
+      ctx.scene.getVars()
     )
 
     // 취소가 아닌 경우에만 변수에 저장

@@ -5,15 +5,23 @@ import { Z_INDEX } from '../constants/render'
 
 // ─── 대화 UI 스타일 + 런타임 상태 스키마 ──────────────────────
 
+import type { SceneContext } from '../core/SceneContext'
+
 export interface DialogueHook {
+  /** view builder에서 방출. 직전 command ctx를 캐싱하여 전달. */
   'dialogue:text-render': (
-    s: { speaker: string | undefined, text: string }
+    s: { speaker: string | undefined, text: string },
+    ctx: SceneContext,
+    vars: Record<string, any>
   ) => {
     speaker: string | undefined
     text: string
   },
+  /** command handler에서 방출. ctx는 항상 존재. */
   'dialogue:text-run': (
-    s: { speaker: string | undefined, text: string }
+    s: { speaker: string | undefined, text: string },
+    ctx: SceneContext,
+    vars: Record<string, any>
   ) => {
     speaker: string | undefined
     text: string
@@ -146,6 +154,12 @@ export interface DialogueCmd<TConfig = any> {
  * // scene (initial 사용)
  * defineScene({ config, initial: { 'dialogue': { bg: { height: 168 } } } }, [...])
  */
+// ─── 최근 command ctx 캐시 (dialogue:text-render 용) ─────────
+// text-render는 defineView의 onUpdate에서 방출되어 직접 SceneContext 접근 불가.
+// defineCommand에서 text-run 방출 직전에 갱신하여 text-render에서 읽습니다.
+let _cachedCtx: SceneContext | undefined
+let _cachedVars: Record<string, any> | undefined
+
 const dialogueModule = define<DialogueCmd<any>, DialogueSchema, DialogueHook>({
   style: undefined,
   bg: DEFAULT_DIALOGUE_BG,
@@ -255,7 +269,9 @@ dialogueModule.defineView((ctx, data, setState) => {
     const resolved = dialogueModule.hooker.trigger(
       'dialogue:text-render',
       { speaker, text },
-      (value) => value
+      (value) => value,
+      _cachedCtx!,
+      _cachedVars!
     )
     const resolvedSpeaker = resolved.speaker
     const resolvedText = resolved.text
@@ -412,8 +428,11 @@ dialogueModule.defineCommand(function* (cmd, ctx, state, setState) {
       _lines: [...lines],
     })
 
-    // 'dialogue:text-run' 훅 방출
-    dialogueModule.hooker.trigger('dialogue:text-run', { speaker, text }, (value) => value)
+    // 'dialogue:text-run' 훅 방출 전 ctx 캐시 갱신 (text-render용)
+    _cachedCtx = ctx
+    _cachedVars = ctx.scene.getVars()
+    dialogueModule.hooker.trigger('dialogue:text-run', { speaker, text }, (value) => value, ctx, ctx.scene.getVars())
+
 
     ctx.scene.setTextSubIndex(index + 1)
 
