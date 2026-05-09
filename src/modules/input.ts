@@ -137,9 +137,9 @@ export const DEFAULT_INPUT_STYLE: Required<Pick<
   InputSchema,
   'overlay' | 'panel' | 'labelStyle' | 'inputTextStyle' | 'cursorStyle' | 'button' | 'buttonHover' | 'buttonText' | 'buttonTextHover'
 >> = {
-  overlay: { color: 'rgba(0,0,0,0.5)' },
+  overlay: { background: 'rgba(0,0,0,0.5)' },
   panel: {
-    color: 'rgba(20,20,40,0.92)',
+    background: 'rgba(20,20,40,0.92)',
     borderColor: 'rgba(255,255,255,0.25)',
     borderWidth: 1,
     borderRadius: '3%',
@@ -162,16 +162,16 @@ export const DEFAULT_INPUT_STYLE: Required<Pick<
     textShadowOffsetY: 1,
   },
   cursorStyle: {
-    color: 'rgba(255,255,255,0.85)',
+    background: 'rgba(255,255,255,0.85)',
   },
   button: {
-    color: 'rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.12)',
     borderColor: 'rgba(255,255,255,0.28)',
     borderWidth: 1,
     borderRadius: '10%',
   },
   buttonHover: {
-    color: 'rgba(255,255,255,0.26)',
+    background: 'rgba(255,255,255,0.26)',
     borderColor: 'rgba(255,255,255,0.65)',
   },
   buttonText: {
@@ -530,7 +530,7 @@ inputModule.defineView((ctx, data, setState) => {
       style: {
         width: AVAILABLE_W,
         height: INPUT_H,
-        color: 'rgba(255,255,255,0.06)',
+        background: 'rgba(255,255,255,0.06)',
         borderColor: 'rgba(255,255,255,0.35)',
         borderWidth: 1,
         borderRadius: '2%',

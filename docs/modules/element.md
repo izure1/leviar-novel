@@ -27,25 +27,25 @@ export default defineScene({
       // 필요한 경우 ctx.execute(...)를 호출하여 추가 연출 실행 가능
     }
   }
-})(({ label }) => [
+})](({ label }) => [
   {
     type: 'element',
     action: 'show',
     id: 'panel_main',
     kind: 'rect',
-    // 화면 우측 중앙 배치 (0~1 정규화 좌표)
-    position: { x: 0.92, y: 0.5 },
+    // 화면 우측 중앙 배치 (픽셀 좌표 기준, 1920x1080 해상도 예시)
+    position: { x: 1748, y: 540 },
     // 배경 패널 스타일
-    style: { width: 120, height: 300, color: 'rgba(0,0,0,0.5)' },
+    style: { width: 120, height: 300, background: 'rgba(0,0,0,0.5)' },
     children: [
       {
         id: 'btn_save',
         kind: 'rect',
         // 부모(panel_main)의 중앙을 기준으로 한 픽셀 오프셋
         position: { x: 0, y: 60 },
-        style: { width: 100, height: 36, color: 'rgba(255,255,255,0.1)' },
+        style: { width: 100, height: 36, background: 'rgba(255,255,255,0.1)' },
         // 호버 시 색상이 약간 밝아짐
-        hoverStyle: { color: 'rgba(255,255,255,0.3)' },
+        hoverStyle: { background: 'rgba(255,255,255,0.3)' },
         // 클릭 시 actions의 'save'를 실행
         onClick: 'save',
         // 버튼 내 텍스트
@@ -88,8 +88,9 @@ export default defineScene({
 
 | 속성명 | 타입 | 설명 |
 | :--- | :--- | :--- |
-| **`position`** | `{ x: number, y: number }` | 루트 요소는 **0~1 사이의 화면 정규화 비율 좌표**입니다.<br>자식 요소(`children`)는 **부모 중심점 기준 픽셀(px) 오프셋**입니다. |
+| **`position`** | `{ x: number, y: number }` | **루트 요소, 자식 요소 모두 픽셀(px) 기반 좌표**입니다.<br>루트 요소는 캔버스 좌상단 `{ x: 0, y: 0 }`을 원점으로 하는 픽셀 좌표이고,<br>자식 요소는 **부모 중심점 기준 픽셀 오프셋**입니다. |
 | **`pivot`** | `{ x: number, y: number }` | 요소의 기준점(0~1 정규화)입니다. 기본값 `{ x: 0.5, y: 0.5 }`(중앙 기준). |
+| **`scale`** | `{ x: number, y: number }` | 요소의 크기 비율입니다. 기본값 `{ x: 1, y: 1 }`. |
 | **`rotation`** | `number` | 요소의 회전 각도(도 단위)입니다. |
 | **`style`** | `Style` | 너비(`width`), 높이(`height`), 색상(`color`), 폰트크기(`fontSize`) 등의 기본 렌더링 스타일입니다. |
 | **`hoverStyle`** | `Style` | 마우스를 올렸을 때 기본 스타일에 병합(Merge)되는 스타일입니다. 마우스가 벗어나면 원상 복구됩니다. |
@@ -101,6 +102,6 @@ export default defineScene({
 | 상황 | 원인 및 해결 방법 |
 | :--- | :--- |
 | **액션을 찾을 수 없다는 경고 발생** | `onClick`에 지정한 이름이 `defineScene({ actions: { ... } })` 블록 내부에 제대로 선언되었는지 확인하세요. |
-| **자식 요소가 보이지 않음** | 자식 요소의 `position`은 화면 비율(0.5 등)이 아니라 부모 중심을 기준으로 한 **픽셀 단위** 오프셋입니다. 숫자를 너무 작거나 크게 주지 않았는지 확인하세요. |
+| **요소가 예상 위치에 나타나지 않음** | 루트·자식 요소 모두 **픽셀 좌표** 기준입니다. 루트는 캔버스 절대 좌표(좌상단 기준), 자식은 부모 중심점 기준 오프셋입니다. 0.5 같은 비율값을 사용하면 거의 원점(0, 0)에 표시됩니다. |
 | **텍스트/이미지 속성 오류** | 타입 스크립트 기반으로 설계되어 있습니다. `kind`가 `'rect'`일 때는 `text`나 `image` 속성을 쓸 수 없고, `'text'`일 때만 `text` 속성을 쓸 수 있습니다. |
 | **태그 기반 숨김 제어** | `uiTags`와 `hideTags`는 **루트 요소(id를 가진 최상위 요소)**에 지정할 때만 유효하게 동작합니다. 인스턴스별로 서로 다른 태그를 지정하여 정교하게 다른 UI를 숨기거나 숨겨질 수 있습니다. 자세한 내용은 **[UI 태그 시스템](../ui-tags.md)**을 참고하세요. |

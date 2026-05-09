@@ -41,7 +41,7 @@ export default defineScene({
   initial: {
     input: {
       panel: {
-        color: '#1a1a1a',
+        background: '#1a1a1a',
         borderColor: '#3498db',
         borderWidth: 2,
         borderRadius: 12,
@@ -53,7 +53,7 @@ export default defineScene({
         fontWeight: 'bold'
       },
       button: {
-        color: '#3498db',
+        background: '#3498db',
         borderRadius: 6
       }
     }

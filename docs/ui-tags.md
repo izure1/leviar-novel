@@ -42,7 +42,7 @@ export default defineScene({ config })(() => [
     // 이 HUD가 떠 있는 동안 'dialogue' 태그를 가진 모든 UI를 숨깁니다.
     hideTags: ['dialogue'],
     position: { x: 0.5, y: 0.5 },
-    style: { width: 400, height: 200, color: 'blue' }
+    style: { width: 400, height: 200, background: 'rgb(0, 0, 255)' }
   },
 
   { type: 'dialogue', text: 'HUD가 켜져 있는 동안 대화창은 잠시 숨겨졌다가, HUD가 사라지면 다시 나타납니다.' },

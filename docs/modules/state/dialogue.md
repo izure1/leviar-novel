@@ -35,7 +35,7 @@ export default defineScene({
     dialogue: {
       bg: { 
         height: 200, 
-        color: 'rgba(20, 20, 40, 0.85)',
+        background: 'rgba(20, 20, 40, 0.85)',
         borderRadius: 16
       },
       text: { 

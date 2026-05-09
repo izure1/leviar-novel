@@ -37,23 +37,23 @@ export type MoodCmd =
     disable?: boolean
   }
 
-const MOOD_PRESETS: Record<MoodType, { color: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
-  day: { color: 'rgba(255,230,180,0.1)', vignette: 'rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%', blendMode: 'screen' },
-  night: { color: 'rgba(10,15,60,0.5)', vignette: 'rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%', blendMode: 'multiply' },
-  dawn: { color: 'rgba(25,35,130,0.4)', vignette: 'rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%', blendMode: 'multiply' },
-  sunset: { color: 'rgba(255,120,50,0.25)', vignette: 'rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%', blendMode: 'screen' },
-  foggy: { color: 'rgba(200,210,220,0.4)', vignette: 'rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%', blendMode: 'screen' },
-  sepia: { color: 'rgba(160,110,50,0.3)', vignette: 'rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%', blendMode: 'multiply' },
-  cold: { color: 'rgba(80,130,220,0.25)', vignette: 'rgba(0,0,0,0) 50%, rgba(20,40,100,0.4) 100%', blendMode: 'hard-light' },
-  noir: { color: 'rgba(0,0,0,0.1)', vignette: 'rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%', blendMode: 'luminosity' },
-  horror: { color: 'rgba(150,0,0,0.3)', vignette: 'rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%', blendMode: 'multiply' },
-  flashback: { color: 'rgba(200,200,200,0.2)', vignette: 'rgba(0,0,0,0) 60%, rgba(255,255,255,0.5) 100%', blendMode: 'screen' },
-  dream: { color: 'rgba(180,150,255,0.2)', vignette: 'rgba(0,0,0,0) 60%, rgba(255,200,255,0.4) 100%', blendMode: 'screen' },
-  danger: { color: 'rgba(255,0,0,0.1)', vignette: 'rgba(0,0,0,0) 50%, rgba(200,0,0,0.5) 100%', blendMode: 'color-burn' },
-  none: { color: 'rgba(0,0,0,0)' },
-  spot: { color: 'radial-gradient(circle,rgba(255,240,180,0.8) 0%,rgba(0,0,0,0) 70%)', blendMode: 'screen', defaultIntensity: 0.6 },
-  ambient: { color: 'rgba(255,230,150,1)', blendMode: 'screen', defaultIntensity: 0.15 },
-  warm: { color: 'rgba(255,160,50,1)', blendMode: 'screen', defaultIntensity: 0.25 },
+const MOOD_PRESETS: Record<MoodType, { background: string; vignette?: string; blendMode?: string; defaultIntensity?: number }> = {
+  day: { background: 'rgba(255,230,180,0.1)', vignette: 'radial-gradient(rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%)', blendMode: 'screen' },
+  night: { background: 'rgba(10,15,60,0.5)', vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%)', blendMode: 'multiply' },
+  dawn: { background: 'rgba(25,35,130,0.4)', vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%)', blendMode: 'multiply' },
+  sunset: { background: 'rgba(255,120,50,0.25)', vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%)', blendMode: 'screen' },
+  foggy: { background: 'rgba(200,210,220,0.4)', vignette: 'radial-gradient(rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%)', blendMode: 'screen' },
+  sepia: { background: 'rgba(160,110,50,0.3)', vignette: 'radial-gradient(rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%)', blendMode: 'multiply' },
+  cold: { background: 'rgba(80,130,220,0.25)', vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(20,40,100,0.4) 100%)', blendMode: 'hard-light' },
+  noir: { background: 'rgba(0,0,0,0.1)', vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%)', blendMode: 'luminosity' },
+  horror: { background: 'rgba(150,0,0,0.3)', vignette: 'radial-gradient(rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%)', blendMode: 'multiply' },
+  flashback: { background: 'rgba(200,200,200,0.2)', vignette: 'radial-gradient(rgba(0,0,0,0) 60%, rgba(255,255,255,0.5) 100%)', blendMode: 'screen' },
+  dream: { background: 'rgba(180,150,255,0.2)', vignette: 'radial-gradient(rgba(0,0,0,0) 60%, rgba(255,200,255,0.4) 100%)', blendMode: 'screen' },
+  danger: { background: 'rgba(255,0,0,0.1)', vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(200,0,0,0.5) 100%)', blendMode: 'color-burn' },
+  none: { background: 'rgba(0,0,0,0)' },
+  spot: { background: 'radial-gradient(rgba(255,240,180,0.8) 0%, rgba(0,0,0,0) 70%)', blendMode: 'screen', defaultIntensity: 0.6 },
+  ambient: { background: 'rgba(255,230,150,1)', blendMode: 'screen', defaultIntensity: 0.15 },
+  warm: { background: 'rgba(255,160,50,1)', blendMode: 'screen', defaultIntensity: 0.25 },
 }
 
 // ─── 스키마 ──────────────────────────────────────────────────
@@ -90,7 +90,7 @@ moodModule.defineView((ctx, data, setState) => {
       return
     }
 
-    const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood]
+    const { background, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood]
     const finalIntensity = intensity ?? defaultIntensity ?? 1
     const dur = immediate ? 0 : ctx.renderer.dur(duration)
 
@@ -107,7 +107,8 @@ moodModule.defineView((ctx, data, setState) => {
 
     const rectOpts: any = {
       style: {
-        color, opacity: dur > 0 ? 0 : finalIntensity,
+        background,
+        opacity: dur > 0 ? 0 : finalIntensity,
         width: exactW, height: exactH,
         zIndex: Z_INDEX.MOOD,
         pointerEvents: false,
@@ -116,8 +117,7 @@ moodModule.defineView((ctx, data, setState) => {
       transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } },
     }
     if (vignette) {
-      rectOpts.style.gradient = vignette
-      rectOpts.style.gradientType = 'circular'
+      rectOpts.style.background = vignette
     }
 
     const rect = ctx.renderer.world.createRectangle(rectOpts)

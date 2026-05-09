@@ -1,95 +1,46 @@
 # 📖 튜토리얼 (Tutorial)
 
-이 문서는 빈 화면에 배경과 캐릭터를 띄우고, 대사를 출력하는 기초적인 시나리오 작성법을 안내합니다.  
+환영합니다! 이 튜토리얼은 Fumika 엔진을 처음 접하는 분들을 위해 작성되었습니다.  
+
+우리는 이 튜토리얼을 통해 **간단한 스토리텔링 미니 프로젝트**를 처음부터 끝까지 직접 만들어볼 것입니다.  
+검은색 빈 화면에서 시작해, 배경을 띄우고, 캐릭터가 대화를 나누며,  
+플레이어의 선택에 따라 결말이 달라지는 구조를 완성해 나갈 것입니다.  
+
+## 누구를 위한 문서인가요?
+* **초보 개발자**: 엔진의 기본 구조와 코드 작성 방식을 익히고 싶은 분  
+* **시나리오 라이터/기획자**: 코드를 통해 어떻게 연출이 이루어지는지 감을 잡고 싶은 분  
+
+## 사전 준비 (Prerequisites)
+이 튜토리얼을 따라가기 위해서는 다음 항목들이 준비되어 있어야 합니다.  
+* **Node.js** 최신 버전 설치  
+* `npm install` 또는 `pnpm install`을 통한 의존성 설치 완료  
 
 ---
 
-## 1. 에셋 및 캐릭터 준비하기
+## 튜토리얼 목차
 
-화면에 띄울 배경과 캐릭터 이미지를 `novel.config.ts`에 등록해야 합니다.  
-ID(문자열)를 키값으로 설정하여 나중에 시나리오에서 쉽게 불러올 수 있습니다.  
+순서대로 차근차근 따라오는 것을 권장합니다.  
+각 단계는 이전 단계의 결과물을 바탕으로 진행됩니다.  
 
-### 핵심 예제 (Main Example)
-
-```typescript
-import { defineNovelConfig } from 'fumika'
-
-export default defineNovelConfig({
-  width: 1280,
-  height: 720,
-  assets: {
-    'bg-classroom': './assets/classroom.jpg',
-    'char-fumika-base': './assets/fumika_base.png',
-    'char-fumika-smile': './assets/fumika_smile.png'
-  },
-  // 사용할 캐릭터의 몸체와 표정을 정의합니다
-  characters: {
-    fumika: {
-      name: '후미카',
-      bases: {
-        default: { src: 'char-fumika-base', width: 400, points: { face: { x: 0.5, y: 0.2 } } }
-      },
-      emotions: {
-        smile: { face: 'char-fumika-smile' }
-      }
-    }
-  }
-})
-```
+1. **[프로젝트 구조와 첫 화면](./tutorial/01-project-structure.md)**  
+   * 처음 프로젝트를 열었을 때 봐야 할 파일들과,  
+     빈 화면에 첫 대사를 띄워보는 방법을 배웁니다.  
+2. **[에셋과 캐릭터의 등장](./tutorial/02-assets-and-characters.md)**  
+   * 화면을 다채롭게 만들기 위해 배경 이미지와 캐릭터 이미지를 등록하고  
+     화면에 띄우는 방법을 배웁니다.  
+3. **[대사와 동적인 연출](./tutorial/03-dialogue-and-actions.md)**  
+   * 캐릭터의 대사를 출력하고, 등장과 동시에 말을 하거나  
+     표정이 자연스럽게 바뀌는 연출을 추가합니다.  
+4. **[선택지와 분기](./tutorial/04-choices-and-branching.md)**  
+   * 플레이어가 직접 스토리에 개입할 수 있도록 선택지를 제공하고,  
+     선택에 따라 다른 장면으로 이동해 봅니다.  
+5. **[호감도와 변수](./tutorial/05-state-management.md)**  
+   * 이전 선택에 따른 결과를 기억하여, 특정 조건이 충족되었을 때만  
+     볼 수 있는 숨겨진 장면을 만들어 봅니다.  
+6. **[나만의 UI 만들기](./tutorial/06-custom-ui.md)**  
+   * 게임 플레이 중 상단에 플레이어의 호감도를 보여주는 등,  
+     게임 화면 위에 독자적인 UI 요소를 띄우는 방법을 배웁니다.  
 
 ---
 
-## 2. 장면 구성하기 (Scene Definition)
-
-이제 작성해둔 `scene-start.ts` 파일을 열어서 배경을 깔고 캐릭터를 등장시킵니다.  
-모든 연출은 배열 안에 객체를 순서대로 나열하는 방식입니다.  
-
-### 핵심 예제 (Main Example)
-
-```typescript
-import { defineScene } from 'fumika'
-import config from './novel.config'
-
-export default defineScene({ config })(() => [
-  // 1. 배경을 출력합니다
-  { type: 'background', name: 'bg-classroom' },
-
-  // 2. 캐릭터를 출력합니다
-  { type: 'character', action: 'show', name: 'fumika', image: 'default:default', position: 'center' },
-
-  // 3. 대사를 출력합니다
-  { type: 'dialogue', speaker: 'fumika', text: '안녕, 오늘부터 잘 부탁해.' },
-
-  // 4. 캐릭터의 표정을 바꿉니다
-  { type: 'character', action: 'show', name: 'fumika', image: 'default:smile' },
-  { type: 'dialogue', speaker: 'fumika', text: '앞으로 재미있는 일이 많을 거야.' }
-])
-```
-
----
-
-## 3. 병렬 실행과 연출 (Skip)
-
-위의 코드는 배경 전환 -> 캐릭터 등장 -> 대사 출력이 순차적으로 진행됩니다.  
-만약 캐릭터 등장과 동시에 대사를 출력하고 싶다면 `skip: true` 속성을 추가합니다.  
-
-### 핵심 예제 (Main Example)
-
-```typescript
-import { defineScene } from 'fumika'
-import config from './novel.config'
-
-export default defineScene({ config })(() => [
-  { type: 'background', name: 'bg-classroom' },
-
-  // skip: true가 있으면 멈추지 않고 즉시 다음 명령어와 동시에 실행됩니다
-  { type: 'character', action: 'show', name: 'fumika', image: 'default:smile', skip: true },
-  { type: 'dialogue', speaker: 'fumika', text: '안녕, 이렇게 나타남과 동시에 말할 수도 있어.' }
-])
-```
-
----
-
-튜토리얼을 무사히 마쳤습니다.  
-더 다양한 연출 명령어가 궁금하시다면 **[명령어 참조](./commands.md)**를 확인하시고,  
-변수나 조건 분기 같은 로직이 필요하시다면 **[핵심 개념](./concepts.md)**을 읽어보시기 바랍니다.  
+준비가 되셨다면, **[1. 프로젝트 구조와 첫 화면](./tutorial/01-project-structure.md)**으로 넘어가 첫 번째 여정을 시작해 보세요!  

@@ -60,16 +60,16 @@ export interface ChoiceSchema {
 
 export const DEFAULT_CHOICE_STYLE: ChoiceSchema = {
   bg: {
-    color: 'rgba(0,0,0,0.1)',
+    background: 'rgba(0,0,0,0.1)',
   },
   button: {
-    color: 'rgba(30,30,60,0.85)',
+    background: 'rgba(30,30,60,0.85)',
     borderColor: 'rgba(255,255,255,0.3)',
     borderWidth: 1.5,
     borderRadius: 8,
   },
   buttonHover: {
-    color: 'rgba(80,80,180,0.9)',
+    background: 'rgba(80,80,180,0.9)',
     borderColor: 'rgba(255,255,255,0.7)',
   },
   text: {

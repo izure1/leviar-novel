@@ -41,7 +41,7 @@ export default defineScene({
   initial: {
     dialogBox: {
       panel: {
-        color: '#2c3e50',
+        background: '#2c3e50',
         borderColor: '#e74c3c',
         borderWidth: 3,
         borderRadius: 8

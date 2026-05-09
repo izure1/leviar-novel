@@ -78,7 +78,7 @@ export interface DialogueSchema {
 // ─── 기본값 ──────────────────────────────────────────────────
 
 export const DEFAULT_DIALOGUE_BG: Partial<Style> = {
-  color: 'rgba(0,0,0,0.82)',
+  background: 'rgba(0,0,0,0.82)',
 }
 
 export const DEFAULT_DIALOGUE_SPEAKER: Partial<Style> = {

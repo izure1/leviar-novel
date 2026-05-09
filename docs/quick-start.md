@@ -68,7 +68,7 @@ import sceneStart from './scene-start'
 
 const novel = new Novel(config, {
   element: document.getElementById('app') as HTMLElement,
-  scenes: { 'scene-start': () => sceneStart }
+  scenes: { 'scene-start': sceneStart }
 })
 
 // 리소스를 비동기로 불러온 후 첫 씬을 시작합니다

@@ -42,18 +42,18 @@ export interface ScreenWipeCmd {
 
 // ─── 프리셋 테이블 ───────────────────────────────────────────
 
-const FADE_PRESETS: Record<Exclude<FadeColorPreset, 'inherit'>, { color: string; easing: EasingType }> = {
-  black: { color: 'rgba(0,0,0,1)', easing: 'linear' },
-  white: { color: 'rgba(255,255,255,1)', easing: 'linear' },
-  red: { color: 'rgba(200,0,0,1)', easing: 'easeIn' },
-  dream: { color: 'rgba(200,180,255,1)', easing: 'easeInOut' },
-  sepia: { color: 'rgba(150,100,50,1)', easing: 'easeIn' },
+const FADE_PRESETS: Record<Exclude<FadeColorPreset, 'inherit'>, { background: string; easing: EasingType }> = {
+  black: { background: 'rgba(0,0,0,1)', easing: 'linear' },
+  white: { background: 'rgba(255,255,255,1)', easing: 'linear' },
+  red: { background: 'rgba(200,0,0,1)', easing: 'easeIn' },
+  dream: { background: 'rgba(200,180,255,1)', easing: 'easeInOut' },
+  sepia: { background: 'rgba(150,100,50,1)', easing: 'easeIn' },
 }
 
-const FLASH_PRESETS: Record<Exclude<FlashPreset, 'inherit'>, { color: string; duration: number }> = {
-  white: { color: 'rgba(255,255,255,1)', duration: 300 },
-  red: { color: 'rgba(255,0,0,1)', duration: 300 },
-  yellow: { color: 'rgba(255,220,0,1)', duration: 250 },
+const FLASH_PRESETS: Record<Exclude<FlashPreset, 'inherit'>, { background: string; duration: number }> = {
+  white: { background: 'rgba(255,255,255,1)', duration: 300 },
+  red: { background: 'rgba(255,0,0,1)', duration: 300 },
+  yellow: { background: 'rgba(255,220,0,1)', duration: 250 },
 }
 
 const WIPE_PRESETS: Record<Exclude<WipePreset, 'inherit'>, { x: number; y: number }> = {
@@ -84,8 +84,7 @@ screenFadeModule.defineView((ctx, data, setState) => {
     const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
     rect = ctx.renderer.world.createRectangle({
       style: {
-        gradientType: 'linear',
-        gradient: '0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%',
+        background: 'linear-gradient(rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%)',
         width: w, height: h,
         opacity: 0, zIndex: Z_INDEX.FADE, pointerEvents: false,
       },
@@ -96,8 +95,7 @@ screenFadeModule.defineView((ctx, data, setState) => {
   }
 
   if (data._isCovered) {
-    rect.style.gradientType = 'linear'
-    rect.style.gradient = `0deg, ${data._coveredColor} 0%, ${data._coveredColor} 100%`
+    rect.style.background = `linear-gradient(0deg, ${data._coveredColor} 0%, ${data._coveredColor} 100%)`
     rect.style.opacity = 1
     rect.transform.position.x = 0
     rect.transform.position.y = 0
@@ -129,14 +127,13 @@ screenFadeModule.defineCommand(function* (cmd, ctx, state, setState) {
   setState({
     _lastPreset: resolvedPreset,
     _isCovered: cmd.dir === 'out',
-    _coveredColor: cfg.color
+    _coveredColor: cfg.background
   })
 
   const rect = ctx.renderer.state.get('_transitionObj')
   if (!rect) return true
 
-  rect.style.gradientType = 'linear'
-  rect.style.gradient = `0deg, ${cfg.color} 0%, ${cfg.color} 100%`
+  rect.style.background = `linear-gradient(0deg, ${cfg.background} 0%, ${cfg.background} 100%)`
   rect.transform.position.x = 0
   rect.transform.position.y = 0
 
@@ -180,7 +177,7 @@ screenFlashModule.defineView((ctx, _data, setState) => {
     const h = (ctx.renderer.world.canvas)?.height ?? ctx.renderer.height
     rect = ctx.renderer.world.createRectangle({
       style: {
-        color: 'rgba(255,255,255,1)', width: w * 2, height: h * 2,
+        background: 'rgba(255,255,255,1)', width: w * 2, height: h * 2,
         opacity: 0, zIndex: Z_INDEX.FADE + 1, pointerEvents: false,
       },
       transform: { position: { x: 0, y: 0, z: 10 } },
@@ -216,7 +213,7 @@ screenFlashModule.defineCommand(function* (cmd, ctx, state, setState) {
   const rect = ctx.renderer.state.get('_flashObj')
   if (!rect) return true
 
-  rect.style.color = cfg.color
+  rect.style.background = cfg.background
   rect.transform.position.x = 0
   rect.transform.position.y = 0
 
@@ -270,7 +267,7 @@ screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
   // 페이드 색상은 screen-fade 모듈의 state에서 가져옴 (renderer.state 공유)
   const fadeState = ctx.state.get('screen-fade') as ScreenFadeSchema | undefined
   const colorPreset = fadeState?._lastPreset ?? state._lastFadePreset
-  const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.color ?? 'rgba(0,0,0,1)'
+  const color = FADE_PRESETS[colorPreset as Exclude<FadeColorPreset, 'inherit'>]?.background ?? 'rgba(0,0,0,1)'
 
   // fadeState 업데이트는 애니메이션 종료 후(onEnd) 수행하여, 
   // in 애니메이션 도중 opacity가 0으로 덮어씌워지는 문제를 방지합니다.
@@ -293,20 +290,18 @@ screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
     colorTransparent = color.replace(/[\d.]+\)$/, '0)')
   }
 
-  rect.style.gradientType = 'linear'
-
   let startGradient = ''
   let endGradient = ''
 
   if (cmd.dir === 'out') {
-    startGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`
-    endGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`
+    startGradient = `linear-gradient(${gradDir}deg, ${color} -20%, ${colorTransparent} 0%)`
+    endGradient = `linear-gradient(${gradDir}deg, ${color} 100%, ${colorTransparent} 120%)`
   } else {
-    startGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`
-    endGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`
+    startGradient = `linear-gradient(${gradDir}deg, ${color} 100%, ${colorTransparent} 120%)`
+    endGradient = `linear-gradient(${gradDir}deg, ${color} -20%, ${colorTransparent} 0%)`
   }
 
-  rect.style.gradient = startGradient
+  rect.style.background = startGradient
 
   const onEnd = () => {
     if (fadeState) {
@@ -323,14 +318,14 @@ screenWipeModule.defineCommand(function* (cmd, ctx, state, setState) {
   // 기존 anim stop (renderer.animate 내 snap이 시작 위치 덮어쓰는 문제 방지)
   const activeAnims = (rect as any).__activeAnims as Map<string, { anim: any }> | undefined
   if (activeAnims) {
-    const existing = activeAnims.get('style.gradient')
+    const existing = activeAnims.get('style.background')
     if (existing?.anim) {
       existing.anim.stop?.()
-      activeAnims.delete('style.gradient')
+      activeAnims.delete('style.background')
     }
   }
 
-  ctx.renderer.animate(rect, { style: { gradient: endGradient } }, dur, 'linear', onAnimEnd)
+  ctx.renderer.animate(rect, { style: { background: endGradient } }, dur, 'linear', onAnimEnd)
 
   // dur === 0이면 animate가 onAnimEnd를 이미 동기 호출했으므로 즉시 완료
   if (dur === 0) return true

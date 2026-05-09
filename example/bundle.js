@@ -826,7 +826,7 @@
 
   // src/modules/dialogue.ts
   var DEFAULT_DIALOGUE_BG = {
-    color: "rgba(0,0,0,0.82)"
+    background: "rgba(0,0,0,0.82)"
   };
   var DEFAULT_DIALOGUE_SPEAKER = {
     fontSize: 18,
@@ -1090,16 +1090,16 @@
   // src/modules/choice.ts
   var DEFAULT_CHOICE_STYLE = {
     bg: {
-      color: "rgba(0,0,0,0.1)"
+      background: "rgba(0,0,0,0.1)"
     },
     button: {
-      color: "rgba(30,30,60,0.85)",
+      background: "rgba(30,30,60,0.85)",
       borderColor: "rgba(255,255,255,0.3)",
       borderWidth: 1.5,
       borderRadius: 8
     },
     buttonHover: {
-      color: "rgba(80,80,180,0.9)",
+      background: "rgba(80,80,180,0.9)",
       borderColor: "rgba(255,255,255,0.7)"
     },
     text: {
@@ -1906,22 +1906,22 @@
 
   // src/modules/mood.ts
   var MOOD_PRESETS = {
-    day: { color: "rgba(255,230,180,0.1)", vignette: "rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%", blendMode: "screen" },
-    night: { color: "rgba(10,15,60,0.5)", vignette: "rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%", blendMode: "multiply" },
-    dawn: { color: "rgba(25,35,130,0.4)", vignette: "rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%", blendMode: "multiply" },
-    sunset: { color: "rgba(255,120,50,0.25)", vignette: "rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%", blendMode: "screen" },
-    foggy: { color: "rgba(200,210,220,0.4)", vignette: "rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%", blendMode: "screen" },
-    sepia: { color: "rgba(160,110,50,0.3)", vignette: "rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%", blendMode: "multiply" },
-    cold: { color: "rgba(80,130,220,0.25)", vignette: "rgba(0,0,0,0) 50%, rgba(20,40,100,0.4) 100%", blendMode: "hard-light" },
-    noir: { color: "rgba(0,0,0,0.1)", vignette: "rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%", blendMode: "luminosity" },
-    horror: { color: "rgba(150,0,0,0.3)", vignette: "rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%", blendMode: "multiply" },
-    flashback: { color: "rgba(200,200,200,0.2)", vignette: "rgba(0,0,0,0) 60%, rgba(255,255,255,0.5) 100%", blendMode: "screen" },
-    dream: { color: "rgba(180,150,255,0.2)", vignette: "rgba(0,0,0,0) 60%, rgba(255,200,255,0.4) 100%", blendMode: "screen" },
-    danger: { color: "rgba(255,0,0,0.1)", vignette: "rgba(0,0,0,0) 50%, rgba(200,0,0,0.5) 100%", blendMode: "color-burn" },
-    none: { color: "rgba(0,0,0,0)" },
-    spot: { color: "radial-gradient(circle,rgba(255,240,180,0.8) 0%,rgba(0,0,0,0) 70%)", blendMode: "screen", defaultIntensity: 0.6 },
-    ambient: { color: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
-    warm: { color: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
+    day: { background: "rgba(255,230,180,0.1)", vignette: "radial-gradient(rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%)", blendMode: "screen" },
+    night: { background: "rgba(10,15,60,0.5)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%)", blendMode: "multiply" },
+    dawn: { background: "rgba(25,35,130,0.4)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(65,122,164,0.6) 100%)", blendMode: "multiply" },
+    sunset: { background: "rgba(255,120,50,0.25)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(255,100,50,0.4) 100%)", blendMode: "screen" },
+    foggy: { background: "rgba(200,210,220,0.4)", vignette: "radial-gradient(rgba(255,255,255,0.05) 0%, rgba(150,160,170,0.4) 100%)", blendMode: "screen" },
+    sepia: { background: "rgba(160,110,50,0.3)", vignette: "radial-gradient(rgba(0,0,0,0) 60%, rgba(80,50,20,0.5) 100%)", blendMode: "multiply" },
+    cold: { background: "rgba(80,130,220,0.25)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(20,40,100,0.4) 100%)", blendMode: "hard-light" },
+    noir: { background: "rgba(0,0,0,0.1)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%)", blendMode: "luminosity" },
+    horror: { background: "rgba(150,0,0,0.3)", vignette: "radial-gradient(rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%)", blendMode: "multiply" },
+    flashback: { background: "rgba(200,200,200,0.2)", vignette: "radial-gradient(rgba(0,0,0,0) 60%, rgba(255,255,255,0.5) 100%)", blendMode: "screen" },
+    dream: { background: "rgba(180,150,255,0.2)", vignette: "radial-gradient(rgba(0,0,0,0) 60%, rgba(255,200,255,0.4) 100%)", blendMode: "screen" },
+    danger: { background: "rgba(255,0,0,0.1)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(200,0,0,0.5) 100%)", blendMode: "color-burn" },
+    none: { background: "rgba(0,0,0,0)" },
+    spot: { background: "radial-gradient(rgba(255,240,180,0.8) 0%, rgba(0,0,0,0) 70%)", blendMode: "screen", defaultIntensity: 0.6 },
+    ambient: { background: "rgba(255,230,150,1)", blendMode: "screen", defaultIntensity: 0.15 },
+    warm: { background: "rgba(255,160,50,1)", blendMode: "screen", defaultIntensity: 0.25 }
   };
   var moodModule = define2({
     _activeMoods: {},
@@ -1937,7 +1937,7 @@
         }
         return;
       }
-      const { color, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
+      const { background, vignette, blendMode, defaultIntensity } = MOOD_PRESETS[mood];
       const finalIntensity = intensity ?? defaultIntensity ?? 1;
       const dur = immediate ? 0 : ctx.renderer.dur(duration);
       const cam = ctx.renderer.world.camera;
@@ -1951,7 +1951,7 @@
       }
       const rectOpts = {
         style: {
-          color,
+          background,
           opacity: dur > 0 ? 0 : finalIntensity,
           width: exactW,
           height: exactH,
@@ -1962,8 +1962,7 @@
         transform: { position: { x: 0, y: 0, z: focalLength - (cam?.transform.position.z ?? 0) } }
       };
       if (vignette) {
-        rectOpts.style.gradient = vignette;
-        rectOpts.style.gradientType = "circular";
+        rectOpts.style.background = vignette;
       }
       const rect = ctx.renderer.world.createRectangle(rectOpts);
       ctx.renderer.world.camera?.addChild(rect);
@@ -2483,16 +2482,16 @@
 
   // src/modules/screen.ts
   var FADE_PRESETS = {
-    black: { color: "rgba(0,0,0,1)", easing: "linear" },
-    white: { color: "rgba(255,255,255,1)", easing: "linear" },
-    red: { color: "rgba(200,0,0,1)", easing: "easeIn" },
-    dream: { color: "rgba(200,180,255,1)", easing: "easeInOut" },
-    sepia: { color: "rgba(150,100,50,1)", easing: "easeIn" }
+    black: { background: "rgba(0,0,0,1)", easing: "linear" },
+    white: { background: "rgba(255,255,255,1)", easing: "linear" },
+    red: { background: "rgba(200,0,0,1)", easing: "easeIn" },
+    dream: { background: "rgba(200,180,255,1)", easing: "easeInOut" },
+    sepia: { background: "rgba(150,100,50,1)", easing: "easeIn" }
   };
   var FLASH_PRESETS = {
-    white: { color: "rgba(255,255,255,1)", duration: 300 },
-    red: { color: "rgba(255,0,0,1)", duration: 300 },
-    yellow: { color: "rgba(255,220,0,1)", duration: 250 }
+    white: { background: "rgba(255,255,255,1)", duration: 300 },
+    red: { background: "rgba(255,0,0,1)", duration: 300 },
+    yellow: { background: "rgba(255,220,0,1)", duration: 250 }
   };
   var WIPE_PRESETS = {
     left: { x: -1, y: 0 },
@@ -2512,8 +2511,7 @@
       const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
       rect = ctx.renderer.world.createRectangle({
         style: {
-          gradientType: "linear",
-          gradient: "0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%",
+          background: "linear-gradient(rgba(0,0,0,1) 0%, rgba(0,0,0,1) 100%)",
           width: w,
           height: h,
           opacity: 0,
@@ -2526,8 +2524,7 @@
       ctx.renderer.state.set("_transitionObj", rect);
     }
     if (data._isCovered) {
-      rect.style.gradientType = "linear";
-      rect.style.gradient = `0deg, ${data._coveredColor} 0%, ${data._coveredColor} 100%`;
+      rect.style.background = `linear-gradient(0deg, ${data._coveredColor} 0%, ${data._coveredColor} 100%)`;
       rect.style.opacity = 1;
       rect.transform.position.x = 0;
       rect.transform.position.y = 0;
@@ -2556,12 +2553,11 @@
     setState({
       _lastPreset: resolvedPreset,
       _isCovered: cmd.dir === "out",
-      _coveredColor: cfg.color
+      _coveredColor: cfg.background
     });
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
-    rect.style.gradientType = "linear";
-    rect.style.gradient = `0deg, ${cfg.color} 0%, ${cfg.color} 100%`;
+    rect.style.background = `linear-gradient(0deg, ${cfg.background} 0%, ${cfg.background} 100%)`;
     rect.transform.position.x = 0;
     rect.transform.position.y = 0;
     const startOpacity = cmd.dir === "in" ? 1 : 0;
@@ -2587,7 +2583,7 @@
       const h = ctx.renderer.world.canvas?.height ?? ctx.renderer.height;
       rect = ctx.renderer.world.createRectangle({
         style: {
-          color: "rgba(255,255,255,1)",
+          background: "rgba(255,255,255,1)",
           width: w * 2,
           height: h * 2,
           opacity: 0,
@@ -2622,7 +2618,7 @@
     if (!cfg) return true;
     const rect = ctx.renderer.state.get("_flashObj");
     if (!rect) return true;
-    rect.style.color = cfg.color;
+    rect.style.background = cfg.background;
     rect.transform.position.x = 0;
     rect.transform.position.y = 0;
     const flashDuration = ctx.renderer.dur(cmd.duration ?? cfg.duration);
@@ -2658,7 +2654,7 @@
     const dur = ctx.renderer.dur(cmd.duration ?? 800);
     const fadeState = ctx.state.get("screen-fade");
     const colorPreset = fadeState?._lastPreset ?? state._lastFadePreset;
-    const color = FADE_PRESETS[colorPreset]?.color ?? "rgba(0,0,0,1)";
+    const color = FADE_PRESETS[colorPreset]?.background ?? "rgba(0,0,0,1)";
     const rect = ctx.renderer.state.get("_transitionObj");
     if (!rect) return true;
     rect.style.opacity = 1;
@@ -2673,17 +2669,16 @@
     if (color.startsWith("rgba(")) {
       colorTransparent = color.replace(/[\d.]+\)$/, "0)");
     }
-    rect.style.gradientType = "linear";
     let startGradient = "";
     let endGradient = "";
     if (cmd.dir === "out") {
-      startGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`;
-      endGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`;
+      startGradient = `linear-gradient(${gradDir}deg, ${color} -20%, ${colorTransparent} 0%)`;
+      endGradient = `linear-gradient(${gradDir}deg, ${color} 100%, ${colorTransparent} 120%)`;
     } else {
-      startGradient = `${gradDir}deg, ${color} 100%, ${colorTransparent} 120%`;
-      endGradient = `${gradDir}deg, ${color} -20%, ${colorTransparent} 0%`;
+      startGradient = `linear-gradient(${gradDir}deg, ${color} 100%, ${colorTransparent} 120%)`;
+      endGradient = `linear-gradient(${gradDir}deg, ${color} -20%, ${colorTransparent} 0%)`;
     }
-    rect.style.gradient = startGradient;
+    rect.style.background = startGradient;
     const onEnd = () => {
       if (fadeState) {
         fadeState._isCovered = cmd.dir === "out";
@@ -2696,13 +2691,13 @@
     };
     const activeAnims = rect.__activeAnims;
     if (activeAnims) {
-      const existing = activeAnims.get("style.gradient");
+      const existing = activeAnims.get("style.background");
       if (existing?.anim) {
         existing.anim.stop?.();
-        activeAnims.delete("style.gradient");
+        activeAnims.delete("style.background");
       }
     }
-    ctx.renderer.animate(rect, { style: { gradient: endGradient } }, dur, "linear", onAnimEnd);
+    ctx.renderer.animate(rect, { style: { background: endGradient } }, dur, "linear", onAnimEnd);
     if (dur === 0) return true;
     if (cmd.disable) {
       ctx.execute({ type: "control", action: "disable", duration: dur });
@@ -2968,9 +2963,9 @@
 
   // src/modules/dialogBox.ts
   var DEFAULT_DIALOG_BOX_STYLE = {
-    overlay: { color: "rgba(0,0,0,0.45)" },
+    overlay: { background: "rgba(0,0,0,0.45)" },
     panel: {
-      color: "rgba(255,255,255,0.12)",
+      background: "rgba(255,255,255,0.12)",
       borderColor: "rgba(255,255,255,0.35)",
       borderWidth: 1,
       borderRadius: "4%",
@@ -3000,14 +2995,14 @@
       textShadowOffsetY: 2
     },
     button: {
-      color: "rgba(255,255,255,0.15)",
+      background: "rgba(255,255,255,0.15)",
       borderColor: "rgba(255,255,255,0.30)",
       borderWidth: 1,
       borderRadius: "10%",
       minWidth: 120
     },
     buttonHover: {
-      color: "rgba(255,255,255,0.28)",
+      background: "rgba(255,255,255,0.28)",
       borderColor: "rgba(255,255,255,0.70)"
     },
     buttonText: {
@@ -3337,9 +3332,9 @@
 
   // src/modules/input.ts
   var DEFAULT_INPUT_STYLE = {
-    overlay: { color: "rgba(0,0,0,0.5)" },
+    overlay: { background: "rgba(0,0,0,0.5)" },
     panel: {
-      color: "rgba(20,20,40,0.92)",
+      background: "rgba(20,20,40,0.92)",
       borderColor: "rgba(255,255,255,0.25)",
       borderWidth: 1,
       borderRadius: "3%",
@@ -3362,16 +3357,16 @@
       textShadowOffsetY: 1
     },
     cursorStyle: {
-      color: "rgba(255,255,255,0.85)"
+      background: "rgba(255,255,255,0.85)"
     },
     button: {
-      color: "rgba(255,255,255,0.12)",
+      background: "rgba(255,255,255,0.12)",
       borderColor: "rgba(255,255,255,0.28)",
       borderWidth: 1,
       borderRadius: "10%"
     },
     buttonHover: {
-      color: "rgba(255,255,255,0.26)",
+      background: "rgba(255,255,255,0.26)",
       borderColor: "rgba(255,255,255,0.65)"
     },
     buttonText: {
@@ -3597,7 +3592,7 @@
         style: {
           width: AVAILABLE_W,
           height: INPUT_H,
-          color: "rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.06)",
           borderColor: "rgba(255,255,255,0.35)",
           borderWidth: 1,
           borderRadius: "2%",
@@ -3917,8 +3912,8 @@
     const cam = ctx.world.camera;
     const w = ctx.renderer.width;
     const h = ctx.renderer.height;
-    const toLocal = (nx, ny) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(nx * w, ny * h) : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 };
-    const resolvePosition = (entry) => entry.parent ? { x: entry.position.x ?? 0, y: entry.position.y ?? 0, z: 0 } : toLocal(entry.position.x ?? 0.5, entry.position.y ?? 0.5);
+    const toLocal = (px, py) => cam && typeof cam.canvasToLocal === "function" ? cam.canvasToLocal(px, py) : { x: px - w / 2, y: -(py - h / 2), z: cam?.attribute?.focalLength ?? 100 };
+    const resolvePosition = (entry) => entry.parent ? { x: entry.position.x ?? 0, y: entry.position.y ?? 0, z: 0 } : toLocal(entry.position.x ?? w / 2, entry.position.y ?? h / 2);
     const resolvePivot = (pivot) => {
       if (pivot === void 0) return void 0;
       return { x: pivot.x ?? 0.5, y: pivot.y ?? 0.5 };
@@ -4173,7 +4168,7 @@
         kind: cmd.kind,
         text: "text" in cmd ? cmd.text : void 0,
         image: "image" in cmd ? cmd.image : void 0,
-        position: cmd.position ?? previous?.position ?? { x: 0.5, y: 0.5 },
+        position: cmd.position ?? previous?.position ?? {},
         style: cmd.style,
         hoverStyle: cmd.hoverStyle,
         pivot: cmd.pivot,
@@ -12452,6 +12447,17 @@ ${addLineNumbers(fragment)}`);
       ];
       return formatColor(result);
     }
+    const gradientPrefixRe = /^(linear-gradient|radial-gradient)\((.+)\)$/s;
+    const fromGrad = from.trim().match(gradientPrefixRe);
+    const toGrad = to.trim().match(gradientPrefixRe);
+    if (fromGrad && toGrad && fromGrad[1] === toGrad[1]) {
+      const prefix = fromGrad[1];
+      const innerResult = interpolateColor(fromGrad[2], toGrad[2], t);
+      if (innerResult !== null) {
+        return `${prefix}(${innerResult})`;
+      }
+      return null;
+    }
     if (from.includes(",") || to.includes(",")) {
       const fromParts = from.split(/,(?![^(]*\))/).map((x) => x.trim());
       const toParts = to.split(/,(?![^(]*\))/).map((x) => x.trim());
@@ -12858,8 +12864,8 @@ ${addLineNumbers(fragment)}`);
   var STYLE_DIRTY_MAP = {
     // 텍스처만 재생성
     color: ["texture"],
-    gradient: ["texture"],
-    gradientType: ["texture"],
+    background: ["texture"],
+    backgroundSize: ["texture"],
     textAlign: ["texture"],
     textShadowColor: ["texture"],
     textShadowBlur: ["texture"],
@@ -12958,10 +12964,11 @@ ${addLineNumbers(fragment)}`);
       zIndex: partial?.zIndex ?? 0,
       blendMode: partial?.blendMode,
       letterSpacing: partial?.letterSpacing ?? 0,
-      gradient: partial?.gradient,
-      gradientType: partial?.gradientType,
+      background: partial?.background,
+      backgroundSize: partial?.backgroundSize,
       borderRadius: partial?.borderRadius,
-      cursor: partial?.cursor
+      cursor: partial?.cursor,
+      overflow: partial?.overflow ?? "visible"
     };
   }
   function makeTrackedProxy(target, emitter, eventName, delegatedKeys) {
@@ -15351,6 +15358,23 @@ ${addLineNumbers(fragment)}`);
     }
     return { direction, stops };
   }
+  function resolveBackground(bg) {
+    if (!bg) return { kind: "none" };
+    if (bg.startsWith("url(")) {
+      const raw = bg.slice(4, -1).trim();
+      const key = raw.replace(/^['"]|['"]$/g, "");
+      return { kind: "url", assetKey: key };
+    }
+    if (bg.startsWith("linear-gradient(")) {
+      const stops = bg.slice("linear-gradient(".length, -1);
+      return { kind: "linear-gradient", stops };
+    }
+    if (bg.startsWith("radial-gradient(")) {
+      const stops = bg.slice("radial-gradient(".length, -1);
+      return { kind: "radial-gradient", stops };
+    }
+    return { kind: "color", value: bg };
+  }
   var TEXT_RENDER_SCALE = 2;
   var Renderer2 = class {
     ogl;
@@ -15386,6 +15410,11 @@ ${addLineNumbers(fragment)}`);
     _activeObj;
     _activeRenderW = 0;
     _activeRenderH = 0;
+    // overflow: 'hidden' 스텐실 클리핑용 임시 행렬
+    _scissorTmpMat = new Mat4();
+    _scissorMvpMat = new Mat4();
+    // 현재 중첩 스텐실 depth (다중 overflow:hidden 중첩 지원)
+    _stencilDepth = 0;
     // 오브젝트별 Mesh 캐시
     meshCache = /* @__PURE__ */ new Map();
     // gradient 렌더링은 WebGL 셰이더로 전환되어 텍스처 캐시 없음
@@ -15492,7 +15521,8 @@ ${addLineNumbers(fragment)}`);
         height: canvas.height,
         alpha: true,
         antialias: true,
-        premultipliedAlpha: true
+        premultipliedAlpha: true,
+        stencil: true
       });
       this.gl = this.ogl.gl;
       this._width = canvas.width;
@@ -15926,6 +15956,87 @@ ${addLineNumbers(fragment)}`);
       this._flushBatch();
       this._renderDebugOverlay(timestamp);
     }
+    // ─── overflow: 'hidden' 스텐실 클리핑 헬퍼 ──────────────────────────────────
+    /**
+     * obj 기준으로 조상 중 overflow:'hidden'인 것들을 수집합니다.
+     */
+    _collectOverflowAncestors(obj) {
+      const result = [];
+      let curr = obj.parent;
+      while (curr) {
+        if (curr.style.overflow === "hidden") result.push(curr);
+        curr = curr.parent;
+      }
+      return result;
+    }
+    /**
+     * overflow:'hidden' 조상들을 스텐실 버퍼에 그려 클리핑 마스크를 설정합니다.
+     * 호출 후에는 스텐실 == depth 인 픽셀만 통과합니다.
+     * 반환값: 적용된 스텐실 depth 수 (0이면 조상 없음)
+     */
+    _applyStencilClip(ancestors) {
+      if (ancestors.length === 0) return 0;
+      const gl = this.gl;
+      gl.enable(gl.STENCIL_TEST);
+      gl.colorMask(false, false, false, false);
+      for (let i = ancestors.length - 1; i >= 0; i--) {
+        const ancestor = ancestors[i];
+        const depth = ancestors.length - i;
+        gl.stencilFunc(gl.ALWAYS, depth, 255);
+        gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+        this._drawStencilShape(ancestor);
+      }
+      gl.colorMask(true, true, true, true);
+      const maxDepth = ancestors.length;
+      gl.stencilFunc(gl.EQUAL, maxDepth, 255);
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+      return maxDepth;
+    }
+    /**
+     * 스텐실 버퍼를 초기화하고 스텐실 테스트를 비활성화합니다.
+     */
+    _clearStencilClip() {
+      const gl = this.gl;
+      gl.colorMask(false, false, false, false);
+      gl.stencilFunc(gl.ALWAYS, 0, 255);
+      gl.stencilOp(gl.ZERO, gl.ZERO, gl.ZERO);
+      gl.clear(gl.STENCIL_BUFFER_BIT);
+      gl.colorMask(true, true, true, true);
+      gl.disable(gl.STENCIL_TEST);
+    }
+    /**
+     * 스텐실 쓰기 전용으로 obj의 사각형 형태를 colorMesh로 렌더합니다.
+     * 현재 _activeObj 상태를 임시 교체하여 _makeModelMatrix를 활용합니다.
+     */
+    _drawStencilShape(obj) {
+      const style = obj.style;
+      const rawW = obj.__renderedSize?.w ?? style.width ?? 0;
+      const rawH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const w = clampSize(rawW, style.minWidth, style.maxWidth);
+      const h = clampSize(rawH, style.minHeight, style.maxHeight);
+      if (w <= 0 || h <= 0) return;
+      const prevObj = this._activeObj;
+      const prevW = this._activeRenderW;
+      const prevH = this._activeRenderH;
+      this._activeObj = obj;
+      this._activeRenderW = w;
+      this._activeRenderH = h;
+      const prog = this.colorProgram;
+      prog.uniforms["uColor"].value = [1, 1, 1, 1];
+      prog.uniforms["uOpacity"].value = 1;
+      prog.uniforms["uRadius"].value = 0;
+      prog.uniforms["uSize"].value = [w, h];
+      prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uIsBorder"].value = 0;
+      prog.uniforms["uInnerSize"].value = [0, 0];
+      prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+      prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, w, h);
+      prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+      this.colorMesh.draw({ camera: this.camera });
+      this._activeObj = prevObj;
+      this._activeRenderW = prevW;
+      this._activeRenderH = prevH;
+    }
     // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
     _drawObject(obj, assets, timestamp) {
       const { style, transform } = obj;
@@ -15940,13 +16051,19 @@ ${addLineNumbers(fragment)}`);
       this._activeRenderH = h;
       const px = 0;
       const py = 0;
+      const overflowAncestors = this._collectOverflowAncestors(obj);
+      const hasClip = overflowAncestors.length > 0;
+      if (hasClip) {
+        this._flushBatch();
+        this._applyStencilClip(overflowAncestors);
+      }
       const type = obj.attribute.type;
       switch (type) {
         case "rectangle":
-          this._drawRectangle(obj, px, py, w, h);
+          this._drawRectangle(obj, px, py, w, h, assets);
           break;
         case "ellipse":
-          this._drawEllipse(obj, px, py, w, h);
+          this._drawEllipse(obj, px, py, w, h, assets);
           break;
         case "text":
           this._drawText(obj, px, py, 1, timestamp);
@@ -15965,6 +16082,10 @@ ${addLineNumbers(fragment)}`);
           break;
         default:
           break;
+      }
+      if (hasClip) {
+        this._flushBatch();
+        this._clearStencilClip();
       }
       if (this.debugMode && w > 0 && h > 0) {
         this._activeObj = obj;
@@ -16448,26 +16569,37 @@ ${addLineNumbers(fragment)}`);
       }
     }
     // ─── Rectangle ──────────────────────────────────────────────────────────
-    _drawRectangle(obj, x, y, w, h) {
+    _drawRectangle(obj, x, y, w, h, assets) {
       const { style } = obj;
-      if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
+      if (!style.background && !style.borderColor && !style.outlineColor) return;
       const targetOpacity = obj.__worldOpacity;
       const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0);
       this._drawShadow(obj, x, y, w, h, void 0, void 0, false, baseRadius);
       this._drawRectBorders(obj, x, y, w, h, targetOpacity);
-      if (style.color) {
-        this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h, baseRadius);
-      }
-      if (style.gradient && w > 0 && h > 0) {
-        this._drawGradient(style.gradient, style.gradientType ?? "linear", x, y, w, h, targetOpacity, false, baseRadius);
+      const bg = resolveBackground(style.background);
+      switch (bg.kind) {
+        case "color":
+          this._drawColorMesh(this.colorProgram, x, y, w, h, bg.value, targetOpacity, w, h, baseRadius);
+          break;
+        case "linear-gradient":
+          if (w > 0 && h > 0) this._drawGradient(bg.stops, "linear", x, y, w, h, targetOpacity, false, baseRadius);
+          break;
+        case "radial-gradient":
+          if (w > 0 && h > 0) this._drawGradient(bg.stops, "circular", x, y, w, h, targetOpacity, false, baseRadius);
+          break;
+        case "url":
+          if (w > 0 && h > 0) this._drawRectBackground(bg.assetKey, assets, x, y, w, h, targetOpacity, baseRadius, style.backgroundSize);
+          break;
+        default:
+          break;
       }
     }
     // ─── Ellipse ────────────────────────────────────────────────────────────
-    _drawEllipse(obj, x, y, w, h) {
+    _drawEllipse(obj, x, y, w, h, assets) {
       this._flushBatch();
       this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
       const { style } = obj;
-      if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
+      if (!style.background && !style.borderColor && !style.outlineColor) return;
       this._drawShadow(obj, x, y, w, h, void 0, void 0, true);
       const drawEllipse = (ew, eh, color, isBorder = false, innerEW = 0, innerEH = 0) => {
         const [r, g, b, a] = parseCSSColor(color);
@@ -16495,11 +16627,22 @@ ${addLineNumbers(fragment)}`);
         const outerH = h + bw * 2;
         drawEllipse(outerW, outerH, style.borderColor, true, w, h);
       }
-      if (style.color) {
-        drawEllipse(w, h, style.color, false);
-      }
-      if (style.gradient && w > 0 && h > 0) {
-        this._drawGradient(style.gradient, style.gradientType ?? "linear", x, y, w, h, obj.__worldOpacity, true, null);
+      const bg = resolveBackground(style.background);
+      switch (bg.kind) {
+        case "color":
+          drawEllipse(w, h, bg.value, false);
+          break;
+        case "linear-gradient":
+          if (w > 0 && h > 0) this._drawGradient(bg.stops, "linear", x, y, w, h, obj.__worldOpacity, true, null);
+          break;
+        case "radial-gradient":
+          if (w > 0 && h > 0) this._drawGradient(bg.stops, "circular", x, y, w, h, obj.__worldOpacity, true, null);
+          break;
+        case "url":
+          if (w > 0 && h > 0) this._drawRectBackground(bg.assetKey, assets, x, y, w, h, obj.__worldOpacity, null, style.backgroundSize);
+          break;
+        default:
+          break;
       }
     }
     // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -17087,21 +17230,20 @@ ${addLineNumbers(fragment)}`);
     /**
      * WebGL 셰이더로 gradient를 직접 렌더링합니다.
      * Canvas 텍스처 생성·캐싱 없이 uniform만 설정하여 즉시 draw합니다.
-     * 애니메이션 시 매 프레임 Canvas/Texture 재생성이 없어 GPU 메모리 누수가 없습니다.
      */
-    _drawGradient(gradient, type, x, y, w, h, opacity, isEllipse, borderRadius) {
-      const { direction, stops } = parseGradientStops(gradient);
-      if (stops.length === 0) return;
+    _drawGradient(stops, type, x, y, w, h, opacity, isEllipse, borderRadius) {
+      const { direction, stops: parsedStops } = parseGradientStops(stops);
+      if (parsedStops.length === 0) return;
       this._flushBatch();
       this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
       const MAX_STOPS = 8;
-      const count = Math.min(stops.length, MAX_STOPS);
+      const count = Math.min(parsedStops.length, MAX_STOPS);
       const colorNames = ["uStopColors0", "uStopColors1", "uStopColors2", "uStopColors3", "uStopColors4", "uStopColors5", "uStopColors6", "uStopColors7"];
       const offsetNames = ["uStopOffset0", "uStopOffset1", "uStopOffset2", "uStopOffset3", "uStopOffset4", "uStopOffset5", "uStopOffset6", "uStopOffset7"];
       const prog = this.gradientProgram;
       prog.uniforms["uStopCount"].value = count;
       for (let i = 0; i < MAX_STOPS; i++) {
-        const src = i < count ? stops[i] : stops[count - 1];
+        const src = i < count ? parsedStops[i] : parsedStops[count - 1];
         const [r, g, b, a] = parseCSSColor(src.color);
         prog.uniforms[colorNames[i]].value = [r, g, b, a];
         prog.uniforms[offsetNames[i]].value = i < count ? src.offset : 1;
@@ -17116,6 +17258,39 @@ ${addLineNumbers(fragment)}`);
       prog.uniforms["uViewMatrix"].value = this._viewMat;
       prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
       this.gradientMesh.draw({ camera: this.camera });
+    }
+    // ─── Rect Background (Image) ────────────────────────────────────────────────
+    /**
+     * style.background = 'url(에셋키)' 에 대응하는 이미지 배경 렌더링.
+     * backgroundSize에 따라 UV를 계산하여 _drawTextureMesh로 전달합니다.
+     *
+     * - 'cover'  : 가로·세로 중 큰 쪽에 맞춰 채움 (중앙 크롭)
+     * - 'contain': 가로·세로 중 작은 쪽에 맞춰 맞춤 (중앙 레터박스)
+     * - 'auto'   : 컨테이너에 그대로 늘림 (기본값)
+     */
+    _drawRectBackground(assetKey, assets, x, y, w, h, opacity, borderRadius, backgroundSize) {
+      const asset = assets[assetKey];
+      if (!asset || !(asset instanceof HTMLImageElement)) return;
+      const texture = this._getOrCreateAssetTexture(assetKey, asset);
+      const natW = asset.naturalWidth;
+      const natH = asset.naturalHeight;
+      if (natW === 0 || natH === 0) return;
+      let uvOffset = [0, 0];
+      let uvScale = [1, 1];
+      if (backgroundSize === "cover") {
+        const scale5 = Math.max(w / natW, h / natH);
+        const visW = w / (natW * scale5);
+        const visH = h / (natH * scale5);
+        uvOffset = [(1 - visW) / 2, (1 - visH) / 2];
+        uvScale = [visW, visH];
+      } else if (backgroundSize === "contain") {
+        const scale5 = Math.min(w / natW, h / natH);
+        const visW = w / (natW * scale5);
+        const visH = h / (natH * scale5);
+        uvOffset = [(1 - visW) / 2, (1 - visH) / 2];
+        uvScale = [visW, visH];
+      }
+      this._drawTextureMesh(texture, x, y, w, h, opacity, false, uvOffset, uvScale, 0, borderRadius);
     }
     // ─── Placeholder ────────────────────────────────────────────────────────
     _drawPlaceholder(x, y, w, h) {
@@ -19587,8 +19762,7 @@ ${addLineNumbers(fragment)}`);
     },
     "dialogue": {
       bg: {
-        gradientType: "linear",
-        gradient: "0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%",
+        background: "linear-gradient(0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%)",
         height: 270
       },
       speaker: {
@@ -19596,8 +19770,6 @@ ${addLineNumbers(fragment)}`);
         fontWeight: "bold",
         fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
         color: "#daacffff",
-        // borderWidth: 2,
-        // borderColor: 'rgb(255,255,255)',
         textShadowOffsetX: 3,
         textShadowOffsetY: 3,
         textShadowBlur: 0,
@@ -19625,11 +19797,10 @@ ${addLineNumbers(fragment)}`);
         color: void 0,
         borderWidth: void 0,
         borderColor: void 0,
-        gradientType: "linear",
-        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%"
+        background: "linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)"
       },
       buttonHover: {
-        gradient: "90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%"
+        background: "linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%)"
       },
       text: {
         color: "rgb(255,255,255)",
@@ -19763,7 +19934,7 @@ ${addLineNumbers(fragment)}`);
       action: "show",
       id: "panel",
       kind: "rect",
-      position: { x: 0.85, y: 0.95 },
+      position: { x: 1090, y: 684 },
       style: {
         width: 180,
         height: 40,
@@ -19816,7 +19987,8 @@ ${addLineNumbers(fragment)}`);
       id: "sidebar",
       kind: "rect",
       uiTags: ["default-ui"],
-      position: { x: 0.9, y: 0.05 },
+      position: { x: 1080, y: 0 },
+      pivot: { x: 0, y: 0 },
       style: {
         width: 200,
         height: 600
@@ -19827,7 +19999,7 @@ ${addLineNumbers(fragment)}`);
           action: "show",
           id: "text_like",
           text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
-          position: { x: 0, y: 0 },
+          position: { x: 50, y: -50 },
           style: {
             ...UI_BUTTON_STYLE,
             color: "rgb(255, 255, 255)"
@@ -19839,9 +20011,10 @@ ${addLineNumbers(fragment)}`);
     },
     {
       type: "element",
-      id: "sidebar",
+      id: "text_like",
       action: "show",
-      kind: "rect",
+      kind: "text",
+      text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
       rotation: 360,
       ease: "easeOutBounce",
       duration: 2500

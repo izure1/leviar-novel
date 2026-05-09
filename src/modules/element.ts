@@ -56,15 +56,15 @@ export type ElementChild<TConfig = any> =
  *   action: 'show',
  *   id: 'panel',
  *   kind: 'rect',
- *   position: { x: 0.92, y: 0.5 },
- *   style: { width: 120, height: 300, color: 'rgba(0,0,0,0.5)' },
+ *   position: { x: 1748, y: 540 },
+ *   style: { width: 120, height: 300, background: 'rgba(0,0,0,0.5)' },
  *   children: [
  *     {
  *       id: 'btn_save',
  *       kind: 'rect',
  *       position: { x: 0, y: 60 },
- *       style: { width: 100, height: 36, color: 'rgba(255,255,255,0.1)' },
- *       hoverStyle: { color: 'rgba(255,255,255,0.3)' },
+ *       style: { width: 100, height: 36, background: 'rgba(255,255,255,0.1)' },
+ *       hoverStyle: { background: 'rgba(255,255,255,0.3)' },
  *       onClick: 'save',
  *       children: [
  *         { id: 'btn_save_text', kind: 'text', text: '💾 저장', style: { fontSize: 14, color: '#fff' } }
@@ -78,8 +78,8 @@ export interface ElementCmdBase<TConfig = any> {
   id: string
   /**
    * 화면 내 위치.
-   * - parent 없음 (루트): 0~1 정규화 좌표. { x: 0, y: 0 } = 좌상단
-   * - parent 있음 (자식): 부모 중심 기준 정규화/픽셀(Leviar 좌표계) 오프셋
+   * - parent 없음 (루트): 픽셀 좌표. { x: 0, y: 0 } = 캔버스 좌상단
+   * - parent 있음 (자식): 부모 중심 기준 픽셀(Leviar 좌표계) 오프셋
    */
   position?: ElementPosition
   /** 기본 스타일 (Leviar Style) */
@@ -278,16 +278,16 @@ elementModule.defineView((ctx, data, setState) => {
   const w = ctx.renderer.width
   const h = ctx.renderer.height
 
-  // 루트 요소: 0~1 정규화 → 월드 좌표
-  const toLocal = (nx: number, ny: number) =>
+  // 루트 요소: 픽셀 좌표 → 월드 좌표
+  const toLocal = (px: number, py: number) =>
     (cam && typeof cam.canvasToLocal === 'function')
-      ? cam.canvasToLocal(nx * w, ny * h)
-      : { x: nx * w - w / 2, y: -(ny * h - h / 2), z: cam?.attribute?.focalLength ?? 100 }
+      ? cam.canvasToLocal(px, py)
+      : { x: px - w / 2, y: -(py - h / 2), z: cam?.attribute?.focalLength ?? 100 }
 
   const resolvePosition = (entry: ElementEntry) =>
     entry.parent
       ? { x: entry.position.x ?? 0, y: entry.position.y ?? 0, z: 0 }
-      : toLocal(entry.position.x ?? 0.5, entry.position.y ?? 0.5)
+      : toLocal(entry.position.x ?? w / 2, entry.position.y ?? h / 2)
 
   const resolvePivot = (pivot: ElementEntry['pivot']) => {
     if (pivot === undefined) return undefined
@@ -593,7 +593,7 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
       kind: cmd.kind!,
       text: 'text' in cmd ? cmd.text : undefined,
       image: 'image' in cmd ? (cmd.image as string | undefined) : undefined,
-      position: cmd.position ?? previous?.position ?? { x: 0.5, y: 0.5 },
+      position: cmd.position ?? previous?.position ?? {},
       style: cmd.style,
       hoverStyle: cmd.hoverStyle,
       pivot: cmd.pivot,

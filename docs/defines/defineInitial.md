@@ -22,9 +22,9 @@ export const intenseInitial = defineInitial(config)({
   // 화면 전체를 붉게 물들입니다
   mood: { mood: 'alert', intensity: 0.7 },
   // 대화창을 어두운 붉은색으로 바꿉니다
-  dialogue: { bg: { color: 'rgba(30, 0, 0, 0.9)', borderColor: '#ff0000' } },
+  dialogue: { bg: { background: 'rgba(30, 0, 0, 0.9)', borderColor: '#ff0000' } },
   // 선택지 버튼 색상을 붉은색으로 바꿉니다
-  choices: { button: { color: 'rgba(100, 0, 0, 0.5)' } }
+  choices: { button: { background: 'rgba(100, 0, 0, 0.5)' } }
 })
 ```
 

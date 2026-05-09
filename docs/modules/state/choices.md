@@ -38,7 +38,7 @@ export default defineScene({
   config,
   initial: {
     choices: {
-      button: { color: '#2c3e50', borderRadius: 20 },
+      button: { background: '#2c3e50', borderRadius: 20 },
       text: { fontSize: 22, color: '#ecf0f1' },
       layout: { gap: 20 }
     }

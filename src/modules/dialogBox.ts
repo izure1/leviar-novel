@@ -113,9 +113,9 @@ export const DEFAULT_DIALOG_BOX_STYLE: Required<Pick<
   DialogBoxSchema,
   'overlay' | 'panel' | 'titleStyle' | 'contentStyle' | 'button' | 'buttonHover' | 'buttonText' | 'buttonTextHover'
 >> = {
-  overlay: { color: 'rgba(0,0,0,0.45)' },
+  overlay: { background: 'rgba(0,0,0,0.45)' },
   panel: {
-    color: 'rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.12)',
     borderColor: 'rgba(255,255,255,0.35)',
     borderWidth: 1,
     borderRadius: '4%',
@@ -145,14 +145,14 @@ export const DEFAULT_DIALOG_BOX_STYLE: Required<Pick<
     textShadowOffsetY: 2,
   },
   button: {
-    color: 'rgba(255,255,255,0.15)',
+    background: 'rgba(255,255,255,0.15)',
     borderColor: 'rgba(255,255,255,0.30)',
     borderWidth: 1,
     borderRadius: '10%',
     minWidth: 120,
   },
   buttonHover: {
-    color: 'rgba(255,255,255,0.28)',
+    background: 'rgba(255,255,255,0.28)',
     borderColor: 'rgba(255,255,255,0.70)',
   },
   buttonText: {

@@ -26,7 +26,7 @@ export default defineScene({
   
   // 3. 씬 시작 시 대화창 색상을 바꾸는 등 모듈의 상태를 덮어씌웁니다
   initial: {
-    dialogue: { bg: { color: 'rgba(0, 0, 50, 0.8)' } }
+    dialogue: { bg: { background: 'rgba(0, 0, 50, 0.8)' } }
   },
   
   // 4. 이 씬의 명령어 배열이 끝난 뒤 이동할 다음 씬을 명시합니다
