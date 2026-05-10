@@ -40,19 +40,30 @@ export default defineScene({ config })(() => [
 ```
 
 ### `index.ts`에 씬 등록하기 (매우 중요)
-새로 만든 씬들이 동작하려면 반드시 `index.ts`의 `new Novel` 생성자에 등록해야 합니다.  
+새로 만든 씬들이 동작하려면 반드시 등록해야 합니다.  
+`novel.config.ts`의 `scenes`, `index.ts`의 `new Novel` 생성자에 등록해야 합니다.  
 
 ```typescript
-// index.ts (일부)
+// novel.config.ts (일부)
 import sceneGood from './scenes/scene-good'
 import sceneBad from './scenes/scene-bad'
+
+const config = defineNovelConfig({
+  scenes: [
+    'scene-start',
+    'scene-good',    // ✅ 추가
+    'scene-bad'      // ✅ 추가
+  ]
+})
+
+// index.ts (일부)
 
 const novel = new Novel(config, {
   element: document.getElementById('app') as HTMLElement,
   scenes: {
     'scene-start': sceneStart,
-    'scene-good': sceneGood,   // 새로 만든 씬 등록
-    'scene-bad': sceneBad      // 새로 만든 씬 등록
+    'scene-good': sceneGood,   // ✅ 추가
+    'scene-bad': sceneBad      // ✅ 추가
   }
 })
 ```
@@ -89,7 +100,8 @@ export default defineScene({ config })(() => [
 ])
 ```
 
-코드를 저장하고 확인해 보세요.  
+코드를 저장하고 확인해 보세요.
+
 대사가 모두 끝나면 두 개의 버튼이 화면에 나타납니다.  
 버튼을 누르면 우리가 방금 만든 각기 다른 씬으로 스토리가 넘어가는 것을 볼 수 있습니다.  
 
