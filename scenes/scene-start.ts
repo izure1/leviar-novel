@@ -81,9 +81,20 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '"무슨 일 하세요?"라고 묻는다', goto: 'ask-job' },
-      { text: '"노트북에 버그 났나요?"라고 묻는다', goto: 'ask-bug' },
-      { text: '조용히 자리를 피한다', goto: 'escape' },
+      {
+        text: '"무슨 일 하세요?"라고 묻는다',
+        goto: 'ask-job',
+      },
+      {
+        text: '"노트북에 버그 났나요?"라고 묻는다',
+        goto: 'ask-bug',
+        var: ({ likeability }) => ({ likeability: likeability - 10 })
+      },
+      {
+        text: '조용히 자리를 피한다',
+        goto: 'escape',
+        var: ({ likeability }) => ({ likeability: likeability + 10 })
+      },
     ]
   },
 
