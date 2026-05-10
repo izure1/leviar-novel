@@ -3855,7 +3855,7 @@
         pivot: child.pivot,
         scale: child.scale,
         rotation: child.rotation,
-        onClick: child.onClick,
+        behaviors: child.behaviors,
         _sceneName: sceneName
       };
       flattenChildren(child.id, child.children, out, sceneName);
@@ -3919,7 +3919,7 @@
       pivot: next.pivot ? mergePoint(previous.pivot, next.pivot, { x: 0.5, y: 0.5 }) : previous.pivot,
       scale: mergeScale(previous.scale, next.scale),
       rotation: next.rotation ?? previous.rotation,
-      onClick: next.onClick ?? previous.onClick,
+      behaviors: next.behaviors ?? previous.behaviors,
       uiTags: next.uiTags ?? previous.uiTags,
       hideTags: next.hideTags ?? previous.hideTags,
       _sceneName: next._sceneName ?? previous._sceneName
@@ -4037,18 +4037,15 @@
           obj.animate({ style: normalStyleProps }, 150);
         });
       }
-      if (entry.onClick) {
-        const actionName = entry.onClick;
+      if (entry.behaviors && entry.behaviors.length > 0) {
         const sceneName = entry._sceneName;
-        obj.on("click", (e) => {
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          const action = sceneName ? ctx.callbacks.getSceneActions(sceneName, actionName) : effectiveCtx.actions.get(actionName);
+        for (const behaviorName of entry.behaviors) {
+          const action = sceneName ? ctx.callbacks.getSceneActions(sceneName, behaviorName) : effectiveCtx.actions.get(behaviorName);
           if (action) {
             const localVars = sceneName ? ctx.callbacks.getSceneLocalVars(sceneName) : effectiveCtx.localVars;
             const globalVars = ctx.callbacks.getGlobalVars();
             const environments = ctx.callbacks.getEnvironments();
-            const clickCtx = {
+            const behaviorCtx = {
               ...ctx,
               localVars,
               globalVars,
@@ -4058,11 +4055,11 @@
                 getVars: () => ({ ...environments, ...globalVars, ...localVars })
               }
             };
-            action(clickCtx, clickCtx.scene.getVars());
+            action(obj, behaviorCtx, behaviorCtx.scene.getVars());
           } else {
-            console.warn(`[fumika] element onClick: action '${actionName}' not found in scene '${sceneName ?? "unknown"}'`);
+            console.warn(`[fumika] element behavior: action '${behaviorName}' not found in scene '${sceneName ?? "unknown"}'`);
           }
-        });
+        }
       }
       _elementObjs[entry.id] = obj;
       _elementEntries[entry.id] = entry;
@@ -4103,11 +4100,7 @@
       if (entry.scale !== void 0) transform.scale = resolveScale(entry.scale);
       if (entry.pivot && obj.transform?.pivot) Object.assign(obj.transform.pivot, resolvePivot(entry.pivot));
       if (entry.kind === "text" && obj.attribute && obj.attribute.text !== entry.text) {
-        if (dur > 0 && typeof obj.transition === "function") {
-          obj.transition(entry.text ?? "", dur);
-        } else {
-          obj.attribute.text = entry.text ?? "";
-        }
+        obj.attribute.text = entry.text ?? "";
       }
       if (entry.kind === "image" && obj.attribute && obj.attribute.src !== entry.image) {
         if (dur > 0 && typeof obj.transition === "function") {
@@ -4177,8 +4170,12 @@
     };
   });
   function warnIfActionsMissing(cmd, ctx) {
-    if (cmd.onClick && !ctx.callbacks.getActiveActions(cmd.onClick)) {
-      console.warn(`[fumika] element: action '${cmd.onClick}' not found in current scene`);
+    if (cmd.behaviors) {
+      for (const name of cmd.behaviors) {
+        if (!ctx.callbacks.getActiveActions(name)) {
+          console.warn(`[fumika] element: behavior '${name}' not found in current scene`);
+        }
+      }
     }
     if (cmd.children) {
       for (const child of cmd.children) {
@@ -4203,7 +4200,7 @@
         pivot: cmd.pivot,
         scale: cmd.scale,
         rotation: cmd.rotation,
-        onClick: cmd.onClick,
+        behaviors: cmd.behaviors,
         uiTags: cmd.uiTags,
         hideTags: cmd.hideTags,
         _sceneName: sceneName
@@ -20150,6 +20147,7 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-ui.ts
   var UI_BUTTON_STYLE = {
+    minWidth: 100,
     fontSize: 22,
     fontFamily: "Google Sans Flex,Google Sans,Helvetica Neue,sans-serif",
     color: "rgba(255, 255, 255, 0.6)",
@@ -20166,18 +20164,41 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     actions: {
-      save: (ctx, vars) => {
-        save(ctx.novel);
+      save: (element, ctx, vars) => {
+        element.on("click", (e) => {
+          e.stopPropagation();
+          save(ctx.novel);
+        });
       },
-      load: (ctx) => {
-        load(ctx.novel);
+      load: (element, ctx, vars) => {
+        element.on("click", (e) => {
+          e.stopPropagation();
+          load(ctx.novel);
+        });
       },
-      fullscreen(ctx, vars) {
-        ctx.novel.toggleFullscreen();
+      fullscreen: (element, ctx, vars) => {
+        element.on("click", (e) => {
+          e.stopPropagation();
+          ctx.novel.toggleFullscreen();
+        });
       },
-      log(ctx, vars) {
-        ctx.localVars._test += 1;
-        console.log(ctx, vars);
+      log: (element, ctx, vars) => {
+        element.on("click", (e) => {
+          e.stopPropagation();
+          ctx.localVars._test += 1;
+          console.log(ctx, vars);
+        });
+        setInterval(() => {
+          element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style> ${vars.likeability}`;
+        }, 1e3);
+      },
+      hoverWhite: (element) => {
+        element.on("mouseover", () => {
+          element.animate({ style: { color: "rgba(255, 255, 255, 1)" } }, 150);
+        });
+        element.on("mouseout", () => {
+          element.animate({ style: { color: "rgba(255, 255, 255, 0.6)" } }, 150);
+        });
       }
     }
   })(({ label, goto, call }) => [
@@ -20204,8 +20225,7 @@ ${addLineNumbers(fragment)}`);
           style: {
             ...UI_BUTTON_STYLE
           },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "save"
+          behaviors: ["save", "hoverWhite"]
         },
         // 로드 버튼 (텍스트)
         {
@@ -20216,8 +20236,7 @@ ${addLineNumbers(fragment)}`);
           style: {
             ...UI_BUTTON_STYLE
           },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "load"
+          behaviors: ["load", "hoverWhite"]
         },
         // 전체화면 버튼
         {
@@ -20228,8 +20247,7 @@ ${addLineNumbers(fragment)}`);
           style: {
             ...UI_BUTTON_STYLE
           },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "fullscreen"
+          behaviors: ["fullscreen", "hoverWhite"]
         }
       ]
     },
@@ -20251,26 +20269,15 @@ ${addLineNumbers(fragment)}`);
           kind: "text",
           action: "show",
           id: "text_like",
-          text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
+          text: '<style color="rgb(255, 0, 0)">\u2665</style> 0',
           position: { x: 50, y: -50 },
           style: {
             ...UI_BUTTON_STYLE,
             color: "rgb(255, 255, 255)"
           },
-          hoverStyle: { color: "rgba(255, 255, 255, 1)" },
-          onClick: "log"
+          behaviors: ["log", "hoverWhite"]
         }
       ]
-    },
-    {
-      type: "element",
-      id: "text_like",
-      action: "show",
-      kind: "text",
-      text: '<style color="rgb(255, 0, 0)">\u2665</style> {{ likeability }}',
-      rotation: 360,
-      ease: "easeOutBounce",
-      duration: 2500
     },
     label("start"),
     call("scene-start", { preserve: true, restore: true }),
@@ -20357,9 +20364,20 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: '"\uBB34\uC2A8 \uC77C \uD558\uC138\uC694?"\uB77C\uACE0 \uBB3B\uB294\uB2E4', goto: "ask-job" },
-        { text: '"\uB178\uD2B8\uBD81\uC5D0 \uBC84\uADF8 \uB0AC\uB098\uC694?"\uB77C\uACE0 \uBB3B\uB294\uB2E4', goto: "ask-bug" },
-        { text: "\uC870\uC6A9\uD788 \uC790\uB9AC\uB97C \uD53C\uD55C\uB2E4", goto: "escape" }
+        {
+          text: '"\uBB34\uC2A8 \uC77C \uD558\uC138\uC694?"\uB77C\uACE0 \uBB3B\uB294\uB2E4',
+          goto: "ask-job"
+        },
+        {
+          text: '"\uB178\uD2B8\uBD81\uC5D0 \uBC84\uADF8 \uB0AC\uB098\uC694?"\uB77C\uACE0 \uBB3B\uB294\uB2E4',
+          goto: "ask-bug",
+          var: ({ likeability }) => ({ likeability: likeability - 10 })
+        },
+        {
+          text: "\uC870\uC6A9\uD788 \uC790\uB9AC\uB97C \uD53C\uD55C\uB2E4",
+          goto: "escape",
+          var: ({ likeability }) => ({ likeability: likeability + 10 })
+        }
       ]
     },
     // ─── 분기: 일 질문 ───

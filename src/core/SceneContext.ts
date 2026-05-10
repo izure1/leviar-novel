@@ -1,4 +1,4 @@
-import type { World } from 'leviar'
+import type { World, LeviarObject } from 'leviar'
 import type { Renderer } from './Renderer'
 import type { SceneCallbacks } from './Scene'
 import type { CustomCmdContext } from '../types/config'
@@ -107,7 +107,7 @@ export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdCo
    */
   actions: {
     /** 이름으로 액션 콜백을 조회합니다 */
-    get(name: string): ((ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+    get(name: string): ((element: LeviarObject, ctx: SceneContext, vars: Record<string, any>) => void) | undefined
   }
 }
 

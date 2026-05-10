@@ -1,4 +1,4 @@
-import type { Style, EasingType } from 'leviar'
+import type { Style, EasingType, LeviarObject } from 'leviar'
 import type { AssetKeysOf } from '../types/config'
 import type { SceneContext } from '../core/SceneContext'
 import type { SetStateFn } from '../define/defineCmdUI'
@@ -27,8 +27,11 @@ export interface ElementChildBase<TConfig = any> {
   scale?: ElementScale
   /** 회전 각도 (degree) */
   rotation?: number
-  /** 클릭 시 실행할 액션 이름 (defineScene의 actions에서 조회) */
-  onClick?: string
+  /**
+   * 이 요소에 바인딩할 behavior 이름 목록.
+   * `defineScene`의 `actions`에 정의된 콜백을 참조합니다.
+   */
+  behaviors?: string[]
   /** 자식 요소 배열 */
   children?: ElementChild<TConfig>[]
 }
@@ -48,7 +51,7 @@ export type ElementChild<TConfig = any> =
  * - `kind: 'text'` — 텍스트
  * - `kind: 'image'` — 이미지
  *
- * `children`으로 계층 구조를 구성하며, `onClick`으로 씬 액션을 바인딩합니다.
+ * `children`으로 계층 구조를 구성하며, `behaviors`로 씬 액션을 바인딩합니다.
  *
  * @example
  * {
@@ -64,8 +67,7 @@ export type ElementChild<TConfig = any> =
  *       kind: 'rect',
  *       position: { x: 0, y: 60 },
  *       style: { width: 100, height: 36, background: 'rgba(255,255,255,0.1)' },
- *       hoverStyle: { background: 'rgba(255,255,255,0.3)' },
- *       onClick: 'save',
+ *       behaviors: ['saveButton', 'hoverGlow'],
  *       children: [
  *         { id: 'btn_save_text', kind: 'text', text: '💾 저장', style: { fontSize: 14, color: '#fff' } }
  *       ]
@@ -92,8 +94,11 @@ export interface ElementCmdBase<TConfig = any> {
   scale?: ElementScale
   /** 회전 각도 (degree) */
   rotation?: number
-  /** 클릭 시 실행할 액션 이름 (defineScene의 actions에서 조회) */
-  onClick?: string
+  /**
+   * 이 요소에 바인딩할 behavior 이름 목록.
+   * `defineScene`의 `actions`에 정의된 콜백을 참조합니다.
+   */
+  behaviors?: string[]
   /** 자식 요소 배열 */
   children?: ElementChild<TConfig>[]
   /** show/hide 페이드 시간(ms). 기본 200 */
@@ -127,7 +132,8 @@ export interface ElementEntry {
   pivot?: ElementPivot
   scale?: ElementScale
   rotation?: number
-  onClick?: string
+  /** 이 요소에 바인딩된 behavior 이름 목록 */
+  behaviors?: string[]
   /** 이 요소의 UI 억제 태그 목록 */
   uiTags?: string[]
   /** 이 요소 활성화 시 숨길 UI 태그 목록 */
@@ -166,7 +172,7 @@ function flattenChildren(
       pivot: child.pivot,
       scale: child.scale,
       rotation: child.rotation,
-      onClick: child.onClick,
+      behaviors: child.behaviors,
       _sceneName: sceneName,
     }
     flattenChildren(child.id, child.children, out, sceneName)
@@ -258,7 +264,7 @@ function mergeElementEntry(
     pivot: next.pivot ? mergePoint(previous.pivot, next.pivot, { x: 0.5, y: 0.5 }) : previous.pivot,
     scale: mergeScale(previous.scale, next.scale),
     rotation: next.rotation ?? previous.rotation,
-    onClick: next.onClick ?? previous.onClick,
+    behaviors: next.behaviors ?? previous.behaviors,
     uiTags: next.uiTags ?? previous.uiTags,
     hideTags: next.hideTags ?? previous.hideTags,
     _sceneName: next._sceneName ?? previous._sceneName,
@@ -407,24 +413,21 @@ elementModule.defineView((ctx, data, setState) => {
       })
     }
 
-    // click 이벤트 바인딩 — 요소를 선언한 씬(entry._sceneName)의 actions에서 조회
-    if (entry.onClick) {
-      const actionName = entry.onClick
+    // behaviors 바인딩 — 요소를 선언한 씬(entry._sceneName)의 actions에서 조회
+    if (entry.behaviors && entry.behaviors.length > 0) {
       const sceneName = entry._sceneName
-      obj.on('click', (e: MouseEvent) => {
-        e.stopPropagation()
-        e.stopImmediatePropagation()
+      for (const behaviorName of entry.behaviors) {
         const action = sceneName
-          ? ctx.callbacks.getSceneActions(sceneName, actionName)
-          : effectiveCtx.actions.get(actionName)
+          ? ctx.callbacks.getSceneActions(sceneName, behaviorName)
+          : effectiveCtx.actions.get(behaviorName)
         if (action) {
-          // 클릭 시점에 선언 씬의 localVars를 동적으로 조회하여 fresh ctx 구성
+          // behavior 호출 시점에 선언 씬의 localVars를 동적으로 조회하여 fresh ctx 구성
           const localVars = sceneName
             ? ctx.callbacks.getSceneLocalVars(sceneName)
             : effectiveCtx.localVars
           const globalVars = ctx.callbacks.getGlobalVars()
           const environments = ctx.callbacks.getEnvironments()
-          const clickCtx: SceneContext = {
+          const behaviorCtx: SceneContext = {
             ...ctx,
             localVars,
             globalVars,
@@ -434,11 +437,11 @@ elementModule.defineView((ctx, data, setState) => {
               getVars: () => ({ ...environments, ...globalVars, ...localVars }),
             },
           }
-          action(clickCtx, clickCtx.scene.getVars())
+          action(obj as LeviarObject, behaviorCtx, behaviorCtx.scene.getVars())
         } else {
-          console.warn(`[fumika] element onClick: action '${actionName}' not found in scene '${sceneName ?? 'unknown'}'`)
+          console.warn(`[fumika] element behavior: action '${behaviorName}' not found in scene '${sceneName ?? 'unknown'}'`)
         }
-      })
+      }
     }
 
     _elementObjs[entry.id] = obj
@@ -489,11 +492,7 @@ elementModule.defineView((ctx, data, setState) => {
     if (entry.pivot && obj.transform?.pivot) Object.assign(obj.transform.pivot, resolvePivot(entry.pivot))
 
     if (entry.kind === 'text' && obj.attribute && obj.attribute.text !== entry.text) {
-      if (dur > 0 && typeof obj.transition === 'function') {
-        obj.transition(entry.text ?? '', dur)
-      } else {
-        obj.attribute.text = entry.text ?? ''
-      }
+      obj.attribute.text = entry.text ?? ''
     }
 
     if (entry.kind === 'image' && obj.attribute && obj.attribute.src !== entry.image) {
@@ -575,13 +574,17 @@ elementModule.defineView((ctx, data, setState) => {
   }
 })
 
-/** cmd + children에서 onClick 이름을 재귀적으로 확인하여 action 부재 시 경고 */
+/** cmd + children에서 behaviors 이름을 재귀적으로 확인하여 action 부재 시 경고 */
 function warnIfActionsMissing(
-  cmd: { onClick?: string; children?: ElementChild[] },
+  cmd: { behaviors?: string[]; children?: ElementChild[] },
   ctx: SceneContext
 ): void {
-  if (cmd.onClick && !ctx.callbacks.getActiveActions(cmd.onClick)) {
-    console.warn(`[fumika] element: action '${cmd.onClick}' not found in current scene`)
+  if (cmd.behaviors) {
+    for (const name of cmd.behaviors) {
+      if (!ctx.callbacks.getActiveActions(name)) {
+        console.warn(`[fumika] element: behavior '${name}' not found in current scene`)
+      }
+    }
   }
   if (cmd.children) {
     for (const child of cmd.children) {
@@ -609,7 +612,7 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
       pivot: cmd.pivot,
       scale: cmd.scale,
       rotation: cmd.rotation,
-      onClick: cmd.onClick,
+      behaviors: cmd.behaviors,
       uiTags: cmd.uiTags,
       hideTags: cmd.hideTags,
       _sceneName: sceneName,

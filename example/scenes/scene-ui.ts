@@ -4,6 +4,7 @@ import { defineHook, defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
+  minWidth: 100,
   fontSize: 22,
   fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
   color: 'rgba(255, 255, 255, 0.6)',
@@ -21,19 +22,42 @@ export default defineScene({
     _test: 0,
   },
   actions: {
-    save: (ctx, vars) => {
-      save(ctx.novel)
+    save: (element, ctx, vars) => {
+      element.on('click', (e: MouseEvent) => {
+        e.stopPropagation()
+        save(ctx.novel)
+      })
     },
-    load: (ctx) => {
-      load(ctx.novel)
+    load: (element, ctx, vars) => {
+      element.on('click', (e: MouseEvent) => {
+        e.stopPropagation()
+        load(ctx.novel)
+      })
     },
-    fullscreen(ctx, vars) {
-      ctx.novel.toggleFullscreen()
+    fullscreen: (element, ctx, vars) => {
+      element.on('click', (e: MouseEvent) => {
+        e.stopPropagation()
+        ctx.novel.toggleFullscreen()
+      })
     },
-    log(ctx, vars) {
-      ctx.localVars._test += 1
-      console.log(ctx, vars)
-    }
+    log: (element, ctx, vars) => {
+      element.on('click', (e: MouseEvent) => {
+        e.stopPropagation()
+        ctx.localVars._test += 1
+        console.log(ctx, vars)
+      })
+      setInterval(() => {
+        element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style> ${vars.likeability}`
+      }, 1000)
+    },
+    hoverWhite: (element) => {
+      element.on('mouseover', () => {
+        element.animate({ style: { color: 'rgba(255, 255, 255, 1)' } }, 150)
+      })
+      element.on('mouseout', () => {
+        element.animate({ style: { color: 'rgba(255, 255, 255, 0.6)' } }, 150)
+      })
+    },
   },
 })(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
@@ -58,8 +82,7 @@ export default defineScene({
         style: {
           ...UI_BUTTON_STYLE,
         },
-        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
-        onClick: 'save',
+        behaviors: ['save', 'hoverWhite'],
       },
       // 로드 버튼 (텍스트)
       {
@@ -70,8 +93,7 @@ export default defineScene({
         style: {
           ...UI_BUTTON_STYLE,
         },
-        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
-        onClick: 'load',
+        behaviors: ['load', 'hoverWhite'],
       },
       // 전체화면 버튼
       {
@@ -82,8 +104,7 @@ export default defineScene({
         style: {
           ...UI_BUTTON_STYLE,
         },
-        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
-        onClick: 'fullscreen',
+        behaviors: ['fullscreen', 'hoverWhite'],
       },
     ]
   },
@@ -106,27 +127,15 @@ export default defineScene({
         kind: 'text',
         action: 'show',
         id: 'text_like',
-        text: '<style color="rgb(255, 0, 0)">♥</style> {{ likeability }}',
+        text: '<style color="rgb(255, 0, 0)">♥</style> 0',
         position: { x: 50, y: -50 },
         style: {
           ...UI_BUTTON_STYLE,
           color: 'rgb(255, 255, 255)'
         },
-        hoverStyle: { color: 'rgba(255, 255, 255, 1)' },
-        onClick: 'log',
+        behaviors: ['log', 'hoverWhite'],
       },
     ]
-  },
-
-  {
-    type: 'element',
-    id: 'text_like',
-    action: 'show',
-    kind: 'text',
-    text: '<style color="rgb(255, 0, 0)">♥</style> {{ likeability }}',
-    rotation: 360,
-    ease: 'easeOutBounce',
-    duration: 2500,
   },
 
   label('start'),

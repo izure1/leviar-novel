@@ -2,6 +2,7 @@
 // defineScene.ts — DialogueScene 정의 헬퍼
 // =============================================================
 
+import type { LeviarObject } from 'leviar'
 import type { NovelConfig, CharDefs, BgDefs, SceneNextTarget, EnvironmentsOf } from '../types/config'
 import type { NovelModule } from '../define/defineCmdUI'
 import type { SceneHookDescriptor } from '../define/defineCmdUI'
@@ -72,9 +73,10 @@ export interface SceneDefinition<
   readonly hooks?: SceneHookDescriptor
   /**
    * 씬 스코프 액션 맵.
-   * `element` 명령어의 `onClick`에서 이름으로 참조하여 호출됩니다.
+   * `element` 명령어의 `behaviors`에서 이름으로 참조하여 호출됩니다.
+   * 각 콜백은 요소가 생성될 때 호출되며, 이벤트 리스너 등을 등록합니다.
    */
-  readonly actions?: Record<string, (ctx: SceneContext, vars: Record<string, any>) => void>
+  readonly actions?: Record<string, (element: LeviarObject, ctx: SceneContext, vars: Record<string, any>) => void>
 }
 
 // ─── SceneBuilders 타입 ──────────────────────────────────────
@@ -246,17 +248,19 @@ type _SceneOptions<
   hooks?: SceneHookDescriptor
   /**
    * 씬 스코프 액션 맵.
-   * element의 onClick에서 이름 문자열로 참조하여 호출됩니다.
+   * element의 behaviors에서 이름 문자열로 참조하여 호출됩니다.
    *
    * @example
    * actions: {
-   *   save: (ctx) => {
-   *     const data = ctx.novel.save()
-   *     localStorage.setItem('save', JSON.stringify(data))
+   *   saveButton: (element, ctx) => {
+   *     element.on('click', () => {
+   *       const data = ctx.novel.save()
+   *       localStorage.setItem('save', JSON.stringify(data))
+   *     })
    *   }
    * }
    */
-  actions?: Record<string, (ctx: SceneContext, vars: TVars & TLocalVars & EnvironmentsOf<TConfig>) => void>
+  actions?: Record<string, (element: LeviarObject, ctx: SceneContext, vars: TVars & TLocalVars & EnvironmentsOf<TConfig>) => void>
 }
 
 type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<
