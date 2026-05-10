@@ -3839,7 +3839,7 @@
   var input_default = inputModule;
 
   // src/modules/element.ts
-  function flattenChildren(parentId, children, out) {
+  function flattenChildren(parentId, children, out, sceneName) {
     if (!children) return;
     for (const child of children) {
       if (out[child.id]) continue;
@@ -3855,9 +3855,10 @@
         pivot: child.pivot,
         scale: child.scale,
         rotation: child.rotation,
-        onClick: child.onClick
+        onClick: child.onClick,
+        _sceneName: sceneName
       };
-      flattenChildren(child.id, child.children, out);
+      flattenChildren(child.id, child.children, out, sceneName);
     }
   }
   function collectDescendants(id, elements) {
@@ -3920,7 +3921,8 @@
       rotation: next.rotation ?? previous.rotation,
       onClick: next.onClick ?? previous.onClick,
       uiTags: next.uiTags ?? previous.uiTags,
-      hideTags: next.hideTags ?? previous.hideTags
+      hideTags: next.hideTags ?? previous.hideTags,
+      _sceneName: next._sceneName ?? previous._sceneName
     };
   }
   var elementModule = define2({
@@ -4037,14 +4039,28 @@
       }
       if (entry.onClick) {
         const actionName = entry.onClick;
+        const sceneName = entry._sceneName;
         obj.on("click", (e) => {
           e.stopPropagation();
           e.stopImmediatePropagation();
-          const action = effectiveCtx.actions.get(actionName);
+          const action = sceneName ? ctx.callbacks.getSceneActions(sceneName, actionName) : effectiveCtx.actions.get(actionName);
           if (action) {
-            action(effectiveCtx, effectiveCtx.scene.getVars());
+            const localVars = sceneName ? ctx.callbacks.getSceneLocalVars(sceneName) : effectiveCtx.localVars;
+            const globalVars = ctx.callbacks.getGlobalVars();
+            const environments = ctx.callbacks.getEnvironments();
+            const clickCtx = {
+              ...ctx,
+              localVars,
+              globalVars,
+              environments,
+              scene: {
+                ...ctx.scene,
+                getVars: () => ({ ...environments, ...globalVars, ...localVars })
+              }
+            };
+            action(clickCtx, clickCtx.scene.getVars());
           } else {
-            console.warn(`[fumika] element onClick: action '${actionName}' not found`);
+            console.warn(`[fumika] element onClick: action '${actionName}' not found in scene '${sceneName ?? "unknown"}'`);
           }
         });
       }
@@ -4175,6 +4191,7 @@
     if (cmd.action === "show") {
       warnIfActionsMissing(cmd, ctx);
       const previous = newElements[cmd.id];
+      const sceneName = ctx.callbacks.getCurrentSceneName();
       const nextEntry = {
         id: cmd.id,
         kind: cmd.kind,
@@ -4188,10 +4205,11 @@
         rotation: cmd.rotation,
         onClick: cmd.onClick,
         uiTags: cmd.uiTags,
-        hideTags: cmd.hideTags
+        hideTags: cmd.hideTags,
+        _sceneName: sceneName
       };
       newElements[cmd.id] = mergeElementEntry(previous, nextEntry);
-      flattenChildren(cmd.id, cmd.children, newElements);
+      flattenChildren(cmd.id, cmd.children, newElements, sceneName);
     } else {
       const toRemove = collectDescendants(cmd.id, newElements);
       for (const id of toRemove) {
@@ -19410,7 +19428,22 @@ ${addLineNumbers(fragment)}`);
           return false;
         })(),
         getActiveActions: (name) => this._currentScene instanceof DialogueScene ? this._currentScene.definition.actions?.[name] : void 0,
-        getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {}
+        getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {},
+        getSceneActions: (sceneName, actionName) => {
+          const def = this._scenes.get(sceneName);
+          return def?.actions?.[actionName];
+        },
+        getCurrentSceneName: () => this._currentSceneDef?.name ?? "",
+        getSceneLocalVars: (sceneName) => {
+          if (this._currentSceneDef?.name === sceneName && this._currentScene instanceof DialogueScene) {
+            return this._currentScene.localVars;
+          }
+          for (let i = this._callStack.length - 1; i >= 0; i--) {
+            if (this._callStack[i].sceneName === sceneName) return this._callStack[i].localVars;
+          }
+          const def = this._scenes.get(sceneName);
+          return { ...def?.localVars ?? {} };
+        }
       };
       const ctx = {
         novel: this,
@@ -19513,7 +19546,22 @@ ${addLineNumbers(fragment)}`);
           })();
         },
         getActiveActions: (name) => this._currentScene instanceof DialogueScene ? this._currentScene.definition.actions?.[name] : void 0,
-        getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {}
+        getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {},
+        getSceneActions: (sceneName, actionName) => {
+          const def = this._scenes.get(sceneName);
+          return def?.actions?.[actionName];
+        },
+        getCurrentSceneName: () => this._currentSceneDef?.name ?? "",
+        getSceneLocalVars: (sceneName) => {
+          if (this._currentSceneDef?.name === sceneName && this._currentScene instanceof DialogueScene) {
+            return this._currentScene.localVars;
+          }
+          for (let i = this._callStack.length - 1; i >= 0; i--) {
+            if (this._callStack[i].sceneName === sceneName) return this._callStack[i].localVars;
+          }
+          const def = this._scenes.get(sceneName);
+          return { ...def?.localVars ?? {} };
+        }
       };
     }
     // ─── 사용자 입력 ─────────────────────────────────────────────
@@ -19764,7 +19812,22 @@ ${addLineNumbers(fragment)}`);
             })();
           },
           getActiveActions: (name) => this._currentScene instanceof DialogueScene ? this._currentScene.definition.actions?.[name] : void 0,
-          getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {}
+          getActiveLocalVars: () => this._currentScene instanceof DialogueScene ? this._currentScene.getLocalVars() : {},
+          getSceneActions: (sceneName, actionName) => {
+            const def = this._scenes.get(sceneName);
+            return def?.actions?.[actionName];
+          },
+          getCurrentSceneName: () => sceneDef?.name ?? "",
+          getSceneLocalVars: (sceneName) => {
+            if (this._currentSceneDef?.name === sceneName && this._currentScene instanceof DialogueScene) {
+              return this._currentScene.localVars;
+            }
+            for (let i = this._callStack.length - 1; i >= 0; i--) {
+              if (this._callStack[i].sceneName === sceneName) return this._callStack[i].localVars;
+            }
+            const def = this._scenes.get(sceneName);
+            return { ...def?.localVars ?? {} };
+          }
         },
         state: {
           set: (name, data) => {
@@ -20114,6 +20177,7 @@ ${addLineNumbers(fragment)}`);
       },
       log(ctx, vars) {
         ctx.localVars._test += 1;
+        console.log(ctx, vars);
       }
     }
   })(({ label, goto, call }) => [

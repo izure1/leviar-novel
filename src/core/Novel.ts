@@ -733,6 +733,21 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getActiveLocalVars: () => this._currentScene instanceof DialogueScene
         ? (this._currentScene as DialogueScene).getLocalVars()
         : {},
+      getSceneActions: (sceneName, actionName) => {
+        const def = this._scenes.get(sceneName)
+        return (def as any)?.actions?.[actionName]
+      },
+      getCurrentSceneName: () => this._currentSceneDef?.name as string ?? '',
+      getSceneLocalVars: (sceneName) => {
+        if (this._currentSceneDef?.name === sceneName && this._currentScene instanceof DialogueScene) {
+          return (this._currentScene as any).localVars
+        }
+        for (let i = this._callStack.length - 1; i >= 0; i--) {
+          if (this._callStack[i].sceneName === sceneName) return this._callStack[i].localVars
+        }
+        const def = this._scenes.get(sceneName)
+        return { ...(def as any)?.localVars ?? {} }
+      },
     }
 
     const ctx: SceneContext = {
@@ -815,6 +830,21 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getActiveLocalVars: () => this._currentScene instanceof DialogueScene
         ? (this._currentScene as DialogueScene).getLocalVars()
         : {},
+      getSceneActions: (sceneName, actionName) => {
+        const def = this._scenes.get(sceneName)
+        return (def as any)?.actions?.[actionName]
+      },
+      getCurrentSceneName: () => this._currentSceneDef?.name as string ?? '',
+      getSceneLocalVars: (sceneName) => {
+        if (this._currentSceneDef?.name === sceneName && this._currentScene instanceof DialogueScene) {
+          return (this._currentScene as any).localVars
+        }
+        for (let i = this._callStack.length - 1; i >= 0; i--) {
+          if (this._callStack[i].sceneName === sceneName) return this._callStack[i].localVars
+        }
+        const def = this._scenes.get(sceneName)
+        return { ...(def as any)?.localVars ?? {} }
+      },
     }
   }
 
@@ -1126,6 +1156,21 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         getActiveLocalVars: () => this._currentScene instanceof DialogueScene
           ? (this._currentScene as DialogueScene).getLocalVars()
           : {},
+        getSceneActions: (sceneName, actionName) => {
+          const def = this._scenes.get(sceneName)
+          return (def as any)?.actions?.[actionName]
+        },
+        getCurrentSceneName: () => sceneDef?.name as string ?? '',
+        getSceneLocalVars: (sceneName) => {
+          if (this._currentSceneDef?.name === sceneName && this._currentScene instanceof DialogueScene) {
+            return (this._currentScene as any).localVars
+          }
+          for (let i = this._callStack.length - 1; i >= 0; i--) {
+            if (this._callStack[i].sceneName === sceneName) return this._callStack[i].localVars
+          }
+          const def = this._scenes.get(sceneName)
+          return { ...(def as any)?.localVars ?? {} }
+        },
       },
       state: {
         set: (name, data) => { stateStore.set(name, data) },

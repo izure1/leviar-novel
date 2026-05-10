@@ -32,6 +32,7 @@ export default defineScene({
     },
     log(ctx, vars) {
       ctx.localVars._test += 1
+      console.log(ctx, vars)
     }
   },
 })(({ label, goto, call }) => [

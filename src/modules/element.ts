@@ -132,6 +132,8 @@ export interface ElementEntry {
   uiTags?: string[]
   /** 이 요소 활성화 시 숨길 UI 태그 목록 */
   hideTags?: string[]
+  /** @internal 이 요소를 선언한 씬 이름 (actions 바인딩 추적용) */
+  _sceneName?: string
 }
 
 export interface ElementSchema {
@@ -145,7 +147,8 @@ export interface ElementSchema {
 function flattenChildren(
   parentId: string,
   children: ElementChild[] | undefined,
-  out: Record<string, ElementEntry>
+  out: Record<string, ElementEntry>,
+  sceneName?: string
 ): void {
   if (!children) return
   for (const child of children) {
@@ -164,8 +167,9 @@ function flattenChildren(
       scale: child.scale,
       rotation: child.rotation,
       onClick: child.onClick,
+      _sceneName: sceneName,
     }
-    flattenChildren(child.id, child.children, out)
+    flattenChildren(child.id, child.children, out, sceneName)
   }
 }
 
@@ -257,6 +261,7 @@ function mergeElementEntry(
     onClick: next.onClick ?? previous.onClick,
     uiTags: next.uiTags ?? previous.uiTags,
     hideTags: next.hideTags ?? previous.hideTags,
+    _sceneName: next._sceneName ?? previous._sceneName,
   }
 }
 
@@ -402,17 +407,36 @@ elementModule.defineView((ctx, data, setState) => {
       })
     }
 
-    // click 이벤트 바인딩 — 커맨드 실행 시점 씬(자신이 호출된 씬) 기준으로 action 호출
+    // click 이벤트 바인딩 — 요소를 선언한 씬(entry._sceneName)의 actions에서 조회
     if (entry.onClick) {
       const actionName = entry.onClick
+      const sceneName = entry._sceneName
       obj.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         e.stopImmediatePropagation()
-        const action = effectiveCtx.actions.get(actionName)
+        const action = sceneName
+          ? ctx.callbacks.getSceneActions(sceneName, actionName)
+          : effectiveCtx.actions.get(actionName)
         if (action) {
-          action(effectiveCtx, effectiveCtx.scene.getVars())
+          // 클릭 시점에 선언 씬의 localVars를 동적으로 조회하여 fresh ctx 구성
+          const localVars = sceneName
+            ? ctx.callbacks.getSceneLocalVars(sceneName)
+            : effectiveCtx.localVars
+          const globalVars = ctx.callbacks.getGlobalVars()
+          const environments = ctx.callbacks.getEnvironments()
+          const clickCtx: SceneContext = {
+            ...ctx,
+            localVars,
+            globalVars,
+            environments,
+            scene: {
+              ...ctx.scene,
+              getVars: () => ({ ...environments, ...globalVars, ...localVars }),
+            },
+          }
+          action(clickCtx, clickCtx.scene.getVars())
         } else {
-          console.warn(`[fumika] element onClick: action '${actionName}' not found`)
+          console.warn(`[fumika] element onClick: action '${actionName}' not found in scene '${sceneName ?? 'unknown'}'`)
         }
       })
     }
@@ -573,6 +597,7 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
     warnIfActionsMissing(cmd, ctx)
 
     const previous = newElements[cmd.id]
+    const sceneName = ctx.callbacks.getCurrentSceneName()
     const nextEntry: ElementEntry = {
       id: cmd.id,
       kind: cmd.kind!,
@@ -587,9 +612,10 @@ elementModule.defineCommand(function* (cmd, ctx, state, setState) {
       onClick: cmd.onClick,
       uiTags: cmd.uiTags,
       hideTags: cmd.hideTags,
+      _sceneName: sceneName,
     }
     newElements[cmd.id] = mergeElementEntry(previous, nextEntry)
-    flattenChildren(cmd.id, cmd.children, newElements)
+    flattenChildren(cmd.id, cmd.children, newElements, sceneName)
   } else {
     // hide: 해당 id + 자식 연쇄 삭제 + per-element entry 비활성화
     const toRemove = collectDescendants(cmd.id, newElements)

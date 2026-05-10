@@ -142,6 +142,15 @@ export interface SceneCallbacks {
    * 클릭 핸들러 등 토소림 메서드에서 활성씬 기준 vars를 재구성할 때 사용합니다.
    */
   getActiveLocalVars(): Record<string, any>
+  /** 지정된 씬의 actions에서 이름으로 액션 콜백을 조회합니다. */
+  getSceneActions(sceneName: string, actionName: string): ((ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+  /** 현재 활성 씬의 이름을 반환합니다. */
+  getCurrentSceneName(): string
+  /**
+   * 지정된 씬의 지역 변수를 라이브 참조로 반환합니다.
+   * 활성 씬 → callStack 프레임 → 정의 기본값 순으로 조회합니다.
+   */
+  getSceneLocalVars(sceneName: string): Record<string, any>
 }
 
 // =============================================================
