@@ -140,7 +140,7 @@ export interface EffectDef {
 /** 
  * 커스텀/내장 명령어 실행 시 제공되는 컨텍스트 객체 
  */
-export interface CustomCmdContext<TVars = any, TLocalVars = any> {
+export interface CustomCmdContext<TVars = any, TLocalVars = any, TEnvs = Record<string, any>> {
   /** Leviar 엔진의 World 인스턴스 */
   world: World
   /** Novel 인스턴스 */
@@ -150,7 +150,7 @@ export interface CustomCmdContext<TVars = any, TLocalVars = any> {
   /** 현재 진행 중인 씬의 지역 변수 목록 */
   localVars: TLocalVars
   /** 환경변수 (모든 세이브 공유) */
-  environments: Record<string, any>
+  environments: TEnvs
 }
 
 /** 

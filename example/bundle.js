@@ -1097,6 +1097,22 @@
     if (typeof val === "function") return val(vars);
     return val;
   }
+  function setScopedVar(ctx, key, value) {
+    if (key.startsWith("$")) {
+      ctx.callbacks.setEnvironment(key, value);
+    } else if (key.startsWith("_")) {
+      ctx.scene.setLocalVar(key, value);
+    } else {
+      ctx.scene.setGlobalVar(key, value);
+    }
+  }
+  function applyVarResolvable(val, ctx) {
+    const vars = resolveVarResolvable(val, ctx.scene.getVars());
+    if (!vars) return;
+    for (const [key, value] of Object.entries(vars)) {
+      setScopedVar(ctx, key, value);
+    }
+  }
 
   // src/modules/choice.ts
   var DEFAULT_CHOICE_STYLE = {
@@ -1310,12 +1326,7 @@
     const item = selected;
     entry?._hide(250);
     if (item.var) {
-      const vars = resolveVarResolvable(item.var, ctx.scene.getVars());
-      if (vars) {
-        for (const [key, value] of Object.entries(vars)) {
-          ctx.scene.setGlobalVar(key, value);
-        }
-      }
+      applyVarResolvable(item.var, ctx);
     }
     if (item.next) {
       const nextVal = typeof item.next === "function" ? item.next(ctx.scene.getVars()) : item.next;
@@ -3318,16 +3329,7 @@
       );
       const finalSelected = selectData.selected;
       if (finalSelected?.var) {
-        const vars = resolveVarResolvable(finalSelected.var, ctx.scene.getVars());
-        if (vars) {
-          for (const [key, value] of Object.entries(vars)) {
-            if (key.startsWith("_")) {
-              ctx.scene.setLocalVar(key, value);
-            } else {
-              ctx.scene.setGlobalVar(key, value);
-            }
-          }
-        }
+        applyVarResolvable(finalSelected.var, ctx);
       }
       ctx.callbacks.advance();
     };
@@ -4052,7 +4054,11 @@
               environments,
               scene: {
                 ...ctx.scene,
-                getVars: () => ({ ...environments, ...globalVars, ...localVars })
+                getVars: () => ({
+                  ...ctx.callbacks.getEnvironments(),
+                  ...ctx.callbacks.getGlobalVars(),
+                  ...localVars
+                })
               }
             };
             action(obj, behaviorCtx, behaviorCtx.scene.getVars());
@@ -18468,13 +18474,7 @@ ${addLineNumbers(fragment)}`);
     "var": function* (cmd, ctx) {
       const allVars = ctx.scene.getVars();
       const val = typeof cmd.value === "function" ? cmd.value(allVars) : cmd.value;
-      if (cmd.name.startsWith("$")) {
-        ctx.callbacks.setEnvironment(cmd.name, val);
-      } else if (cmd.name.startsWith("_")) {
-        ctx.scene.setLocalVar(cmd.name, val);
-      } else {
-        ctx.scene.setGlobalVar(cmd.name, val);
-      }
+      setScopedVar(ctx, cmd.name, val);
       return true;
     }
   };
@@ -19392,17 +19392,16 @@ ${addLineNumbers(fragment)}`);
       if (!(scene instanceof DialogueScene)) {
         throw new Error("[fumika] Variable and audio operations require an active scene. Call novel.start() first.");
       }
-      const globalVars = { ...this.variables };
-      const envVars = { ...this.environments };
+      const globalVars = this.variables;
+      const envVars = this.environments;
       const localVars = scene.getLocalVars();
-      const mergedVars = { ...envVars, ...globalVars, ...localVars };
       const stableCallbacks = {
         getNovel: () => this,
-        getGlobalVars: () => ({ ...this.variables }),
+        getGlobalVars: () => this.variables,
         setGlobalVar: (n, v2) => {
           this._setGlobalVar(n, v2);
         },
-        getEnvironments: () => ({ ...this.environments ?? {} }),
+        getEnvironments: () => this.environments,
         setEnvironment: (n, v2) => {
           this._setEnvironment(n, v2);
         },
@@ -19458,7 +19457,7 @@ ${addLineNumbers(fragment)}`);
           jumpToLabel: () => {
           },
           hasLabel: () => false,
-          getVars: () => mergedVars,
+          getVars: () => ({ ...envVars, ...globalVars, ...localVars }),
           setGlobalVar: (key, value) => {
             this._setGlobalVar(key, value);
           },
@@ -19495,17 +19494,17 @@ ${addLineNumbers(fragment)}`);
         },
         actions: { get: () => void 0 }
       };
-      return { ctx, vars: mergedVars };
+      return { ctx, vars: ctx.scene.getVars() };
     }
     _buildCallbacks() {
       const gen = ++this._sceneGeneration;
       return {
         getNovel: () => this,
-        getGlobalVars: () => ({ ...this.variables }),
+        getGlobalVars: () => this.variables,
         setGlobalVar: (name, value) => {
           this._setGlobalVar(name, value);
         },
-        getEnvironments: () => ({ ...this.environments ?? {} }),
+        getEnvironments: () => this.environments,
         setEnvironment: (name, value) => {
           this._setEnvironment(name, value);
         },
@@ -20158,6 +20157,7 @@ ${addLineNumbers(fragment)}`);
     textShadowColor: "rgba(0, 0, 0, 1)",
     cursor: "pointer"
   };
+  var likeabilityInterval;
   var scene_ui_default = defineScene({
     config: novel_config_default,
     variables: {
@@ -20186,11 +20186,20 @@ ${addLineNumbers(fragment)}`);
         element.on("click", (e) => {
           e.stopPropagation();
           ctx.localVars._test += 1;
-          console.log(ctx, vars);
         });
-        setInterval(() => {
-          element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style> ${vars.likeability}`;
-        }, 1e3);
+        ctx.novel.hooker.onBefore("novel:load", (data) => {
+          if (likeabilityInterval) {
+            clearInterval(likeabilityInterval);
+            likeabilityInterval = void 0;
+          }
+          return data;
+        });
+        const updateLikeabilityText = () => {
+          console.log(ctx.globalVars.likeability);
+          element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style>: ${ctx.globalVars.likeability}`;
+        };
+        updateLikeabilityText();
+        likeabilityInterval = setInterval(updateLikeabilityText, 1e3);
       },
       hoverWhite: (element) => {
         element.on("mouseover", () => {

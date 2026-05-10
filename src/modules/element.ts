@@ -434,7 +434,11 @@ elementModule.defineView((ctx, data, setState) => {
             environments,
             scene: {
               ...ctx.scene,
-              getVars: () => ({ ...environments, ...globalVars, ...localVars }),
+              getVars: () => ({
+                ...ctx.callbacks.getEnvironments(),
+                ...ctx.callbacks.getGlobalVars(),
+                ...localVars,
+              }),
             },
           }
           action(obj as LeviarObject, behaviorCtx, behaviorCtx.scene.getVars())

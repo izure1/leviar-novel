@@ -260,7 +260,11 @@ type _SceneOptions<
    *   }
    * }
    */
-  actions?: Record<string, (element: LeviarObject, ctx: SceneContext, vars: TVars & TLocalVars & EnvironmentsOf<TConfig>) => void>
+  actions?: Record<string, (
+    element: LeviarObject,
+    ctx: SceneContext<TVars, TLocalVars, EnvironmentsOf<TConfig>>,
+    vars: TVars & TLocalVars & EnvironmentsOf<TConfig>
+  ) => void>
 }
 
 type _SceneReturn<TConfig, TLocalVars> = SceneDefinition<

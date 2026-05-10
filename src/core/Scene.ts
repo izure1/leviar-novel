@@ -18,6 +18,7 @@ import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
 import elementModule from '../modules/element'
 import type { NovelModule } from '../define/defineCmdUI'
+import { setScopedVar } from '../types/utils'
 
 // ─── 흐름제어 예약어 핸들러 (모듈과 별도 관리) ──────────
 const FLOW_CONTROL_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
@@ -53,13 +54,7 @@ const FLOW_CONTROL_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Gen
     const val = typeof cmd.value === 'function'
       ? cmd.value(allVars)
       : cmd.value
-    if (cmd.name.startsWith('$')) {
-      ctx.callbacks.setEnvironment(cmd.name, val)
-    } else if (cmd.name.startsWith('_')) {
-      ctx.scene.setLocalVar(cmd.name, val)
-    } else {
-      ctx.scene.setGlobalVar(cmd.name, val)
-    }
+    setScopedVar(ctx, cmd.name, val)
     return true
   },
 }

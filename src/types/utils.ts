@@ -2,7 +2,7 @@
 // types/utils.ts — 커맨드 공통 유틸리티 타입 & 헬퍼
 // =============================================================
 
-import type { VariablesOf } from './config'
+import type { EnvironmentsOf, VariablesOf } from './config'
 
 /**
  * 전역/지역 변수 설정값 타입.
@@ -21,8 +21,19 @@ import type { VariablesOf } from './config'
  * })
  */
 export type VarResolvable<TConfig, TLocalVars = Record<never, never>> =
-  | Partial<VariablesOf<TConfig> & TLocalVars>
-  | ((vars: VariablesOf<TConfig> & TLocalVars) => Partial<VariablesOf<TConfig> & TLocalVars>)
+  | Partial<VariablesOf<TConfig> & TLocalVars & EnvironmentsOf<TConfig>>
+  | ((vars: VariablesOf<TConfig> & TLocalVars & EnvironmentsOf<TConfig>) => Partial<VariablesOf<TConfig> & TLocalVars & EnvironmentsOf<TConfig>>)
+
+export interface VarAssignmentContext {
+  callbacks: {
+    setEnvironment: (name: string, value: any) => void
+  }
+  scene: {
+    getVars: () => Record<string, any>
+    setGlobalVar: (key: string, value: any) => void
+    setLocalVar: (key: string, value: any) => void
+  }
+}
 
 /**
  * `VarResolvable` 값을 런타임에 resolve합니다.
@@ -47,4 +58,26 @@ export function resolveVarResolvable(
   if (val === undefined || val === null) return undefined
   if (typeof val === 'function') return val(vars)
   return val as Record<string, any>
+}
+
+export function setScopedVar(ctx: VarAssignmentContext, key: string, value: any): void {
+  if (key.startsWith('$')) {
+    ctx.callbacks.setEnvironment(key, value)
+  } else if (key.startsWith('_')) {
+    ctx.scene.setLocalVar(key, value)
+  } else {
+    ctx.scene.setGlobalVar(key, value)
+  }
+}
+
+export function applyVarResolvable(
+  val: VarResolvable<any, any> | undefined,
+  ctx: VarAssignmentContext,
+): void {
+  const vars = resolveVarResolvable(val, ctx.scene.getVars())
+  if (!vars) return
+
+  for (const [key, value] of Object.entries(vars)) {
+    setScopedVar(ctx, key, value)
+  }
 }

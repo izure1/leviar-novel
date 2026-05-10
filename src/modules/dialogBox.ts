@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import type { VarResolvable } from '../types/utils'
-import { resolveVarResolvable } from '../types/utils'
+import { applyVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
 import { Z_INDEX } from '../constants/render'
 
@@ -608,16 +608,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
     const finalSelected = selectData.selected
 
     if (finalSelected?.var) {
-      const vars = resolveVarResolvable(finalSelected.var, ctx.scene.getVars())
-      if (vars) {
-        for (const [key, value] of Object.entries(vars)) {
-          if (key.startsWith('_')) {
-            ctx.scene.setLocalVar(key, value)
-          } else {
-            ctx.scene.setGlobalVar(key, value)
-          }
-        }
-      }
+      applyVarResolvable(finalSelected.var, ctx)
     }
     // 모듈의 역할이 끝났음을 명시적으로 선언하고 씬을 진행시킵니다.
     // (클릭 이벤트 버블링은 상단의 e.stopPropagation()으로 방어합니다)

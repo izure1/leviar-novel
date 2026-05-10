@@ -2,7 +2,7 @@ import type { Style } from 'leviar'
 import type { Resolvable } from '../define/defineCmd'
 import type { SceneNextTarget, VariablesOf } from '../types/config'
 import type { VarResolvable } from '../types/utils'
-import { resolveVarResolvable } from '../types/utils'
+import { applyVarResolvable } from '../types/utils'
 import { define } from '../define/defineCmdUI'
 import { Z_INDEX } from '../constants/render'
 
@@ -371,12 +371,7 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
 
   // var 설정
   if (item.var) {
-    const vars = resolveVarResolvable(item.var, ctx.scene.getVars())
-    if (vars) {
-      for (const [key, value] of Object.entries(vars)) {
-        ctx.scene.setGlobalVar(key, value)
-      }
-    }
+    applyVarResolvable(item.var, ctx)
   }
 
   // 분기

@@ -705,17 +705,16 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       throw new Error('[fumika] Variable and audio operations require an active scene. Call novel.start() first.')
     }
 
-    const globalVars = { ...(this.variables as object) }
-    const envVars = { ...(this.environments as object) }
+    const globalVars = this.variables as Record<string, any>
+    const envVars = this.environments as Record<string, any>
     const localVars = scene.getLocalVars()
-    const mergedVars = { ...envVars, ...globalVars, ...localVars }
 
     // _buildCallbacks()는 _sceneGeneration을 증가시키므로 안정적 콜백 직접 구성
     const stableCallbacks: SceneCallbacks = {
       getNovel: () => this as any,
-      getGlobalVars: () => ({ ...this.variables as object }),
+      getGlobalVars: () => this.variables as Record<string, any>,
       setGlobalVar: (n, v) => { this._setGlobalVar(n, v) },
-      getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
+      getEnvironments: () => this.environments as Record<string, any>,
       setEnvironment: (n, v) => { this._setEnvironment(n, v) },
       loadScene: (target) => { this.loadScene(target) },
       callScene: () => {},
@@ -764,7 +763,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         interpolateText: (text) => text,
         jumpToLabel: () => {},
         hasLabel: () => false,
-        getVars: () => mergedVars as any,
+        getVars: () => ({ ...envVars, ...globalVars, ...localVars }) as any,
         setGlobalVar: (key, value) => { this._setGlobalVar(key, value) },
         setLocalVar: () => {},
         loadScene: (target) => { this.loadScene(target) },
@@ -785,16 +784,16 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       actions: { get: () => undefined },
     }
 
-    return { ctx, vars: mergedVars }
+    return { ctx, vars: ctx.scene.getVars() }
   }
 
   private _buildCallbacks(): SceneCallbacks {
     const gen = ++this._sceneGeneration
     return {
       getNovel: () => this as any,
-      getGlobalVars: () => ({ ...this.variables as object }),
+      getGlobalVars: () => this.variables as Record<string, any>,
       setGlobalVar: (name, value) => { this._setGlobalVar(name, value) },
-      getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
+      getEnvironments: () => this.environments as Record<string, any>,
       setEnvironment: (name, value) => { this._setEnvironment(name, value) },
       loadScene: (target) => { this.loadScene(target) },
       callScene: (name, callerCursor, callerLocalVars, callerTextSubIndex, preserve, restore) => {

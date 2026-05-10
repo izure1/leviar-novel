@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineHook, defineScene } from '../../src'
+import { defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
@@ -15,6 +15,8 @@ const UI_BUTTON_STYLE: Partial<Style> = {
   textShadowColor: 'rgba(0, 0, 0, 1)',
   cursor: 'pointer',
 }
+
+let likeabilityInterval: ReturnType<typeof setInterval> | undefined
 
 export default defineScene({
   config,
@@ -44,11 +46,23 @@ export default defineScene({
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         ctx.localVars._test += 1
-        console.log(ctx, vars)
       })
-      setInterval(() => {
-        element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style> ${vars.likeability}`
-      }, 1000)
+
+      ctx.novel.hooker.onBefore('novel:load', (data) => {
+        if (likeabilityInterval) {
+          clearInterval(likeabilityInterval)
+          likeabilityInterval = undefined
+        }
+        return data
+      })
+
+      const updateLikeabilityText = () => {
+        console.log(ctx.globalVars.likeability)
+        element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${ctx.globalVars.likeability}`
+      }
+
+      updateLikeabilityText()
+      likeabilityInterval = setInterval(updateLikeabilityText, 1000)
     },
     hoverWhite: (element) => {
       element.on('mouseover', () => {

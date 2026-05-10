@@ -8,7 +8,11 @@ import type { DialogueEntry } from '../types/dialogue'
 /**
  * 커맨드 핸들러 실행 시 제공되는 씬(Scene)의 컨텍스트 정보
  */
-export interface SceneContext<TVars = any, TLocalVars = any> extends CustomCmdContext<TVars, TLocalVars> {
+export interface SceneContext<
+  TVars = any,
+  TLocalVars = any,
+  TEnvs = Record<string, any>,
+> extends CustomCmdContext<TVars, TLocalVars, TEnvs> {
   /** Fumika 렌더러 인스턴스 (화면 렌더링 담당) */
   renderer: Renderer
   /** 환경변수 (모든 세이브 공유). CustomCmdContext에서 상속됨. */
