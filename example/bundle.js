@@ -766,7 +766,12 @@
       defineCommand(handler) {
         _handlerFn = function* (rawParams, ctx) {
           const resolved = resolveParams(rawParams, ctx);
-          const gen = handler(resolved, ctx, data, setState);
+          const ctxSetState = (partial) => {
+            const updates = typeof partial === "function" ? partial(data) : partial;
+            Object.assign(data, updates);
+            _onUpdate?.(data, ctx);
+          };
+          const gen = handler(resolved, ctx, data, ctxSetState);
           let res = gen.next();
           while (!res.done) {
             if (_moduleKey) {
@@ -793,7 +798,7 @@
             ctx.state.set(_moduleKey, { ...data });
           }
           const entry = builder(ctx, data, setState);
-          _onUpdate = (d2) => entry.onUpdate?.(ctx, d2, setState);
+          _onUpdate = (d2, cmdCtx) => entry.onUpdate?.(cmdCtx ?? ctx, d2, setState);
           entry.onUpdate?.(ctx, data, setState);
           return entry;
         };
@@ -4007,7 +4012,8 @@
         }
       });
     };
-    const _addElement = (entry, immediate = false, duration, ease = "easeOut") => {
+    const _addElement = (entry, immediate = false, duration, ease = "easeOut", actionCtx) => {
+      const effectiveCtx = actionCtx ?? ctx;
       if (_elementObjs[entry.id]) return;
       const creator = KIND_CREATORS[entry.kind];
       if (!creator) return;
@@ -4034,30 +4040,9 @@
         obj.on("click", (e) => {
           e.stopPropagation();
           e.stopImmediatePropagation();
-          const action = ctx.callbacks.getActiveActions(actionName);
+          const action = effectiveCtx.actions.get(actionName);
           if (action) {
-            const activeLocalVars = ctx.callbacks.getActiveLocalVars();
-            const freshVars = {
-              ...ctx.callbacks.getEnvironments(),
-              ...ctx.callbacks.getGlobalVars(),
-              ...activeLocalVars
-            };
-            const activeCtx = {
-              ...ctx,
-              globalVars: ctx.callbacks.getGlobalVars(),
-              localVars: activeLocalVars,
-              environments: ctx.callbacks.getEnvironments(),
-              scene: {
-                ...ctx.scene,
-                getVars: () => freshVars
-              },
-              execute: (cmd) => {
-                const gen = ctx.callbacks.executeCmd(cmd);
-                gen.next();
-                return gen;
-              }
-            };
-            action(activeCtx, freshVars);
+            action(effectiveCtx, effectiveCtx.scene.getVars());
           } else {
             console.warn(`[fumika] element onClick: action '${actionName}' not found`);
           }
@@ -4156,7 +4141,7 @@
         for (const key of Object.keys(_elementObjs)) delete _elementObjs[key];
         for (const key of Object.keys(_elementEntries)) delete _elementEntries[key];
       },
-      onUpdate: (_ctx, state, _setState) => {
+      onUpdate: (cmdCtx, state, _setState) => {
         const dur = state._lastDuration;
         const ease = state._lastEase ?? "easeIn";
         const newKeys = new Set(Object.keys(state._elements));
@@ -4170,7 +4155,7 @@
         const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
         const sortedAdd = topoSort(toAdd);
         for (const entry of sortedAdd) {
-          _addElement(entry, false, dur, ease ?? "easeOut");
+          _addElement(entry, false, dur, ease ?? "easeOut", cmdCtx);
         }
       }
     };
@@ -18644,7 +18629,7 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd) => this.callbacks.executeCmd(cmd),
         actions: {
-          get: (name) => this.callbacks.getActiveActions(name)
+          get: (name) => this.definition.actions?.[name]
         }
       };
       for (const [moduleKey, module] of Object.entries(modules)) {
@@ -18812,7 +18797,7 @@ ${addLineNumbers(fragment)}`);
         },
         execute: (cmd2) => this.callbacks.executeCmd(cmd2),
         actions: {
-          get: (name) => this.callbacks.getActiveActions(name)
+          get: (name) => this.definition.actions?.[name]
         }
       };
       if (FLOW_CONTROL_HANDLERS[type]) {
@@ -19357,11 +19342,11 @@ ${addLineNumbers(fragment)}`);
           restore: frame.restore ?? false
         });
       }
+      this._currentSceneDef = def;
       this._rebuildModuleViews();
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
-      this._currentSceneDef = def;
       this._inputMode = "block";
       def.hooks?._register(this);
       const subIndex = resolvedData.states?.["dialogue"]?.subIndex ?? 0;
@@ -19374,7 +19359,7 @@ ${addLineNumbers(fragment)}`);
      * 저장된 state를 각 모듈의 View에 주입하여 상태를 복원합니다.
      */
     _rebuildModuleViews() {
-      const ctx = this._makeRebuildCtx();
+      const ctx = this._makeRebuildCtx(this._currentSceneDef);
       for (const [name, module] of this._modules) {
         if (!module.__viewBuilder) continue;
         const savedState = this._stateStore.get(name) ?? {};
@@ -19645,6 +19630,7 @@ ${addLineNumbers(fragment)}`);
       }
       const needsFullRestore = !frame.preserve || frame.restore;
       this._currentSceneDef?.hooks?._unregister(this);
+      this._currentSceneDef = def;
       this._cleanupUI();
       this.stopSkip();
       if (needsFullRestore) {
@@ -19665,7 +19651,6 @@ ${addLineNumbers(fragment)}`);
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
       this._currentScene = scene;
-      this._currentSceneDef = def;
       this._inputMode = "block";
       scene.restoreState(frame.cursor, frame.localVars, frame.textSubIndex);
       this._syncUIState();
@@ -19740,7 +19725,7 @@ ${addLineNumbers(fragment)}`);
       this._world.debugMode = value;
     }
     // ─── rebuild용 SceneContext stub ────────────────────────────
-    _makeRebuildCtx() {
+    _makeRebuildCtx(sceneDef) {
       const noop = () => {
       };
       const stateStore = this._stateStore;
@@ -19819,7 +19804,7 @@ ${addLineNumbers(fragment)}`);
           })();
         },
         actions: {
-          get: () => void 0
+          get: (name) => sceneDef?.actions?.[name]
         }
       };
     }

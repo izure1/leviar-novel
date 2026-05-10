@@ -370,7 +370,8 @@ elementModule.defineView((ctx, data, setState) => {
     })
   }
 
-  const _addElement = (entry: ElementEntry, immediate = false, duration?: number, ease: EasingType = 'easeOut') => {
+  const _addElement = (entry: ElementEntry, immediate = false, duration?: number, ease: EasingType = 'easeOut', actionCtx?: SceneContext) => {
+    const effectiveCtx = actionCtx ?? ctx
     if (_elementObjs[entry.id]) return // 이미 존재
 
     const creator = KIND_CREATORS[entry.kind]
@@ -401,36 +402,15 @@ elementModule.defineView((ctx, data, setState) => {
       })
     }
 
-    // click 이벤트 바인딩 — 클릭 시점에 활성씬 기준 ctx/vars 재구성
+    // click 이벤트 바인딩 — 커맨드 실행 시점 씬(자신이 호출된 씬) 기준으로 action 호출
     if (entry.onClick) {
       const actionName = entry.onClick
       obj.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         e.stopImmediatePropagation()
-        const action = ctx.callbacks.getActiveActions(actionName)
+        const action = effectiveCtx.actions.get(actionName)
         if (action) {
-          const activeLocalVars = ctx.callbacks.getActiveLocalVars()
-          const freshVars = {
-            ...ctx.callbacks.getEnvironments(),
-            ...ctx.callbacks.getGlobalVars(),
-            ...activeLocalVars,
-          }
-          const activeCtx: SceneContext = {
-            ...ctx,
-            globalVars: ctx.callbacks.getGlobalVars() as any,
-            localVars: activeLocalVars as any,
-            environments: ctx.callbacks.getEnvironments(),
-            scene: {
-              ...ctx.scene,
-              getVars: () => freshVars as any,
-            },
-            execute: (cmd) => {
-              const gen = ctx.callbacks.executeCmd(cmd)
-              gen.next()
-              return gen
-            },
-          }
-          action(activeCtx, freshVars)
+          action(effectiveCtx, effectiveCtx.scene.getVars())
         } else {
           console.warn(`[fumika] element onClick: action '${actionName}' not found`)
         }
@@ -546,7 +526,7 @@ elementModule.defineView((ctx, data, setState) => {
       for (const key of Object.keys(_elementObjs)) delete _elementObjs[key]
       for (const key of Object.keys(_elementEntries)) delete _elementEntries[key]
     },
-    onUpdate: (_ctx: SceneContext, state: ElementSchema, _setState: SetStateFn<ElementSchema>) => {
+    onUpdate: (cmdCtx: SceneContext, state: ElementSchema, _setState: SetStateFn<ElementSchema>) => {
       const dur = state._lastDuration
       const ease = (state._lastEase ?? 'easeIn') as EasingType
       const newKeys = new Set(Object.keys(state._elements))
@@ -565,7 +545,7 @@ elementModule.defineView((ctx, data, setState) => {
       const toAdd = Object.values(state._elements).filter(e => !_elementObjs[e.id])
       const sortedAdd = topoSort(toAdd)
       for (const entry of sortedAdd) {
-        _addElement(entry, false, dur, ease ?? 'easeOut')
+        _addElement(entry, false, dur, ease ?? 'easeOut', cmdCtx)
       }
     },
   }

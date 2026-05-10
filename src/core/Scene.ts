@@ -1,4 +1,4 @@
-import type { Renderer, RendererState } from './Renderer'
+import type { Renderer, RendererState } from './Renderer' 
 import type { SceneDefinition } from '../define/defineScene'
 import type { DialogueEntry, DialogueStep } from '../types/dialogue'
 import type { SceneContext, CommandResult } from './SceneContext'
@@ -311,7 +311,7 @@ export class DialogueScene {
       },
       execute: (cmd) => this.callbacks.executeCmd(cmd as any),
       actions: {
-        get: (name: string) => this.callbacks.getActiveActions(name),
+        get: (name: string) => this.definition.actions?.[name],
       },
     }
 
@@ -502,7 +502,7 @@ export class DialogueScene {
       },
       execute: (cmd) => this.callbacks.executeCmd(cmd as any),
       actions: {
-        get: (name: string) => this.callbacks.getActiveActions(name),
+        get: (name: string) => this.definition.actions?.[name],
       },
     }
 

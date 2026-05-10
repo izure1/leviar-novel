@@ -137,7 +137,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
  */
 
 export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>, THook extends ListenerSignature<THook> = DefaultHook>(schema?: TSchema): NovelModule<TCmd, TSchema, THook> {
-  let _onUpdate: ((data: TSchema) => void) | null = null
+  let _onUpdate: ((data: TSchema, ctx?: SceneContext) => void) | null = null
   let _moduleKey: string | null = null
 
   // 이 모듈 전용 훅 시스템 (target 객체 기반 로컬 훅)
@@ -179,7 +179,13 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
     ): NovelModule<TCmd, TSchema, THook> {
       _handlerFn = function* (rawParams: any, ctx: SceneContext) {
         const resolved = resolveParams(rawParams, ctx)
-        const gen = handler(resolved as TCmd, ctx, data, setState)
+        // 커맨드 실행 시점의 ctx를 onUpdate에 전달하기 위해 setState를 래핑
+        const ctxSetState: SetStateFn<TSchema> = (partial) => {
+          const updates = typeof partial === 'function' ? partial(data) : partial
+          Object.assign(data, updates)
+          _onUpdate?.(data, ctx)
+        }
+        const gen = handler(resolved as TCmd, ctx, data, ctxSetState)
         let res = gen.next()
         while (!res.done) {
           if (_moduleKey) {
@@ -218,7 +224,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
         }
 
         const entry = builder(ctx, data, setState)
-        _onUpdate = (d) => entry.onUpdate?.(ctx, d, setState)
+        _onUpdate = (d, cmdCtx) => entry.onUpdate?.(cmdCtx ?? ctx, d, setState)
 
         // 초기 렌더링 정합성을 위해 즉시 onUpdate 1회 호출
         entry.onUpdate?.(ctx, data, setState)

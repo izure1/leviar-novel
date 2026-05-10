@@ -657,6 +657,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
 
     // 모듈 View 재생성 (state에서 스키마 읽어 빌더 실행)
+    this._currentSceneDef = def
     this._rebuildModuleViews()
 
     // 새 씬 인스턴스 생성 (start() 호출 없이)
@@ -665,7 +666,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     // 지역 변수 + cursor 복원
     this._currentScene = scene
-    this._currentSceneDef = def
     this._inputMode = 'block'
 
     // 새 씬 훅 등록
@@ -683,7 +683,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
    * 저장된 state를 각 모듈의 View에 주입하여 상태를 복원합니다.
    */
   private _rebuildModuleViews(): void {
-    const ctx = this._makeRebuildCtx()
+    const ctx = this._makeRebuildCtx(this._currentSceneDef)
 
     for (const [name, module] of this._modules) {
       if (!module.__viewBuilder) continue
@@ -963,6 +963,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     // 서브씬 훅만 해제합니다. 부모씬 훅은 call 진입 시점에 유지되었으므로 이미 활성 상태입니다.
     this._currentSceneDef?.hooks?._unregister(this)
+    this._currentSceneDef = def
     this._cleanupUI()
     this.stopSkip()
 
@@ -990,7 +991,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const callbacks = this._buildCallbacks()
     const scene = new DialogueScene(this._renderer, callbacks, def as SceneDefinition<any, any, any, any, any>)
     this._currentScene = scene
-    this._currentSceneDef = def
     this._inputMode = 'block'
 
     // 부모씬 훅은 call 진입 시점부터 유지되어 이미 등록 상태입니다.
@@ -1087,7 +1087,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
   // ─── rebuild용 SceneContext stub ────────────────────────────
 
-  private _makeRebuildCtx(): SceneContext {
+  private _makeRebuildCtx(sceneDef?: AnySceneDef | null): SceneContext {
     const noop = () => { /* no-op */ }
     const stateStore = this._stateStore
     const uiRegistry = this._uiRegistry
@@ -1158,7 +1158,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         return (function* () { return false })()
       },
       actions: {
-        get: () => undefined,
+        get: (name) => (sceneDef as any)?.actions?.[name],
       },
     }
   }
