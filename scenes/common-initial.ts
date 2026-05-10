@@ -14,8 +14,7 @@ export const commonInitial = defineInitial(config)({
   },
   'dialogue': {
     bg: {
-      gradientType: 'linear',
-      gradient: '0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%',
+      background: 'linear-gradient(0deg, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%)',
       height: 270,
     },
     speaker: {
@@ -23,8 +22,6 @@ export const commonInitial = defineInitial(config)({
       fontWeight: 'bold',
       fontFamily: 'Google Sans Flex,Google Sans,Helvetica Neue,sans-serif',
       color: '#daacffff',
-      // borderWidth: 2,
-      // borderColor: 'rgb(255,255,255)',
       textShadowOffsetX: 3,
       textShadowOffsetY: 3,
       textShadowBlur: 0,
@@ -52,11 +49,10 @@ export const commonInitial = defineInitial(config)({
       color: undefined,
       borderWidth: undefined,
       borderColor: undefined,
-      gradientType: 'linear',
-      gradient: '90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%',
+      background: 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
     },
     buttonHover: {
-      gradient: '90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%',
+      background: 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 20%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0) 100%)',
     },
     text: {
       color: 'rgb(255,255,255)',

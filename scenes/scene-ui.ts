@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineScene } from '../../src'
+import { defineHook, defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
@@ -17,6 +17,9 @@ const UI_BUTTON_STYLE: Partial<Style> = {
 
 export default defineScene({
   config,
+  variables: {
+    _test: 0,
+  },
   actions: {
     save: (ctx, vars) => {
       save(ctx.novel)
@@ -28,9 +31,10 @@ export default defineScene({
       ctx.novel.toggleFullscreen()
     },
     log(ctx, vars) {
+      ctx.localVars._test += 1
       console.log(ctx, vars)
     }
-  }
+  },
 })(({ label, goto, call }) => [
   // ── 하단 패널 (우측 하단) ─────────────────────────────
   {
@@ -38,7 +42,7 @@ export default defineScene({
     action: 'show',
     id: 'panel',
     kind: 'rect',
-    position: { x: 0.85, y: 0.95 },
+    position: { x: 1090, y: 684 },
     style: {
       width: 180,
       height: 40,
@@ -91,7 +95,8 @@ export default defineScene({
     id: 'sidebar',
     kind: 'rect',
     uiTags: ['default-ui'],
-    position: { x: 0.9, y: 0.05 },
+    position: { x: 1080, y: 0 },
+    pivot: { x: 0, y: 0 },
     style: {
       width: 200,
       height: 600,
@@ -102,7 +107,7 @@ export default defineScene({
         action: 'show',
         id: 'text_like',
         text: '<style color="rgb(255, 0, 0)">♥</style> {{ likeability }}',
-        position: { x: 0, y: 0 },
+        position: { x: 50, y: -50 },
         style: {
           ...UI_BUTTON_STYLE,
           color: 'rgb(255, 255, 255)'
@@ -115,9 +120,10 @@ export default defineScene({
 
   {
     type: 'element',
-    id: 'sidebar',
+    id: 'text_like',
     action: 'show',
-    kind: 'rect',
+    kind: 'text',
+    text: '<style color="rgb(255, 0, 0)">♥</style> {{ likeability }}',
     rotation: 360,
     ease: 'easeOutBounce',
     duration: 2500,
