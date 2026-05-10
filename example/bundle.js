@@ -20099,6 +20099,9 @@ ${addLineNumbers(fragment)}`);
   };
   var scene_ui_default = defineScene({
     config: novel_config_default,
+    variables: {
+      _test: 0
+    },
     actions: {
       save: (ctx, vars) => {
         save(ctx.novel);
@@ -20110,7 +20113,7 @@ ${addLineNumbers(fragment)}`);
         ctx.novel.toggleFullscreen();
       },
       log(ctx, vars) {
-        console.log(ctx, vars);
+        ctx.localVars._test += 1;
       }
     }
   })(({ label, goto, call }) => [

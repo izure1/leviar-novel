@@ -92,7 +92,7 @@ export default defineNovelConfig({
 
 ---
 
-설정을 마치셨다면 **[빠른 시작](./quick-start.md)** 또는 **[튜토리얼](./tutorial.md)**을 통해 본격적인 시나리오를 작성해 보세요.  
+설정을 마치셨다면 **[튜토리얼](./tutorial.md)**을 통해 본격적인 시나리오를 작성해 보세요.  
 
 ---
 

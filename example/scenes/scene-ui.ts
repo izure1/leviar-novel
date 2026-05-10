@@ -17,6 +17,9 @@ const UI_BUTTON_STYLE: Partial<Style> = {
 
 export default defineScene({
   config,
+  variables: {
+    _test: 0,
+  },
   actions: {
     save: (ctx, vars) => {
       save(ctx.novel)
@@ -28,7 +31,7 @@ export default defineScene({
       ctx.novel.toggleFullscreen()
     },
     log(ctx, vars) {
-      console.log(ctx, vars)
+      ctx.localVars._test += 1
     }
   },
 })(({ label, goto, call }) => [

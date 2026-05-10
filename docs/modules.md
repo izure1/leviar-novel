@@ -51,7 +51,14 @@ const myModule = define<MyModuleCommand, MyModuleState, MyModuleHook>({ count: 0
 
 ### 2. 명령어 로직 구현 (`defineCommand`)
 
-시나리오 진행 중 해당 명령어를 만났을 때 실행될 로직을 제너레이터 함수로 작성합니다.  
+시나리오 진행 중 해당 명령어를 만났을 때 실행될 로직을 제너레이터 함수로 작성합니다. 콜백 함수의 매개변수는 다음과 같습니다.
+
+| 매개변수 | 설명 |
+| :--- | :--- |
+| **`cmd`** | 명령어 호출 시 사용했던 속성값들입니다. |
+| **`ctx`** | 명령어를 호출했던 씬(Scene)의 정보를 담고 있는 컨텍스트입니다. |
+| **`state`** | 현재 모듈에 저장된 상태 데이터입니다. |
+| **`setState`** | 모듈의 상태를 갱신하는 함수로, 호출 시 화면 UI와 동기화됩니다. |
 
 ```typescript
 myModule.defineCommand(function* (cmd, ctx, state, setState) {
@@ -65,7 +72,13 @@ myModule.defineCommand(function* (cmd, ctx, state, setState) {
 
 ### 3. 화면 UI 구현 (`defineView`)
 
-명령어나 상태가 바뀌면 화면을 다시 그릴 수 있도록 뷰(View)를 정의합니다.  
+명령어나 상태가 바뀌면 화면을 다시 그릴 수 있도록 뷰(View)를 정의합니다. 초기화 콜백 함수의 매개변수는 다음과 같습니다.
+
+| 매개변수 | 설명 |
+| :--- | :--- |
+| **`ctx`** | 명령어를 호출했던 씬(Scene)의 정보를 담고 있는 컨텍스트입니다. |
+| **`state`** | 렌더링에 사용할 모듈의 초기 상태 데이터입니다. |
+| **`setState`** | 내부 인터랙션 등에 의해 상태를 갱신해야 할 때 사용하는 함수입니다. |
 
 ```typescript
 myModule.defineView((ctx, state, setState) => {
