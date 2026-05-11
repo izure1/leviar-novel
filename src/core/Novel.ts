@@ -115,9 +115,8 @@ export interface NovelHook {
   /**
    * 변수 값 변경 시 방출. 씨이 없으면 에러 발생 (novel.start() 이후 사용 가능).
    * @param ctx - 변경이 발생한 시점의 SceneContext
-   * @param vars - 변경 시점의 통합 변수 맵 (env + global + local)
    */
-  'novel:var': (payload: NovelVarHookPayload, ctx: SceneContext, vars: Record<string, any>) => NovelVarHookPayload
+  'novel:var': (payload: NovelVarHookPayload, ctx: SceneContext) => NovelVarHookPayload
 }
 
 // =============================================================
@@ -264,7 +263,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     // AudioManager 초기화 — audioModule.hooker를 공유하여 audio:* 훅 라우팅 유지
     this.audio = new AudioManager(audioModule.hooker as IHookallSync<AudioHook>)
-    this.audio.setCtxProvider(() => this._makeCurrentCtxVars())
+    this.audio.setCtxProvider(() => this._makeCurrentCtx())
 
     this.variables = { ...(config.variables as object) } as TConfig['variables']
     this.environments = { ...(config.environments ?? {} as object) } as TConfig['environments']
@@ -328,13 +327,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const oldValue = (this.variables as any)[name]
     if (Object.is(oldValue, value)) return
 
-    const { ctx, vars } = this._makeCurrentCtxVars()
+    const ctx = this._makeCurrentCtx()
     const payload = this._novelHooker.trigger(
       'novel:var',
       { name, oldValue, newValue: value },
       (data) => data,
-      ctx,
-      vars
+      ctx
     )
     const variables = this.variables as any
     variables[name] = payload.newValue
@@ -344,13 +342,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const oldValue = (this.environments as any)[name]
     if (Object.is(oldValue, value)) return
 
-    const { ctx, vars } = this._makeCurrentCtxVars()
+    const ctx = this._makeCurrentCtx()
     const payload = this._novelHooker.trigger(
       'novel:var',
       { name, oldValue, newValue: value },
       (data) => data,
-      ctx,
-      vars
+      ctx
     )
     const environments = this.environments as any
     environments[name] = payload.newValue
@@ -696,10 +693,10 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
   // ─── 콜백 팩토리 ─────────────────────────────────────────────
 
   /**
-   * 현재 활성 씨 기반으로 ctx/vars를 생성합니다.
+   * 현재 활성 씨 기반으로 ctx를 생성합니다.
    * 율 시작 전 (novel.start() 이전)에 호출되면 에러를 발생합니다.
    */
-  private _makeCurrentCtxVars(): { ctx: SceneContext; vars: Record<string, any> } {
+  private _makeCurrentCtx(): SceneContext {
     const scene = this._currentScene
     if (!(scene instanceof DialogueScene)) {
       throw new Error('[fumika] Variable and audio operations require an active scene. Call novel.start() first.')
@@ -707,7 +704,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const globalVars = this.variables as Record<string, any>
     const envVars = this.environments as Record<string, any>
-    const localVars = scene.getLocalVars()
+    const getLocalVars = () => this._currentScene instanceof DialogueScene
+      ? (this._currentScene as any).localVars as Record<string, any>
+      : scene.getLocalVars()
 
     // _buildCallbacks()는 _sceneGeneration을 증가시키므로 안정적 콜백 직접 구성
     const stableCallbacks: SceneCallbacks = {
@@ -753,9 +752,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       novel: this as any,
       world: this._world as any,
       renderer: this._renderer,
-      globalVars: globalVars as any,
-      localVars: localVars as any,
-      environments: envVars,
+      get globalVars() { return this.callbacks.getGlobalVars() as any },
+      get localVars() { return getLocalVars() as any },
+      get environments() { return this.callbacks.getEnvironments() as any },
       callbacks: stableCallbacks,
       scene: {
         getTextSubIndex: () => 0,
@@ -763,7 +762,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         interpolateText: (text) => text,
         jumpToLabel: () => {},
         hasLabel: () => false,
-        getVars: () => ({ ...envVars, ...globalVars, ...localVars }) as any,
+        getVars: () => ({
+          ...this.environments as object,
+          ...this.variables as object,
+          ...getLocalVars(),
+        }) as any,
         setGlobalVar: (key, value) => { this._setGlobalVar(key, value) },
         setLocalVar: () => {},
         loadScene: (target) => { this.loadScene(target) },
@@ -784,7 +787,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       actions: { get: () => undefined },
     }
 
-    return { ctx, vars: ctx.scene.getVars() }
+    return ctx
   }
 
   private _buildCallbacks(): SceneCallbacks {
@@ -1124,12 +1127,12 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       novel: this as any,
       world: this._world,
       renderer: this._renderer,
-      globalVars: {},
-      localVars: {},
-      environments: { ...(this.environments ?? {}) as object },
+      get globalVars() { return this.callbacks.getGlobalVars() as any },
+      get localVars() { return this.callbacks.getActiveLocalVars() as any },
+      get environments() { return this.callbacks.getEnvironments() as any },
       callbacks: {
         getNovel: () => this as any,
-        getGlobalVars: () => ({}),
+        getGlobalVars: () => this.variables as Record<string, any>,
         setGlobalVar: noop as any,
         getEnvironments: () => ({ ...(this.environments ?? {}) as object }),
         setEnvironment: (name: string, value: any) => { this._setEnvironment(name, value) },
@@ -1187,7 +1190,11 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         interpolateText: (t: string) => t,
         jumpToLabel: noop as any,
         hasLabel: () => false,
-        getVars: () => ({ ...(this.environments ?? {}) as object, ...this.variables as object }),
+        getVars: () => ({
+          ...(this.environments ?? {}) as object,
+          ...this.variables as object,
+          ...(this._currentScene instanceof DialogueScene ? (this._currentScene as any).localVars : {}),
+        }),
         setGlobalVar: noop as any,
         setLocalVar: noop as any,
         loadScene: noop as any,

@@ -132,14 +132,14 @@ export interface SceneCallbacks {
    * 현재 활성 씬(하위씬 포함)의 actions에서 이름으로 액션 콜백을 조회합니다.
    * 훅의 ctx와 동일하게 항상 현재 활성씬 기준으로 반환됩니다.
    */
-  getActiveActions(name: string): ((element: LeviarObject, ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+  getActiveActions(name: string): ((element: LeviarObject, ctx: SceneContext) => void) | undefined
   /**
    * 현재 활성 씬의 지역 변수를 반환합니다.
    * 클릭 핸들러 등 토소림 메서드에서 활성씬 기준 vars를 재구성할 때 사용합니다.
    */
   getActiveLocalVars(): Record<string, any>
   /** 지정된 씬의 actions에서 이름으로 액션 콜백을 조회합니다. */
-  getSceneActions(sceneName: string, actionName: string): ((element: LeviarObject, ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+  getSceneActions(sceneName: string, actionName: string): ((element: LeviarObject, ctx: SceneContext) => void) | undefined
   /** 현재 활성 씬의 이름을 반환합니다. */
   getCurrentSceneName(): string
   /**
@@ -219,8 +219,7 @@ export class DialogueScene {
       'novel:var',
       { name, oldValue, newValue: value },
       (data: { name: string, oldValue: any, newValue: any }) => data,
-      ctx,
-      ctx ? this._vars : undefined
+      ctx
     )
     this.localVars[name] = payload.newValue
   }
@@ -266,13 +265,14 @@ export class DialogueScene {
 
     const stateStore = this.callbacks.getStateStore()
     const uiRegistry = this.callbacks.getUIRegistry()
+    const sceneRunner = this
 
     const ctx: SceneContext = {
       novel: this.callbacks.getNovel(),
       world: r.world,
-      globalVars: this.callbacks.getGlobalVars(),
-      localVars: this.localVars,
-      environments: this.callbacks.getEnvironments(),
+      get globalVars() { return this.callbacks.getGlobalVars() },
+      get localVars() { return sceneRunner.localVars as any },
+      get environments() { return this.callbacks.getEnvironments() },
       renderer: r,
       callbacks: this.callbacks,
       state: {
@@ -457,13 +457,14 @@ export class DialogueScene {
 
     const stateStore = this.callbacks.getStateStore()
     const uiRegistry = this.callbacks.getUIRegistry()
+    const sceneRunner = this
 
     const ctx: SceneContext = {
       novel: this.callbacks.getNovel(),
       world: r.world,
-      globalVars: this.callbacks.getGlobalVars(),
-      localVars: this.localVars,
-      environments: this.callbacks.getEnvironments(),
+      get globalVars() { return this.callbacks.getGlobalVars() },
+      get localVars() { return sceneRunner.localVars as any },
+      get environments() { return this.callbacks.getEnvironments() },
       renderer: r,
       callbacks: this.callbacks,
       state: {

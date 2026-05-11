@@ -271,6 +271,7 @@ export default defineScene({
     [
       // ─── 분기: 빈 이름 ───
       set('_inputRepeatCount', ({ _inputRepeatCount }) => _inputRepeatCount + 1),
+      set('likeability', ({ likeability }) => likeability - 5),
       {
         type: 'dialogue',
         text: '후미카의 표정이 썩어들어간다.'

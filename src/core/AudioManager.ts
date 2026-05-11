@@ -98,18 +98,18 @@ export class AudioManager {
   private readonly _fading = new Set<ManagedAudioElement>()
 
   private readonly _hooker: IHookallSync<AudioHook>
-  private _ctxProvider: (() => { ctx: SceneContext; vars: Record<string, any> }) | null = null
+  private _ctxProvider: (() => SceneContext) | null = null
 
   constructor(hooker: IHookallSync<AudioHook>) {
     this._hooker = hooker
   }
 
   /** Novel 인스턴스가 현재 활성 씬의 ctx/vars를 반환하는 함수를 주입합니다. */
-  setCtxProvider(fn: () => { ctx: SceneContext; vars: Record<string, any> }): void {
+  setCtxProvider(fn: () => SceneContext): void {
     this._ctxProvider = fn
   }
 
-  private _getCtxVars(): { ctx: SceneContext; vars: Record<string, any> } {
+  private _getCtx(): SceneContext {
     if (!this._ctxProvider) {
       throw new Error('[fumika] Audio operations require an active scene. Call novel.start() first.')
     }
@@ -130,7 +130,7 @@ export class AudioManager {
     currentSrc: string | undefined,
     playCmd: AudioPlayCmd<any>
   ): void {
-    const { ctx, vars } = this._getCtxVars()
+    const ctx = this._getCtx()
     const existing = this._pool.get(name)
     const existingSrc = existing ? currentSrc : undefined
 
@@ -148,7 +148,7 @@ export class AudioManager {
       }
 
       fadeVolume(existing, opts.volume, opts.duration)
-      this._hooker.trigger('audio:play', playCmd, (val) => val, ctx, vars)
+      this._hooker.trigger('audio:play', playCmd, (val) => val, ctx)
       return
     }
 
@@ -180,7 +180,7 @@ export class AudioManager {
       fadeVolume(audio, opts.volume, opts.duration)
     }
 
-    this._hooker.trigger('audio:play', playCmd, (val) => val, ctx, vars)
+    this._hooker.trigger('audio:play', playCmd, (val) => val, ctx)
   }
 
   // ─── 일시정지 ───────────────────────────────────────────────
@@ -190,7 +190,7 @@ export class AudioManager {
    * duration이 있으면 페이드아웃 후 정지하고 Promise가 resolve됩니다.
    */
   pause(name: string, trackVolume: number, pauseCmd: AudioPauseCmd, duration: number): Promise<void> {
-    const { ctx, vars } = this._getCtxVars()
+    const ctx = this._getCtx()
     const audio = this._pool.get(name)
     if (!audio) return Promise.resolve()
 
@@ -198,13 +198,13 @@ export class AudioManager {
       return fadeVolume(audio, 0, duration).then(() => {
         audio.pause()
         audio.volume = trackVolume
-        this._hooker.trigger('audio:pause', pauseCmd, (val) => val, ctx, vars)
+        this._hooker.trigger('audio:pause', pauseCmd, (val) => val, ctx)
       })
     }
 
     audio.pause()
     audio.volume = trackVolume
-    this._hooker.trigger('audio:pause', pauseCmd, (val) => val, ctx, vars)
+    this._hooker.trigger('audio:pause', pauseCmd, (val) => val, ctx)
     return Promise.resolve()
   }
 
@@ -215,7 +215,7 @@ export class AudioManager {
    * duration이 있으면 페이드아웃 후 정지합니다.
    */
   stop(name: string, stopCmd: AudioStopCmd, duration: number): Promise<void> {
-    const { ctx, vars } = this._getCtxVars()
+    const ctx = this._getCtx()
     const audio = this._pool.get(name)
     if (!audio) return Promise.resolve()
 
@@ -225,14 +225,14 @@ export class AudioManager {
       this._fading.add(audio)
       return fadeVolume(audio, 0, duration, true).then(() => {
         this._fading.delete(audio)
-        this._hooker.trigger('audio:stop', stopCmd, (val) => val, ctx, vars)
+        this._hooker.trigger('audio:stop', stopCmd, (val) => val, ctx)
       })
     }
 
     audio.pause()
     audio.currentTime = 0
     audio.src = ''
-    this._hooker.trigger('audio:stop', stopCmd, (val) => val, ctx, vars)
+    this._hooker.trigger('audio:stop', stopCmd, (val) => val, ctx)
     return Promise.resolve()
   }
 
@@ -377,13 +377,12 @@ export class AudioManager {
       // 자연 루프 감지 (loop=true이고 endSec 없을 때 시간이 과거로 돌아가면 루프)
       if (currentRepeat && currentEndSec === 0) {
         if (audio.currentTime < lastTime - 0.5) {
-          const { ctx, vars } = this._getCtxVars()
+          const ctx = this._getCtx()
           this._hooker.trigger(
             'audio:repeat',
             { name, src: audio.__srcKey! },
             (val) => val,
-            ctx,
-            vars
+            ctx
           )
         }
       }
@@ -394,23 +393,21 @@ export class AudioManager {
         audio.pause()
         audio.currentTime = currentStartSec
         if (currentRepeat) {
-          const { ctx, vars } = this._getCtxVars()
+          const ctx = this._getCtx()
           this._hooker.trigger(
             'audio:repeat',
             { name, src: audio.__srcKey! },
             (val) => val,
-            ctx,
-            vars
+            ctx
           )
           audio.play().catch(() => {})
         } else {
-          const { ctx, vars } = this._getCtxVars()
+          const ctx = this._getCtx()
           this._hooker.trigger(
             'audio:end',
             { name, src: audio.__srcKey! },
             (val) => val,
-            ctx,
-            vars
+            ctx
           )
         }
       }
@@ -420,13 +417,12 @@ export class AudioManager {
       const currentRepeat = audio.loop
       const currentEndSec = audio.__endSec ?? 0
       if (!currentRepeat && currentEndSec === 0) {
-        const { ctx, vars } = this._getCtxVars()
+        const ctx = this._getCtx()
         this._hooker.trigger(
           'audio:end',
           { name, src: audio.__srcKey! },
           (val) => val,
-          ctx,
-          vars
+          ctx
         )
       }
     })

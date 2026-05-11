@@ -422,26 +422,24 @@ elementModule.defineView((ctx, data, setState) => {
           : effectiveCtx.actions.get(behaviorName)
         if (action) {
           // behavior 호출 시점에 선언 씬의 localVars를 동적으로 조회하여 fresh ctx 구성
-          const localVars = sceneName
+          const getLocalVars = () => sceneName
             ? ctx.callbacks.getSceneLocalVars(sceneName)
             : effectiveCtx.localVars
-          const globalVars = ctx.callbacks.getGlobalVars()
-          const environments = ctx.callbacks.getEnvironments()
           const behaviorCtx: SceneContext = {
             ...ctx,
-            localVars,
-            globalVars,
-            environments,
+            get localVars() { return getLocalVars() as any },
+            get globalVars() { return ctx.callbacks.getGlobalVars() as any },
+            get environments() { return ctx.callbacks.getEnvironments() as any },
             scene: {
               ...ctx.scene,
               getVars: () => ({
                 ...ctx.callbacks.getEnvironments(),
                 ...ctx.callbacks.getGlobalVars(),
-                ...localVars,
+                ...getLocalVars(),
               }),
             },
           }
-          action(obj as LeviarObject, behaviorCtx, behaviorCtx.scene.getVars())
+          action(obj as LeviarObject, behaviorCtx)
         } else {
           console.warn(`[fumika] element behavior: action '${behaviorName}' not found in scene '${sceneName ?? 'unknown'}'`)
         }

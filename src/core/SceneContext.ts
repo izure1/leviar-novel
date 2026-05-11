@@ -111,7 +111,7 @@ export interface SceneContext<
    */
   actions: {
     /** 이름으로 액션 콜백을 조회합니다 */
-    get(name: string): ((element: LeviarObject, ctx: SceneContext, vars: Record<string, any>) => void) | undefined
+    get(name: string): ((element: LeviarObject, ctx: SceneContext) => void) | undefined
   }
 }
 

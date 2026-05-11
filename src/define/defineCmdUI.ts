@@ -282,7 +282,7 @@ export type NovelHookRef = {
   'novel:load': (value: any) => any
   'novel:next': (value: boolean) => boolean
   'novel:scene': (value: string) => string
-  'novel:var': (payload: { name: string, oldValue: any, newValue: any }, ctx: SceneContext | undefined, vars: Record<string, any> | undefined) => { name: string, oldValue: any, newValue: any }
+  'novel:var': (payload: { name: string, oldValue: any, newValue: any }, ctx: SceneContext | undefined) => { name: string, oldValue: any, newValue: any }
 }
 
 // ─── SceneHookDescriptor ─────────────────────────────────────

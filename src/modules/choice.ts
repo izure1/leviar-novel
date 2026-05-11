@@ -126,8 +126,8 @@ export type ResolvedChoiceItem = Omit<ChoiceCmd<any, any>['choices'][number], 't
 import type { SceneContext } from '../core/SceneContext'
 
 export interface ChoiceHook {
-  'choice:show': (value: { choices: ResolvedChoiceItem[] }, ctx: SceneContext, vars: Record<string, any>) => { choices: ResolvedChoiceItem[] }
-  'choice:select': (value: { index: number, selected: ResolvedChoiceItem }, ctx: SceneContext, vars: Record<string, any>) => { index: number, selected: ResolvedChoiceItem }
+  'choice:show': (value: { choices: ResolvedChoiceItem[] }, ctx: SceneContext) => { choices: ResolvedChoiceItem[] }
+  'choice:select': (value: { index: number, selected: ResolvedChoiceItem }, ctx: SceneContext) => { index: number, selected: ResolvedChoiceItem }
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -338,8 +338,7 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
     'choice:show',
     { choices: resolvedChoices },
     (value) => value,
-    ctx,
-    ctx.scene.getVars()
+    ctx
   )
 
   console.log('[fumika] choiceHandler: opening choices', showData.choices)
@@ -352,8 +351,7 @@ choiceModule.defineCommand(function* (cmd, ctx, state, setState) {
       'choice:select',
       { index: i, selected: showData.choices[i] },
       (value) => value,
-      ctx,
-      ctx.scene.getVars()
+      ctx
     )
     selected = selectData.selected ?? null
     ctx.callbacks.advance()

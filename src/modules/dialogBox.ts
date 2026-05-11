@@ -217,8 +217,8 @@ export type ResolvedDialogBoxButton = DialogBoxCmd<any, any>['buttons'][number]
 import type { SceneContext } from '../core/SceneContext'
 
 export interface DialogBoxHook {
-  'dialogBox:show': (value: DialogBoxCmd<any, any>, ctx: SceneContext, vars: Record<string, any>) => DialogBoxCmd<any, any>
-  'dialogBox:select': (value: { index: number, selected?: ResolvedDialogBoxButton }, ctx: SceneContext, vars: Record<string, any>) => { index: number, selected?: ResolvedDialogBoxButton }
+  'dialogBox:show': (value: DialogBoxCmd<any, any>, ctx: SceneContext) => DialogBoxCmd<any, any>
+  'dialogBox:select': (value: { index: number, selected?: ResolvedDialogBoxButton }, ctx: SceneContext) => { index: number, selected?: ResolvedDialogBoxButton }
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -582,7 +582,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
   // 대화창 숨김 — suppressRoles를 통해 onSuppress() 이벤트로 자동 처리됨
 
   // 'dialogBox:show' 훅 방출
-  const finalCmd = dialogBoxModule.hooker.trigger('dialogBox:show', cmd, (value) => value, ctx, ctx.scene.getVars())
+  const finalCmd = dialogBoxModule.hooker.trigger('dialogBox:show', cmd, (value) => value, ctx)
 
   const duration = finalCmd.duration ?? 200
   const persist = finalCmd.buttons.length > 0 ? true : (finalCmd.persist ?? false)
@@ -601,8 +601,7 @@ dialogBoxModule.defineCommand(function* (cmd, ctx, _state, setState) {
       'dialogBox:select',
       { index: i, selected: selectedObj },
       (value) => value,
-      ctx,
-      ctx.scene.getVars()
+      ctx
     )
 
     const finalSelected = selectData.selected

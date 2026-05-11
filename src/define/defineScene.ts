@@ -76,7 +76,7 @@ export interface SceneDefinition<
    * `element` 명령어의 `behaviors`에서 이름으로 참조하여 호출됩니다.
    * 각 콜백은 요소가 생성될 때 호출되며, 이벤트 리스너 등을 등록합니다.
    */
-  readonly actions?: Record<string, (element: LeviarObject, ctx: SceneContext, vars: Record<string, any>) => void>
+  readonly actions?: Record<string, (element: LeviarObject, ctx: SceneContext) => void>
 }
 
 // ─── SceneBuilders 타입 ──────────────────────────────────────
@@ -262,8 +262,7 @@ type _SceneOptions<
    */
   actions?: Record<string, (
     element: LeviarObject,
-    ctx: SceneContext<TVars, TLocalVars, EnvironmentsOf<TConfig>>,
-    vars: TVars & TLocalVars & EnvironmentsOf<TConfig>
+    ctx: SceneContext<TVars, TLocalVars, EnvironmentsOf<TConfig>>
   ) => void>
 }
 
