@@ -23,7 +23,7 @@
 
 ```typescript
 // 특정 BGM 재생 시 로그를 기록하고 이펙트를 실행합니다
-novel.hooker.onAfter('audio:play', (cmd, ctx, vars) => {
+novel.hooker.onAfter('audio:play', (cmd, ctx) => {
   if (cmd.name === 'bgm') {
     console.log(`배경음 재생 시작: ${cmd.src}`)
   }
@@ -37,7 +37,7 @@ novel.hooker.onAfter('audio:play', (cmd, ctx, vars) => {
 
 ```typescript
 // 문 닫히는 효과음이 끝나면 다음 로직을 동기화합니다
-novel.hooker.onAfter('audio:end', (payload, ctx, vars) => {
+novel.hooker.onAfter('audio:end', (payload, ctx) => {
   if (payload.src === 'sfx_door_close') {
     console.log('문이 닫혔습니다')
   }

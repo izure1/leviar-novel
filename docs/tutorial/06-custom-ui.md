@@ -4,7 +4,7 @@
 기본적인 대화창 외에도, 게임 화면에 체력바, 호감도 수치 등 나만의 시각 요소(UI)를 띄워야 할 때가 있습니다.
 
 이 장에서는 `element` 명령어를 사용해 화면에 커스텀 UI를 만들고,  
-앞서 배운 변수 보간 기법을 결합하는 방법을 배웁니다.  
+`behaviors` 속성을 사용해 UI에 동적인 동작을 연결하는 방법을 배웁니다.  
 
 ## 사전 준비 (Prerequisites)
 * 이전 장에서 만든 `affection` 호감도 전역 변수가 동작해야 합니다.  
@@ -25,8 +25,25 @@ Fumika 엔진에서는 `element` 명령어를 통해 화면 위에 자유롭게 
 import { defineScene } from 'fumika'
 import config from '../novel.config'
 
-export default defineScene({ config })(() => [
-  // 1. 커스텀 UI 요소 띄우기
+export default defineScene({
+  config,
+  // 1. UI의 동작(behavior)을 정의합니다
+  actions: {
+    updateAffection: (element, ctx) => {
+      // 텍스트를 현재 호감도로 초기화합니다.
+      element.attribute.text = `현재 호감도: ${ctx.globalVars.affection ?? 0}`
+      
+      // 변수가 변경될 때 텍스트를 갱신하도록 이벤트를 연결합니다.
+      ctx.novel.hooker.on('novel:var', (data) => {
+        if (data.key === 'affection') {
+          element.attribute.text = `현재 호감도: ${data.value}`
+        }
+        return data
+      })
+    }
+  }
+})(() => [
+  // 2. 커스텀 UI 요소 띄우기
   {
     type: 'element',
     action: 'show',
@@ -46,8 +63,9 @@ export default defineScene({ config })(() => [
       {
         id: 'ui-text',
         kind: 'text',
-        // 이중 중괄호를 사용하면 변수값을 텍스트 안에 자동으로 치환해 보여줍니다
-        text: '현재 호감도: {{affection}}',
+        text: '현재 호감도: 0',
+        // 정의해둔 액션을 behaviors로 연결합니다
+        behaviors: ['updateAffection'],
         // 부모 사각형의 중심을 기준으로 한 픽셀 오프셋 지정
         position: { x: 0, y: 0 },
         style: {
@@ -65,11 +83,11 @@ export default defineScene({ config })(() => [
 ])
 ```
 
-### 변수 보간 문법 (Interpolation)
-주목할 점은 `text: '현재 호감도: {{affection}}'` 부분입니다.
+### Behaviors (동작 연결)
+주목할 점은 `defineScene` 내부의 `actions` 객체와 요소의 `behaviors: ['updateAffection']` 속성입니다.
 
-엔진은 문자열 내부에 `{{변수명}}`이 있으면 이를 현재 저장된 변수 값으로 자동 치환합니다.  
-나중에 선택지를 통해 `affection` 값이 바뀌어도 이 기능 덕분에 손쉽게 수치를 텍스트로 갱신해 보여줄 수 있습니다.  
+UI의 동작을 `actions`로 정의하고 `behaviors`로 주입하는 방식을 사용합니다.  
+이를 통해 재사용성이 높아지고, 자바스크립트의 모든 기능(이벤트 핸들러, 타이머, 엔진 훅 등)을 활용해 자유롭게 UI를 제어할 수 있습니다.  
 
 ---
 

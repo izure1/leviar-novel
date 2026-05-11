@@ -19,7 +19,7 @@
 
 ```typescript
 // 특정 캐릭터가 대사를 시작할 때 음성 파일을 틀어줍니다
-novel.hooker.onBefore('dialogue:text-run', (state, ctx, vars) => {
+novel.hooker.onBefore('dialogue:text-run', (state, ctx) => {
   if (state.speaker === 'heroine') {
     voiceManager.play('voice_heroine_01')
   }
@@ -33,7 +33,7 @@ novel.hooker.onBefore('dialogue:text-run', (state, ctx, vars) => {
 
 ```typescript
 // 대사를 화면에 띄우기 전 외국어 번역 플러그인을 적용합니다
-novel.hooker.onBefore('dialogue:text-render', (state, ctx, vars) => {
+novel.hooker.onBefore('dialogue:text-render', (state, ctx) => {
   return {
     ...state,
     text: i18n.translate(state.text)

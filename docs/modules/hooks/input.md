@@ -17,7 +17,7 @@
 
 ```typescript
 // 플레이어 방문 여부에 따라 입력 안내 문구를 다르게 띄웁니다
-novel.hooker.onBefore('input:open', (state, ctx, vars) => {
+novel.hooker.onBefore('input:open', (state, ctx) => {
   const label = novel.variables.isFirstVisit 
     ? '성함을 입력해 주십시오.' 
     : '성함을 다시 한번 확인해 주십시오.'
@@ -30,7 +30,7 @@ novel.hooker.onBefore('input:open', (state, ctx, vars) => {
 
 ```typescript
 // 입력된 데이터의 양쪽 공백을 지우고, 너무 짧으면 엔진 변수에 저장을 막습니다
-novel.hooker.onBefore('input:submit', (state, ctx, vars) => {
+novel.hooker.onBefore('input:submit', (state, ctx) => {
   if (state.cancelled) return state
 
   const processedText = state.text.trim()

@@ -27,7 +27,7 @@ import config from './novel.config'
 
 export const myHook = defineHook(config)({
   'novel:var': {
-    onBefore: (payload, ctx, vars) => {
+    onBefore: (payload, ctx) => {
       console.log(`변수 변경: ${payload.name} (${payload.oldValue} -> ${payload.newValue})`)
       
       // vars나 payload를 사용하여 조건을 검사합니다
@@ -47,7 +47,7 @@ export const myHook = defineHook(config)({
 특정 연출이 끝나기 전까지 사용자의 '다음' 입력을 무시하고 싶을 때 사용합니다.
 
 ```typescript
-novel.hooker.onBefore('novel:next', (canAdvance, ctx, vars) => {
+novel.hooker.onBefore('novel:next', (canAdvance, ctx) => {
   // 현재 긴 애니메이션이 재생 중이라면 진행을 막습니다
   if (myAnimation.isBusy()) {
     return false

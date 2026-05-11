@@ -7,7 +7,6 @@
 
 모든 훅의 콜백 함수는 대상 데이터 외에도 현재 활성화된 씬의 컨텍스트(`ctx`)와 모든 변수 맵(`vars`)을 제공받아, 조건부 로직을 작성하기 용이합니다.
 
-
 ## 사전 준비 (Prerequisites)
 
 이벤트를 등록할 대상 모듈들의 정보를 알기 위해 `novel.config.ts`의 설정 객체(`config`)를 불러와야 합니다.  
@@ -26,7 +25,7 @@ export default defineScene({
   hooks: defineHook(config)({
     // 대사가 화면에 그려지기 전(text-run)에 실행됩니다
     'dialogue:text-run': {
-      onBefore: (state, ctx, vars) => {
+      onBefore: (state, ctx) => {
         console.log(`출력될 대사: ${state.text}`)
         // 수정한 상태를 반드시 반환해야 다음 단계로 정상 진행됩니다
         return state 
@@ -34,14 +33,14 @@ export default defineScene({
     },
     // 엔진의 씬 전환(next) 직후에 한 번만 실행되는 훅입니다
     'novel:next': {
-      onceAfter: (value, ctx, vars) => {
+      onceAfter: (value, ctx) => {
         console.log('다음 씬으로 넘어갑니다.')
         return value
       }
     },
     // 변수 변경 시마다 실행되는 훅입니다
     'novel:var': {
-      onBefore: (payload, ctx, vars) => {
+      onBefore: (payload, ctx) => {
         console.log(`변수 ${payload.name} 변경 시도: ${payload.oldValue} -> ${payload.newValue}`)
         return payload
       }
