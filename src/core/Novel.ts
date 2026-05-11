@@ -18,6 +18,7 @@ import type { IHookallSync } from 'hookall'
 import { useHookallSync } from 'hookall'
 import audioModule from '../modules/audio'
 import type { AudioHook } from '../modules/audio'
+import { createVarSetterProxy } from '../types/utils'
 
 // =============================================================
 // 내부 타입
@@ -351,6 +352,35 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     )
     const environments = this.environments as any
     environments[name] = payload.newValue
+  }
+
+  private _createGlobalVarsProxy(): Record<string, any> {
+    return createVarSetterProxy(
+      () => this.variables as Record<string, any>,
+      (name, value) => { this._setGlobalVar(name, value) },
+    )
+  }
+
+  private _createEnvironmentsProxy(): Record<string, any> {
+    return createVarSetterProxy(
+      () => this.environments as Record<string, any>,
+      (name, value) => { this._setEnvironment(name, value) },
+    )
+  }
+
+  private _createSceneLocalVarsProxy(
+    getTarget: () => Record<string, any>,
+    getCtx: () => SceneContext,
+  ): Record<string, any> {
+    return createVarSetterProxy(
+      getTarget,
+      (name, value) => {
+        const scene = this._currentScene
+        if (scene instanceof DialogueScene) {
+          (scene as any)._setLocalVar(name, value, getCtx())
+        }
+      },
+    )
   }
 
   // ─── 에셋 로딩 ───────────────────────────────────────────────
@@ -748,13 +778,14 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       },
     }
 
-    const ctx: SceneContext = {
+    let ctx: SceneContext
+    ctx = {
       novel: this as any,
       world: this._world as any,
       renderer: this._renderer,
-      get globalVars() { return this.callbacks.getGlobalVars() as any },
-      get localVars() { return getLocalVars() as any },
-      get environments() { return this.callbacks.getEnvironments() as any },
+      get globalVars() { return this.novel._createGlobalVarsProxy() },
+      get localVars() { return this.novel._createSceneLocalVarsProxy(getLocalVars, () => ctx) as any },
+      get environments() { return this.novel._createEnvironmentsProxy() },
       callbacks: stableCallbacks,
       scene: {
         getTextSubIndex: () => 0,
@@ -1123,13 +1154,19 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     const noop = () => { /* no-op */ }
     const stateStore = this._stateStore
     const uiRegistry = this._uiRegistry
-    return {
+    let ctx: SceneContext
+    ctx = {
       novel: this as any,
       world: this._world,
       renderer: this._renderer,
-      get globalVars() { return this.callbacks.getGlobalVars() as any },
-      get localVars() { return this.callbacks.getActiveLocalVars() as any },
-      get environments() { return this.callbacks.getEnvironments() as any },
+      get globalVars() { return this.novel._createGlobalVarsProxy() },
+      get localVars() {
+        return this.novel._createSceneLocalVarsProxy(
+          () => this.callbacks.getActiveLocalVars(),
+          () => ctx,
+        ) as any
+      },
+      get environments() { return this.novel._createEnvironmentsProxy() },
       callbacks: {
         getNovel: () => this as any,
         getGlobalVars: () => this.variables as Record<string, any>,
@@ -1212,5 +1249,6 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
         get: (name) => (sceneDef as any)?.actions?.[name],
       },
     }
+    return ctx
   }
 }

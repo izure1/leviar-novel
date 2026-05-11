@@ -18,7 +18,7 @@ import controlModule from '../modules/control'
 import audioModule from '../modules/audio'
 import elementModule from '../modules/element'
 import type { NovelModule } from '../define/defineCmdUI'
-import { setScopedVar } from '../types/utils'
+import { createVarSetterProxy, setScopedVar } from '../types/utils'
 
 // ─── 흐름제어 예약어 핸들러 (모듈과 별도 관리) ──────────
 const FLOW_CONTROL_HANDLERS: Record<string, (cmd: any, ctx: SceneContext) => Generator<CommandResult, CommandResult, any>> = {
@@ -224,6 +224,27 @@ export class DialogueScene {
     this.localVars[name] = payload.newValue
   }
 
+  private _createGlobalVarsProxy(): Record<string, any> {
+    return createVarSetterProxy(
+      () => this.callbacks.getGlobalVars(),
+      (name, value) => { this.callbacks.setGlobalVar(name, value) },
+    )
+  }
+
+  private _createLocalVarsProxy(ctx: SceneContext): Record<string, any> {
+    return createVarSetterProxy(
+      () => this.localVars,
+      (name, value) => { this._setLocalVar(name, value, ctx) },
+    )
+  }
+
+  private _createEnvironmentsProxy(): Record<string, any> {
+    return createVarSetterProxy(
+      () => this.callbacks.getEnvironments(),
+      (name, value) => { this.callbacks.setEnvironment(name, value) },
+    )
+  }
+
   private _interpolateText(text: string): string {
     return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
       try {
@@ -270,9 +291,9 @@ export class DialogueScene {
     const ctx: SceneContext = {
       novel: this.callbacks.getNovel(),
       world: r.world,
-      get globalVars() { return this.callbacks.getGlobalVars() },
-      get localVars() { return sceneRunner.localVars as any },
-      get environments() { return this.callbacks.getEnvironments() },
+      get globalVars() { return sceneRunner._createGlobalVarsProxy() },
+      get localVars() { return sceneRunner._createLocalVarsProxy(ctx) as any },
+      get environments() { return sceneRunner._createEnvironmentsProxy() },
       renderer: r,
       callbacks: this.callbacks,
       state: {
@@ -462,9 +483,9 @@ export class DialogueScene {
     const ctx: SceneContext = {
       novel: this.callbacks.getNovel(),
       world: r.world,
-      get globalVars() { return this.callbacks.getGlobalVars() },
-      get localVars() { return sceneRunner.localVars as any },
-      get environments() { return this.callbacks.getEnvironments() },
+      get globalVars() { return sceneRunner._createGlobalVarsProxy() },
+      get localVars() { return sceneRunner._createLocalVarsProxy(ctx) as any },
+      get environments() { return sceneRunner._createEnvironmentsProxy() },
       renderer: r,
       callbacks: this.callbacks,
       state: {

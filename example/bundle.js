@@ -1110,6 +1110,33 @@
       setScopedVar(ctx, key, value);
     }
   }
+  function createVarSetterProxy(getTarget, setValue) {
+    return new Proxy({}, {
+      get: (_target, property) => {
+        return getTarget()[property];
+      },
+      set: (_target, property, value) => {
+        setValue(String(property), value);
+        return true;
+      },
+      deleteProperty: (_target, property) => {
+        setValue(String(property), void 0);
+        return true;
+      },
+      has: (_target, property) => property in getTarget(),
+      ownKeys: () => Reflect.ownKeys(getTarget()),
+      getOwnPropertyDescriptor: (_target, property) => {
+        const target = getTarget();
+        if (!(property in target)) return void 0;
+        return {
+          enumerable: true,
+          configurable: true,
+          writable: true,
+          value: target[property]
+        };
+      }
+    });
+  }
 
   // src/modules/choice.ts
   var DEFAULT_CHOICE_STYLE = {
@@ -4037,19 +4064,45 @@
           const action = sceneName ? ctx.callbacks.getSceneActions(sceneName, behaviorName) : effectiveCtx.actions.get(behaviorName);
           if (action) {
             const getLocalVars = () => sceneName ? ctx.callbacks.getSceneLocalVars(sceneName) : effectiveCtx.localVars;
-            const behaviorCtx = {
+            let behaviorCtx;
+            behaviorCtx = {
               ...ctx,
               get localVars() {
                 return getLocalVars();
               },
               get globalVars() {
-                return ctx.callbacks.getGlobalVars();
+                return createVarSetterProxy(
+                  () => ctx.callbacks.getGlobalVars(),
+                  (name, value) => {
+                    ctx.callbacks.setGlobalVar(name, value);
+                  }
+                );
               },
               get environments() {
-                return ctx.callbacks.getEnvironments();
+                return createVarSetterProxy(
+                  () => ctx.callbacks.getEnvironments(),
+                  (name, value) => {
+                    ctx.callbacks.setEnvironment(name, value);
+                  }
+                );
               },
               scene: {
                 ...ctx.scene,
+                setLocalVar: (name, value) => {
+                  if (!sceneName) {
+                    ctx.scene.setLocalVar(name, value);
+                    return;
+                  }
+                  const oldValue = getLocalVars()[name];
+                  if (Object.is(oldValue, value)) return;
+                  const payload = ctx.callbacks.getNovel().hooker.trigger(
+                    "novel:var",
+                    { name, oldValue, newValue: value },
+                    (data2) => data2,
+                    behaviorCtx
+                  );
+                  getLocalVars()[name] = payload.newValue;
+                },
                 getVars: () => ({
                   ...ctx.callbacks.getEnvironments(),
                   ...ctx.callbacks.getGlobalVars(),
@@ -4057,6 +4110,16 @@
                 })
               }
             };
+            Object.defineProperty(behaviorCtx, "localVars", {
+              enumerable: true,
+              configurable: true,
+              get: () => createVarSetterProxy(
+                getLocalVars,
+                (name, value) => {
+                  behaviorCtx.scene.setLocalVar(name, value);
+                }
+              )
+            });
             action(obj, behaviorCtx);
           } else {
             console.warn(`[fumika] element behavior: action '${behaviorName}' not found in scene '${sceneName ?? "unknown"}'`);
@@ -18541,6 +18604,30 @@ ${addLineNumbers(fragment)}`);
       );
       this.localVars[name] = payload.newValue;
     }
+    _createGlobalVarsProxy() {
+      return createVarSetterProxy(
+        () => this.callbacks.getGlobalVars(),
+        (name, value) => {
+          this.callbacks.setGlobalVar(name, value);
+        }
+      );
+    }
+    _createLocalVarsProxy(ctx) {
+      return createVarSetterProxy(
+        () => this.localVars,
+        (name, value) => {
+          this._setLocalVar(name, value, ctx);
+        }
+      );
+    }
+    _createEnvironmentsProxy() {
+      return createVarSetterProxy(
+        () => this.callbacks.getEnvironments(),
+        (name, value) => {
+          this.callbacks.setEnvironment(name, value);
+        }
+      );
+    }
     _interpolateText(text) {
       return text.replace(/\{\{(.*?)\}\}/g, (_, expr) => {
         try {
@@ -18583,13 +18670,13 @@ ${addLineNumbers(fragment)}`);
         novel: this.callbacks.getNovel(),
         world: r.world,
         get globalVars() {
-          return this.callbacks.getGlobalVars();
+          return sceneRunner._createGlobalVarsProxy();
         },
         get localVars() {
-          return sceneRunner.localVars;
+          return sceneRunner._createLocalVarsProxy(ctx);
         },
         get environments() {
-          return this.callbacks.getEnvironments();
+          return sceneRunner._createEnvironmentsProxy();
         },
         renderer: r,
         callbacks: this.callbacks,
@@ -18758,13 +18845,13 @@ ${addLineNumbers(fragment)}`);
         novel: this.callbacks.getNovel(),
         world: r.world,
         get globalVars() {
-          return this.callbacks.getGlobalVars();
+          return sceneRunner._createGlobalVarsProxy();
         },
         get localVars() {
-          return sceneRunner.localVars;
+          return sceneRunner._createLocalVarsProxy(ctx);
         },
         get environments() {
-          return this.callbacks.getEnvironments();
+          return sceneRunner._createEnvironmentsProxy();
         },
         renderer: r,
         callbacks: this.callbacks,
@@ -19130,6 +19217,33 @@ ${addLineNumbers(fragment)}`);
       const environments = this.environments;
       environments[name] = payload.newValue;
     }
+    _createGlobalVarsProxy() {
+      return createVarSetterProxy(
+        () => this.variables,
+        (name, value) => {
+          this._setGlobalVar(name, value);
+        }
+      );
+    }
+    _createEnvironmentsProxy() {
+      return createVarSetterProxy(
+        () => this.environments,
+        (name, value) => {
+          this._setEnvironment(name, value);
+        }
+      );
+    }
+    _createSceneLocalVarsProxy(getTarget, getCtx) {
+      return createVarSetterProxy(
+        getTarget,
+        (name, value) => {
+          const scene = this._currentScene;
+          if (scene instanceof DialogueScene) {
+            scene._setLocalVar(name, value, getCtx());
+          }
+        }
+      );
+    }
     // ─── 에셋 로딩 ───────────────────────────────────────────────
     async load() {
       if (this._config.assets) {
@@ -19444,18 +19558,19 @@ ${addLineNumbers(fragment)}`);
           return { ...def?.localVars ?? {} };
         }
       };
-      const ctx = {
+      let ctx;
+      ctx = {
         novel: this,
         world: this._world,
         renderer: this._renderer,
         get globalVars() {
-          return this.callbacks.getGlobalVars();
+          return this.novel._createGlobalVarsProxy();
         },
         get localVars() {
-          return getLocalVars();
+          return this.novel._createSceneLocalVarsProxy(getLocalVars, () => ctx);
         },
         get environments() {
-          return this.callbacks.getEnvironments();
+          return this.novel._createEnvironmentsProxy();
         },
         callbacks: stableCallbacks,
         scene: {
@@ -19787,18 +19902,22 @@ ${addLineNumbers(fragment)}`);
       };
       const stateStore = this._stateStore;
       const uiRegistry = this._uiRegistry;
-      return {
+      let ctx;
+      ctx = {
         novel: this,
         world: this._world,
         renderer: this._renderer,
         get globalVars() {
-          return this.callbacks.getGlobalVars();
+          return this.novel._createGlobalVarsProxy();
         },
         get localVars() {
-          return this.callbacks.getActiveLocalVars();
+          return this.novel._createSceneLocalVarsProxy(
+            () => this.callbacks.getActiveLocalVars(),
+            () => ctx
+          );
         },
         get environments() {
-          return this.callbacks.getEnvironments();
+          return this.novel._createEnvironmentsProxy();
         },
         callbacks: {
           getNovel: () => this,
@@ -19889,6 +20008,7 @@ ${addLineNumbers(fragment)}`);
           get: (name) => sceneDef?.actions?.[name]
         }
       };
+      return ctx;
     }
   };
 

@@ -81,3 +81,35 @@ export function applyVarResolvable(
     setScopedVar(ctx, key, value)
   }
 }
+
+export function createVarSetterProxy<T extends Record<string, any>>(
+  getTarget: () => T,
+  setValue: (name: string, value: any) => void,
+): T {
+  return new Proxy({} as T, {
+    get: (_target, property) => {
+      return getTarget()[property as keyof T]
+    },
+    set: (_target, property, value) => {
+      setValue(String(property), value)
+      return true
+    },
+    deleteProperty: (_target, property) => {
+      setValue(String(property), undefined)
+      return true
+    },
+    has: (_target, property) => property in getTarget(),
+    ownKeys: () => Reflect.ownKeys(getTarget()),
+    getOwnPropertyDescriptor: (_target, property) => {
+      const target = getTarget()
+      if (!(property in target)) return undefined
+
+      return {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: target[property as keyof T],
+      }
+    },
+  })
+}

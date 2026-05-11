@@ -4,6 +4,7 @@ import type { SceneContext } from '../core/SceneContext'
 import type { SetStateFn } from '../define/defineCmdUI'
 import { Z_INDEX } from '../constants/render'
 import { define } from '../define/defineCmdUI'
+import { createVarSetterProxy } from '../types/utils'
 
 // ─── 타입 정의 ───────────────────────────────────────────────
 
@@ -425,13 +426,41 @@ elementModule.defineView((ctx, data, setState) => {
           const getLocalVars = () => sceneName
             ? ctx.callbacks.getSceneLocalVars(sceneName)
             : effectiveCtx.localVars
-          const behaviorCtx: SceneContext = {
+          let behaviorCtx: SceneContext
+          behaviorCtx = {
             ...ctx,
             get localVars() { return getLocalVars() as any },
-            get globalVars() { return ctx.callbacks.getGlobalVars() as any },
-            get environments() { return ctx.callbacks.getEnvironments() as any },
+            get globalVars() {
+              return createVarSetterProxy(
+                () => ctx.callbacks.getGlobalVars(),
+                (name, value) => { ctx.callbacks.setGlobalVar(name, value) },
+              )
+            },
+            get environments() {
+              return createVarSetterProxy(
+                () => ctx.callbacks.getEnvironments(),
+                (name, value) => { ctx.callbacks.setEnvironment(name, value) },
+              )
+            },
             scene: {
               ...ctx.scene,
+              setLocalVar: (name, value) => {
+                if (!sceneName) {
+                  ctx.scene.setLocalVar(name, value)
+                  return
+                }
+
+                const oldValue = getLocalVars()[name]
+                if (Object.is(oldValue, value)) return
+
+                const payload = ctx.callbacks.getNovel().hooker.trigger(
+                  'novel:var',
+                  { name, oldValue, newValue: value },
+                  (data: { name: string, oldValue: any, newValue: any }) => data,
+                  behaviorCtx,
+                )
+                getLocalVars()[name] = payload.newValue
+              },
               getVars: () => ({
                 ...ctx.callbacks.getEnvironments(),
                 ...ctx.callbacks.getGlobalVars(),
@@ -439,6 +468,14 @@ elementModule.defineView((ctx, data, setState) => {
               }),
             },
           }
+          Object.defineProperty(behaviorCtx, 'localVars', {
+            enumerable: true,
+            configurable: true,
+            get: () => createVarSetterProxy(
+              getLocalVars,
+              (name, value) => { behaviorCtx.scene.setLocalVar(name, value) },
+            ),
+          })
           action(obj as LeviarObject, behaviorCtx)
         } else {
           console.warn(`[fumika] element behavior: action '${behaviorName}' not found in scene '${sceneName ?? 'unknown'}'`)
