@@ -20300,7 +20300,6 @@ ${addLineNumbers(fragment)}`);
     textShadowColor: "rgba(0, 0, 0, 1)",
     cursor: "pointer"
   };
-  var likeabilityInterval;
   var scene_ui_default = defineScene({
     config: novel_config_default,
     variables: {
@@ -20325,24 +20324,19 @@ ${addLineNumbers(fragment)}`);
           ctx.novel.toggleFullscreen();
         });
       },
-      log: (element, ctx) => {
+      likeability: (element, ctx) => {
         element.on("click", (e) => {
           e.stopPropagation();
           ctx.localVars._test += 1;
         });
-        ctx.novel.hooker.onBefore("novel:load", (data) => {
-          if (likeabilityInterval) {
-            clearInterval(likeabilityInterval);
-            likeabilityInterval = void 0;
+        ctx.novel.hooker.onBefore("novel:var", (payload, ctx2) => {
+          console.log(payload, ctx2);
+          if (payload.name === "likeability") {
+            const value = payload.newValue;
+            element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style>: ${value}`;
           }
-          return data;
+          return payload;
         });
-        const updateLikeabilityText = () => {
-          console.log(ctx.globalVars.likeability);
-          element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style>: ${ctx.globalVars.likeability}`;
-        };
-        updateLikeabilityText();
-        likeabilityInterval = setInterval(updateLikeabilityText, 1e3);
       },
       hoverWhite: (element) => {
         element.on("mouseover", () => {
@@ -20421,13 +20415,13 @@ ${addLineNumbers(fragment)}`);
           kind: "text",
           action: "show",
           id: "text_like",
-          text: '<style color="rgb(255, 0, 0)">\u2665</style> 0',
+          text: '<style color="rgb(255, 0, 0)">\u2665</style>: -',
           position: { x: 50, y: -50 },
           style: {
             ...UI_BUTTON_STYLE,
             color: "rgb(255, 255, 255)"
           },
-          behaviors: ["log", "hoverWhite"]
+          behaviors: ["likeability", "hoverWhite"]
         }
       ]
     },
