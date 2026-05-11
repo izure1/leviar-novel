@@ -863,7 +863,6 @@
     return charDefs?.[speakerKey]?.name ?? speakerKey;
   }
   var _cachedCtx;
-  var _cachedVars;
   var dialogueModule = define2({
     style: void 0,
     bg: DEFAULT_DIALOGUE_BG,
@@ -947,8 +946,7 @@
         "dialogue:text-render",
         { speaker, text },
         (value) => value,
-        _cachedCtx,
-        _cachedVars
+        _cachedCtx
       );
       const resolvedSpeaker = resolved.speaker;
       const resolvedText = resolved.text;
@@ -1082,8 +1080,7 @@
         _lines: [...lines]
       });
       _cachedCtx = ctx;
-      _cachedVars = ctx.scene.getVars();
-      dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value, ctx, ctx.scene.getVars());
+      dialogueModule.hooker.trigger("dialogue:text-run", { speaker, text }, (value) => value, ctx);
       ctx.scene.setTextSubIndex(index + 1);
       yield false;
     }
@@ -1304,8 +1301,7 @@
       "choice:show",
       { choices: resolvedChoices },
       (value) => value,
-      ctx,
-      ctx.scene.getVars()
+      ctx
     );
     console.log("[fumika] choiceHandler: opening choices", showData.choices);
     let selected = null;
@@ -1314,8 +1310,7 @@
         "choice:select",
         { index: i, selected: showData.choices[i] },
         (value) => value,
-        ctx,
-        ctx.scene.getVars()
+        ctx
       );
       selected = selectData.selected ?? null;
       ctx.callbacks.advance();
@@ -3311,7 +3306,7 @@
       console.warn("[fumika] dialogBox UI entry not found. Ensure it is defined in novel.config.ts modules.");
       return true;
     }
-    const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value, ctx, ctx.scene.getVars());
+    const finalCmd = dialogBoxModule.hooker.trigger("dialogBox:show", cmd, (value) => value, ctx);
     const duration = finalCmd.duration ?? 200;
     const persist = finalCmd.buttons.length > 0 ? true : finalCmd.persist ?? false;
     let _resolved = false;
@@ -3324,8 +3319,7 @@
         "dialogBox:select",
         { index: i, selected: selectedObj },
         (value) => value,
-        ctx,
-        ctx.scene.getVars()
+        ctx
       );
       const finalSelected = selectData.selected;
       if (finalSelected?.var) {
@@ -3797,8 +3791,7 @@
       "input:open",
       { label: cmd.label ?? "", multiline: cmd.multiline ?? false },
       (v2) => v2,
-      ctx,
-      ctx.scene.getVars()
+      ctx
     );
     const buttons = cmd.buttons?.length ? cmd.buttons : [{ text: "\uD655\uC778" }];
     let _resolved = false;
@@ -3811,8 +3804,7 @@
         "input:submit",
         { varName: cmd.to, text: value, buttonIndex, cancelled: isCancelled },
         (v2) => v2,
-        ctx,
-        ctx.scene.getVars()
+        ctx
       );
       if (!submitData.cancelled) {
         const finalText = submitData.text;
@@ -4044,24 +4036,28 @@
         for (const behaviorName of entry.behaviors) {
           const action = sceneName ? ctx.callbacks.getSceneActions(sceneName, behaviorName) : effectiveCtx.actions.get(behaviorName);
           if (action) {
-            const localVars = sceneName ? ctx.callbacks.getSceneLocalVars(sceneName) : effectiveCtx.localVars;
-            const globalVars = ctx.callbacks.getGlobalVars();
-            const environments = ctx.callbacks.getEnvironments();
+            const getLocalVars = () => sceneName ? ctx.callbacks.getSceneLocalVars(sceneName) : effectiveCtx.localVars;
             const behaviorCtx = {
               ...ctx,
-              localVars,
-              globalVars,
-              environments,
+              get localVars() {
+                return getLocalVars();
+              },
+              get globalVars() {
+                return ctx.callbacks.getGlobalVars();
+              },
+              get environments() {
+                return ctx.callbacks.getEnvironments();
+              },
               scene: {
                 ...ctx.scene,
                 getVars: () => ({
                   ...ctx.callbacks.getEnvironments(),
                   ...ctx.callbacks.getGlobalVars(),
-                  ...localVars
+                  ...getLocalVars()
                 })
               }
             };
-            action(obj, behaviorCtx, behaviorCtx.scene.getVars());
+            action(obj, behaviorCtx);
           } else {
             console.warn(`[fumika] element behavior: action '${behaviorName}' not found in scene '${sceneName ?? "unknown"}'`);
           }
@@ -18181,7 +18177,7 @@ ${addLineNumbers(fragment)}`);
     setCtxProvider(fn) {
       this._ctxProvider = fn;
     }
-    _getCtxVars() {
+    _getCtx() {
       if (!this._ctxProvider) {
         throw new Error("[fumika] Audio operations require an active scene. Call novel.start() first.");
       }
@@ -18194,7 +18190,7 @@ ${addLineNumbers(fragment)}`);
      * - 다른 src (또는 없음): 기존 크로스페이드 아웃 후 새 오디오 생성
      */
     play(name, url, opts, currentSrc, playCmd) {
-      const { ctx, vars } = this._getCtxVars();
+      const ctx = this._getCtx();
       const existing = this._pool.get(name);
       const existingSrc = existing ? currentSrc : void 0;
       if (existing && existingSrc === opts.src) {
@@ -18208,7 +18204,7 @@ ${addLineNumbers(fragment)}`);
           });
         }
         fadeVolume(existing, opts.volume, opts.duration);
-        this._hooker.trigger("audio:play", playCmd, (val) => val, ctx, vars);
+        this._hooker.trigger("audio:play", playCmd, (val) => val, ctx);
         return;
       }
       if (existing) {
@@ -18233,7 +18229,7 @@ ${addLineNumbers(fragment)}`);
       if (opts.duration > 0) {
         fadeVolume(audio, opts.volume, opts.duration);
       }
-      this._hooker.trigger("audio:play", playCmd, (val) => val, ctx, vars);
+      this._hooker.trigger("audio:play", playCmd, (val) => val, ctx);
     }
     // ─── 일시정지 ───────────────────────────────────────────────
     /**
@@ -18241,19 +18237,19 @@ ${addLineNumbers(fragment)}`);
      * duration이 있으면 페이드아웃 후 정지하고 Promise가 resolve됩니다.
      */
     pause(name, trackVolume, pauseCmd, duration) {
-      const { ctx, vars } = this._getCtxVars();
+      const ctx = this._getCtx();
       const audio = this._pool.get(name);
       if (!audio) return Promise.resolve();
       if (duration > 0) {
         return fadeVolume(audio, 0, duration).then(() => {
           audio.pause();
           audio.volume = trackVolume;
-          this._hooker.trigger("audio:pause", pauseCmd, (val) => val, ctx, vars);
+          this._hooker.trigger("audio:pause", pauseCmd, (val) => val, ctx);
         });
       }
       audio.pause();
       audio.volume = trackVolume;
-      this._hooker.trigger("audio:pause", pauseCmd, (val) => val, ctx, vars);
+      this._hooker.trigger("audio:pause", pauseCmd, (val) => val, ctx);
       return Promise.resolve();
     }
     // ─── 정지 ───────────────────────────────────────────────────
@@ -18262,7 +18258,7 @@ ${addLineNumbers(fragment)}`);
      * duration이 있으면 페이드아웃 후 정지합니다.
      */
     stop(name, stopCmd, duration) {
-      const { ctx, vars } = this._getCtxVars();
+      const ctx = this._getCtx();
       const audio = this._pool.get(name);
       if (!audio) return Promise.resolve();
       this._pool.delete(name);
@@ -18270,13 +18266,13 @@ ${addLineNumbers(fragment)}`);
         this._fading.add(audio);
         return fadeVolume(audio, 0, duration, true).then(() => {
           this._fading.delete(audio);
-          this._hooker.trigger("audio:stop", stopCmd, (val) => val, ctx, vars);
+          this._hooker.trigger("audio:stop", stopCmd, (val) => val, ctx);
         });
       }
       audio.pause();
       audio.currentTime = 0;
       audio.src = "";
-      this._hooker.trigger("audio:stop", stopCmd, (val) => val, ctx, vars);
+      this._hooker.trigger("audio:stop", stopCmd, (val) => val, ctx);
       return Promise.resolve();
     }
     // ─── 전체 정지 ───────────────────────────────────────────────
@@ -18392,13 +18388,12 @@ ${addLineNumbers(fragment)}`);
         const currentStartSec = audio.__startSec ?? 0;
         if (currentRepeat && currentEndSec === 0) {
           if (audio.currentTime < lastTime - 0.5) {
-            const { ctx, vars } = this._getCtxVars();
+            const ctx = this._getCtx();
             this._hooker.trigger(
               "audio:repeat",
               { name, src: audio.__srcKey },
               (val) => val,
-              ctx,
-              vars
+              ctx
             );
           }
         }
@@ -18407,24 +18402,22 @@ ${addLineNumbers(fragment)}`);
           audio.pause();
           audio.currentTime = currentStartSec;
           if (currentRepeat) {
-            const { ctx, vars } = this._getCtxVars();
+            const ctx = this._getCtx();
             this._hooker.trigger(
               "audio:repeat",
               { name, src: audio.__srcKey },
               (val) => val,
-              ctx,
-              vars
+              ctx
             );
             audio.play().catch(() => {
             });
           } else {
-            const { ctx, vars } = this._getCtxVars();
+            const ctx = this._getCtx();
             this._hooker.trigger(
               "audio:end",
               { name, src: audio.__srcKey },
               (val) => val,
-              ctx,
-              vars
+              ctx
             );
           }
         }
@@ -18433,13 +18426,12 @@ ${addLineNumbers(fragment)}`);
         const currentRepeat = audio.loop;
         const currentEndSec = audio.__endSec ?? 0;
         if (!currentRepeat && currentEndSec === 0) {
-          const { ctx, vars } = this._getCtxVars();
+          const ctx = this._getCtx();
           this._hooker.trigger(
             "audio:end",
             { name, src: audio.__srcKey },
             (val) => val,
-            ctx,
-            vars
+            ctx
           );
         }
       });
@@ -18545,8 +18537,7 @@ ${addLineNumbers(fragment)}`);
         "novel:var",
         { name, oldValue, newValue: value },
         (data) => data,
-        ctx,
-        ctx ? this._vars : void 0
+        ctx
       );
       this.localVars[name] = payload.newValue;
     }
@@ -18587,12 +18578,19 @@ ${addLineNumbers(fragment)}`);
       if (!modules) return;
       const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
+      const sceneRunner = this;
       const ctx = {
         novel: this.callbacks.getNovel(),
         world: r.world,
-        globalVars: this.callbacks.getGlobalVars(),
-        localVars: this.localVars,
-        environments: this.callbacks.getEnvironments(),
+        get globalVars() {
+          return this.callbacks.getGlobalVars();
+        },
+        get localVars() {
+          return sceneRunner.localVars;
+        },
+        get environments() {
+          return this.callbacks.getEnvironments();
+        },
         renderer: r,
         callbacks: this.callbacks,
         state: {
@@ -18755,12 +18753,19 @@ ${addLineNumbers(fragment)}`);
       const { type, skip, ...params } = cmd;
       const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
+      const sceneRunner = this;
       const ctx = {
         novel: this.callbacks.getNovel(),
         world: r.world,
-        globalVars: this.callbacks.getGlobalVars(),
-        localVars: this.localVars,
-        environments: this.callbacks.getEnvironments(),
+        get globalVars() {
+          return this.callbacks.getGlobalVars();
+        },
+        get localVars() {
+          return sceneRunner.localVars;
+        },
+        get environments() {
+          return this.callbacks.getEnvironments();
+        },
         renderer: r,
         callbacks: this.callbacks,
         state: {
@@ -19034,7 +19039,7 @@ ${addLineNumbers(fragment)}`);
         height: this._option.height
       });
       this.audio = new AudioManager(audio_default.hooker);
-      this.audio.setCtxProvider(() => this._makeCurrentCtxVars());
+      this.audio.setCtxProvider(() => this._makeCurrentCtx());
       this.variables = { ...config.variables };
       this.environments = { ...config.environments ?? {} };
       this._collectModules(config.modules);
@@ -19102,13 +19107,12 @@ ${addLineNumbers(fragment)}`);
     _setGlobalVar(name, value) {
       const oldValue = this.variables[name];
       if (Object.is(oldValue, value)) return;
-      const { ctx, vars } = this._makeCurrentCtxVars();
+      const ctx = this._makeCurrentCtx();
       const payload = this._novelHooker.trigger(
         "novel:var",
         { name, oldValue, newValue: value },
         (data) => data,
-        ctx,
-        vars
+        ctx
       );
       const variables = this.variables;
       variables[name] = payload.newValue;
@@ -19116,13 +19120,12 @@ ${addLineNumbers(fragment)}`);
     _setEnvironment(name, value) {
       const oldValue = this.environments[name];
       if (Object.is(oldValue, value)) return;
-      const { ctx, vars } = this._makeCurrentCtxVars();
+      const ctx = this._makeCurrentCtx();
       const payload = this._novelHooker.trigger(
         "novel:var",
         { name, oldValue, newValue: value },
         (data) => data,
-        ctx,
-        vars
+        ctx
       );
       const environments = this.environments;
       environments[name] = payload.newValue;
@@ -19384,17 +19387,17 @@ ${addLineNumbers(fragment)}`);
     }
     // ─── 콜백 팩토리 ─────────────────────────────────────────────
     /**
-     * 현재 활성 씨 기반으로 ctx/vars를 생성합니다.
+     * 현재 활성 씨 기반으로 ctx를 생성합니다.
      * 율 시작 전 (novel.start() 이전)에 호출되면 에러를 발생합니다.
      */
-    _makeCurrentCtxVars() {
+    _makeCurrentCtx() {
       const scene = this._currentScene;
       if (!(scene instanceof DialogueScene)) {
         throw new Error("[fumika] Variable and audio operations require an active scene. Call novel.start() first.");
       }
       const globalVars = this.variables;
       const envVars = this.environments;
-      const localVars = scene.getLocalVars();
+      const getLocalVars = () => this._currentScene instanceof DialogueScene ? this._currentScene.localVars : scene.getLocalVars();
       const stableCallbacks = {
         getNovel: () => this,
         getGlobalVars: () => this.variables,
@@ -19445,9 +19448,15 @@ ${addLineNumbers(fragment)}`);
         novel: this,
         world: this._world,
         renderer: this._renderer,
-        globalVars,
-        localVars,
-        environments: envVars,
+        get globalVars() {
+          return this.callbacks.getGlobalVars();
+        },
+        get localVars() {
+          return getLocalVars();
+        },
+        get environments() {
+          return this.callbacks.getEnvironments();
+        },
         callbacks: stableCallbacks,
         scene: {
           getTextSubIndex: () => 0,
@@ -19457,7 +19466,11 @@ ${addLineNumbers(fragment)}`);
           jumpToLabel: () => {
           },
           hasLabel: () => false,
-          getVars: () => ({ ...envVars, ...globalVars, ...localVars }),
+          getVars: () => ({
+            ...this.environments,
+            ...this.variables,
+            ...getLocalVars()
+          }),
           setGlobalVar: (key, value) => {
             this._setGlobalVar(key, value);
           },
@@ -19494,7 +19507,7 @@ ${addLineNumbers(fragment)}`);
         },
         actions: { get: () => void 0 }
       };
-      return { ctx, vars: ctx.scene.getVars() };
+      return ctx;
     }
     _buildCallbacks() {
       const gen = ++this._sceneGeneration;
@@ -19778,12 +19791,18 @@ ${addLineNumbers(fragment)}`);
         novel: this,
         world: this._world,
         renderer: this._renderer,
-        globalVars: {},
-        localVars: {},
-        environments: { ...this.environments ?? {} },
+        get globalVars() {
+          return this.callbacks.getGlobalVars();
+        },
+        get localVars() {
+          return this.callbacks.getActiveLocalVars();
+        },
+        get environments() {
+          return this.callbacks.getEnvironments();
+        },
         callbacks: {
           getNovel: () => this,
-          getGlobalVars: () => ({}),
+          getGlobalVars: () => this.variables,
           setGlobalVar: noop,
           getEnvironments: () => ({ ...this.environments ?? {} }),
           setEnvironment: (name, value) => {
@@ -19845,7 +19864,11 @@ ${addLineNumbers(fragment)}`);
           interpolateText: (t) => t,
           jumpToLabel: noop,
           hasLabel: () => false,
-          getVars: () => ({ ...this.environments ?? {}, ...this.variables }),
+          getVars: () => ({
+            ...this.environments ?? {},
+            ...this.variables,
+            ...this._currentScene instanceof DialogueScene ? this._currentScene.localVars : {}
+          }),
           setGlobalVar: noop,
           setLocalVar: noop,
           loadScene: noop,
@@ -20164,25 +20187,25 @@ ${addLineNumbers(fragment)}`);
       _test: 0
     },
     actions: {
-      save: (element, ctx, vars) => {
+      save: (element, ctx) => {
         element.on("click", (e) => {
           e.stopPropagation();
           save(ctx.novel);
         });
       },
-      load: (element, ctx, vars) => {
+      load: (element, ctx) => {
         element.on("click", (e) => {
           e.stopPropagation();
           load(ctx.novel);
         });
       },
-      fullscreen: (element, ctx, vars) => {
+      fullscreen: (element, ctx) => {
         element.on("click", (e) => {
           e.stopPropagation();
           ctx.novel.toggleFullscreen();
         });
       },
-      log: (element, ctx, vars) => {
+      log: (element, ctx) => {
         element.on("click", (e) => {
           e.stopPropagation();
           ctx.localVars._test += 1;
@@ -20557,6 +20580,7 @@ ${addLineNumbers(fragment)}`);
       [
         // ─── 분기: 빈 이름 ───
         set6("_inputRepeatCount", ({ _inputRepeatCount }) => _inputRepeatCount + 1),
+        set6("likeability", ({ likeability }) => likeability - 5),
         {
           type: "dialogue",
           text: "\uD6C4\uBBF8\uCE74\uC758 \uD45C\uC815\uC774 \uC369\uC5B4\uB4E4\uC5B4\uAC04\uB2E4."

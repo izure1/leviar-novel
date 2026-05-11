@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineScene } from '../../src'
+import { defineHook, defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
@@ -24,25 +24,25 @@ export default defineScene({
     _test: 0,
   },
   actions: {
-    save: (element, ctx, vars) => {
+    save: (element, ctx) => {
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         save(ctx.novel)
       })
     },
-    load: (element, ctx, vars) => {
+    load: (element, ctx) => {
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         load(ctx.novel)
       })
     },
-    fullscreen: (element, ctx, vars) => {
+    fullscreen: (element, ctx) => {
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         ctx.novel.toggleFullscreen()
       })
     },
-    log: (element, ctx, vars) => {
+    log: (element, ctx) => {
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         ctx.localVars._test += 1
