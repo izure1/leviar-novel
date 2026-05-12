@@ -42,27 +42,22 @@ export default defineScene({
         ctx.novel.toggleFullscreen()
       })
     },
-    log: (element, ctx) => {
+    likeability: (element, ctx) => {
+      console.log(123, ctx, element)
+      element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${ctx.globalVars.likeability}`
+
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         ctx.localVars._test += 1
       })
 
-      ctx.novel.hooker.onBefore('novel:load', (data) => {
-        if (likeabilityInterval) {
-          clearInterval(likeabilityInterval)
-          likeabilityInterval = undefined
+      ctx.novel.hooker.onBefore('novel:var', (payload, ctx) => {
+        if (payload.name === 'likeability') {
+          const value = payload.newValue
+          element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${value}`
         }
-        return data
+        return payload
       })
-
-      const updateLikeabilityText = () => {
-        console.log(ctx.globalVars.likeability)
-        element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${ctx.globalVars.likeability}`
-      }
-
-      updateLikeabilityText()
-      likeabilityInterval = setInterval(updateLikeabilityText, 1000)
     },
     hoverWhite: (element) => {
       element.on('mouseover', () => {
@@ -141,13 +136,13 @@ export default defineScene({
         kind: 'text',
         action: 'show',
         id: 'text_like',
-        text: '<style color="rgb(255, 0, 0)">♥</style> 0',
+        text: '<style color="rgb(255, 0, 0)">♥</style>: -',
         position: { x: 50, y: -50 },
         style: {
           ...UI_BUTTON_STYLE,
           color: 'rgb(255, 255, 255)'
         },
-        behaviors: ['log', 'hoverWhite'],
+        behaviors: ['likeability', 'hoverWhite'],
       },
     ]
   },
