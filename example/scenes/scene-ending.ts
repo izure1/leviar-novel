@@ -4,6 +4,19 @@ import { commonInitial } from './common-initial'
 
 export default defineScene({
   config,
+  actions: {
+    fadeIn: (element, ctx) => {
+      element.fadeIn(1000, 'easeOutBack')
+      ctx.renderer.animate(element, {
+        transform: {
+          scale: {
+            x: 2,
+            y: 2,
+          }
+        }
+      }, 1000, 'easeOutBack')
+    }
+  }
 })(({ label, goto, call }) => [
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 0 },
   { type: 'background', name: 'room', duration: 0 },
@@ -141,4 +154,27 @@ export default defineScene({
   },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 3000 },
   { type: 'dialogue', text: '후미카 에피소드가 모두 종료되었습니다.' },
+
+  {
+    type: 'element',
+    action: 'show',
+    id: 'final_score',
+    kind: 'text',
+    position: { x: 640, y: 360 },
+    style: {
+      fontSize: 48,
+      fontWeight: 900,
+      color: '#fff',
+      textAlign: 'center',
+      display: 'none',
+    },
+    text: ({ likeability }) => `최종 <style color="rgb(255, 0, 0)">♥</style>는... ${likeability}`,
+    behaviors: ['fadeIn']
+  },
+
+  {
+    type: 'control',
+    action: 'disable',
+    duration: 1000,
+  }
 ])

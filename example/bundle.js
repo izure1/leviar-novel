@@ -19782,7 +19782,14 @@ ${addLineNumbers(fragment)}`);
         if (this._currentScene?.isEnded && this._currentSceneDef?.kind === "dialogue") {
           const next = this._currentSceneDef.nextScene;
           if (next) {
-            this.loadScene(next);
+            if (this._callStack.length > 0) {
+              this._currentSceneDef?.hooks?._unregister(this);
+              this._callingSubScene = true;
+              this.loadScene(next);
+              this._callingSubScene = false;
+            } else {
+              this.loadScene(next);
+            }
             return;
           }
           if (this._callStack.length > 0) {
@@ -21991,7 +21998,20 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-ending.ts
   var scene_ending_default = defineScene({
-    config: novel_config_default
+    config: novel_config_default,
+    actions: {
+      fadeIn: (element, ctx) => {
+        element.fadeIn(1e3, "easeOutBack");
+        ctx.renderer.animate(element, {
+          transform: {
+            scale: {
+              x: 2,
+              y: 2
+            }
+          }
+        }, 1e3, "easeOutBack");
+      }
+    }
   })(({ label, goto, call }) => [
     { type: "screen-fade", dir: "out", preset: "black", duration: 0 },
     { type: "background", name: "room", duration: 0 },
@@ -22125,7 +22145,28 @@ ${addLineNumbers(fragment)}`);
       text: "\uB098\uC758 \uD3C9\uD654\uB85C\uC6B4 \uC8FC\uB9D0\uC740 \uC774\uB807\uAC8C \uADF8\uB140\uC758 \uAC8C\uC784 \uC911\uB3C5\uACFC \uD568\uAED8 \uD130\uC838\uBC84\uB838\uB2E4."
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 3e3 },
-    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uBAA8\uB450 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4." }
+    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uBAA8\uB450 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4." },
+    {
+      type: "element",
+      action: "show",
+      id: "final_score",
+      kind: "text",
+      position: { x: 640, y: 360 },
+      style: {
+        fontSize: 48,
+        fontWeight: 900,
+        color: "#fff",
+        textAlign: "center",
+        display: "none"
+      },
+      text: ({ likeability }) => `\uCD5C\uC885 <style color="rgb(255, 0, 0)">\u2665</style>\uB294... ${likeability}`,
+      behaviors: ["fadeIn"]
+    },
+    {
+      type: "control",
+      action: "disable",
+      duration: 1e3
+    }
   ]);
 
   // example/main.ts

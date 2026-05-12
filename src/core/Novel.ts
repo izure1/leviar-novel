@@ -449,6 +449,7 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       this._currentSceneDef?.hooks?._unregister(this)
     }
 
+
     // 하드 전환(loadScene 직접 호출)일 때 콜스택을 초기화합니다.
     // 상위씬 훅에서 ctx.scene.loadScene을 호출하거나,
     // 하위씬 내부에서 next 커맨드로 이탈할 때 잔여 call frame이 남지 않도록 합니다.
@@ -746,14 +747,14 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       getEnvironments: () => this.environments as Record<string, any>,
       setEnvironment: (n, v) => { this._setEnvironment(n, v) },
       loadScene: (target) => { this.loadScene(target) },
-      callScene: () => {},
+      callScene: () => { },
       captureRenderer: () => this._renderer.captureState(),
       isSkipping: () => this._isSkipping,
-      disableInput: () => {},
+      disableInput: () => { },
       getStateStore: () => this._stateStore,
       getUIRegistry: () => this._uiRegistry,
-      syncUIState: () => {},
-      advance: () => {},
+      syncUIState: () => { },
+      advance: () => { },
       executeCmd: () => (function* () { return false as const })(),
       getActiveActions: (name) => this._currentScene instanceof DialogueScene
         ? (this._currentScene as DialogueScene).definition.actions?.[name]
@@ -789,9 +790,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       callbacks: stableCallbacks,
       scene: {
         getTextSubIndex: () => 0,
-        setTextSubIndex: () => {},
+        setTextSubIndex: () => { },
         interpolateText: (text) => text,
-        jumpToLabel: () => {},
+        jumpToLabel: () => { },
         hasLabel: () => false,
         getVars: () => ({
           ...this.environments as object,
@@ -799,10 +800,10 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
           ...getLocalVars(),
         }) as any,
         setGlobalVar: (key, value) => { this._setGlobalVar(key, value) },
-        setLocalVar: () => {},
+        setLocalVar: () => { },
         loadScene: (target) => { this.loadScene(target) },
-        end: () => {},
-        callScene: () => {},
+        end: () => { },
+        callScene: () => { },
       },
       state: {
         set: (n, data) => { this._stateStore.set(n, data) },
@@ -914,7 +915,18 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       this._inputMode = 'block'
       if (this._currentScene?.isEnded && this._currentSceneDef?.kind === 'dialogue') {
         const next = (this._currentSceneDef as SceneDefinition<any, any, any, any, any>).nextScene
-        if (next) { this.loadScene(next); return }
+        if (next) {
+          if (this._callStack.length > 0) {
+            // 서브씬 체이닝: 현재 씬의 훅은 해제하되, callStack은 유지
+            this._currentSceneDef?.hooks?._unregister(this)
+            this._callingSubScene = true
+            this.loadScene(next)
+            this._callingSubScene = false
+          } else {
+            this.loadScene(next)
+          }
+          return
+        }
         if (this._callStack.length > 0) {
           this._resumeCallerScene()
           return
