@@ -36,7 +36,7 @@ export default defineScene({
       // 변수가 변경될 때 텍스트를 갱신하도록 이벤트를 연결합니다.
       ctx.novel.hooker.on('novel:var', (data) => {
         if (data.key === 'affection') {
-          element.attribute.text = `현재 호감도: ${data.value}`
+          element.attribute.text = `현재 호감도: ${ctx.globalVars.affection ?? 0}`
         }
         return data
       })
@@ -100,10 +100,10 @@ UI의 동작을 `actions`로 정의하고 `behaviors`로 주입하는 방식을 
 
 ---
 
-🎉 **튜토리얼 수료를 축하합니다!** 🎉
+🎉 **기본 튜토리얼 수료를 축하합니다!** 🎉
 
-이제 여러분은 빈 프로젝트에서 시작해, 배경과 캐릭터를 띄우고,  
-플레이어의 선택을 받아 분기를 나누며, 그 상태를 화면에 띄우는 완전한 형태의 미니 게임을 만들 수 있게 되었습니다.  
+이제 여러분은 빈 프로젝트에서 시작해 배경과 캐릭터를 띄우고, 선택지를 통해 분기를 나누며, 나만의 UI를 설계하는 모든 기본 과정을 마쳤습니다.
 
-여기서 멈추지 않고 더 많은 연출 방법이 궁금하시다면,  
-**[명령어 참조 (Commands)](../commands.md)**를 통해 다양한 기능들을 살펴보세요!  
+여기서 한 걸음 더 나아가, 대규모 프로젝트를 위한 전문적인 설계 기법을 배우고 싶다면 다음 문서를 확인하세요.
+
+👉 **[07. 좀 더 나아가기 (Advanced Patterns)](./07-going-further.md)**
