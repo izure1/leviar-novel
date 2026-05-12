@@ -2874,25 +2874,21 @@
   var ui_default = uiModule;
 
   // src/modules/control.ts
-  var controlModule = define2({ expireAt: 0 });
+  var controlModule = define2({});
   controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   }, onCleanup: () => {
   } }));
   controlModule.defineCommand(function* (cmd, ctx, state, setState) {
-    if (cmd.action === "disable" && typeof cmd.duration === "number") {
-      const expireAt = state.expireAt > Date.now() ? state.expireAt : Date.now() + cmd.duration;
-      if (state.expireAt <= Date.now()) {
-        setState({ expireAt });
-        ctx.callbacks.disableInput(cmd.duration);
-      }
-      while (Date.now() < expireAt) {
-        yield false;
-      }
-      setState({ expireAt: 0 });
-      return true;
+    const now = Date.now() + cmd.duration;
+    const autoAdvance = cmd.autoAdvance ?? true;
+    if (autoAdvance) {
+      setTimeout(() => ctx.callbacks.advance(), cmd.duration);
     }
-    return true;
+    while (Date.now() < now) {
+      yield false;
+    }
+    return autoAdvance;
   });
   var control_default = controlModule;
 
@@ -22146,6 +22142,7 @@ ${addLineNumbers(fragment)}`);
     },
     { type: "screen-fade", dir: "out", preset: "black", duration: 3e3 },
     { type: "dialogue", text: "\uD6C4\uBBF8\uCE74 \uC5D0\uD53C\uC18C\uB4DC\uAC00 \uBAA8\uB450 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4." },
+    { type: "ui", action: "hide", name: "dialogue" },
     {
       type: "element",
       action: "show",
@@ -22165,7 +22162,8 @@ ${addLineNumbers(fragment)}`);
     {
       type: "control",
       action: "disable",
-      duration: 1e3
+      duration: 3e3,
+      autoAdvance: false
     }
   ]);
 

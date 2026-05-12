@@ -154,6 +154,7 @@ export default defineScene({
   },
   { type: 'screen-fade', dir: 'out', preset: 'black', duration: 3000 },
   { type: 'dialogue', text: '후미카 에피소드가 모두 종료되었습니다.' },
+  { type: 'ui', action: 'hide', name: 'dialogue' },
 
   {
     type: 'element',
@@ -175,6 +176,7 @@ export default defineScene({
   {
     type: 'control',
     action: 'disable',
-    duration: 1000,
+    duration: 3000,
+    autoAdvance: false,
   }
 ])

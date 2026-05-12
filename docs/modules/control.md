@@ -14,6 +14,7 @@
 | **`type`** | `'control'` | 필수 | 커맨드 타입 |
 | **`action`** | `'disable'` | 필수 | 수행할 제어 동작 (`disable`: 입력 차단) |
 | **`duration`** | `number` | 필수 | 입력을 차단하고 시나리오를 정지시킬 대기 시간(ms) |
+| **`autoAdvance`** | `boolean` | `true` | `duration`이 완료된 후 자동으로 다음 명령으로 넘어갈지 여부 |
 
 ## 핵심 예제 (Main Example)
 
