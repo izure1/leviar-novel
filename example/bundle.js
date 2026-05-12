@@ -20415,7 +20415,23 @@ ${addLineNumbers(fragment)}`);
         ctx.novel.hooker.onBefore("novel:var", (payload, ctx2) => {
           if (payload.name === "likeability") {
             const value = payload.newValue;
+            const gap = payload.newValue - payload.oldValue;
             element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style>: ${value}`;
+            const clone = (t) => JSON.parse(JSON.stringify(t));
+            const gapText = gap > 0 ? "+" : "";
+            const shadow = ctx2.world.createText({
+              attribute: { ...clone(element.attribute), text: gapText + gap.toString() },
+              style: { ...clone(element.style), display: "block" },
+              transform: { ...clone(element.transform) },
+              dataset: { ...clone(element.dataset) }
+            });
+            element.parent?.addChild(shadow);
+            shadow.fadeOut(1e3);
+            shadow.animate({
+              transform: {
+                position: { y: "+=20" }
+              }
+            }, 1e3, "easeOutBack").on("end", () => shadow.remove());
           }
           return payload;
         });
