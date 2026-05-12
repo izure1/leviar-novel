@@ -3,8 +3,11 @@ import { defineScene } from '../../src'
 import { commonInitial } from './common-initial'
 
 export default defineScene({
-  config
-})(({ label, goto }) => [
+  config,
+  variables: {
+    _run: false
+  }
+})(({ label, condition, goto }) => [
   {
     type: 'dialogue',
     text: [
@@ -34,9 +37,21 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '매미를 맨손으로 잡아서 치워준다', goto: 'hero' },
-      { text: '같이 비명을 지르며 도망간다', goto: 'run' },
-      { text: '매미를 잡아서 등에 붙여준다', goto: 'prank' },
+      {
+        text: '매미를 맨손으로 잡아서 치워준다',
+        goto: 'hero',
+        var: ({ likeability }) => ({ likeability: likeability + 10 }),
+      },
+      {
+        text: '같이 비명을 지르며 도망간다',
+        goto: 'run',
+        var: () => ({ _run: true })
+      },
+      {
+        text: '매미를 잡아서 등에 붙여준다',
+        goto: 'prank',
+        var: ({ likeability }) => ({ likeability: likeability - 10, _run: true }),
+      },
     ]
   },
 
@@ -122,12 +137,20 @@ export default defineScene({
   },
 
   label('calm'),
-  { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 500 },
+  condition(({ _run }) => _run,
+    [
+      { type: 'character', action: 'show', name: 'fumika', image: 'normal:embarrassed', duration: 500 },
+      {
+        type: 'dialogue',
+        speaker: 'fumika',
+        text: '하아... 하아...'
+      },
+    ]
+  ),
   {
     type: 'dialogue',
     speaker: 'fumika',
     text: [
-      '하아... 하아...',
       '역시 현실 세계는 버그 덩어리야.',
       '빨리 아지트로 복귀하자.'
     ]

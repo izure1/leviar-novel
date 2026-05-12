@@ -56,8 +56,13 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '"탱커 수고비 내놔."', goto: 'pay' },
-      { text: '"다음 레이드는 딴 사람 구해라."', goto: 'tired' },
+      {
+        text: '"탱커 수고비 내놔."', goto: 'pay',
+        var: ({ likeability }) => ({ likeability: likeability - 10 }),
+      },
+      {
+        text: '"다음 레이드는 딴 사람 구해라."', goto: 'tired'
+      },
     ]
   },
 

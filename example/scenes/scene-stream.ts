@@ -115,8 +115,16 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '카메라 밖에서 조용히 손을 흔들어준다', goto: 'wave' },
-      { text: '"야, 내 찜닭은 언제 와?" 라고 소리친다', goto: 'troll' },
+      {
+        text: '카메라 밖에서 조용히 손을 흔들어준다',
+        goto: 'wave',
+        var: ({ likeability }) => ({ likeability: likeability - 30 }),
+      },
+      {
+        text: '"야, 내 찜닭은 언제 와?" 라고 소리친다',
+        goto: 'troll',
+        var: ({ likeability }) => ({ likeability: likeability - 10 }),
+      },
     ]
   },
 

@@ -64,8 +64,15 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '"광합성 좀 해. 창백해서 뱀파이어인 줄 알겠다."', goto: 'sun' },
-      { text: '"야외 방송 콘텐츠라고 생각해."', goto: 'content' },
+      {
+        text: '"광합성 좀 해. 창백해서 뱀파이어인 줄 알겠다."',
+        goto: 'sun',
+      },
+      {
+        text: '"야외 방송 콘텐츠라고 생각해."',
+        goto: 'content',
+        var: ({ likeability }) => ({ likeability: likeability + 5 }),
+      },
     ]
   },
 

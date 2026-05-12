@@ -20855,6 +20855,7 @@ ${addLineNumbers(fragment)}`);
               speaker: "fumika",
               text: "\uC9C4\uC9DC \uC774\uB984\uC774 \uB098\uB791 \uAC19\uB124."
             },
+            set6("likeability", ({ likeability }) => likeability + 30),
             {
               type: "dialogue",
               text: "\uD655\uC2E4\uD788 \uC2E0\uAE30\uD55C \uC6B0\uC5F0\uC774\uB2E4."
@@ -21003,8 +21004,16 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: '"\uBC84\uADF8\uAC00 \uC544\uB2C8\uB77C \uAE30\uB2A5\uC774\uB124\uC694."', goto: "agree" },
-        { text: '"\uADF8\uB0E5 \uB9DD\uAC9C \uC544\uB2C8\uC57C?"', goto: "disagree" }
+        {
+          text: '"\uBC84\uADF8\uAC00 \uC544\uB2C8\uB77C \uAE30\uB2A5\uC774\uB124\uC694."',
+          goto: "agree",
+          var: ({ likeability }) => ({ likeability: likeability + 10 })
+        },
+        {
+          text: '"\uADF8\uB0E5 \uB9DD\uAC9C \uC544\uB2C8\uC57C?"',
+          goto: "disagree",
+          var: ({ likeability }) => ({ likeability: likeability - 10 })
+        }
       ]
     },
     // ─── 분기: 동의 ───
@@ -21027,7 +21036,6 @@ ${addLineNumbers(fragment)}`);
       speaker: "fumika",
       text: "\uAC1C\uBC1C\uC790\uC758 \uC758\uB3C4\uB97C \uC644\uBCBD\uD788 \uD30C\uC545\uD588\uC5B4."
     },
-    set6("likeability", 10),
     goto("play-game"),
     // ─── 분기: 반대 ───
     label("disagree"),
@@ -21156,8 +21164,15 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: '"\uBB34\uB09C\uD558\uAC8C \uCE58\uD0A8 \uC5B4\uB54C?"', goto: "chicken" },
-        { text: '"\uC544\uAE4C \uB9E4\uC6B4 \uAC70 \uBA39\uACE0 \uC2F6\uB2E4\uBA70. \uC5FD\uAE30 \uB5A1\uBCF6\uC774?"', goto: "spicy" }
+        {
+          text: '"\uBB34\uB09C\uD558\uAC8C \uCE58\uD0A8 \uC5B4\uB54C?"',
+          goto: "chicken"
+        },
+        {
+          text: '"\uC544\uAE4C \uB9E4\uC6B4 \uAC70 \uBA39\uACE0 \uC2F6\uB2E4\uBA70. \uC5FD\uAE30 \uB5A1\uBCF6\uC774?"',
+          goto: "spicy",
+          var: ({ likeability }) => ({ likeability: likeability + 5 })
+        }
       ]
     },
     // ─── 치킨 ───
@@ -21366,8 +21381,16 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: "\uCE74\uBA54\uB77C \uBC16\uC5D0\uC11C \uC870\uC6A9\uD788 \uC190\uC744 \uD754\uB4E4\uC5B4\uC900\uB2E4", goto: "wave" },
-        { text: '"\uC57C, \uB0B4 \uCC1C\uB2ED\uC740 \uC5B8\uC81C \uC640?" \uB77C\uACE0 \uC18C\uB9AC\uCE5C\uB2E4', goto: "troll" }
+        {
+          text: "\uCE74\uBA54\uB77C \uBC16\uC5D0\uC11C \uC870\uC6A9\uD788 \uC190\uC744 \uD754\uB4E4\uC5B4\uC900\uB2E4",
+          goto: "wave",
+          var: ({ likeability }) => ({ likeability: likeability - 30 })
+        },
+        {
+          text: '"\uC57C, \uB0B4 \uCC1C\uB2ED\uC740 \uC5B8\uC81C \uC640?" \uB77C\uACE0 \uC18C\uB9AC\uCE5C\uB2E4',
+          goto: "troll",
+          var: ({ likeability }) => ({ likeability: likeability - 10 })
+        }
       ]
     },
     label("wave"),
@@ -21699,8 +21722,15 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."', goto: "sun" },
-        { text: '"\uC57C\uC678 \uBC29\uC1A1 \uCF58\uD150\uCE20\uB77C\uACE0 \uC0DD\uAC01\uD574."', goto: "content" }
+        {
+          text: '"\uAD11\uD569\uC131 \uC880 \uD574. \uCC3D\uBC31\uD574\uC11C \uBC40\uD30C\uC774\uC5B4\uC778 \uC904 \uC54C\uACA0\uB2E4."',
+          goto: "sun"
+        },
+        {
+          text: '"\uC57C\uC678 \uBC29\uC1A1 \uCF58\uD150\uCE20\uB77C\uACE0 \uC0DD\uAC01\uD574."',
+          goto: "content",
+          var: ({ likeability }) => ({ likeability: likeability + 5 })
+        }
       ]
     },
     label("sun"),
@@ -21790,8 +21820,11 @@ ${addLineNumbers(fragment)}`);
 
   // example/scenes/scene-bug.ts
   var scene_bug_default = defineScene({
-    config: novel_config_default
-  })(({ label, goto }) => [
+    config: novel_config_default,
+    variables: {
+      _run: false
+    }
+  })(({ label, condition, goto }) => [
     {
       type: "dialogue",
       text: [
@@ -21819,9 +21852,21 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: "\uB9E4\uBBF8\uB97C \uB9E8\uC190\uC73C\uB85C \uC7A1\uC544\uC11C \uCE58\uC6CC\uC900\uB2E4", goto: "hero" },
-        { text: "\uAC19\uC774 \uBE44\uBA85\uC744 \uC9C0\uB974\uBA70 \uB3C4\uB9DD\uAC04\uB2E4", goto: "run" },
-        { text: "\uB9E4\uBBF8\uB97C \uC7A1\uC544\uC11C \uB4F1\uC5D0 \uBD99\uC5EC\uC900\uB2E4", goto: "prank" }
+        {
+          text: "\uB9E4\uBBF8\uB97C \uB9E8\uC190\uC73C\uB85C \uC7A1\uC544\uC11C \uCE58\uC6CC\uC900\uB2E4",
+          goto: "hero",
+          var: ({ likeability }) => ({ likeability: likeability + 10 })
+        },
+        {
+          text: "\uAC19\uC774 \uBE44\uBA85\uC744 \uC9C0\uB974\uBA70 \uB3C4\uB9DD\uAC04\uB2E4",
+          goto: "run",
+          var: () => ({ _run: true })
+        },
+        {
+          text: "\uB9E4\uBBF8\uB97C \uC7A1\uC544\uC11C \uB4F1\uC5D0 \uBD99\uC5EC\uC900\uB2E4",
+          goto: "prank",
+          var: ({ likeability }) => ({ likeability: likeability - 10, _run: true })
+        }
       ]
     },
     label("hero"),
@@ -21903,12 +21948,21 @@ ${addLineNumbers(fragment)}`);
       ]
     },
     label("calm"),
-    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 500 },
+    condition(
+      ({ _run }) => _run,
+      [
+        { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 500 },
+        {
+          type: "dialogue",
+          speaker: "fumika",
+          text: "\uD558\uC544... \uD558\uC544..."
+        }
+      ]
+    ),
     {
       type: "dialogue",
       speaker: "fumika",
       text: [
-        "\uD558\uC544... \uD558\uC544...",
         "\uC5ED\uC2DC \uD604\uC2E4 \uC138\uACC4\uB294 \uBC84\uADF8 \uB369\uC5B4\uB9AC\uC57C.",
         "\uBE68\uB9AC \uC544\uC9C0\uD2B8\uB85C \uBCF5\uADC0\uD558\uC790."
       ]
@@ -21988,8 +22042,15 @@ ${addLineNumbers(fragment)}`);
     {
       type: "choice",
       choices: [
-        { text: '"\uD0F1\uCEE4 \uC218\uACE0\uBE44 \uB0B4\uB194."', goto: "pay" },
-        { text: '"\uB2E4\uC74C \uB808\uC774\uB4DC\uB294 \uB534 \uC0AC\uB78C \uAD6C\uD574\uB77C."', goto: "tired" }
+        {
+          text: '"\uD0F1\uCEE4 \uC218\uACE0\uBE44 \uB0B4\uB194."',
+          goto: "pay",
+          var: ({ likeability }) => ({ likeability: likeability - 10 })
+        },
+        {
+          text: '"\uB2E4\uC74C \uB808\uC774\uB4DC\uB294 \uB534 \uC0AC\uB78C \uAD6C\uD574\uB77C."',
+          goto: "tired"
+        }
       ]
     },
     label("pay"),
