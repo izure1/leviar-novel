@@ -52,8 +52,15 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '"무난하게 치킨 어때?"', goto: 'chicken' },
-      { text: '"아까 매운 거 먹고 싶다며. 엽기 떡볶이?"', goto: 'spicy' },
+      {
+        text: '"무난하게 치킨 어때?"',
+        goto: 'chicken',
+      },
+      {
+        text: '"아까 매운 거 먹고 싶다며. 엽기 떡볶이?"',
+        goto: 'spicy',
+        var: ({ likeability }) => ({ likeability: likeability + 5 }),
+      },
     ]
   },
 

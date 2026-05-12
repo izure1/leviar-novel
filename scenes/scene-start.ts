@@ -352,6 +352,9 @@ export default defineScene({
           speaker: 'fumika',
           text: '진짜 이름이 나랑 같네.'
         },
+
+        set('likeability', ({ likeability }) => likeability + 30),
+
         {
           type: 'dialogue',
           text: '확실히 신기한 우연이다.'

@@ -67,8 +67,16 @@ export default defineScene({
   {
     type: 'choice',
     choices: [
-      { text: '"버그가 아니라 기능이네요."', goto: 'agree' },
-      { text: '"그냥 망겜 아니야?"', goto: 'disagree' },
+      {
+        text: '"버그가 아니라 기능이네요."',
+        goto: 'agree',
+        var: ({ likeability }) => ({ likeability: likeability + 10 }),
+      },
+      {
+        text: '"그냥 망겜 아니야?"',
+        goto: 'disagree',
+        var: ({ likeability }) => ({ likeability: likeability - 10 }),
+      },
     ]
   },
 
@@ -92,7 +100,6 @@ export default defineScene({
     speaker: 'fumika',
     text: '개발자의 의도를 완벽히 파악했어.'
   },
-  set('likeability', 10),
   goto('play-game'),
 
   // ─── 분기: 반대 ───
