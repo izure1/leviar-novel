@@ -4186,9 +4186,13 @@
       _elementEntries[entry.id] = entry;
       _registerRootElement(entry);
     };
+    let _skipNextUpdateForExisting = false;
     const sorted = topoSort(Object.values(data._elements));
     for (const entry of sorted) {
       _addElement(entry, true);
+    }
+    if (sorted.length > 0) {
+      _skipNextUpdateForExisting = true;
     }
     return {
       // 모듈 레벨 entry는 태그 없음 — 억제는 per-element entry가 담당
@@ -4216,20 +4220,82 @@
         for (const key of Object.keys(_elementEntries)) delete _elementEntries[key];
       },
       onUpdate: (cmdCtx, state, _setState) => {
+        const skipExistingUpdate = _skipNextUpdateForExisting;
+        _skipNextUpdateForExisting = false;
         const dur = state._lastDuration;
         const ease = state._lastEase ?? "easeIn";
         const newKeys = new Set(Object.keys(state._elements));
         for (const key of Object.keys(_elementObjs)) {
           if (!newKeys.has(key)) _removeElement(key, dur, false, ease);
         }
-        const toUpdate = Object.values(state._elements).filter((e) => _elementObjs[e.id]);
-        for (const entry of topoSort(toUpdate)) {
-          _updateElement(entry, dur, ease ?? "easeInOutQuad");
+        if (!skipExistingUpdate) {
+          const toUpdate = Object.values(state._elements).filter((e) => _elementObjs[e.id]);
+          for (const entry of topoSort(toUpdate)) {
+            _updateElement(entry, dur, ease ?? "easeInOutQuad");
+          }
         }
         const toAdd = Object.values(state._elements).filter((e) => !_elementObjs[e.id]);
         const sortedAdd = topoSort(toAdd);
         for (const entry of sortedAdd) {
           _addElement(entry, false, dur, ease ?? "easeOut", cmdCtx);
+        }
+      },
+      // ─── 런타임 상태 보존 (restore 전용) ───────────────────────
+      captureRuntime: () => {
+        const snapshots = {};
+        for (const [id, obj] of Object.entries(_elementObjs)) {
+          if (!obj) continue;
+          const snapshot = {};
+          if (obj.attribute) {
+            const attr = {};
+            for (const key of Object.keys(obj.attribute)) {
+              attr[key] = obj.attribute[key];
+            }
+            if (Object.keys(attr).length > 0) snapshot.attribute = attr;
+          }
+          if (obj.style) {
+            const style = {};
+            for (const key of Object.keys(obj.style)) {
+              style[key] = obj.style[key];
+            }
+            if (Object.keys(style).length > 0) snapshot.style = style;
+          }
+          if (obj.transform) {
+            const transform = {};
+            if (obj.transform.position) transform.position = { ...obj.transform.position };
+            if (obj.transform.scale) transform.scale = { ...obj.transform.scale };
+            if (obj.transform.rotation) transform.rotation = { ...obj.transform.rotation };
+            if (obj.transform.pivot) transform.pivot = { ...obj.transform.pivot };
+            if (Object.keys(transform).length > 0) snapshot.transform = transform;
+          }
+          snapshots[id] = snapshot;
+        }
+        return snapshots;
+      },
+      restoreRuntime: (data2) => {
+        for (const [id, snapshot] of Object.entries(data2)) {
+          const obj = _elementObjs[id];
+          if (!obj) continue;
+          if (snapshot.attribute && obj.attribute) {
+            Object.assign(obj.attribute, snapshot.attribute);
+          }
+          if (snapshot.style) {
+            Object.assign(obj.style, snapshot.style);
+          }
+          if (snapshot.transform) {
+            if (snapshot.transform.position && obj.transform?.position) {
+              Object.assign(obj.transform.position, snapshot.transform.position);
+            }
+            if (snapshot.transform.scale && obj.transform?.scale) {
+              Object.assign(obj.transform.scale, snapshot.transform.scale);
+            }
+            if (snapshot.transform.rotation && obj.transform?.rotation) {
+              Object.assign(obj.transform.rotation, snapshot.transform.rotation);
+            }
+            if (snapshot.transform.pivot && obj.transform?.pivot) {
+              Object.assign(obj.transform.pivot, snapshot.transform.pivot);
+            }
+          }
         }
       }
     };
@@ -19801,6 +19867,12 @@ ${addLineNumbers(fragment)}`);
         return;
       }
       const needsFullRestore = !frame.preserve || frame.restore;
+      const runtimeSnapshots = /* @__PURE__ */ new Map();
+      for (const [name, entry] of this._uiRegistry) {
+        if (entry.captureRuntime) {
+          runtimeSnapshots.set(name, entry.captureRuntime());
+        }
+      }
       this._currentSceneDef?.hooks?._unregister(this);
       this._currentSceneDef = def;
       this._cleanupUI();
@@ -19819,6 +19891,12 @@ ${addLineNumbers(fragment)}`);
         this._uiRegistry.clear();
         this._suppressedEntries.clear();
         this._rebuildModuleViews();
+      }
+      for (const [name, snapshot] of runtimeSnapshots) {
+        const entry = this._uiRegistry.get(name);
+        if (entry?.restoreRuntime) {
+          entry.restoreRuntime(snapshot);
+        }
       }
       const callbacks = this._buildCallbacks();
       const scene = new DialogueScene(this._renderer, callbacks, def);
@@ -20325,12 +20403,13 @@ ${addLineNumbers(fragment)}`);
         });
       },
       likeability: (element, ctx) => {
+        console.log(123, ctx, element);
+        element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style>: ${ctx.globalVars.likeability}`;
         element.on("click", (e) => {
           e.stopPropagation();
           ctx.localVars._test += 1;
         });
         ctx.novel.hooker.onBefore("novel:var", (payload, ctx2) => {
-          console.log(payload, ctx2);
           if (payload.name === "likeability") {
             const value = payload.newValue;
             element.attribute.text = `<style color="rgb(255, 0, 0)">\u2665</style>: ${value}`;

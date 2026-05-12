@@ -558,9 +558,18 @@ elementModule.defineView((ctx, data, setState) => {
 
   // ─── 초기 복원 (세이브 로드 시) ─────────────────────────────
 
+  // builder body에서 element 생성 직후 _viewBuilderFn이 onUpdate를 즉시 호출함.
+  // 이때 _updateElement가 behaviors가 설정한 attribute.text 등을 EntryEntry 원본값으로 덮어쓰는 문제를 방지.
+  // 첫 번째 즉시 호출에서만 _updateElement를 건너뜀.
+  let _skipNextUpdateForExisting = false
+
   const sorted = topoSort(Object.values(data._elements))
   for (const entry of sorted) {
     _addElement(entry, true)
+  }
+  // builder body에서 element를 생성한 경우에만 플래그 설정
+  if (sorted.length > 0) {
+    _skipNextUpdateForExisting = true
   }
 
   return {
@@ -589,6 +598,10 @@ elementModule.defineView((ctx, data, setState) => {
       for (const key of Object.keys(_elementEntries)) delete _elementEntries[key]
     },
     onUpdate: (cmdCtx: SceneContext, state: ElementSchema, _setState: SetStateFn<ElementSchema>) => {
+      // builder body 직후 즉시 호출 시: behaviors가 설정한 값 보존을 위해 기존 element 업데이트 건너뜀
+      const skipExistingUpdate = _skipNextUpdateForExisting
+      _skipNextUpdateForExisting = false
+
       const dur = state._lastDuration
       const ease = (state._lastEase ?? 'easeIn') as EasingType
       const newKeys = new Set(Object.keys(state._elements))
@@ -598,16 +611,88 @@ elementModule.defineView((ctx, data, setState) => {
         if (!newKeys.has(key)) _removeElement(key, dur, false, ease)
       }
 
-      // 추가된 항목 (토폴로지 순)
-      const toUpdate = Object.values(state._elements).filter(e => _elementObjs[e.id])
-      for (const entry of topoSort(toUpdate)) {
-        _updateElement(entry, dur, ease ?? 'easeInOutQuad')
+      // 기존 항목 업데이트 — builder body 직후 즉시 호출 시 건너뜀
+      // (behaviors가 설정한 attribute.text 등이 EntryEntry 원본값으로 덮어씌워지는 것을 방지)
+      if (!skipExistingUpdate) {
+        const toUpdate = Object.values(state._elements).filter(e => _elementObjs[e.id])
+        for (const entry of topoSort(toUpdate)) {
+          _updateElement(entry, dur, ease ?? 'easeInOutQuad')
+        }
       }
 
       const toAdd = Object.values(state._elements).filter(e => !_elementObjs[e.id])
       const sortedAdd = topoSort(toAdd)
       for (const entry of sortedAdd) {
         _addElement(entry, false, dur, ease ?? 'easeOut', cmdCtx)
+      }
+    },
+
+    // ─── 런타임 상태 보존 (restore 전용) ───────────────────────
+
+    captureRuntime: () => {
+      const snapshots: Record<string, Record<string, any>> = {}
+      for (const [id, obj] of Object.entries(_elementObjs)) {
+        if (!obj) continue
+        const snapshot: Record<string, any> = {}
+
+        // attribute (text, src 등)
+        if (obj.attribute) {
+          const attr: Record<string, any> = {}
+          for (const key of Object.keys(obj.attribute)) {
+            attr[key] = obj.attribute[key]
+          }
+          if (Object.keys(attr).length > 0) snapshot.attribute = attr
+        }
+
+        // style
+        if (obj.style) {
+          const style: Record<string, any> = {}
+          for (const key of Object.keys(obj.style)) {
+            style[key] = obj.style[key]
+          }
+          if (Object.keys(style).length > 0) snapshot.style = style
+        }
+
+        // transform (position, scale, rotation, pivot)
+        if (obj.transform) {
+          const transform: Record<string, any> = {}
+          if (obj.transform.position) transform.position = { ...obj.transform.position }
+          if (obj.transform.scale) transform.scale = { ...obj.transform.scale }
+          if (obj.transform.rotation) transform.rotation = { ...obj.transform.rotation }
+          if (obj.transform.pivot) transform.pivot = { ...obj.transform.pivot }
+          if (Object.keys(transform).length > 0) snapshot.transform = transform
+        }
+
+        snapshots[id] = snapshot
+      }
+      return snapshots
+    },
+
+    restoreRuntime: (data: Record<string, Record<string, any>>) => {
+      for (const [id, snapshot] of Object.entries(data)) {
+        const obj = _elementObjs[id]
+        if (!obj) continue
+
+        if (snapshot.attribute && obj.attribute) {
+          Object.assign(obj.attribute, snapshot.attribute)
+        }
+        if (snapshot.style) {
+          Object.assign(obj.style, snapshot.style)
+        }
+        if (snapshot.transform) {
+          if (snapshot.transform.position && obj.transform?.position) {
+            Object.assign(obj.transform.position, snapshot.transform.position)
+          }
+          if (snapshot.transform.scale && obj.transform?.scale) {
+            Object.assign(obj.transform.scale, snapshot.transform.scale)
+          }
+          if (snapshot.transform.rotation && obj.transform?.rotation) {
+            Object.assign(obj.transform.rotation, snapshot.transform.rotation)
+          }
+          if (snapshot.transform.pivot && obj.transform?.pivot) {
+            Object.assign(obj.transform.pivot, snapshot.transform.pivot)
+          }
+        }
       }
     },
   }

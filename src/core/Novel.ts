@@ -1024,6 +1024,15 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
 
     const needsFullRestore = !frame.preserve || frame.restore
 
+    // 런타임 상태 캡처 (behaviors가 수정한 attribute/style/transform 등)
+    // cleanup 전에 수행하여 Leviar 오브젝트가 파괴되기 전 상태를 보존합니다.
+    const runtimeSnapshots = new Map<string, Record<string, any>>()
+    for (const [name, entry] of this._uiRegistry) {
+      if (entry.captureRuntime) {
+        runtimeSnapshots.set(name, entry.captureRuntime())
+      }
+    }
+
     // 서브씬 훅만 해제합니다. 부모씬 훅은 call 진입 시점에 유지되었으므로 이미 활성 상태입니다.
     this._currentSceneDef?.hooks?._unregister(this)
     this._currentSceneDef = def
@@ -1048,6 +1057,14 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
       this._uiRegistry.clear()
       this._suppressedEntries.clear()
       this._rebuildModuleViews()
+    }
+
+    // 런타임 상태 복원 — rebuild된 새 Leviar 오브젝트에 캡처된 상태를 재적용
+    for (const [name, snapshot] of runtimeSnapshots) {
+      const entry = this._uiRegistry.get(name)
+      if (entry?.restoreRuntime) {
+        entry.restoreRuntime(snapshot)
+      }
     }
 
     // 호출자 씬 복원 (커서·localVars)

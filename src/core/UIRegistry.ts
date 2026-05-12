@@ -46,4 +46,20 @@ export interface UIRuntimeEntry<TSchema = any> {
    * - `false`: 타이핑 완성 등 "완료 처리 후 재대기" (next() 중단)
    */
   canAdvance?(): boolean
+
+  // ─── 런타임 상태 보존 (restore 전용) ──────────────────────
+
+  /**
+   * 씬 복원(restore) 전에 호출되어 런타임 변경사항을 캡처합니다.
+   * behaviors가 수정한 attribute, style, transform 등의 상태를 반환합니다.
+   * 반환값은 복원 후 `restoreRuntime()`에 전달됩니다.
+   * 세이브/로드에는 영향을 주지 않습니다.
+   */
+  captureRuntime?(): Record<string, any>
+
+  /**
+   * 씬 복원(restore) 후에 호출되어 캡처된 런타임 상태를 재적용합니다.
+   * @param data - `captureRuntime()`이 반환한 데이터
+   */
+  restoreRuntime?(data: Record<string, any>): void
 }

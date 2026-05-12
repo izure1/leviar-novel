@@ -43,13 +43,15 @@ export default defineScene({
       })
     },
     likeability: (element, ctx) => {
+      console.log(123, ctx, element)
+      element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${ctx.globalVars.likeability}`
+
       element.on('click', (e: MouseEvent) => {
         e.stopPropagation()
         ctx.localVars._test += 1
       })
 
       ctx.novel.hooker.onBefore('novel:var', (payload, ctx) => {
-        console.log(payload, ctx)
         if (payload.name === 'likeability') {
           const value = payload.newValue
           element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${value}`
