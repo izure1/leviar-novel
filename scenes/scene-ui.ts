@@ -54,7 +54,27 @@ export default defineScene({
       ctx.novel.hooker.onBefore('novel:var', (payload, ctx) => {
         if (payload.name === 'likeability') {
           const value = payload.newValue
+          const gap = payload.newValue - payload.oldValue
           element.attribute.text = `<style color="rgb(255, 0, 0)">♥</style>: ${value}`
+
+          const clone = <T>(t: T) => JSON.parse(JSON.stringify(t)) as T
+          const gapText = gap > 0 ? '+' : ''
+
+          const shadow = ctx.world.createText({
+            attribute: { ...clone(element.attribute), text: gapText + gap.toString() },
+            style: { ...clone(element.style), display: 'block' },
+            transform: { ...clone(element.transform) },
+            dataset: { ...clone(element.dataset) },
+          })
+
+          element.parent?.addChild(shadow)
+
+          shadow.fadeOut(1000)
+          shadow.animate({
+            transform: {
+              position: { y: '+=20' }
+            }
+          }, 1000, 'easeOutBack').on('end', () => shadow.remove())
         }
         return payload
       })
@@ -143,7 +163,7 @@ export default defineScene({
           color: 'rgb(255, 255, 255)'
         },
         behaviors: ['likeability', 'hoverWhite'],
-      },
+      }
     ]
   },
 
