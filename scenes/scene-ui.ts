@@ -1,6 +1,6 @@
 import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineHook, defineScene } from '../../src'
+import { defineHook, defineInitial, defineScene } from '../../src'
 import { save, load } from '../main'
 
 const UI_BUTTON_STYLE: Partial<Style> = {
