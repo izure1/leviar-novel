@@ -61,9 +61,9 @@ export interface DialogueLayout {
 /** dialogueModule이 공유하는 데이터 스키마 */
 export interface DialogueSchema {
   /** 대화창 전체 패널 스타일 (권장) */
-  style?: Partial<Style> & { height?: number }
+  style?: Partial<Style>
   /** 대화창 배경 패널 스타일 */
-  bg?: Partial<Style> & { height?: number }
+  bg?: Partial<Style>
   /** 화자(캐릭터 이름) 텍스트 스타일 */
   speaker?: Partial<Style>
   /** 대사 텍스트 스타일 */
