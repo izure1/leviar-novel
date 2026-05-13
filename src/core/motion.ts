@@ -46,7 +46,13 @@ export function playMotionEffect(
   duration?: number,
   intensity?: number,
   repeat: number = 1,
-  stateKey: string = '__activeMotionStop'
+  stateKey: string = '__activeMotionStop',
+  callbacks?: {
+    /** 한 사이클 완료마다 호출됩니다. remaining은 남은 반복 횟수입니다. */
+    onRepeat?: (remaining: number) => void
+    /** 효과가 자연 종료되었을 때 호출됩니다. 외부 stop() 시에는 호출되지 않습니다. */
+    onEnd?: () => void
+  }
 ) {
   if (!obj) return
 
@@ -97,9 +103,15 @@ export function playMotionEffect(
   obj[stateKey] = stop
 
   const loop = () => {
-    if (!active || (repeat >= 0 && frame++ >= repeat)) {
+    if (!active) return
+    if (repeat >= 0 && frame++ >= repeat) {
       stop()
+      callbacks?.onEnd?.()
       return
+    }
+    // 남은 반복 횟수를 콜백으로 전달합니다.
+    if (repeat >= 0) {
+      callbacks?.onRepeat?.(repeat - frame)
     }
 
     let elapsed = 0

@@ -359,6 +359,8 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
     hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_overlayObjs)) {
+        // 진행 중인 오버레이 모션 효과(setTimeout 루프)를 중단합니다.
+        if (typeof obj.__activeOverlayEffectStop === 'function') obj.__activeOverlayEffectStop()
         obj.remove()
       }
       Object.keys(_overlayObjs).forEach(k => delete _overlayObjs[k])
@@ -513,17 +515,57 @@ interface OverlayViewEntry {
   getObj: (name: string) => (Record<string, any> & { __activeOverlayEffectStop?: (() => void) | null }) | undefined
 }
 
-export interface OverlayEffectSchema { _unused: undefined }
+export interface OverlayEffectSchema {
+  _activeEffects: Record<string, {
+    preset: CameraEffectPreset
+    duration?: number
+    intensity?: number
+    remaining: number
+  }>
+}
 
-const overlayEffectModule = define<OverlayEffectCmd, OverlayEffectSchema>({ _unused: undefined })
+const overlayEffectModule = define<OverlayEffectCmd, OverlayEffectSchema>({
+  _activeEffects: {},
+})
 
-overlayEffectModule.defineView((_ctx, _data, _setState) => ({
-  show: () => { },
-  hide: () => { },
-  onCleanup: () => { },
-}))
+overlayEffectModule.defineView((ctx, data, _setState) => {
+  // 복원: 저장된 오버레이 효과 재생
+  // 다른 모듈(overlay-text, overlay-image)의 뷰 빌드 완료를 보장하기 위해 지연 실행합니다.
+  if (Object.keys(data._activeEffects).length > 0) {
+    setTimeout(() => {
+      const textEntry = ctx.ui.get('overlay-text') as OverlayViewEntry | undefined
+      const imageEntry = ctx.ui.get('overlay-image') as OverlayViewEntry | undefined
+      const moduleKey = 'overlay-effect'
 
-overlayEffectModule.defineCommand(function* (cmd, ctx) {
+      for (const [name, effect] of Object.entries(data._activeEffects)) {
+        const overlayObj = textEntry?.getObj(name) ?? imageEntry?.getObj(name)
+        if (!overlayObj) continue
+
+        playMotionEffect(
+          ctx, overlayObj, effect.preset, effect.duration, effect.intensity,
+          effect.remaining, '__activeOverlayEffectStop', {
+            onRepeat: (rem) => {
+              const s = ctx.state.get(moduleKey) as OverlayEffectSchema | undefined
+              if (s?._activeEffects[name]) s._activeEffects[name].remaining = rem
+            },
+            onEnd: () => {
+              const s = ctx.state.get(moduleKey) as OverlayEffectSchema | undefined
+              if (s) delete s._activeEffects[name]
+            },
+          }
+        )
+      }
+    }, 0)
+  }
+
+  return {
+    show: () => { },
+    hide: () => { },
+    onCleanup: () => { },
+  }
+})
+
+overlayEffectModule.defineCommand(function* (cmd, ctx, _state, setState) {
   // overlay-text, overlay-image 양쪽 모두에서 찾기
   const textEntry = ctx.ui.get('overlay-text') as OverlayViewEntry | undefined
   const imageEntry = ctx.ui.get('overlay-image') as OverlayViewEntry | undefined
@@ -531,14 +573,42 @@ overlayEffectModule.defineCommand(function* (cmd, ctx) {
 
   if (!overlayObj) return true
 
+  const repeat = cmd.repeat ?? 1
+  const moduleKey = 'overlay-effect'
+  const name = cmd.name
+
+  if (cmd.preset === 'reset') {
+    setState((prev) => {
+      const updated = { ...prev._activeEffects }
+      delete updated[name]
+      return { _activeEffects: updated }
+    })
+  } else {
+    setState((prev) => ({
+      _activeEffects: {
+        ...prev._activeEffects,
+        [name]: {
+          preset: cmd.preset,
+          duration: cmd.duration,
+          intensity: cmd.intensity,
+          remaining: repeat,
+        },
+      },
+    }))
+  }
+
   playMotionEffect(
-    ctx,
-    overlayObj,
-    cmd.preset,
-    cmd.duration,
-    cmd.intensity,
-    cmd.repeat,
-    '__activeOverlayEffectStop'
+    ctx, overlayObj, cmd.preset, cmd.duration, cmd.intensity,
+    repeat, '__activeOverlayEffectStop', {
+      onRepeat: (remaining) => {
+        const s = ctx.state.get(moduleKey) as OverlayEffectSchema | undefined
+        if (s?._activeEffects[name]) s._activeEffects[name].remaining = remaining
+      },
+      onEnd: () => {
+        const s = ctx.state.get(moduleKey) as OverlayEffectSchema | undefined
+        if (s) delete s._activeEffects[name]
+      },
+    }
   )
 
   return true

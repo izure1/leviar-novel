@@ -268,6 +268,12 @@ export class Renderer {
    * 렌더 오브젝트의 제거는 각 모듈의 onCleanup()이 담당합니다.
    */
   clear(): void {
+    // 진행 중인 카메라 모션 효과(setTimeout 루프)를 중단합니다.
+    // camOffsetObj는 영속 객체이므로 stop()을 호출하지 않으면
+    // 루프가 계속 offset 좌표를 덮어씁니다.
+    const camEffectStop = this.state.get('_activeCamEffectStop')
+    if (typeof camEffectStop === 'function') camEffectStop()
+
     this.state.clear()
     if (this.camOffsetObj) {
       this.camOffsetObj.transform.position.x = 0

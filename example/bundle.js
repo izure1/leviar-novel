@@ -1517,7 +1517,7 @@
     float: { intensity: 10, duration: 2e3 },
     jolt: { intensity: 30, duration: 200 }
   };
-  function playMotionEffect(ctx, obj, preset, duration, intensity, repeat = 1, stateKey = "__activeMotionStop") {
+  function playMotionEffect(ctx, obj, preset, duration, intensity, repeat = 1, stateKey = "__activeMotionStop", callbacks) {
     if (!obj) return;
     if (preset === "reset") {
       const stopFn2 = obj[stateKey];
@@ -1559,9 +1559,14 @@
     };
     obj[stateKey] = stop;
     const loop = () => {
-      if (!active || repeat >= 0 && frame++ >= repeat) {
+      if (!active) return;
+      if (repeat >= 0 && frame++ >= repeat) {
         stop();
+        callbacks?.onEnd?.();
         return;
+      }
+      if (repeat >= 0) {
+        callbacks?.onRepeat?.(repeat - frame);
       }
       let elapsed = 0;
       const stepTime = 16;
@@ -1796,6 +1801,7 @@
       },
       onCleanup: () => {
         for (const obj of Object.values(_charObjs)) {
+          if (typeof obj.__activeCharEffectStop === "function") obj.__activeCharEffectStop();
           obj.remove({ child: true });
         }
         Object.keys(_charObjs).forEach((k2) => delete _charObjs[k2]);
@@ -1927,27 +1933,93 @@
   characterHighlightModule.defineCommand(function* (_cmd, _ctx) {
     return true;
   });
-  var characterEffectModule = define2({ _unused: void 0 });
-  characterEffectModule.defineView((_ctx, _data, _setState) => ({
-    show: () => {
-    },
-    hide: () => {
-    },
-    onCleanup: () => {
+  var characterEffectModule = define2({
+    _activeEffects: {}
+  });
+  characterEffectModule.defineView((ctx, data, _setState) => {
+    if (Object.keys(data._activeEffects).length > 0) {
+      setTimeout(() => {
+        const charEntry = ctx.ui.get("character");
+        if (!charEntry) return;
+        const moduleKey = "character-effect";
+        for (const [name, effect] of Object.entries(data._activeEffects)) {
+          const charObj = charEntry.getObj(name);
+          if (!charObj) continue;
+          playMotionEffect(
+            ctx,
+            charObj,
+            effect.preset,
+            effect.duration,
+            effect.intensity,
+            effect.remaining,
+            "__activeCharEffectStop",
+            {
+              onRepeat: (rem) => {
+                const s = ctx.state.get(moduleKey);
+                if (s?._activeEffects[name]) s._activeEffects[name].remaining = rem;
+              },
+              onEnd: () => {
+                const s = ctx.state.get(moduleKey);
+                if (s) delete s._activeEffects[name];
+              }
+            }
+          );
+        }
+      }, 0);
     }
-  }));
-  characterEffectModule.defineCommand(function* (cmd, ctx) {
+    return {
+      show: () => {
+      },
+      hide: () => {
+      },
+      onCleanup: () => {
+      }
+    };
+  });
+  characterEffectModule.defineCommand(function* (cmd, ctx, _state, setState) {
     const entry = ctx.ui.get("character");
     const charObj = entry?.getObj(cmd.name);
     if (!charObj) return true;
+    const repeat = cmd.repeat ?? 1;
+    const moduleKey = "character-effect";
+    const name = cmd.name;
+    if (cmd.preset === "reset") {
+      setState((prev) => {
+        const updated = { ...prev._activeEffects };
+        delete updated[name];
+        return { _activeEffects: updated };
+      });
+    } else {
+      setState((prev) => ({
+        _activeEffects: {
+          ...prev._activeEffects,
+          [name]: {
+            preset: cmd.preset,
+            duration: cmd.duration,
+            intensity: cmd.intensity,
+            remaining: repeat
+          }
+        }
+      }));
+    }
     playMotionEffect(
       ctx,
       charObj,
       cmd.preset,
       cmd.duration,
       cmd.intensity,
-      cmd.repeat,
-      "__activeCharEffectStop"
+      repeat,
+      "__activeCharEffectStop",
+      {
+        onRepeat: (remaining) => {
+          const s = ctx.state.get(moduleKey);
+          if (s?._activeEffects[name]) s._activeEffects[name].remaining = remaining;
+        },
+        onEnd: () => {
+          const s = ctx.state.get(moduleKey);
+          if (s) delete s._activeEffects[name];
+        }
+      }
     );
     return true;
   });
@@ -2429,6 +2501,7 @@
       },
       onCleanup: () => {
         for (const obj of Object.values(_overlayObjs)) {
+          if (typeof obj.__activeOverlayEffectStop === "function") obj.__activeOverlayEffectStop();
           obj.remove();
         }
         Object.keys(_overlayObjs).forEach((k2) => delete _overlayObjs[k2]);
@@ -2502,28 +2575,94 @@
     setState({ _overlays: newOverlays, _lastDuration: cmd.duration, _lastEase: cmd.ease });
     return true;
   });
-  var overlayEffectModule = define2({ _unused: void 0 });
-  overlayEffectModule.defineView((_ctx, _data, _setState) => ({
-    show: () => {
-    },
-    hide: () => {
-    },
-    onCleanup: () => {
+  var overlayEffectModule = define2({
+    _activeEffects: {}
+  });
+  overlayEffectModule.defineView((ctx, data, _setState) => {
+    if (Object.keys(data._activeEffects).length > 0) {
+      setTimeout(() => {
+        const textEntry = ctx.ui.get("overlay-text");
+        const imageEntry = ctx.ui.get("overlay-image");
+        const moduleKey = "overlay-effect";
+        for (const [name, effect] of Object.entries(data._activeEffects)) {
+          const overlayObj = textEntry?.getObj(name) ?? imageEntry?.getObj(name);
+          if (!overlayObj) continue;
+          playMotionEffect(
+            ctx,
+            overlayObj,
+            effect.preset,
+            effect.duration,
+            effect.intensity,
+            effect.remaining,
+            "__activeOverlayEffectStop",
+            {
+              onRepeat: (rem) => {
+                const s = ctx.state.get(moduleKey);
+                if (s?._activeEffects[name]) s._activeEffects[name].remaining = rem;
+              },
+              onEnd: () => {
+                const s = ctx.state.get(moduleKey);
+                if (s) delete s._activeEffects[name];
+              }
+            }
+          );
+        }
+      }, 0);
     }
-  }));
-  overlayEffectModule.defineCommand(function* (cmd, ctx) {
+    return {
+      show: () => {
+      },
+      hide: () => {
+      },
+      onCleanup: () => {
+      }
+    };
+  });
+  overlayEffectModule.defineCommand(function* (cmd, ctx, _state, setState) {
     const textEntry = ctx.ui.get("overlay-text");
     const imageEntry = ctx.ui.get("overlay-image");
     const overlayObj = textEntry?.getObj(cmd.name) ?? imageEntry?.getObj(cmd.name);
     if (!overlayObj) return true;
+    const repeat = cmd.repeat ?? 1;
+    const moduleKey = "overlay-effect";
+    const name = cmd.name;
+    if (cmd.preset === "reset") {
+      setState((prev) => {
+        const updated = { ...prev._activeEffects };
+        delete updated[name];
+        return { _activeEffects: updated };
+      });
+    } else {
+      setState((prev) => ({
+        _activeEffects: {
+          ...prev._activeEffects,
+          [name]: {
+            preset: cmd.preset,
+            duration: cmd.duration,
+            intensity: cmd.intensity,
+            remaining: repeat
+          }
+        }
+      }));
+    }
     playMotionEffect(
       ctx,
       overlayObj,
       cmd.preset,
       cmd.duration,
       cmd.intensity,
-      cmd.repeat,
-      "__activeOverlayEffectStop"
+      repeat,
+      "__activeOverlayEffectStop",
+      {
+        onRepeat: (remaining) => {
+          const s = ctx.state.get(moduleKey);
+          if (s?._activeEffects[name]) s._activeEffects[name].remaining = remaining;
+        },
+        onEnd: () => {
+          const s = ctx.state.get(moduleKey);
+          if (s) delete s._activeEffects[name];
+        }
+      }
     );
     return true;
   });
@@ -2810,7 +2949,7 @@
       }, dur, ease);
     }
   }
-  function cameraEffect(ctx, preset, duration, intensity, repeat = 1) {
+  function cameraEffect(ctx, preset, duration, intensity, repeat = 1, motionCallbacks) {
     const offsetObj = ctx.renderer.camOffsetObj;
     if (!offsetObj) return;
     const objWrapper = {
@@ -2822,7 +2961,7 @@
         ctx.renderer.state.set("_activeCamEffectStop", val);
       }
     };
-    playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, "_activeCamEffectStop");
+    playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, "_activeCamEffectStop", motionCallbacks);
   }
   var cameraZoomModule = define2({ _lastPreset: "reset" });
   cameraZoomModule.defineView((_ctx, _data, _setState) => ({ show: () => {
@@ -2846,14 +2985,56 @@
     panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y, cmd.ease);
     return true;
   });
-  var cameraEffectModule = define2({ _lastPreset: "shake" });
-  cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => {
-  }, hide: () => {
-  }, onCleanup: () => {
-  } }));
+  var cameraEffectModule = define2({
+    _lastPreset: "shake",
+    _activeEffect: null
+  });
+  cameraEffectModule.defineView((ctx, data, _setState) => {
+    if (data._activeEffect) {
+      const { preset, duration, intensity, remaining } = data._activeEffect;
+      const moduleKey = "camera-effect";
+      cameraEffect(ctx, preset, duration, intensity, remaining, {
+        onRepeat: (rem) => {
+          const s = ctx.state.get(moduleKey);
+          if (s?._activeEffect) s._activeEffect.remaining = rem;
+        },
+        onEnd: () => {
+          const s = ctx.state.get(moduleKey);
+          if (s) s._activeEffect = null;
+        }
+      });
+    }
+    return { show: () => {
+    }, hide: () => {
+    }, onCleanup: () => {
+    } };
+  });
   cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
-    setState({ _lastPreset: cmd.preset });
-    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat);
+    const repeat = cmd.repeat ?? 1;
+    const moduleKey = "camera-effect";
+    if (cmd.preset === "reset") {
+      setState({ _lastPreset: cmd.preset, _activeEffect: null });
+    } else {
+      setState({
+        _lastPreset: cmd.preset,
+        _activeEffect: {
+          preset: cmd.preset,
+          duration: cmd.duration,
+          intensity: cmd.intensity,
+          remaining: repeat
+        }
+      });
+    }
+    cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, repeat, {
+      onRepeat: (remaining) => {
+        const s = ctx.state.get(moduleKey);
+        if (s?._activeEffect) s._activeEffect.remaining = remaining;
+      },
+      onEnd: () => {
+        const s = ctx.state.get(moduleKey);
+        if (s) s._activeEffect = null;
+      }
+    });
     return true;
   });
 
@@ -18236,6 +18417,8 @@ ${addLineNumbers(fragment)}`);
      * 렌더 오브젝트의 제거는 각 모듈의 onCleanup()이 담당합니다.
      */
     clear() {
+      const camEffectStop = this.state.get("_activeCamEffectStop");
+      if (typeof camEffectStop === "function") camEffectStop();
       this.state.clear();
       if (this.camOffsetObj) {
         this.camOffsetObj.transform.position.x = 0;

@@ -340,6 +340,8 @@ characterModule.defineView((ctx, data, setState) => {
     hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_charObjs)) {
+        // 진행 중인 캐릭터 모션 효과(setTimeout 루프)를 중단합니다.
+        if (typeof obj.__activeCharEffectStop === 'function') obj.__activeCharEffectStop()
         obj.remove({ child: true })
       }
       Object.keys(_charObjs).forEach(k => delete _charObjs[k])
@@ -515,29 +517,97 @@ export { characterHighlightModule }
 
 // ─── character-effect 모듈 ───────────────────────────────────
 
-export interface CharacterEffectSchema { _unused: undefined }
+export interface CharacterEffectSchema {
+  _activeEffects: Record<string, {
+    preset: CameraEffectPreset
+    duration?: number
+    intensity?: number
+    remaining: number
+  }>
+}
 
-const characterEffectModule = define<CharacterEffectCmd<any>, CharacterEffectSchema>({ _unused: undefined })
+const characterEffectModule = define<CharacterEffectCmd<any>, CharacterEffectSchema>({
+  _activeEffects: {},
+})
 
-characterEffectModule.defineView((_ctx, _data, _setState) => ({
-  show: () => { },
-  hide: () => { },
-  onCleanup: () => { },
-}))
+characterEffectModule.defineView((ctx, data, _setState) => {
+  // 복원: 저장된 캐릭터 효과 재생
+  // 다른 모듈(character)의 뷰 빌드 완료를 보장하기 위해 지연 실행합니다.
+  if (Object.keys(data._activeEffects).length > 0) {
+    setTimeout(() => {
+      const charEntry = ctx.ui.get('character') as CharacterViewEntry | undefined
+      if (!charEntry) return
+      const moduleKey = 'character-effect'
 
-characterEffectModule.defineCommand(function* (cmd, ctx) {
+      for (const [name, effect] of Object.entries(data._activeEffects)) {
+        const charObj = charEntry.getObj(name)
+        if (!charObj) continue
+
+        playMotionEffect(
+          ctx, charObj, effect.preset, effect.duration, effect.intensity,
+          effect.remaining, '__activeCharEffectStop', {
+            onRepeat: (rem) => {
+              const s = ctx.state.get(moduleKey) as CharacterEffectSchema | undefined
+              if (s?._activeEffects[name]) s._activeEffects[name].remaining = rem
+            },
+            onEnd: () => {
+              const s = ctx.state.get(moduleKey) as CharacterEffectSchema | undefined
+              if (s) delete s._activeEffects[name]
+            },
+          }
+        )
+      }
+    }, 0)
+  }
+
+  return {
+    show: () => { },
+    hide: () => { },
+    onCleanup: () => { },
+  }
+})
+
+characterEffectModule.defineCommand(function* (cmd, ctx, _state, setState) {
   const entry = ctx.ui.get('character') as CharacterViewEntry | undefined
   const charObj = entry?.getObj(cmd.name)
   if (!charObj) return true
 
+  const repeat = cmd.repeat ?? 1
+  const moduleKey = 'character-effect'
+  const name = cmd.name as string
+
+  if (cmd.preset === 'reset') {
+    setState((prev) => {
+      const updated = { ...prev._activeEffects }
+      delete updated[name]
+      return { _activeEffects: updated }
+    })
+  } else {
+    setState((prev) => ({
+      _activeEffects: {
+        ...prev._activeEffects,
+        [name]: {
+          preset: cmd.preset,
+          duration: cmd.duration,
+          intensity: cmd.intensity,
+          remaining: repeat,
+        },
+      },
+    }))
+  }
+
   playMotionEffect(
-    ctx,
-    charObj,
-    cmd.preset,
-    cmd.duration,
-    cmd.intensity,
-    cmd.repeat,
-    '__activeCharEffectStop'
+    ctx, charObj, cmd.preset, cmd.duration, cmd.intensity,
+    repeat, '__activeCharEffectStop', {
+      onRepeat: (remaining) => {
+        const s = ctx.state.get(moduleKey) as CharacterEffectSchema | undefined
+        if (s?._activeEffects[name]) s._activeEffects[name].remaining = remaining
+      },
+      onEnd: () => {
+        const s = ctx.state.get(moduleKey) as CharacterEffectSchema | undefined
+        if (s) delete s._activeEffects[name]
+      },
+    }
   )
 
   return true

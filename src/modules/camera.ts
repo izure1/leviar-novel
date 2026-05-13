@@ -119,7 +119,17 @@ export function panCamera(ctx: SceneContext, position: PanPreset, duration?: num
   }
 }
 
-function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: number, intensity?: number, repeat: number = 1) {
+function cameraEffect(
+  ctx: SceneContext,
+  preset: CameraEffectPreset,
+  duration?: number,
+  intensity?: number,
+  repeat: number = 1,
+  motionCallbacks?: {
+    onRepeat?: (remaining: number) => void
+    onEnd?: () => void
+  }
+) {
   const offsetObj = ctx.renderer.camOffsetObj
   if (!offsetObj) return
 
@@ -130,7 +140,7 @@ function cameraEffect(ctx: SceneContext, preset: CameraEffectPreset, duration?: 
     set _activeCamEffectStop(val) { ctx.renderer.state.set('_activeCamEffectStop', val) }
   }
 
-  playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, '_activeCamEffectStop')
+  playMotionEffect(ctx, objWrapper, preset, duration, intensity, repeat, '_activeCamEffectStop', motionCallbacks)
 }
 
 // ─── camera-zoom 모듈 ────────────────────────────────────────
@@ -169,15 +179,70 @@ export { cameraPanModule }
 
 // ─── camera-effect 모듈 ─────────────────────────────────────
 
-export interface CameraEffectSchema { _lastPreset: string }
+export interface CameraEffectSchema {
+  _lastPreset: string
+  _activeEffect: {
+    preset: CameraEffectPreset
+    duration?: number
+    intensity?: number
+    remaining: number
+  } | null
+}
 
-const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({ _lastPreset: 'shake' })
+const cameraEffectModule = define<CameraEffectCmd, CameraEffectSchema>({
+  _lastPreset: 'shake',
+  _activeEffect: null,
+})
 
-cameraEffectModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
+cameraEffectModule.defineView((ctx, data, _setState) => {
+  // 복원: 저장된 카메라 효과 재생
+  if (data._activeEffect) {
+    const { preset, duration, intensity, remaining } = data._activeEffect
+    const moduleKey = 'camera-effect'
+    cameraEffect(ctx, preset, duration, intensity, remaining, {
+      onRepeat: (rem) => {
+        const s = ctx.state.get(moduleKey) as CameraEffectSchema | undefined
+        if (s?._activeEffect) s._activeEffect.remaining = rem
+      },
+      onEnd: () => {
+        const s = ctx.state.get(moduleKey) as CameraEffectSchema | undefined
+        if (s) s._activeEffect = null
+      },
+    })
+  }
+
+  return { show: () => { }, hide: () => { }, onCleanup: () => { } }
+})
 
 cameraEffectModule.defineCommand(function* (cmd, ctx, state, setState) {
-  setState({ _lastPreset: cmd.preset })
-  cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, cmd.repeat)
+  const repeat = cmd.repeat ?? 1
+  const moduleKey = 'camera-effect'
+
+  if (cmd.preset === 'reset') {
+    setState({ _lastPreset: cmd.preset, _activeEffect: null })
+  } else {
+    setState({
+      _lastPreset: cmd.preset,
+      _activeEffect: {
+        preset: cmd.preset,
+        duration: cmd.duration,
+        intensity: cmd.intensity,
+        remaining: repeat,
+      },
+    })
+  }
+
+  cameraEffect(ctx, cmd.preset, cmd.duration, cmd.intensity, repeat, {
+    onRepeat: (remaining) => {
+      const s = ctx.state.get(moduleKey) as CameraEffectSchema | undefined
+      if (s?._activeEffect) s._activeEffect.remaining = remaining
+    },
+    onEnd: () => {
+      const s = ctx.state.get(moduleKey) as CameraEffectSchema | undefined
+      if (s) s._activeEffect = null
+    },
+  })
+
   return true
 })
 
