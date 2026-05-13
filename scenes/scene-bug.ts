@@ -104,7 +104,7 @@ export default defineScene({
       '매미가 맴맴 울기 시작하자 후미카의 눈동자가 미친듯이 흔들렸다.'
     ]
   },
-  { type: 'camera-effect', preset: 'shake', intensity: 20, duration: 1000 },
+  { type: 'character-effect', name: 'fumika', preset: 'shake', intensity: 20, repeat: -1, duration: 1000 },
   {
     type: 'dialogue',
     speaker: 'fumika',
@@ -135,6 +135,7 @@ export default defineScene({
       '강제 달리기 운동으로 오늘치 칼로리 소모는 완벽하다.'
     ]
   },
+  { type: 'character-effect', name: 'fumika', preset: 'reset' },
 
   label('calm'),
   condition(({ _run }) => _run,
