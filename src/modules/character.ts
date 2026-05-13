@@ -340,8 +340,6 @@ characterModule.defineView((ctx, data, setState) => {
     hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_charObjs)) {
-        // 진행 중인 캐릭터 모션 효과(setTimeout 루프)를 중단합니다.
-        if (typeof obj.__activeCharEffectStop === 'function') obj.__activeCharEffectStop()
         obj.remove({ child: true })
       }
       Object.keys(_charObjs).forEach(k => delete _charObjs[k])

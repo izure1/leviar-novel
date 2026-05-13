@@ -68,6 +68,9 @@ export class Renderer {
 
   private _isSkipping: boolean = false
 
+  /** 관리형 타이머 ID 저장소. clear() 시 일괄 취소됩니다. */
+  private _timers: Set<ReturnType<typeof setTimeout>> = new Set()
+
   // 커스텀 명령어들이 저장할 범용 상태 저장소
   public state: Map<string, any> = new Map()
 
@@ -183,6 +186,44 @@ export class Renderer {
     return anim
   }
 
+  // ─── 관리형 타이머 ──────────────────────────────────────────
+
+  /**
+   * 관리형 setTimeout. 등록된 타이머는 `clear()` 호출 시 자동으로 취소됩니다.
+   * 씬 전환이나 세이브 로드 시 잔여 타이머가 남지 않도록 보장합니다.
+   *
+   * @param fn 실행할 콜백 함수
+   * @param ms 지연 시간(ms)
+   * @returns 타이머 ID. `clearTimer()`로 개별 취소할 수 있습니다.
+   */
+  setTimer(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
+    const id = setTimeout(() => {
+      this._timers.delete(id)
+      fn()
+    }, ms)
+    this._timers.add(id)
+    return id
+  }
+
+  /**
+   * 특정 관리형 타이머를 취소합니다.
+   */
+  clearTimer(id: ReturnType<typeof setTimeout>): void {
+    clearTimeout(id)
+    this._timers.delete(id)
+  }
+
+  /**
+   * 등록된 모든 관리형 타이머를 취소합니다.
+   * `clear()` 내부에서 자동 호출됩니다.
+   */
+  clearAllTimers(): void {
+    for (const id of this._timers) {
+      clearTimeout(id)
+    }
+    this._timers.clear()
+  }
+
   /**
    * 세이브 저장을 위해 현재 렌더러의 뷰포트/카메라 상태와 커스텀 플러그인 상태를 캡처하여 반환합니다.
    */
@@ -268,12 +309,7 @@ export class Renderer {
    * 렌더 오브젝트의 제거는 각 모듈의 onCleanup()이 담당합니다.
    */
   clear(): void {
-    // 진행 중인 카메라 모션 효과(setTimeout 루프)를 중단합니다.
-    // camOffsetObj는 영속 객체이므로 stop()을 호출하지 않으면
-    // 루프가 계속 offset 좌표를 덮어씁니다.
-    const camEffectStop = this.state.get('_activeCamEffectStop')
-    if (typeof camEffectStop === 'function') camEffectStop()
-
+    this.clearAllTimers()
     this.state.clear()
     if (this.camOffsetObj) {
       this.camOffsetObj.transform.position.x = 0

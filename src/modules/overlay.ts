@@ -359,8 +359,6 @@ function buildOverlayView(ctx: SceneContext, data: OverlaySchema, setState: SetS
     hide: () => { },
     onCleanup: () => {
       for (const obj of Object.values(_overlayObjs)) {
-        // 진행 중인 오버레이 모션 효과(setTimeout 루프)를 중단합니다.
-        if (typeof obj.__activeOverlayEffectStop === 'function') obj.__activeOverlayEffectStop()
         obj.remove()
       }
       Object.keys(_overlayObjs).forEach(k => delete _overlayObjs[k])

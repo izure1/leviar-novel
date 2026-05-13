@@ -1540,9 +1540,14 @@
     const originXRotation = obj.transform?.rotation?.x ?? 0;
     const originYRotation = obj.transform?.rotation?.y ?? 0;
     const originZRotation = obj.transform?.rotation?.z ?? 0;
+    let pendingTimer = null;
     const stop = () => {
       active = false;
       obj[stateKey] = null;
+      if (pendingTimer !== null) {
+        ctx.renderer.clearTimer(pendingTimer);
+        pendingTimer = null;
+      }
       if (obj.transform?.position) {
         obj.transform.position.x = originX;
         obj.transform.position.y = originY;
@@ -1637,7 +1642,7 @@
           obj.transform.rotation.y = originYRotation + dRotY;
           obj.transform.rotation.z = originZRotation + dz;
         }
-        setTimeout(tick, stepTime);
+        pendingTimer = ctx.renderer.setTimer(tick, stepTime);
       };
       tick();
     };
@@ -1801,7 +1806,6 @@
       },
       onCleanup: () => {
         for (const obj of Object.values(_charObjs)) {
-          if (typeof obj.__activeCharEffectStop === "function") obj.__activeCharEffectStop();
           obj.remove({ child: true });
         }
         Object.keys(_charObjs).forEach((k2) => delete _charObjs[k2]);
@@ -2501,7 +2505,6 @@
       },
       onCleanup: () => {
         for (const obj of Object.values(_overlayObjs)) {
-          if (typeof obj.__activeOverlayEffectStop === "function") obj.__activeOverlayEffectStop();
           obj.remove();
         }
         Object.keys(_overlayObjs).forEach((k2) => delete _overlayObjs[k2]);
@@ -3064,7 +3067,7 @@
     const now = Date.now() + cmd.duration;
     const autoAdvance = cmd.autoAdvance ?? true;
     if (autoAdvance) {
-      setTimeout(() => ctx.callbacks.advance(), cmd.duration);
+      ctx.renderer.setTimer(() => ctx.callbacks.advance(), cmd.duration);
     }
     while (Date.now() < now) {
       yield false;
@@ -18239,6 +18242,8 @@ ${addLineNumbers(fragment)}`);
     width;
     height;
     _isSkipping = false;
+    /** 관리형 타이머 ID 저장소. clear() 시 일괄 취소됩니다. */
+    _timers = /* @__PURE__ */ new Set();
     // 커스텀 명령어들이 저장할 범용 상태 저장소
     state = /* @__PURE__ */ new Map();
     // ─── 카메라 변환 합성용 ─────────────────────────────────────
@@ -18335,6 +18340,40 @@ ${addLineNumbers(fragment)}`);
       if (onEnd) anim.on("end", onEnd);
       return anim;
     }
+    // ─── 관리형 타이머 ──────────────────────────────────────────
+    /**
+     * 관리형 setTimeout. 등록된 타이머는 `clear()` 호출 시 자동으로 취소됩니다.
+     * 씬 전환이나 세이브 로드 시 잔여 타이머가 남지 않도록 보장합니다.
+     *
+     * @param fn 실행할 콜백 함수
+     * @param ms 지연 시간(ms)
+     * @returns 타이머 ID. `clearTimer()`로 개별 취소할 수 있습니다.
+     */
+    setTimer(fn, ms) {
+      const id = setTimeout(() => {
+        this._timers.delete(id);
+        fn();
+      }, ms);
+      this._timers.add(id);
+      return id;
+    }
+    /**
+     * 특정 관리형 타이머를 취소합니다.
+     */
+    clearTimer(id) {
+      clearTimeout(id);
+      this._timers.delete(id);
+    }
+    /**
+     * 등록된 모든 관리형 타이머를 취소합니다.
+     * `clear()` 내부에서 자동 호출됩니다.
+     */
+    clearAllTimers() {
+      for (const id of this._timers) {
+        clearTimeout(id);
+      }
+      this._timers.clear();
+    }
     /**
      * 세이브 저장을 위해 현재 렌더러의 뷰포트/카메라 상태와 커스텀 플러그인 상태를 캡처하여 반환합니다.
      */
@@ -18417,8 +18456,7 @@ ${addLineNumbers(fragment)}`);
      * 렌더 오브젝트의 제거는 각 모듈의 onCleanup()이 담당합니다.
      */
     clear() {
-      const camEffectStop = this.state.get("_activeCamEffectStop");
-      if (typeof camEffectStop === "function") camEffectStop();
+      this.clearAllTimers();
       this.state.clear();
       if (this.camOffsetObj) {
         this.camOffsetObj.transform.position.x = 0;
@@ -22118,7 +22156,7 @@ ${addLineNumbers(fragment)}`);
         "\uB9E4\uBBF8\uAC00 \uB9F4\uB9F4 \uC6B8\uAE30 \uC2DC\uC791\uD558\uC790 \uD6C4\uBBF8\uCE74\uC758 \uB208\uB3D9\uC790\uAC00 \uBBF8\uCE5C\uB4EF\uC774 \uD754\uB4E4\uB838\uB2E4."
       ]
     },
-    { type: "camera-effect", preset: "shake", intensity: 20, duration: 1e3 },
+    { type: "character-effect", name: "fumika", preset: "shake", intensity: 20, repeat: -1, duration: 1e3 },
     {
       type: "dialogue",
       speaker: "fumika",
@@ -22149,6 +22187,7 @@ ${addLineNumbers(fragment)}`);
         "\uAC15\uC81C \uB2EC\uB9AC\uAE30 \uC6B4\uB3D9\uC73C\uB85C \uC624\uB298\uCE58 \uCE7C\uB85C\uB9AC \uC18C\uBAA8\uB294 \uC644\uBCBD\uD558\uB2E4."
       ]
     },
+    { type: "character-effect", name: "fumika", preset: "reset" },
     label("calm"),
     condition(
       ({ _run }) => _run,

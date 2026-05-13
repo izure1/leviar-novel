@@ -83,9 +83,15 @@ export function playMotionEffect(
   const originYRotation = obj.transform?.rotation?.y ?? 0
   const originZRotation = obj.transform?.rotation?.z ?? 0
 
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null
+
   const stop = () => {
     active = false
     obj[stateKey] = null
+    if (pendingTimer !== null) {
+      ctx.renderer.clearTimer(pendingTimer)
+      pendingTimer = null
+    }
     if (obj.transform?.position) {
       obj.transform.position.x = originX
       obj.transform.position.y = originY
@@ -187,7 +193,7 @@ export function playMotionEffect(
         obj.transform.rotation.z = originZRotation + dz
       }
 
-      setTimeout(tick, stepTime)
+      pendingTimer = ctx.renderer.setTimer(tick, stepTime)
     }
     tick()
   }

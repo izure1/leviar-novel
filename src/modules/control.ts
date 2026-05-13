@@ -22,7 +22,7 @@ controlModule.defineCommand(function* (cmd, ctx, state, setState) {
   const autoAdvance = cmd.autoAdvance ?? true
 
   if (autoAdvance) {
-    setTimeout(() => ctx.callbacks.advance(), cmd.duration)
+    ctx.renderer.setTimer(() => ctx.callbacks.advance(), cmd.duration)
   }
 
   while (Date.now() < now) {
