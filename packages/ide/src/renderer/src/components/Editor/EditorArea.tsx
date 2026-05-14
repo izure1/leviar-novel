@@ -28,7 +28,7 @@ export function EditorArea() {
           if (fileName === 'backgrounds.ts') {
             template = `import { defineBackgrounds } from 'fumika'\nimport assets from './declarations/assets'\n\nexport default defineBackgrounds(assets)({\n\n})\n`
           } else if (fileName === 'audios.ts') {
-            template = `import { defineAudios } from 'fumika'\n\nexport default defineAudios({\n\n})\n`
+            template = `import { defineAudios } from 'fumika'\nimport assets from './declarations/assets'\n\nexport default defineAudios(assets)({\n\n})\n`
           } else if (fileName === 'modules.ts') {
             template = `import { defineCustomModules } from 'fumika'\nimport modules from './declarations/modules'\n\nexport default defineCustomModules(modules)\n`
           } else if (fileName === 'novel.config.ts') {

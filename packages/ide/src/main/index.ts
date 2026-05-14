@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { scaffoldProject } from './services/project'
+import { scaffoldProject, updateProject } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 
@@ -91,6 +91,15 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('project:update', async (_, projectPath: string) => {
+    try {
+      await updateProject(projectPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('preview:start', async (_, projectPath: string) => {
     try {
       const url = await previewService.start(projectPath)
@@ -133,6 +142,8 @@ app.whenReady().then(() => {
   ipcMain.handle('fs:copyFile', async (_, src: string, dest: string) => {
     try {
       const fs = require('fs/promises')
+      const path = require('path')
+      await fs.mkdir(path.dirname(dest), { recursive: true })
       await fs.copyFile(src, dest)
       return { success: true }
     } catch (error: any) {
@@ -140,14 +151,68 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
+  ipcMain.handle('fs:renameFile', async (_, oldPath: string, newPath: string) => {
     try {
       const fs = require('fs/promises')
-      const files = await fs.readdir(dirPath, { withFileTypes: true })
-      return { 
-        success: true, 
-        files: files.map(f => ({ name: f.name, isDirectory: f.isDirectory() })) 
+      await fs.rename(oldPath, newPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:deleteFile', async (_, targetPath: string) => {
+    try {
+      const fs = require('fs/promises')
+      await fs.unlink(targetPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:deleteDir', async (_, targetPath: string) => {
+    try {
+      const fs = require('fs/promises')
+      await fs.rm(targetPath, { recursive: true, force: true })
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:mkdir', async (_, targetPath: string) => {
+    try {
+      const fs = require('fs/promises')
+      await fs.mkdir(targetPath, { recursive: true })
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:readDir', async (_, dirPath: string, recursive = false) => {
+    try {
+      const fs = require('fs/promises')
+      const path = require('path')
+      
+      const readRecursively = async (currentPath: string, relativeRoot: string = ''): Promise<any[]> => {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true })
+        const result: any[] = []
+        for (const entry of entries) {
+          const isDir = entry.isDirectory()
+          const relativePath = path.join(relativeRoot, entry.name).replace(/\\/g, '/')
+          const node = { name: entry.name, isDirectory: isDir, path: relativePath, children: [] as any[] }
+          if (isDir && recursive) {
+            node.children = await readRecursively(path.join(currentPath, entry.name), relativePath)
+          }
+          result.push(node)
+        }
+        return result
       }
+      
+      const files = await readRecursively(dirPath)
+      return { success: true, files }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

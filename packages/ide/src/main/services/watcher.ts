@@ -63,40 +63,71 @@ export class ProjectWatcher {
     const declPath = path.join(this.projectPath, 'declarations', `${folder}.ts`)
 
     try {
-      // Ensure folder exists
       try {
         await fs.access(folderPath)
       } catch {
-        return // Folder doesn't exist yet, do nothing
+        return
       }
 
-      const files = await fs.readdir(folderPath)
+      const getFilesRecursively = async (dir: string, relativeRoot: string = ''): Promise<{ name: string; path: string; rel: string }[]> => {
+        const entries = await fs.readdir(dir, { withFileTypes: true })
+        let result: { name: string; path: string; rel: string }[] = []
+        for (const entry of entries) {
+          if (entry.name.startsWith('.')) continue
+          
+          const relativeEntryPath = relativeRoot ? `${relativeRoot}/${entry.name}` : entry.name
+          const fullPath = path.join(dir, entry.name)
+
+          if (entry.isDirectory()) {
+            result = result.concat(await getFilesRecursively(fullPath, relativeEntryPath))
+          } else {
+            result.push({
+              name: entry.name,
+              path: fullPath,
+              rel: relativeEntryPath
+            })
+          }
+        }
+        return result
+      }
+
+      const files = await getFilesRecursively(folderPath)
 
       let imports = ''
       let exports = 'export default {\n'
 
       for (const file of files) {
-        if (file.startsWith('.')) continue // 숨김 파일 무시
-
-        if (file.endsWith('.ts')) {
-          const baseName = path.basename(file, '.ts')
-          // 변수명으로 안전하게 사용할 수 있도록 변환
-          const importName = baseName.replace(/[^a-zA-Z0-9_]/g, '_')
-          imports += `import ${importName} from '../${folder}/${baseName}'\n`
+        // file.rel is like "ch1/intro.ts" or "intro.ts"
+        const parsed = path.parse(file.rel)
+        const baseName = parsed.name
+        
+        if (file.name.endsWith('.ts')) {
+          // e.g. "ch1_intro" or just "intro"
+          // We use the full relative path without extension to generate a unique import name
+          const relativePathNoExt = parsed.dir ? `${parsed.dir}/${parsed.name}` : parsed.name
+          const importName = '_' + relativePathNoExt.replace(/[^a-zA-Z0-9_]/g, '_')
+          
+          imports += `import ${importName} from '../${folder}/${relativePathNoExt}'\n`
+          
+          // if it's deeply nested, should the key be just the basename?
+          // To prevent collision, it's safer to use the basename, but what if there are duplicates?
+          // For now, let's export it as baseName but prefix it with dir name if needed?
+          // The user usually wants the filename to be the key. Let's use basename as before.
           exports += `  ...${importName},\n`
         } else {
-          // 미디어 파일(png, wav, mp3 등)의 경우 파일 경로를 직접 매핑
-          const baseName = path.parse(file).name
-          // 파일명에 특수문자가 있을 수 있으므로 따옴표로 감쌈
-          exports += `  '${baseName}': './${folder}/${file}',\n`
+          // assets (png, wav, etc)
+          const relativePathForwardSlash = file.rel.replace(/\\/g, '/')
+          // 중첩된 폴더 구조를 고려하여 key 생성 (예: ch1/bg.png -> ch1/bg)
+          const relativePathNoExt = parsed.dir ? `${parsed.dir}/${parsed.name}` : parsed.name
+          const assetKey = relativePathNoExt.replace(/\\/g, '/')
+          exports += `  '${assetKey}': './${folder}/${relativePathForwardSlash}',\n`
         }
       }
 
-      exports += '}\n'
+      exports += '} as const\n'
 
       const content = `${imports}\n${exports}`
       
-      // Ensure declarations folder exists
       await fs.mkdir(path.dirname(declPath), { recursive: true })
       await fs.writeFile(declPath, content, 'utf-8')
       console.log(`[IDE] Generated declaration: ${declPath}`)

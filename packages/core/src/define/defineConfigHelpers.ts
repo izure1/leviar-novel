@@ -44,15 +44,15 @@ export function defineBackgrounds<TAssets extends Record<string, string>>(assets
 // ─── defineAudios ─────────────────────────────────────────────
 
 /**
- * 오디오 맵을 정의합니다. 에셋과 독립된 별도 맵으로, 경로 리터럴을 보존합니다.
+ * 오디오 맵을 정의합니다. 에셋의 오디오 키를 바탕으로 타입을 추론합니다.
  *
  * @example
- * const audios = defineAudios({
- *   bgm_main: './assets/bgm_main.mp3',
+ * const audios = defineAudios(assets)({
+ *   bgm_main: 'bgm_main',
  * })
  */
-export function defineAudios<T extends Record<string, string>>(audios: T): T {
-  return audios
+export function defineAudios<TAssets extends Record<string, string>>(assets: TAssets) {
+  return <U extends Record<string, AssetKey<TAssets>>>(audios: U): U => audios
 }
 
 // ─── defineEffects ────────────────────────────────────────────

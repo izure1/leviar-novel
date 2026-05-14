@@ -9,17 +9,22 @@ const api = {
   },
   project: {
     scaffold: (targetDir: string) => ipcRenderer.invoke('project:scaffold', targetDir),
-    load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath)
+    load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
+    update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath)
   },
   preview: {
     start: (projectPath: string) => ipcRenderer.invoke('preview:start', projectPath),
     stop: () => ipcRenderer.invoke('preview:stop')
   },
   fs: {
-    readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
-    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
-    readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
-    copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest)
+    readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
+    writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
+    copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest),
+    readDir: (path: string, recursive?: boolean) => ipcRenderer.invoke('fs:readDir', path, recursive),
+    renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:renameFile', oldPath, newPath),
+    deleteFile: (path: string) => ipcRenderer.invoke('fs:deleteFile', path),
+    deleteDir: (path: string) => ipcRenderer.invoke('fs:deleteDir', path),
+    mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path)
   }
 }
 
