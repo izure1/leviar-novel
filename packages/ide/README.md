@@ -6,7 +6,7 @@
 
 게임 프로젝트 구조는 다음과 같습니다
 
-```
+```bash
 - 루트
   - novel.config.ts
   - main.ts

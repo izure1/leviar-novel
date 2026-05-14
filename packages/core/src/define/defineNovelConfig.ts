@@ -97,7 +97,7 @@ export function defineNovelConfig<
     effects?: Partial<Record<EffectType, EffectDef>>
     assets?: TAssets
     audios?: TAudios
-    fallback?: FallbackRuleOf<any>[]
+    fallback?: FallbackRuleOf<TModules>[]
     modules?: TModules
     environments?: TEnvs & { [K in keyof TEnvs]: K extends `$${string}` ? TEnvs[K] : never }
   }

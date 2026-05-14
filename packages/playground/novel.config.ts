@@ -1,11 +1,21 @@
-﻿// example/novel.config.ts
-import { defineNovelConfig, define } from 'fumika'
+﻿import {
+  defineNovelConfig,
+  define,
+  defineBackgrounds,
+  defineAudios,
+  defineEffects,
+  defineFallback,
+  defineCustomModules
+} from 'fumika'
 import chat from './characters/chat'
 import fumika from './characters/fumika'
+import assets from './assets'
+
+// ─── 모듈 ────────────────────────────────────────────────────
 
 const testModule = define<{ message: string }>()
 testModule
-  .onBoot(async (world) => {
+  .onBoot(async (_world) => {
     console.log('booting...')
   })
   .defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
@@ -24,14 +34,55 @@ debugModule
     show: () => { },
     hide: () => { },
     onCleanup: () => { },
-    onUpdate: (ctx, state, setState) => {
+    onUpdate: (ctx, state, _setState) => {
       ctx.world.debugMode = state.on
     }
   }))
-  .defineCommand(function* (cmd, ctx, state, setState) {
+  .defineCommand(function* (_cmd, _ctx, state, setState) {
     setState({ on: !state.on })
     return true
   })
+
+const modules = defineCustomModules({
+  'test-cmd': testModule,
+  'debug': debugModule,
+})
+
+// ─── 배경 ────────────────────────────────────────────────────
+
+const backgrounds = defineBackgrounds(assets)({
+  'floor': { src: 'bg_floor', parallax: true },
+  'room': { src: 'bg_room', parallax: true },
+  'park': { src: 'bg_park', parallax: true },
+})
+
+// ─── 오디오 ──────────────────────────────────────────────────
+
+const audios = defineAudios({
+  'am223': './assets/bgm_am223.mp3',
+  'daytime': './assets/bgm_daytime.mp3',
+})
+
+// ─── 폴백 ────────────────────────────────────────────────────
+
+const fallback = defineFallback(modules)([
+  { type: 'character', action: 'show', defaults: { duration: 300 } },
+  { type: 'character', action: 'remove', defaults: { duration: 1000 } },
+])
+
+// ─── 이펙트 ──────────────────────────────────────────────────
+
+const effects = defineEffects({
+  sakura: {
+    clip: {
+      size: [
+        [1.0, 2.0],
+      ]
+    }
+  }
+})
+
+// ─── config ──────────────────────────────────────────────────
 
 export default defineNovelConfig({
   width: 1280,
@@ -46,10 +97,7 @@ export default defineNovelConfig({
   environments: {
     $bgmVolume: 1,
   },
-  modules: {
-    'test-cmd': testModule,
-    'debug': debugModule,
-  },
+  modules,
   scenes: [
     'scene-title',
     'scene-ui',
@@ -66,49 +114,9 @@ export default defineNovelConfig({
     'chat': chat,
     'fumika': fumika,
   },
-  backgrounds: {
-    'floor': { src: 'bg_floor', parallax: true },
-    'room': { src: 'bg_room', parallax: true },
-    'park': { src: 'bg_park', parallax: true },
-  },
-  audios: {
-    'am223': './assets/bgm_am223.mp3',
-    'daytime': './assets/bgm_daytime.mp3',
-  },
-  assets: {
-    // 배경
-    bg_floor: './assets/bg_floor.png',
-    bg_room: './assets/bg_room.png',
-    bg_park: './assets/bg_park.png',
-    // 캐릭터 베이스
-    fumika_base_normal: './assets/fumika_base_normal.png',
-
-    // 캐릭터 표정
-    fumika_emotion_base_normal: './assets/fumika_emotion_base_normal.png',
-    fumika_emotion_base_angry: './assets/fumika_emotion_base_angry.png',
-    fumika_emotion_base_smile: './assets/fumika_emotion_base_smile.png',
-    fumika_emotion_base_embarrassed: './assets/fumika_emotion_base_embarrassed.png',
-
-    img_card_heroine: './assets/img_card_hero.png',
-    // 파티클
-    dust: './assets/particle_dust.png',
-    rain: './assets/particle_rain.png',
-    snow: './assets/particle_snow.png',
-    sakura: './assets/particle_sakura.png',
-    fog: './assets/particle_fog.png',
-  },
-  fallback: [
-    { type: 'character', action: 'show', defaults: { duration: 300 } },
-    { type: 'character', action: 'remove', defaults: { duration: 1000 } },
-  ],
-  effects: {
-    sakura: {
-      clip: {
-        size: [
-          [1.0, 2.0],
-        ]
-      }
-    }
-  }
+  backgrounds,
+  audios,
+  assets,
+  fallback,
+  effects,
 })
-

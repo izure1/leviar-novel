@@ -34,6 +34,7 @@ export type * from './types/dialogue'
 export { defineNovelConfig, BUILTIN_MODULES } from './define/defineNovelConfig'
 export type { BuiltinModules } from './define/defineNovelConfig'
 export { defineCharacter } from './define/defineCharacter'
+export { defineAssets, defineBackgrounds, defineAudios, defineEffects, defineFallback, defineCustomModules } from './define/defineConfigHelpers'
 export { defineScene, defineInitial } from './define/defineScene'
 export type { SceneDefinition, SceneBuilders } from './define/defineScene'
 
