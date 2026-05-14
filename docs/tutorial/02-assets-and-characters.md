@@ -1,10 +1,12 @@
 # 2. 에셋과 캐릭터의 등장
 
-## 개요 (Overview)
-글자만 나오는 검은 화면에서 벗어나, 시각적인 요소를 추가해 봅니다.
+> **Guide 문서**입니다. 이미 개념을 알고 있다면 [캐릭터 빌더 레퍼런스](../defines/defineCharacter.md)를 참조하세요.
 
-이 장에서는 이미지 에셋을 프로젝트에 등록하고,  
-이를 활용해 배경을 바꾸고 캐릭터를 화면에 등장시키는 방법을 알아봅니다.  
+이 페이지에서는 화면에 시각적인 요소를 추가하는 방법을 다룹니다.
+이미지 에셋을 프로젝트에 등록하고, 이를 활용해 배경을 바꾸고 캐릭터를 화면에 등장시켜 봅시다.
+
+## 동기 (Motivation)
+글자만 나오는 검은 화면에서 벗어나려면 이미지가 필요합니다. 하지만 이미지 경로를 씬마다 하드코딩하면 나중에 경로가 바뀌었을 때 전부 수정해야 하는 번거로움이 생깁니다. 이를 방지하기 위해 에셋과 캐릭터를 중앙에서 선언하고 관리합니다.
 
 ## 사전 준비 (Prerequisites)
 엔진에 기본으로 내장된 예제 이미지들을 프로젝트 내부로 복사해 사용해 보겠습니다.  
@@ -16,37 +18,45 @@
 
 ---
 
-## 1단계: `novel.config.ts`에 에셋과 캐릭터 등록하기
+## 1단계: `assets.ts`에 이미지 등록하기
 
-가장 먼저 엔진에게 우리가 어떤 이미지를 쓸 것인지, 캐릭터의 몸통과 얼굴은 어떻게 생겼는지 알려주어야 합니다.  
-프로젝트 루트에 있는 `novel.config.ts` 파일을 열어 아래와 같이 수정합니다.  
+가장 먼저 엔진에게 우리가 어떤 이미지를 쓸 것인지 알려주어야 합니다.
+프로젝트에서 `assets.ts` 파일을 만들어 이미지의 별명(Key)과 실제 파일 경로를 연결해 보세요.
 
 ```typescript
-// novel.config.ts
-import { defineNovelConfig } from 'fumika'
+// ❌ 이렇게 하면 안 됩니다 (하드코딩)
+// 씬에서 직접 './assets/bg_room.png'를 사용하면 관리가 어렵습니다.
 
-export default defineNovelConfig({
-  width: 1280,
-  height: 720,
-  // 1. 사용할 이미지들의 별명(Key)과 경로를 연결합니다
-  assets: {
-    'bg-room': './assets/bg_room.png',
-    'fumika-base': './assets/fumika_base_normal.png',
-    'fumika-face': './assets/fumika_emotion_base_normal.png'
+// ✅ 이렇게 하세요
+// assets.ts
+import { defineAssets } from 'fumika'
+
+export default defineAssets({
+  'bg-room': './assets/bg_room.png',
+  'fumika-base': './assets/fumika_base_normal.png',
+  'fumika-face': './assets/fumika_emotion_base_normal.png'
+})
+```
+
+## 2단계: 캐릭터 구조 정의하기
+
+등록한 에셋을 이용해 캐릭터의 뼈대를 만듭니다. `characters/fumika.ts` 파일을 생성해 보세요.
+
+```typescript
+// characters/fumika.ts
+import { defineCharacter } from 'fumika'
+import assets from '../assets' // 방금 만든 에셋 맵을 불러옵니다
+
+// assets를 넘겨주면, 내부에서 이미지 키의 오타를 잡아줍니다!
+export default defineCharacter(assets)({
+  name: '후미카',
+  bases: {
+    // 'idle'이라는 기본 몸체에 'fumika-base' 이미지를 연결합니다
+    idle: { src: 'fumika-base', width: 400, points: { face: { x: 0.5, y: 0.2 } } }
   },
-  // 2. 캐릭터의 구조를 정의합니다
-  characters: {
-    fumika: {
-      name: '후미카',
-      bases: {
-        // 'idle'이라는 기본 몸체에 'fumika-base' 이미지를 연결합니다
-        idle: { src: 'fumika-base', width: 400, points: { face: { x: 0.5, y: 0.2 } } }
-      },
-      emotions: {
-        // 'normal' 표정에 기본 얼굴 이미지를 연결합니다
-        normal: { face: 'fumika-face' }
-      }
-    }
+  emotions: {
+    // 'normal' 표정에 얼굴 이미지를 연결합니다
+    normal: { face: 'fumika-face' }
   }
 })
 ```
@@ -81,10 +91,36 @@ Fumika 엔진에서 캐릭터 하나를 등록할 때는 다음과 같은 계층
 
 ---
 
-## 2단계: 씬에서 배경과 캐릭터 호출하기
+## 3단계: `novel.config.ts`에 조립하기
+
+이제 만들어둔 에셋과 캐릭터를 `novel.config.ts`에 등록하여 씬에서 쓸 수 있도록 조립합시다.
+
+```typescript
+// novel.config.ts
+import { defineNovelConfig, defineBackgrounds } from 'fumika'
+import assets from './assets'
+import fumika from './characters/fumika'
+
+const backgrounds = defineBackgrounds(assets)({
+  'room': { src: 'bg-room', parallax: true }
+})
+
+export default defineNovelConfig({
+  // ... 기본 설정 생략
+  assets,
+  backgrounds,
+  characters: {
+    fumika
+  }
+})
+```
+
+---
+
+## 4단계: 씬에서 배경과 캐릭터 호출하기
 
 이제 설정한 자원들을 실제 대본에 사용할 차례입니다.  
-`scenes/scene-start.ts` 파일을 열어 배경과 캐릭터를 띄우는 명령어를 추가합니다.  
+`scenes/scene-start.ts` 파일을 열어 배경과 캐릭터를 띄우는 명령어를 추가해 보세요.  
 
 ```typescript
 // scenes/scene-start.ts
@@ -140,21 +176,23 @@ const novel = new Novel(config, {
 
 ---
 
-## 주의 사항 (Edge Cases)
+## 체크리스트
 
-* **이미지 경로 오류**  
-  `assets` 객체에 적은 경로에 실제 이미지가 존재해야 합니다.  
-  파일명에 오타가 없는지, 확장자(`.png`, `.jpg`)가 정확한지 확인하세요.
-  
-* **타입스크립트 오류 (빨간 줄)**  
-  `config` 파일에 에셋이나 캐릭터를 등록하지 않고 `scene` 파일에서 먼저 이름을 적으려고 하면  
-  TypeScript가 "그런 이름은 정의되어 있지 않다"며 오류를 냅니다.  
-  항상 **Config 등록 -> Scene 사용** 순서를 지켜주세요.  
+- [ ] `assets.ts`를 분리하고 `defineAssets`를 적용했나요?
+- [ ] `characters/fumika.ts`를 만들고 `defineCharacter`에 에셋을 전달했나요?
+- [ ] `novel.config.ts`에 분리한 파일들을 성공적으로 import 했나요?
 
 ---
+
+> [!WARNING]
+> `assets` 객체에 적은 경로에 실제 이미지가 존재해야 합니다. 파일명에 오타가 없는지, 확장자(`.png`, `.jpg`)가 정확한지 확인하세요.
 
 이제 그럴싸한 시각적 연출이 가능해졌습니다.  
 하지만 캐릭터가 가만히 서서 말만 하는 건 조금 심심하네요.  
 다음 장에서는 대사와 함께 캐릭터의 표정을 바꾸거나 애니메이션을 주는 방법을 알아보겠습니다.  
 
 👉 **[다음 장: 3. 대사와 동적인 연출](./03-dialogue-and-actions.md)**  
+
+## 관련 레퍼런스
+- [설정 (novel.config) 레퍼런스](../config.md)
+- [캐릭터 빌더 (defineCharacter) 레퍼런스](../defines/defineCharacter.md)

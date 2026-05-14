@@ -11,7 +11,26 @@
 ### 핵심 예제 (Main Example)
 
 ```typescript
-import { defineNovelConfig } from 'fumika'
+// assets.ts
+// 에셋을 한 곳에서 중앙 관리합니다
+import { defineAssets } from 'fumika'
+
+export default defineAssets({
+  'bg-room': './assets/room.webp',
+  'char-aris-body': './assets/aris_body.png',
+  'char-aris-smile': './assets/aris_smile.png'
+})
+```
+
+```typescript
+// novel.config.ts
+import { defineNovelConfig, defineBackgrounds } from 'fumika'
+import assets from './assets'
+
+// 배경을 등록합니다. 에셋의 키만 사용할 수 있도록 타입이 강제됩니다.
+const backgrounds = defineBackgrounds(assets)({
+  room: { src: 'bg-room', parallax: true }
+})
 
 export default defineNovelConfig({
   // 기준 해상도입니다
@@ -24,11 +43,9 @@ export default defineNovelConfig({
     playerName: '여행자'
   },
   
-  // 게임에서 사용할 리소스(이미지, 소리)에 ID를 부여합니다
-  assets: {
-    'bg-room': './assets/room.webp',
-    'char-aris-body': './assets/aris_body.png'
-  }
+  assets,
+  backgrounds,
+  // ... 생략
 })
 ```
 
@@ -41,52 +58,78 @@ export default defineNovelConfig({
 ### 핵심 예제 (Main Example)
 
 ```typescript
+// characters/aris.ts
+import { defineCharacter } from 'fumika'
+import assets from '../assets'
+
+// assets를 전달하여 표정에 사용될 이미지 키를 안전하게 추론합니다
+export default defineCharacter(assets)({
+  name: '아리스',
+  // 기본 몸체 이미지입니다
+  bases: {
+    normal: {
+      src: 'char-aris-body', 
+      width: 600, 
+      // 캐릭터의 머리, 눈, 입의 위치를 설정합니다 (0.0 ~ 1.0)
+      points: { face: { x: 0.5, y: 0.2 } }
+    }
+  },
+  // 몸체 위에 덧씌워질 표정 이미지입니다
+  emotions: {
+    smile: { face: 'char-aris-smile' }
+  }
+})
+```
+
+```typescript
+// novel.config.ts
 import { defineNovelConfig } from 'fumika'
+import aris from './characters/aris'
 
 export default defineNovelConfig({
-  // ... 기본 설정 생략
+  // ... 생략
   characters: {
-    heroine: {
-      name: '아리스',
-      // 기본 몸체 이미지입니다
-      bases: {
-        normal: {
-          src: 'char-aris-body', 
-          width: 600, 
-          // 캐릭터의 머리, 눈, 입의 위치를 설정합니다 (0.0 ~ 1.0)
-          points: { face: { x: 0.5, y: 0.2 } }
-        }
-      },
-      // 기본 몸체 위에 덧씌워질 표정 이미지입니다
-      emotions: {
-        smile: { face: 'aris_face_smile' }
-      }
-    }
+    aris
   }
 })
 ```
 
 ---
 
-## 3. 모듈 초기 상태 (Initial State)
+## 3. 고급 설정 (Fallback, Modules, Audios, Effects)
 
-게임이 시작될 때 대화창이 미리 떠 있을지, 텍스트 출력 속도는 몇일지 등 모듈의 기본 상태를 지정합니다.  
+게임의 기본 폴백 액션, 커스텀 모듈, 오디오, 이펙트 등도 중앙에서 관리합니다.
+타입 추론을 돕기 위해 제공되는 헬퍼 함수들을 조합하여 구성해 보세요.
 
 ### 핵심 예제 (Main Example)
 
 ```typescript
-import { defineNovelConfig } from 'fumika'
+import { defineNovelConfig, defineCustomModules, defineFallback, defineAudios, defineEffects } from 'fumika'
+
+// 커스텀 모듈을 정의합니다
+const modules = defineCustomModules({
+  'my-cmd': myModule,
+})
+
+// 폴백 규칙을 정의합니다. (모듈 정보를 넘겨 타입 추론을 받습니다)
+const fallback = defineFallback(modules)([
+  { type: 'character', action: 'show', defaults: { duration: 300 } }
+])
+
+// 오디오와 이펙트를 정의합니다
+const audios = defineAudios({
+  'bgm_main': './assets/bgm_main.mp3'
+})
+const effects = defineEffects({
+  sakura: { clip: { size: [[1.0, 2.0]] } }
+})
 
 export default defineNovelConfig({
   // ... 기본 설정 생략
-  initial: {
-    dialogue: {
-      // 씬 시작 시 대화창을 기본적으로 노출시킵니다
-      visible: true, 
-      // 텍스트 타이핑 효과의 지연 시간(ms)입니다
-      speed: 50      
-    }
-  }
+  modules,
+  fallback,
+  audios,
+  effects
 })
 ```
 

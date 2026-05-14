@@ -71,22 +71,28 @@ export default defineScene({ config })(() => [
 
 ```typescript
 // ✅ novel.config.ts 최종 완성본
-import { defineNovelConfig } from 'fumika'
+import { defineNovelConfig, defineFallback, defineBackgrounds, defineAudios } from 'fumika'
+import assets from './assets'
+import fumika from './characters/fumika'
+
+// 공통 규칙 설정 (빈 객체 {}는 커스텀 모듈이 없을 때 넘깁니다)
+const fallback = defineFallback({})([
+  { type: 'audio', defaults: { volume: 0.8 } },
+  { type: 'dialogue', defaults: { speed: 50 } }
+])
+
+const backgrounds = defineBackgrounds(assets)({})
+const audios = defineAudios({ 'bgm-room': './assets/audio/room.mp3' })
 
 export default defineNovelConfig({
   width: 1920,
   height: 1080,
 
-  // 리소스 매핑 및 기본 정의
-  assets: { 'char-body': './assets/images/fumika.webp' },
-  audios: { 'bgm-room': './assets/audio/room.mp3' },
-  characters: { fumika: { bases: { normal: { src: 'char-body', width: 600 } } } },
-
-  // 공통 규칙 설정
-  fallback: [
-    { type: 'audio', defaults: { volume: 0.8 } },
-    { type: 'dialogue', defaults: { speed: 50 } }
-  ],
+  assets,
+  backgrounds,
+  audios,
+  characters: { fumika },
+  fallback,
 
   // 전역 공유 변수
   environments: { $textSpeed: 50, $masterVolume: 0.8 }
