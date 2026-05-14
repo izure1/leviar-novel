@@ -1,4 +1,4 @@
-import config from '../novel.config'
+﻿import config from '../novel.config'
 import {
   defineInitial,
   DEFAULT_DIALOG_BOX_STYLE,
@@ -6,7 +6,7 @@ import {
   DEFAULT_CHOICE_LAYOUT,
   DEFAULT_INPUT_STYLE,
   DEFAULT_INPUT_LAYOUT
-} from '../../src'
+} from 'fumika'
 
 export const commonInitial = defineInitial(config)({
   'debug': {

@@ -1,4 +1,4 @@
-// example/main.ts — 기능 테스트 진입점
+﻿// example/main.ts — 기능 테스트 진입점
 import {
   AnimaleseEngine,
   WebSampler,
@@ -6,7 +6,7 @@ import {
   PitchManager,
   KoreanAnalyzer,
 } from 'animalese-tts'
-import { Novel } from '../src'
+import { Novel } from 'fumika'
 import config from './novel.config'
 
 import sceneTitle from './scenes/scene-title'

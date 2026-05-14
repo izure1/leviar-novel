@@ -1,6 +1,6 @@
-import type { Style } from 'leviar'
+﻿import type { Style } from 'leviar'
 import config from '../novel.config'
-import { defineScene } from '../../src'
+import { defineScene } from 'fumika'
 import { commonInitial } from './common-initial'
 
 const UI_BUTTON_STYLE: Partial<Style> = {

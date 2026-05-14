@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  // node_modules/animalese-tts/dist/animalese.browser.mjs
+  // ../../node_modules/animalese-tts/dist/animalese.browser.mjs
   var M = class {
     static float32ToInt16(e) {
       let t = new Int16Array(e.length);
@@ -397,7 +397,7 @@
     }
   };
 
-  // node_modules/hookall/dist/esm/index.mjs
+  // ../core/dist/index.mjs
   var HookallStore = class extends WeakMap {
     ensure(obj, key) {
       if (!this.has(obj)) {
@@ -707,8 +707,6 @@
   function useHookallSync(target = HookallSync.Global) {
     return new HookallSync(target);
   }
-
-  // src/define/defineCmdUI.ts
   function resolveVal(val, vars) {
     if (typeof val === "function") return val(vars);
     if (Array.isArray(val)) {
@@ -811,8 +809,6 @@
     };
     return module;
   }
-
-  // src/constants/render.ts
   var Z_INDEX = {
     BACKGROUND: 0,
     CHARACTER_NORMAL: 100,
@@ -828,8 +824,6 @@
     UI_HELPERS: 600,
     DIALOG_BOX: 700
   };
-
-  // src/modules/dialogue.ts
   var DEFAULT_DIALOGUE_BG = {
     background: "rgba(0,0,0,0.82)"
   };
@@ -1087,8 +1081,6 @@
     return true;
   });
   var dialogue_default = dialogueModule;
-
-  // src/types/utils.ts
   function resolveVarResolvable(val, vars) {
     if (val === void 0 || val === null) return void 0;
     if (typeof val === "function") return val(vars);
@@ -1137,8 +1129,6 @@
       }
     });
   }
-
-  // src/modules/choice.ts
   var DEFAULT_CHOICE_STYLE = {
     bg: {
       background: "rgba(0,0,0,0.1)"
@@ -1362,8 +1352,6 @@
     return true;
   });
   var choice_default = choiceModule;
-
-  // src/modules/background.ts
   var backgroundModule = define2({
     _key: void 0,
     _fit: "cover",
@@ -1499,8 +1487,6 @@
     return true;
   });
   var background_default = backgroundModule;
-
-  // src/core/motion.ts
   var MOTION_EFFECT_PRESETS = {
     shake: { intensity: 10, duration: 500 },
     "shake-x": { intensity: 15, duration: 500 },
@@ -1648,8 +1634,6 @@
     };
     loop();
   }
-
-  // src/modules/character.ts
   var CHARACTER_X_RATIO = {
     "far-left": 0.1,
     "left": 0.25,
@@ -2027,8 +2011,6 @@
     );
     return true;
   });
-
-  // src/modules/mood.ts
   var MOOD_PRESETS = {
     day: { background: "rgba(255,230,180,0.1)", vignette: "radial-gradient(rgba(0,0,0,0) 70%, rgba(255,200,100,0.15) 100%)", blendMode: "screen" },
     night: { background: "rgba(10,15,60,0.5)", vignette: "radial-gradient(rgba(0,0,0,0) 50%, rgba(0,5,25,0.6) 100%)", blendMode: "multiply" },
@@ -2224,8 +2206,6 @@
     step();
   }
   var mood_default = moodModule;
-
-  // src/modules/effect.ts
   var EFFECT_PARTICLE_PRESETS = {
     dust: { attribute: { frictionAir: 0, gravityScale: 1e-3 }, style: { width: 10, height: 10, blendMode: "lighter" } },
     rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: "screen" } },
@@ -2350,8 +2330,6 @@
     return true;
   });
   var effect_default = effectModule;
-
-  // src/modules/overlay.ts
   var OVERLAY_PRESETS = {
     caption: { fontSize: 24, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_CAPTION, y: "bottom" },
     title: { fontSize: 48, color: "#ffffff", opacity: 1, zIndex: Z_INDEX.OVERLAY_TITLE, y: "center" },
@@ -2669,8 +2647,6 @@
     );
     return true;
   });
-
-  // src/modules/screen.ts
   var FADE_PRESETS = {
     black: { background: "rgba(0,0,0,1)", easing: "linear" },
     white: { background: "rgba(255,255,255,1)", easing: "linear" },
@@ -2895,8 +2871,6 @@
     yield false;
     return true;
   });
-
-  // src/modules/camera.ts
   var ZOOM_PRESETS = {
     "close-up": { scale: 1.5, duration: 800 },
     "medium": { scale: 1.2, duration: 600 },
@@ -3040,8 +3014,6 @@
     });
     return true;
   });
-
-  // src/modules/ui.ts
   var uiModule = define2({});
   uiModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
@@ -3056,8 +3028,6 @@
     return true;
   });
   var ui_default = uiModule;
-
-  // src/modules/control.ts
   var controlModule = define2({});
   controlModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
@@ -3075,8 +3045,6 @@
     return autoAdvance;
   });
   var control_default = controlModule;
-
-  // src/modules/audio.ts
   var audioModule = define2({ _tracks: {} });
   audioModule.defineView((ctx, data) => {
     const audioMap = ctx.renderer.config.audios;
@@ -3188,8 +3156,6 @@
     return true;
   });
   var audio_default = audioModule;
-
-  // src/modules/dialogBox.ts
   var DEFAULT_DIALOG_BOX_STYLE = {
     overlay: { background: "rgba(0,0,0,0.45)" },
     panel: {
@@ -3549,8 +3515,6 @@
     return true;
   });
   var dialogBox_default = dialogBoxModule;
-
-  // src/modules/input.ts
   var DEFAULT_INPUT_STYLE = {
     overlay: { background: "rgba(0,0,0,0.5)" },
     panel: {
@@ -4038,8 +4002,6 @@
     return true;
   });
   var input_default = inputModule;
-
-  // src/modules/element.ts
   function flattenChildren(parentId, children, out, sceneName) {
     if (!children) return;
     for (const child of children) {
@@ -4540,8 +4502,6 @@
     return true;
   });
   var element_default = elementModule;
-
-  // src/define/defineNovelConfig.ts
   var BUILTIN_MODULES = {
     "dialogue": dialogue_default,
     "choice": choice_default,
@@ -4572,13 +4532,9 @@
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
     return { ...config, modules: mergedModules };
   }
-
-  // src/define/defineCharacter.ts
   function defineCharacter(def) {
     return def;
   }
-
-  // src/define/defineScene.ts
   function defineInitial(config) {
     return (initial) => initial;
   }
@@ -4695,8 +4651,6 @@
       };
     };
   }
-
-  // node_modules/leviar/dist/index.js
   var __create = Object.create;
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -18214,8 +18168,6 @@ ${addLineNumbers(fragment)}`);
       obj.on("scalemodified", () => resizeBody());
     }
   };
-
-  // src/core/Renderer.ts
   function _extractPropKeys(props) {
     const keys = [];
     if (props.style) keys.push("style");
@@ -18466,8 +18418,6 @@ ${addLineNumbers(fragment)}`);
       }
     }
   };
-
-  // src/core/AudioManager.ts
   var _fadeCounter = 0;
   function fadeVolume(audio, targetVolume, duration, stopOnEnd = false) {
     return new Promise((resolve) => {
@@ -18783,8 +18733,6 @@ ${addLineNumbers(fragment)}`);
       });
     }
   };
-
-  // src/core/Scene.ts
   var FLOW_CONTROL_HANDLERS = {
     "label": function* () {
       return true;
@@ -19319,8 +19267,6 @@ ${addLineNumbers(fragment)}`);
       return this._waitingInput;
     }
   };
-
-  // src/core/Novel.ts
   var Novel = class {
     /** 전역 변수. 씬 전환에도 유지됩니다 */
     variables;
@@ -20314,14 +20260,14 @@ ${addLineNumbers(fragment)}`);
     }
   };
 
-  // example/characters/chat.ts
+  // characters/chat.ts
   var chat_default = defineCharacter({
     name: "\uCC44\uD305\uCC3D",
     bases: {},
     emotions: {}
   });
 
-  // example/characters/fumika.ts
+  // characters/fumika.ts
   var fumika_default = defineCharacter({
     name: "\uD6C4\uBBF8\uCE74",
     bases: {
@@ -20342,7 +20288,7 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
-  // example/novel.config.ts
+  // novel.config.ts
   var testModule = define2();
   testModule.onBoot(async (world) => {
     console.log("booting...");
@@ -20445,7 +20391,7 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
-  // example/scenes/common-initial.ts
+  // scenes/common-initial.ts
   var commonInitial = defineInitial(novel_config_default)({
     "debug": {
       on: false
@@ -20566,7 +20512,7 @@ ${addLineNumbers(fragment)}`);
     }
   });
 
-  // example/scenes/scene-title.ts
+  // scenes/scene-title.ts
   var scene_title_default = defineScene({
     config: novel_config_default,
     initial: commonInitial
@@ -20589,7 +20535,7 @@ ${addLineNumbers(fragment)}`);
     call("scene-ui", { preserve: true, restore: true })
   ]);
 
-  // example/scenes/scene-ui.ts
+  // scenes/scene-ui.ts
   var UI_BUTTON_STYLE = {
     minWidth: 100,
     fontSize: 22,
@@ -20751,7 +20697,7 @@ ${addLineNumbers(fragment)}`);
     goto("start")
   ]);
 
-  // example/scenes/scene-start.ts
+  // scenes/scene-start.ts
   var scene_start_default = defineScene({
     config: novel_config_default,
     variables: {
@@ -21179,7 +21125,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-wipe", dir: "out", preset: "left", duration: 3e3, disable: true }
   ]);
 
-  // example/scenes/scene-game.ts
+  // scenes/scene-game.ts
   var scene_game_default = defineScene({
     config: novel_config_default,
     variables: {
@@ -21354,7 +21300,7 @@ ${addLineNumbers(fragment)}`);
     }
   ]);
 
-  // example/scenes/scene-food.ts
+  // scenes/scene-food.ts
   var scene_food_default = defineScene({
     config: novel_config_default,
     next: {
@@ -21507,7 +21453,7 @@ ${addLineNumbers(fragment)}`);
     }
   ]);
 
-  // example/scenes/scene-stream.ts
+  // scenes/scene-stream.ts
   var scene_stream_default = defineScene({
     config: novel_config_default
   })(({ label, goto }) => [
@@ -21900,7 +21846,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
 
-  // example/scenes/scene-outside.ts
+  // scenes/scene-outside.ts
   var scene_outside_default = defineScene({
     config: novel_config_default,
     next: {
@@ -22058,7 +22004,7 @@ ${addLineNumbers(fragment)}`);
     }
   ]);
 
-  // example/scenes/scene-bug.ts
+  // scenes/scene-bug.ts
   var scene_bug_default = defineScene({
     config: novel_config_default,
     variables: {
@@ -22211,7 +22157,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "out", preset: "black", duration: 1500 }
   ]);
 
-  // example/scenes/scene-sub.ts
+  // scenes/scene-sub.ts
   var scene_sub_default = defineScene({
     config: novel_config_default
   })(({}) => [
@@ -22230,7 +22176,7 @@ ${addLineNumbers(fragment)}`);
     { type: "screen-fade", dir: "in", preset: "black", duration: 500, disable: true }
   ]);
 
-  // example/scenes/scene-ending.ts
+  // scenes/scene-ending.ts
   var scene_ending_default = defineScene({
     config: novel_config_default,
     actions: {
@@ -22405,7 +22351,7 @@ ${addLineNumbers(fragment)}`);
     }
   ]);
 
-  // example/main.ts
+  // main.ts
   var svg = (body, w, h) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
     `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
   )}`;

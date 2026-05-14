@@ -1,4 +1,4 @@
-import { defineCharacter } from '../../src'
+﻿import { defineCharacter } from 'fumika'
 
 export default defineCharacter({
   name: '후미카',

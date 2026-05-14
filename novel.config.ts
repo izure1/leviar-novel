@@ -1,5 +1,5 @@
-// example/novel.config.ts
-import { defineNovelConfig, define } from '../src'
+﻿// example/novel.config.ts
+import { defineNovelConfig, define } from 'fumika'
 import chat from './characters/chat'
 import fumika from './characters/fumika'
 

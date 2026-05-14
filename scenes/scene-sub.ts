@@ -1,5 +1,5 @@
-import config from '../novel.config'
-import { defineScene } from '../../src'
+﻿import config from '../novel.config'
+import { defineScene } from 'fumika'
 
 export default defineScene({
   config
