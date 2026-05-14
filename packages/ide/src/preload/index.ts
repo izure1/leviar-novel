@@ -1,8 +1,27 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  dialog: {
+    openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
+    openFile: () => ipcRenderer.invoke('dialog:openFile')
+  },
+  project: {
+    scaffold: (targetDir: string) => ipcRenderer.invoke('project:scaffold', targetDir),
+    load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath)
+  },
+  preview: {
+    start: (projectPath: string) => ipcRenderer.invoke('preview:start', projectPath),
+    stop: () => ipcRenderer.invoke('preview:stop')
+  },
+  fs: {
+    readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
+    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
+    readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
+    copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest)
+  }
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

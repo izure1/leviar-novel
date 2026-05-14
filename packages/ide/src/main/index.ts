@@ -1,7 +1,13 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { scaffoldProject } from './services/project'
+import { ProjectWatcher } from './services/watcher'
+import { PreviewService } from './services/preview'
+
+const watcher = new ProjectWatcher()
+const previewService = new PreviewService()
 
 function createWindow(): void {
   // Create the browser window.
@@ -51,6 +57,101 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Project Management IPCs
+  ipcMain.handle('dialog:openDirectory', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openDirectory']
+    })
+    return canceled ? null : filePaths[0]
+  })
+
+  ipcMain.handle('dialog:openFile', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections']
+    })
+    return canceled ? null : filePaths
+  })
+
+  ipcMain.handle('project:scaffold', async (_, targetDir: string) => {
+    try {
+      await scaffoldProject(targetDir)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:load', async (_, projectPath: string) => {
+    try {
+      await watcher.start(projectPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('preview:start', async (_, projectPath: string) => {
+    try {
+      const url = await previewService.start(projectPath)
+      return { success: true, url }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('preview:stop', async () => {
+    try {
+      await previewService.stop()
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // File System IPCs
+  ipcMain.handle('fs:readFile', async (_, filePath: string) => {
+    try {
+      const fs = require('fs/promises')
+      const content = await fs.readFile(filePath, 'utf-8')
+      return { success: true, content }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
+    try {
+      const fs = require('fs/promises')
+      await fs.writeFile(filePath, content, 'utf-8')
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:copyFile', async (_, src: string, dest: string) => {
+    try {
+      const fs = require('fs/promises')
+      await fs.copyFile(src, dest)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
+    try {
+      const fs = require('fs/promises')
+      const files = await fs.readdir(dirPath, { withFileTypes: true })
+      return { 
+        success: true, 
+        files: files.map(f => ({ name: f.name, isDirectory: f.isDirectory() })) 
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
 
   createWindow()
 
