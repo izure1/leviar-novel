@@ -36,6 +36,7 @@
     }
   },
   "scripts": {
+    "dev": "node build/index.js --watch",
     "build": "node build/index.js && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },

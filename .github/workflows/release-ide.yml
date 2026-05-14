@@ -1,0 +1,79 @@
+name: Release Fumika IDE
+
+on:
+  push:
+    tags:
+      - 'ide-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Core
+        run: npm run build -w packages/core
+
+      - name: Build & Publish IDE (Windows)
+        run: npm run build:win -w packages/ide
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Core
+        run: npm run build -w packages/core
+
+      - name: Build & Publish IDE (macOS)
+        run: npm run build:mac -w packages/ide
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Core
+        run: npm run build -w packages/core
+
+      - name: Build & Publish IDE (Linux)
+        run: npm run build:linux -w packages/ide
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

@@ -1,3 +1,4 @@
-provider: generic
-url: https://example.com/auto-updates
-updaterCacheDirName: ide-updater
+provider: github
+owner: izure1
+repo: fumika
+updaterCacheDirName: fumika-ide-updater

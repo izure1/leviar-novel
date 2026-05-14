@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: ide
+appId: org.izure.fumika-ide
+productName: Fumika IDE
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: ide
+  executableName: fumika-ide
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -39,5 +39,6 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: izure1
+  repo: fumika
