@@ -1,52 +1,18 @@
 {
-  "name": "fumika",
-  "version": "0.0.7",
-  "description": "A powerful and flexible modular visual novel engine based on web technologies.",
-  "license": "MIT",
-  "author": "izure <admin@izure.org>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/izure1/fumika.git"
-  },
-  "bugs": {
-    "url": "https://github.com/izure1/fumika/issues"
-  },
-  "homepage": "https://github.com/izure1/fumika#readme",
-  "keywords": [
-    "visual-novel",
-    "engine",
-    "canvas",
-    "typescript",
-    "modular",
-    "leviar"
+  "name": "fumika-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
-  "files": [
-    "dist/**/*"
-  ],
-  "type": "module",
-  "types": "./dist/types/index.d.ts",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.mjs"
-    }
-  },
   "scripts": {
-    "build": "node build/index.js && tsc -p tsconfig.build.json",
-    "example:build": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap",
-    "example:dev": "esbuild example/main.ts --bundle --outfile=example/bundle.js --platform=browser --target=esnext --sourcemap --watch"
+    "build": "npm run build -w packages/core",
+    "dev:ide": "npm run dev -w packages/ide",
+    "dev:playground": "npm run dev -w packages/playground",
+    "example:build": "npm run build -w packages/playground",
+    "example:dev": "npm run dev -w packages/playground",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "animalese-tts": "^1.1.3",
-    "esbuild": "^0.28.0",
     "typescript": "^6.0.2"
-  },
-  "dependencies": {
-    "hookall": "^2.2.0",
-    "leviar": "^1.1.0"
   }
 }

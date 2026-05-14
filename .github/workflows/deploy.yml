@@ -3,7 +3,7 @@ name: Deploy Example to GitHub Pages
 on:
   push:
     branches:
-      - main  # or your default branch name
+      - main
 
 permissions:
   contents: write
@@ -25,13 +25,13 @@ jobs:
         run: npm install
 
       - name: Build Library
-        run: npm run build
+        run: npm run build -w packages/core
 
-      - name: Build Example
-        run: npm run example:build
+      - name: Build Playground
+        run: npm run build -w packages/playground
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./example
+          publish_dir: ./packages/playground

@@ -1,4 +1,6 @@
 node_modules
 dist
-example/bundle.js
-example/bundle.js.map
+packages/playground/bundle.js
+packages/playground/bundle.js.map
+packages/ide/out
+packages/ide/dist
