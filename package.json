@@ -9,7 +9,8 @@
     "build:playground": "npm run build -w packages/playground",
     "dev:ide": "npm run dev -w packages/ide",
     "dev:playground": "concurrently \"npm run dev -w packages/core\" \"npm run dev -w packages/playground\"",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "publish:core": "npm run build:core && npm publish -w packages/core"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
