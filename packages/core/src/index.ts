@@ -28,52 +28,7 @@ export type {
   ModuleKeysOf,
 } from './types/config'
 
-export type {
-  // dialogue 프리셋 타입
-  MoodType,
-  FlickerPreset,
-  OverlayPreset,
-  EffectType,
-  ZoomPreset,
-  PanPreset,
-  CameraEffectPreset,
-  BackgroundFitPreset,
-  FadeColorPreset,
-  FlashPreset,
-  WipePreset,
-  CharacterPositionPreset,
-  // 커맨드 타입
-  DialogueCmd,
-  ChoiceCmd,
-  LabelCmd,
-  GotoCmd,
-  NextCmd,
-  CallCmd,
-  ConditionFlowCmd,
-  FlowControlEntry,
-  SetCmd,
-  BackgroundCmd,
-  MoodCmd,
-  EffectCmd,
-  OverlayTextCmd,
-  OverlayImageCmd,
-  OverlayEffectCmd,
-  CharacterCmd,
-  CharacterFocusCmd,
-  CharacterHighlightCmd,
-  CameraZoomCmd,
-  CameraPanCmd,
-  CameraEffectCmd,
-  ScreenFadeCmd,
-  ScreenFlashCmd,
-  ScreenWipeCmd,
-  UICmd,
-  DialogueEntry,
-  DialogueStep,
-  DialogBoxCmd,
-  InputCmd,
-  ElementCmd,
-} from './types/dialogue'
+export type * from './types/dialogue'
 
 // ─── define 헬퍼 함수 ────────────────────────────────────────
 export { defineNovelConfig, BUILTIN_MODULES } from './define/defineNovelConfig'
@@ -88,11 +43,6 @@ export type { NovelModule, NovelModuleMeta, BootCallback, ListenerSignature, Def
 
 // ─── UI 시스템 ───────────────────────────────────────────────
 export type { UIRuntimeEntry } from './core/UIRegistry'
-export type { DialogueSchema, DialogueHook } from './modules/dialogue'
-export type { ChoiceSchema } from './modules/choice'
-export type { DialogBoxSchema } from './modules/dialogBox'
-export type { InputSchema, InputHook, InputLayout, InputButton } from './modules/input'
-export type { ElementChild, ElementSchema, ElementEntry, ElementKind } from './modules/element'
 
 // ─── 내장 모듈 ───────────────────────────────────────────────
 export { default as dialogueModule, DEFAULT_DIALOGUE_BG, DEFAULT_DIALOGUE_SPEAKER, DEFAULT_DIALOGUE_TEXT, DEFAULT_DIALOGUE_LAYOUT } from './modules/dialogue'
