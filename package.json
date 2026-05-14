@@ -8,8 +8,7 @@
     "build": "npm run build -w packages/core",
     "dev:ide": "npm run dev -w packages/ide",
     "dev:playground": "concurrently \"npm run dev -w packages/core\" \"npm run dev -w packages/playground\"",
-    "example:build": "npm run build -w packages/playground",
-    "example:dev": "concurrently \"npm run dev -w packages/core\" \"npm run dev -w packages/playground\"",
+    "build:playground": "npm run build -w packages/playground",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
