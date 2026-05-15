@@ -13,11 +13,18 @@ const DEFAULT_FOLDERS = [
   'fallbacks'
 ]
 
-import { NOVEL_CONFIG_CONTENT, MAIN_TS_CONTENT, INDEX_HTML_CONTENT, getDeclarationTemplate } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate } from '../../shared/templates'
+
+export interface ProjectOptions {
+  gameName: string
+  projectId: string
+  processName: string
+  width: number
+  height: number
+}
 
 
-// installFumikaDependencies is removed as we now fetch from npm
-export async function ensureProjectDependencies(targetDir: string, forceUpdate = false): Promise<void> {
+export async function ensureProjectDependencies(targetDir: string, processName?: string, forceUpdate = false): Promise<void> {
   const packageJsonPath = path.join(targetDir, 'package.json')
   let needsInstall = false
 
@@ -31,7 +38,7 @@ export async function ensureProjectDependencies(targetDir: string, forceUpdate =
   } catch {
     needsInstall = true
     const pkg = {
-      name: path.basename(targetDir).replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase() || 'fumika-project',
+      name: processName || path.basename(targetDir).replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase() || 'fumika-project',
       private: true,
       version: '0.0.0',
       type: 'module',
@@ -94,13 +101,13 @@ export async function ensureProjectDependencies(targetDir: string, forceUpdate =
 
 export async function updateProject(targetDir: string): Promise<void> {
   // Force update by passing true
-  await ensureProjectDependencies(targetDir, true)
+  await ensureProjectDependencies(targetDir, undefined, true)
 }
 
 /**
  * 스캐폴딩: 대상 디렉토리에 빈 프로젝트 구조를 생성합니다.
  */
-export async function scaffoldProject(targetDir: string): Promise<void> {
+export async function scaffoldProject(targetDir: string, options: ProjectOptions): Promise<void> {
   // 1. 디렉토리 생성
   for (const folder of DEFAULT_FOLDERS) {
     const dirPath = path.join(targetDir, folder)
@@ -133,7 +140,7 @@ export async function scaffoldProject(targetDir: string): Promise<void> {
   try {
     await fs.access(configPath)
   } catch {
-    await fs.writeFile(configPath, NOVEL_CONFIG_CONTENT, 'utf-8')
+    await fs.writeFile(configPath, getNovelConfigContent(options.width, options.height), 'utf-8')
   }
 
   try {
@@ -146,10 +153,37 @@ export async function scaffoldProject(targetDir: string): Promise<void> {
   try {
     await fs.access(indexPath)
   } catch {
-    await fs.writeFile(indexPath, INDEX_HTML_CONTENT, 'utf-8')
+    await fs.writeFile(indexPath, getIndexHtmlContent(options.gameName), 'utf-8')
   }
 
+  const licensePath = path.join(targetDir, 'LICENSE')
+  try {
+    await fs.access(licensePath)
+  } catch {
+    const MIT_LICENSE = `MIT License
 
+Copyright (c) ${new Date().getFullYear()}
 
-  await ensureProjectDependencies(targetDir)
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+`
+    await fs.writeFile(licensePath, MIT_LICENSE, 'utf-8')
+  }
+
+  await ensureProjectDependencies(targetDir, options.processName)
 }

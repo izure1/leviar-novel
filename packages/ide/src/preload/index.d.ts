@@ -9,7 +9,7 @@ declare global {
         openFile: () => Promise<string[] | null>
       }
       project: {
-        scaffold: (targetDir: string) => Promise<{ success: boolean; error?: string }>
+        scaffold: (targetDir: string, options: { folderName: string, gameName: string, projectId: string, processName: string, width: number, height: number }) => Promise<{ success: boolean; error?: string }>
         load: (projectPath: string) => Promise<{ success: boolean; error?: string }>
         update: (projectPath: string) => Promise<{ success: boolean; error?: string }>
         getTypes: (projectPath: string) => Promise<{ success: boolean; types?: { path: string; content: string }[]; error?: string }>

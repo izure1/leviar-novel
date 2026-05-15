@@ -37,7 +37,7 @@ export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
-      <div className="bg-slate-800 border border-slate-700 p-4 rounded shadow-xl w-80 animate-fade-scale">
+      <div className="bg-slate-800 border border-slate-700 p-4 rounded shadow-xl w-full max-w-md min-w-[320px] mx-4 animate-fade-scale">
         <h3 className="text-sm font-bold text-white mb-2">{title}</h3>
         <input
           ref={inputRef}

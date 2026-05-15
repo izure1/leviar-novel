@@ -4,7 +4,8 @@
 
 // ─── 최상위 설정 파일 ─────────────────────────────────────────
 
-export const NOVEL_CONFIG_CONTENT = `import Assets from './declarations/assets'
+export function getNovelConfigContent(width: number, height: number): string {
+  return `import Assets from './declarations/assets'
 import { sceneKeys } from './declarations/scenes'
 import Characters from './declarations/characters'
 import Modules from './declarations/modules'
@@ -16,8 +17,8 @@ import Fallbacks from './declarations/fallbacks'
 import { defineNovelConfig } from 'fumika'
 
 export default defineNovelConfig({
-  width: 1920,
-  height: 1080,
+  width: ${width},
+  height: ${height},
   variables: {},
   environments: {},
   assets: Assets,
@@ -30,6 +31,7 @@ export default defineNovelConfig({
   fallback: Fallbacks,
 })
 `
+}
 
 export const MAIN_TS_CONTENT = `// Fumika Engine Entry Point
 import { Novel } from 'fumika'
@@ -58,12 +60,13 @@ async function main() {
 main().catch(console.error)
 `
 
-export const INDEX_HTML_CONTENT = `<!DOCTYPE html>
+export function getIndexHtmlContent(gameName: string): string {
+  return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fumika Visual Novel</title>
+    <title>${gameName}</title>
     <style>
       body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
       #app { width: 100%; height: 100%; }
@@ -75,6 +78,7 @@ export const INDEX_HTML_CONTENT = `<!DOCTYPE html>
   </body>
 </html>
 `
+}
 
 // ─── declarations/ 초기 파일 템플릿 ──────────────────────────
 

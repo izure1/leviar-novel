@@ -3,7 +3,7 @@ import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
 import { EditorArea } from './components/Editor/EditorArea'
-import { DialogBox } from './components/UI/DialogBox'
+import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectDialog'
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
 
 function App() {
@@ -31,12 +31,12 @@ function App() {
     }
   }
 
-  const submitNewProject = async (projectName: string) => {
-    if (!projectName || !newProjectData) return
-    const safeName = projectName.replace(/[^a-zA-Z0-9_-]/g, '_')
+  const submitNewProject = async (options: NewProjectOptions) => {
+    if (!newProjectData || !options.folderName) return
+    
     // Windows 경로 대응
     const separator = newProjectData.parentDir.includes('\\') ? '\\' : '/'
-    const targetDir = `${newProjectData.parentDir}${separator}${safeName}`
+    const targetDir = `${newProjectData.parentDir}${separator}${options.folderName}`
     
     setGlobalLoading(true)
     const check = await window.api.fs.checkExists(targetDir)
@@ -47,7 +47,7 @@ function App() {
       return
     }
 
-    const res = await window.api.project.scaffold(targetDir)
+    const res = await window.api.project.scaffold(targetDir, options)
     if (res.success) {
       await window.api.project.load(targetDir)
       setProjectPath(targetDir)
@@ -84,10 +84,8 @@ function App() {
           </div>
         </div>
 
-        <DialogBox
+        <NewProjectDialog
           isOpen={newProjectData?.isOpen || false}
-          title="새 프로젝트 이름 입력"
-          defaultValue="my-visual-novel"
           onConfirm={submitNewProject}
           onCancel={() => setNewProjectData(null)}
         />

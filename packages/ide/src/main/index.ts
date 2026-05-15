@@ -74,9 +74,9 @@ app.whenReady().then(() => {
     return canceled ? null : filePaths
   })
 
-  ipcMain.handle('project:scaffold', async (_, targetDir: string) => {
+  ipcMain.handle('project:scaffold', async (_, targetDir: string, options: { folderName: string, gameName: string, projectId: string, processName: string, width: number, height: number }) => {
     try {
-      await scaffoldProject(targetDir)
+      await scaffoldProject(targetDir, options)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
