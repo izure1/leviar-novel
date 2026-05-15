@@ -4,7 +4,7 @@ import { DialogBox } from '../UI/DialogBox'
 import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
 import { getFileTemplate } from '../../../../shared/templates'
 
-const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks']
+const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'initials', 'hooks']
 const CONFIG_FILES = ['novel.config.ts', 'main.ts']
 
 interface FileNode {
@@ -32,6 +32,8 @@ export function ProjectSidebar() {
     backgrounds: true,
     effects: true,
     fallbacks: true,
+    initials: true,
+    hooks: true,
   })
   const [folderFiles, setFolderFiles] = useState<Record<string, FileNode[]>>({})
   const [promptData, setPromptData] = useState<PromptData | null>(null)
@@ -169,8 +171,10 @@ export function ProjectSidebar() {
         const fullPath = `${projectPath}/${folderPath}/${node.path}`
         if (node.isDirectory) {
           await window.api.fs.deleteDir(fullPath)
+          window.dispatchEvent(new CustomEvent('dir-deleted', { detail: { path: fullPath } }))
         } else {
           await window.api.fs.deleteFile(fullPath)
+          window.dispatchEvent(new CustomEvent('file-deleted', { detail: { path: fullPath } }))
           if (activeFile === fullPath) setActiveFile(null)
         }
         fetchFiles()
@@ -219,6 +223,7 @@ export function ProjectSidebar() {
       const newPath = `${dirPath}/${newName}`
       
       await window.api.fs.renameFile(oldPath, newPath)
+      window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath, newPath, isDirectory: targetNode.isDirectory } }))
       if (activeFile === oldPath) setActiveFile(newPath)
     }
     

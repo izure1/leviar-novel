@@ -88,6 +88,11 @@ export function EditorArea() {
     
     setIsSaving(true)
     try {
+      if (draftTimers.current[activeFile]) {
+        clearTimeout(draftTimers.current[activeFile])
+        delete draftTimers.current[activeFile]
+      }
+      
       const res = await window.api.fs.writeFile(activeFile, data.content)
       if (res.success) {
         setTabData(prev => ({
@@ -107,6 +112,24 @@ export function EditorArea() {
   const handleSaveRef = useRef(handleSave)
   useEffect(() => { handleSaveRef.current = handleSave }, [handleSave])
 
+  const removeTab = useCallback((tab: string) => {
+    fetchedTabs.current.delete(tab)
+    setOpenTabs(prev => {
+      const newTabs = prev.filter(t => t !== tab)
+      const currentActive = useProjectStore.getState().activeFile
+      if (currentActive === tab) {
+        const fallback = newTabs.length > 0 ? newTabs[newTabs.length - 1] : null
+        useProjectStore.getState().setActiveFile(fallback)
+      }
+      return newTabs
+    })
+    setTabData(prev => {
+      const next = { ...prev }
+      delete next[tab]
+      return next
+    })
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -117,6 +140,95 @@ export function EditorArea() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  useEffect(() => {
+    const onFileDeleted = (e: any) => {
+      const deletedPath = e.detail.path
+      if (draftTimers.current[deletedPath]) {
+        clearTimeout(draftTimers.current[deletedPath])
+        delete draftTimers.current[deletedPath]
+      }
+      window.api.fs.deleteFile(getDraftPath(deletedPath))
+      removeTab(deletedPath)
+    }
+
+    const onDirDeleted = (e: any) => {
+      const dirPath = e.detail.path
+      const tabs = Array.from(fetchedTabs.current)
+      tabs.forEach(p => {
+        if (p.startsWith(dirPath + '/') || p.startsWith(dirPath + '\\')) {
+          if (draftTimers.current[p]) {
+            clearTimeout(draftTimers.current[p])
+            delete draftTimers.current[p]
+          }
+          window.api.fs.deleteFile(getDraftPath(p))
+          removeTab(p)
+        }
+      })
+    }
+
+    const onFileRenamed = (e: any) => {
+      const { oldPath, newPath, isDirectory } = e.detail
+      
+      const updateTabPath = (oldP: string, newP: string) => {
+        setOpenTabs(prev => {
+          const idx = prev.indexOf(oldP)
+          if (idx === -1) return prev
+          const next = [...prev]
+          next[idx] = newP
+          return next
+        })
+
+        setTabData(prev => {
+          if (!prev[oldP]) return prev
+          const next = { ...prev }
+          next[newP] = next[oldP]
+          delete next[oldP]
+          return next
+        })
+
+        fetchedTabs.current.delete(oldP)
+        fetchedTabs.current.add(newP)
+        
+        if (draftTimers.current[oldP]) {
+          clearTimeout(draftTimers.current[oldP])
+          delete draftTimers.current[oldP]
+        }
+      }
+
+      if (isDirectory) {
+        const tabs = Array.from(fetchedTabs.current)
+        tabs.forEach(p => {
+          if (p.startsWith(oldPath + '/') || p.startsWith(oldPath + '\\')) {
+            const relative = p.slice(oldPath.length)
+            const newChildPath = newPath + relative
+            updateTabPath(p, newChildPath)
+          }
+        })
+      } else {
+        updateTabPath(oldPath, newPath)
+      }
+    }
+
+    window.addEventListener('file-deleted', onFileDeleted)
+    window.addEventListener('dir-deleted', onDirDeleted)
+    window.addEventListener('file-renamed', onFileRenamed)
+
+    const unsubscribeFile = window.api.fs.onFileDeleted?.((data) => {
+      window.dispatchEvent(new CustomEvent('file-deleted', { detail: { path: data.path } }))
+    })
+    const unsubscribeDir = window.api.fs.onDirDeleted?.((data) => {
+      window.dispatchEvent(new CustomEvent('dir-deleted', { detail: { path: data.path } }))
+    })
+
+    return () => {
+      window.removeEventListener('file-deleted', onFileDeleted)
+      window.removeEventListener('dir-deleted', onDirDeleted)
+      window.removeEventListener('file-renamed', onFileRenamed)
+      unsubscribeFile?.()
+      unsubscribeDir?.()
+    }
+  }, [removeTab])
 
   const handleContentChange = (tab: string, val: string | undefined) => {
     const newContent = val || ''
@@ -132,23 +244,6 @@ export function EditorArea() {
     }, 1000)
   }
 
-  const removeTab = (tab: string) => {
-    fetchedTabs.current.delete(tab)
-    setOpenTabs(prev => {
-      const newTabs = prev.filter(t => t !== tab)
-      if (activeFile === tab) {
-        const fallback = newTabs.length > 0 ? newTabs[newTabs.length - 1] : null
-        setActiveFile(fallback)
-      }
-      return newTabs
-    })
-    setTabData(prev => {
-      const next = { ...prev }
-      delete next[tab]
-      return next
-    })
-  }
-
   const handleCloseTab = (tab: string) => {
     if (tabData[tab]?.isDirty) {
       setConfirmState({
@@ -158,12 +253,20 @@ export function EditorArea() {
         type: 'danger',
         onConfirm: () => {
           setConfirmState(null)
+          if (draftTimers.current[tab]) {
+            clearTimeout(draftTimers.current[tab])
+            delete draftTimers.current[tab]
+          }
           // 저장하지 않고 닫을 경우 임시 파일도 폐기
           window.api.fs.deleteFile(getDraftPath(tab))
           removeTab(tab)
         }
       })
     } else {
+      if (draftTimers.current[tab]) {
+        clearTimeout(draftTimers.current[tab])
+        delete draftTimers.current[tab]
+      }
       removeTab(tab)
     }
   }

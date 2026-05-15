@@ -96,6 +96,8 @@ export type DeclarationFolder =
   | 'fallbacks'
   | 'audios'
   | 'types'
+  | 'initials'
+  | 'hooks'
 
 const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   assets: `import { defineAssets } from 'fumika'\n\nexport default defineAssets({\n\n})\n`,
@@ -107,6 +109,8 @@ const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   fallbacks: `import { defineFallback } from 'fumika'\nimport modules from './modules'\n\nexport default defineFallback(modules)([\n\n])\n`,
   audios: `import { defineAudios } from 'fumika'\n\nexport default defineAudios({\n\n})\n`,
   types: `import type { FallbackRuleOf } from 'fumika'\nimport type Modules from './modules'\n\ndeclare global {\n  type FallbackItem = FallbackRuleOf<typeof Modules>\n}\n`,
+  initials: `export default {}\n`,
+  hooks: `export default {}\n`,
 }
 
 export function getDeclarationTemplate(type: DeclarationFolder | string): string {
@@ -159,10 +163,10 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   Record<DeclarationFolder, (safeName: string, relativeDots: string) => string>
 > = {
   scenes: (_, relativeDots) =>
-    `import { defineScene } from 'fumika'\nimport type Config from '${relativeDots}/novel.config'\n\nexport default defineScene({ config: {} as typeof Config })(({ label, next }) => [\n  label('start'),\n  { type: 'dialogue', text: '새로운 씬입니다.' },\n])\n`,
+    `import { defineScene } from 'fumika'\nimport config from '${relativeDots}/novel.config'\nimport Initials from '${relativeDots}/declarations/initials'\nimport Hooks from '${relativeDots}/declarations/hooks'\n\nexport default defineScene({\n  config,\n  variables: {},\n  // next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks['']\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
 
   characters: (safeName, relativeDots) =>
-    `import { defineCharacter } from 'fumika'\nimport assets from '${relativeDots}/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: {\n    normal: { src: '', width: 560, points: {} }\n  },\n  emotions: {\n    normal: {}\n  }\n})\n`,
+    `import { defineCharacter } from 'fumika'\nimport assets from '${relativeDots}/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: {\n    idle: {\n      src: '',\n      width: 560,\n      points: {}\n    }\n  },\n  emotions: {\n    normal: {}\n  }\n})\n`,
 
   modules: (safeName) =>
     `import { define } from 'fumika'\n\ninterface MyCmd { }\n\ninterface MySchema { }\n\ninterface MyHook {\n  '${safeName}:event': (val: unknown) => unknown\n}\n\nexport default define<MyCmd, MySchema, MyHook>({ })\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return {\n      show: () => {},\n      hide: () => {},\n      onUpdate: () => {},\n      onCleanup: () => {}\n    }\n  })\n`,
@@ -175,6 +179,12 @@ const FILE_TEMPLATE_GENERATORS: Partial<
 
   fallbacks: () =>
     `const fallback: FallbackItem = {\n  type: '',\n  defaults: {}\n}\n\nexport default fallback`,
+
+  initials: (_, relativeDots) =>
+    `import { defineInitial } from 'fumika'\nimport config from '${relativeDots}/novel.config'\n\nexport default defineInitial(config)({\n  \n})\n`,
+
+  hooks: (_, relativeDots) =>
+    `import { defineHook } from 'fumika'\nimport config from '${relativeDots}/novel.config'\n\nexport default defineHook(config)({\n  \n})\n`,
 }
 
 export function getFileTemplate(

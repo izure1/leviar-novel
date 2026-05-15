@@ -12,6 +12,8 @@ const WATCH_FOLDERS = [
   'backgrounds',
   'effects',
   'fallbacks',
+  'initials',
+  'hooks',
 ]
 
 export class ProjectWatcher {
@@ -37,7 +39,13 @@ export class ProjectWatcher {
 
     this.watcher
       .on('add', (filePath) => this.handleFileChange(filePath))
-      .on('unlink', (filePath) => this.handleFileChange(filePath))
+      .on('unlink', (filePath) => {
+        this.handleFileChange(filePath)
+        this.notifyFileDeleted(filePath)
+      })
+      .on('unlinkDir', (dirPath) => {
+        this.notifyDirDeleted(dirPath)
+      })
     // 'change'는 export 구조가 바뀌지 않으면 선언 재생성 불필요
   }
 
@@ -155,7 +163,19 @@ export class ProjectWatcher {
 
   private notifyFileChanged(filePath: string, content: string): void {
     if (this.win && !this.win.isDestroyed()) {
-      this.win.webContents.send('fs:fileChanged', { path: filePath, content })
+      this.win.webContents.send('fs:fileChanged', { path: filePath.replace(/\\/g, '/') , content })
+    }
+  }
+
+  private notifyFileDeleted(filePath: string): void {
+    if (this.win && !this.win.isDestroyed()) {
+      this.win.webContents.send('fs:fileDeleted', { path: filePath.replace(/\\/g, '/') })
+    }
+  }
+
+  private notifyDirDeleted(dirPath: string): void {
+    if (this.win && !this.win.isDestroyed()) {
+      this.win.webContents.send('fs:dirDeleted', { path: dirPath.replace(/\\/g, '/') })
     }
   }
 }

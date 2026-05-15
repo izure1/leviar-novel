@@ -182,6 +182,8 @@ app.whenReady().then(() => {
   ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
     try {
       const fs = require('fs/promises')
+      const path = require('path')
+      await fs.mkdir(path.dirname(filePath), { recursive: true })
       await fs.writeFile(filePath, content, 'utf-8')
       return { success: true }
     } catch (error: any) {

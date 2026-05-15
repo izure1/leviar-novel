@@ -34,6 +34,16 @@ const api = {
       const listener = (_: Electron.IpcRendererEvent, data: { path: string; content: string }) => callback(data)
       ipcRenderer.on('fs:fileChanged', listener)
       return () => ipcRenderer.removeListener('fs:fileChanged', listener)
+    },
+    onFileDeleted: (callback: (data: { path: string }) => void) => {
+      const listener = (_: Electron.IpcRendererEvent, data: { path: string }) => callback(data)
+      ipcRenderer.on('fs:fileDeleted', listener)
+      return () => ipcRenderer.removeListener('fs:fileDeleted', listener)
+    },
+    onDirDeleted: (callback: (data: { path: string }) => void) => {
+      const listener = (_: Electron.IpcRendererEvent, data: { path: string }) => callback(data)
+      ipcRenderer.on('fs:dirDeleted', listener)
+      return () => ipcRenderer.removeListener('fs:dirDeleted', listener)
     }
   }
 }
