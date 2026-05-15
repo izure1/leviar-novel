@@ -207,8 +207,9 @@ function removeExt(rel: string): string {
 
 function buildAssetDecl(files: FileEntry[]): string {
   const decl = WATCHER_DECL['assets']!
+  const audioExt = /\.(mp3|wav|ogg|m4a|aac)$/i
   const entries = files
-    .filter((f) => !f.name.endsWith('.ts'))
+    .filter((f) => !f.name.endsWith('.ts') && !audioExt.test(f.name))
     .map((f) => {
       const relFwd = f.rel.replace(/\\/g, '/')
       const key = removeExt(relFwd)
@@ -227,7 +228,7 @@ function buildAudioDecl(files: FileEntry[]): string {
     .map((f) => {
       const relFwd = f.rel.replace(/\\/g, '/')
       const key = removeExt(relFwd)
-      return `  '${key}': Assets['${key}'],`
+      return `  '${key}': './assets/${relFwd}',`
     })
     .join('\n')
 
