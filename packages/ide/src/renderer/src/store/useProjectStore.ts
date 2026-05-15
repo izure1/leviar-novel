@@ -4,16 +4,20 @@ interface ProjectState {
   projectPath: string | null
   activeFile: string | null
   globalLoading: boolean
+  isDirty: boolean
   setProjectPath: (path: string | null) => void
   setActiveFile: (file: string | null) => void
   setGlobalLoading: (loading: boolean) => void
+  setIsDirty: (dirty: boolean) => void
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
   projectPath: null,
   activeFile: null,
   globalLoading: false,
-  setProjectPath: (path) => set({ projectPath: path, activeFile: null }),
+  isDirty: false,
+  setProjectPath: (path) => set({ projectPath: path, activeFile: null, isDirty: false }),
   setActiveFile: (file) => set({ activeFile: file }),
-  setGlobalLoading: (loading) => set({ globalLoading: loading })
+  setGlobalLoading: (loading) => set({ globalLoading: loading }),
+  setIsDirty: (dirty) => set({ isDirty: dirty })
 }))

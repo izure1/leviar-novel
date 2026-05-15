@@ -3,11 +3,10 @@ import { useProjectStore } from '../../store/useProjectStore'
 import { CodeEditor } from './CodeEditor'
 
 export function EditorArea() {
-  const { activeFile } = useProjectStore()
+  const { activeFile, isDirty, setIsDirty } = useProjectStore()
   const [content, setContent] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isDirty, setIsDirty] = useState(false)
 
   useEffect(() => {
     if (!activeFile) return

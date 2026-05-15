@@ -23,7 +23,7 @@ interface PromptData {
   defaultValue: string
 }
 export function ProjectSidebar() {
-  const { projectPath, activeFile, setActiveFile, setGlobalLoading } = useProjectStore()
+  const { projectPath, activeFile, setActiveFile, setGlobalLoading, isDirty } = useProjectStore()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     scenes: true,
     assets: true,
@@ -49,6 +49,24 @@ export function ProjectSidebar() {
   const toggleFolder = (folderPath: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setExpanded((prev) => ({ ...prev, [folderPath]: !prev[folderPath] }))
+  }
+
+  const handleFileClick = (targetPath: string) => {
+    if (activeFile === targetPath) return
+    if (isDirty) {
+      setConfirmState({
+        isOpen: true,
+        title: '저장되지 않은 변경 사항',
+        message: '현재 파일에 저장되지 않은 변경 사항이 있습니다. 변경 사항을 무시하고 다른 파일을 여시겠습니까?',
+        type: 'warning',
+        onConfirm: () => {
+          setConfirmState(null)
+          setActiveFile(targetPath)
+        }
+      })
+    } else {
+      setActiveFile(targetPath)
+    }
   }
 
   const fetchFiles = async () => {
@@ -244,7 +262,7 @@ export function ProjectSidebar() {
                 }`}
                 onClick={(e) => {
                   if (isDir) toggleFolder(fullPath, e)
-                  else setActiveFile(fullPath)
+                  else handleFileClick(fullPath)
                 }}
                 title={node.name}
               >
@@ -322,7 +340,7 @@ export function ProjectSidebar() {
                         ? 'bg-indigo-600/30 text-indigo-300 font-medium' 
                         : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
-                    onClick={() => setActiveFile(filePath)}
+                    onClick={() => handleFileClick(filePath)}
                     title={file}
                   >
                     <span className="mr-1 opacity-40 w-3 inline-block text-center text-[10px]">•</span>
