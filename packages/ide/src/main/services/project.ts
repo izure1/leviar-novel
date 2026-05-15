@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import { execFile } from 'child_process'
 
 const DEFAULT_FOLDERS = [
   'assets',
@@ -15,6 +16,7 @@ const DEFAULT_FOLDERS = [
 import { NOVEL_CONFIG_CONTENT, MAIN_TS_CONTENT, INDEX_HTML_CONTENT, getDeclarationTemplate } from '../../shared/templates'
 
 
+// installFumikaDependencies is removed as we now fetch from npm
 export async function ensureProjectDependencies(targetDir: string, forceUpdate = false): Promise<void> {
   const packageJsonPath = path.join(targetDir, 'package.json')
   let needsInstall = false
@@ -66,21 +68,20 @@ export async function ensureProjectDependencies(targetDir: string, forceUpdate =
   }
 
   if (needsInstall || forceUpdate) {
-    console.log('[IDE] Copying bundled fumika engine to', targetDir)
-    const { app } = require('electron')
-    const sourceDir = app.isPackaged
-      ? path.join(process.resourcesPath, 'core-template')
-      : path.join(app.getAppPath(), 'resources/core-template')
-      
-    const destDir = path.join(targetDir, 'node_modules', 'fumika')
+    console.log('[IDE] Installing fumika and vite from npm to', targetDir)
+    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
     
-    try {
-      await fs.cp(sourceDir, destDir, { recursive: true, force: true })
-      console.log('[IDE] Successfully copied fumika engine.')
-    } catch (err) {
-      console.error('[IDE] Failed to copy fumika engine:', err)
-      throw err
-    }
+    await new Promise<void>((resolve, reject) => {
+      execFile(npmCmd, ['install', '--save-dev', 'fumika', 'vite'], { cwd: targetDir, shell: true }, (err, stdout, stderr) => {
+        if (err) {
+          console.error('[IDE] npm install failed:', stderr)
+          reject(err)
+        } else {
+          console.log('[IDE] Dependencies installed from npm:', stdout)
+          resolve()
+        }
+      })
+    })
   }
 }
 

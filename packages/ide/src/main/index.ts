@@ -25,7 +25,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -119,13 +119,11 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:getTypes', async (_, _projectPath: string) => {
+  ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
     try {
       const fs = require('fs/promises')
       const path = require('path')
-      const typesDir = app.isPackaged
-        ? path.join(process.resourcesPath, 'core-template', 'dist', 'types')
-        : path.join(app.getAppPath(), 'resources', 'core-template', 'dist', 'types')
+      const typesDir = path.join(projectPath, 'node_modules', 'fumika', 'dist', 'types')
       
       const types: { path: string, content: string }[] = []
       

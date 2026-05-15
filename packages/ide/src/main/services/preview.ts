@@ -1,7 +1,4 @@
 import { createServer, ViteDevServer, InlineConfig } from 'vite'
-import { createRequire } from 'module'
-
-const require = createRequire(import.meta.url)
 
 export class PreviewService {
   private server: ViteDevServer | null = null
@@ -11,28 +8,11 @@ export class PreviewService {
     await this.stop()
 
     try {
-      // IDE 내부에 설치된 fumika 엔진의 경로를 찾아서 Alias로 주입
-      // 이렇게 하면 사용자가 별도로 패키지를 설치하지 않아도 됨
-      let fumikaPath = ''
-      try {
-        fumikaPath = require.resolve('fumika')
-      } catch (e) {
-        console.warn('Could not resolve fumika package directly. Falling back.')
-      }
-
-      const alias: Record<string, string> = fumikaPath ? { 'fumika': fumikaPath } : {}
-
       const config: InlineConfig = {
         root: projectPath,
         server: {
           port: this.port,
           strictPort: false,
-        },
-        resolve: {
-          alias
-        },
-        optimizeDeps: {
-          include: fumikaPath ? ['fumika'] : []
         }
       }
 

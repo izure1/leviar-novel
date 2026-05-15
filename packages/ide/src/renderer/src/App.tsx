@@ -4,23 +4,23 @@ import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
 import { EditorArea } from './components/Editor/EditorArea'
 import { DialogBox } from './components/UI/DialogBox'
+import { LoadingOverlay } from './components/UI/LoadingOverlay'
 
 function App() {
-  const { projectPath, setProjectPath } = useProjectStore()
-  const [loading, setLoading] = useState(false)
+  const { projectPath, setProjectPath, globalLoading, setGlobalLoading } = useProjectStore()
   const [newProjectData, setNewProjectData] = useState<{ isOpen: boolean, parentDir: string } | null>(null)
 
   const handleOpenProject = async () => {
     const path = await window.api.dialog.openDirectory()
     if (path) {
-      setLoading(true)
+      setGlobalLoading(true)
       const res = await window.api.project.load(path)
       if (res.success) {
         setProjectPath(path)
       } else {
         alert('Failed to load project: ' + res.error)
       }
-      setLoading(false)
+      setGlobalLoading(false)
     }
   }
 
@@ -38,11 +38,11 @@ function App() {
     const separator = newProjectData.parentDir.includes('\\') ? '\\' : '/'
     const targetDir = `${newProjectData.parentDir}${separator}${safeName}`
     
-    setLoading(true)
+    setGlobalLoading(true)
     const check = await window.api.fs.checkExists(targetDir)
     if (check.exists) {
       alert(`이미 해당 경로에 폴더가 존재합니다:\n${targetDir}`)
-      setLoading(false)
+      setGlobalLoading(false)
       setNewProjectData(null)
       return
     }
@@ -54,7 +54,7 @@ function App() {
     } else {
       alert('Failed to scaffold project: ' + res.error)
     }
-    setLoading(false)
+    setGlobalLoading(false)
     setNewProjectData(null)
   }
 
@@ -69,14 +69,14 @@ function App() {
           <div className="flex flex-col gap-4">
             <button
               onClick={handleOpenProject}
-              disabled={loading}
+              disabled={globalLoading}
               className="rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-500 hover:-translate-y-0.5"
             >
               Open Existing Project
             </button>
             <button
               onClick={handleScaffoldProject}
-              disabled={loading}
+              disabled={globalLoading}
               className="rounded-lg border border-slate-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:-translate-y-0.5"
             >
               Create New Project
@@ -91,6 +91,7 @@ function App() {
           onConfirm={submitNewProject}
           onCancel={() => setNewProjectData(null)}
         />
+        <LoadingOverlay />
       </div>
     )
   }
@@ -111,6 +112,7 @@ function App() {
           </div>
         </div>
       </main>
+      <LoadingOverlay />
     </div>
   )
 }
