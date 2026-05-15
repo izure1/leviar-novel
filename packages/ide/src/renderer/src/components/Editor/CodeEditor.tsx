@@ -29,7 +29,7 @@ interface Props {
  * addExtraLib의 키로 사용되며, <Editor path>와 동일한 형식이어야 한다.
  */
 function toFileUri(absPath: string): string {
-  return 'file:///' + absPath.replace(/\\/g, '/')
+  return monaco.Uri.file(absPath).toString()
 }
 
 export function CodeEditor({ code, onChange, language = 'typescript', filePath }: Props) {
