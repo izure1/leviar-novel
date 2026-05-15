@@ -25,6 +25,7 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
   const [processName, setProcessName] = useState('my-visual-novel')
   const [width, setWidth] = useState(1920)
   const [height, setHeight] = useState(1080)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -47,23 +48,60 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
 
   if (!isOpen) return null
 
+  const validateStep = (currentStep: number) => {
+    const newErrors: Record<string, string> = {}
+    
+    if (currentStep === 2) {
+      if (!folderName.trim()) newErrors.folderName = '폴더 이름을 입력해주세요.'
+      else if (!/^[a-zA-Z0-9_-]+$/.test(folderName)) newErrors.folderName = '폴더 이름은 영문, 숫자, 하이픈(-), 언더스코어(_)만 가능합니다.'
+      
+      if (!processName.trim()) newErrors.processName = '프로세스 이름을 입력해주세요.'
+      else if (!/^[a-z0-9-]+$/.test(processName)) newErrors.processName = '프로세스 이름은 소문자, 숫자, 하이픈(-)만 가능합니다.'
+    }
+
+    if (currentStep === 3) {
+      if (!gameName.trim()) newErrors.gameName = '게임 이름을 입력해주세요.'
+      
+      if (!projectId.trim()) newErrors.projectId = '프로젝트 ID를 입력해주세요.'
+      else if (!/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/.test(projectId)) {
+        newErrors.projectId = '올바른 프로젝트 ID 형식이 아닙니다 (예: com.example.game)'
+      }
+    }
+
+    if (currentStep === 4) {
+      if (width <= 0) newErrors.width = '해상도는 1 이상이어야 합니다.'
+      if (height <= 0) newErrors.height = '해상도는 1 이상이어야 합니다.'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleNext = () => {
-    if (step < maxStep) setStep(step + 1)
+    if (validateStep(step) && step < maxStep) {
+      setErrors({})
+      setStep(step + 1)
+    }
   }
 
   const handlePrev = () => {
-    if (step > 1) setStep(step - 1)
+    if (step > 1) {
+      setErrors({})
+      setStep(step - 1)
+    }
   }
 
   const handleConfirm = () => {
-    onConfirm({
-      folderName,
-      gameName,
-      projectId,
-      processName,
-      width,
-      height
-    })
+    if (validateStep(step)) {
+      onConfirm({
+        folderName,
+        gameName,
+        projectId,
+        processName,
+        width,
+        height
+      })
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -110,19 +148,21 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
                 <span className="font-semibold text-xs">폴더 이름 (영문/숫자/하이픈)</span>
                 <input
                   ref={inputRef}
-                  className="bg-slate-900 border border-slate-600 text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500"
+                  className={`bg-slate-900 border ${errors.folderName ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500`}
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))}
                 />
+                {errors.folderName && <span className="text-red-400 text-[10px]">{errors.folderName}</span>}
               </label>
 
               <label className="flex flex-col gap-1 text-slate-300 animate-fade-in">
                 <span className="font-semibold text-xs">프로세스 이름 (작업 관리자 표시용)</span>
                 <input
-                  className="bg-slate-900 border border-slate-600 text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500"
+                  className={`bg-slate-900 border ${errors.processName ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500`}
                   value={processName}
-                  onChange={(e) => setProcessName(e.target.value)}
+                  onChange={(e) => setProcessName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 />
+                {errors.processName && <span className="text-red-400 text-[10px]">{errors.processName}</span>}
               </label>
             </>
           )}
@@ -133,19 +173,21 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
                 <span className="font-semibold text-xs">게임 이름 (실제 표기용)</span>
                 <input
                   ref={inputRef}
-                  className="bg-slate-900 border border-slate-600 text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500"
+                  className={`bg-slate-900 border ${errors.gameName ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500`}
                   value={gameName}
                   onChange={(e) => setGameName(e.target.value)}
                 />
+                {errors.gameName && <span className="text-red-400 text-[10px]">{errors.gameName}</span>}
               </label>
 
               <label className="flex flex-col gap-1 text-slate-300 animate-fade-in">
                 <span className="font-semibold text-xs">프로젝트 ID (com.example.game)</span>
                 <input
-                  className="bg-slate-900 border border-slate-600 text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500"
+                  className={`bg-slate-900 border ${errors.projectId ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500`}
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
                 />
+                {errors.projectId && <span className="text-red-400 text-[10px]">{errors.projectId}</span>}
               </label>
             </>
           )}
@@ -158,19 +200,21 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
                   <input
                     ref={inputRef}
                     type="number"
-                    className="bg-slate-900 border border-slate-600 text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500"
+                    className={`bg-slate-900 border ${errors.width ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500`}
                     value={width}
                     onChange={(e) => setWidth(Number(e.target.value))}
                   />
+                  {errors.width && <span className="text-red-400 text-[10px]">{errors.width}</span>}
                 </label>
                 <label className="flex flex-col gap-1 text-slate-300 flex-1">
                   <span className="font-semibold text-xs">세로 해상도</span>
                   <input
                     type="number"
-                    className="bg-slate-900 border border-slate-600 text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500"
+                    className={`bg-slate-900 border ${errors.height ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded focus:outline-none focus:border-indigo-500`}
                     value={height}
                     onChange={(e) => setHeight(Number(e.target.value))}
                   />
+                  {errors.height && <span className="text-red-400 text-[10px]">{errors.height}</span>}
                 </label>
               </div>
             </>
