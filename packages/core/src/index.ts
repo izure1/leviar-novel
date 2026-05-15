@@ -28,7 +28,7 @@ export type {
   ModuleKeysOf,
 } from './types/config'
 
-export type * from './types/dialogue'
+export type * from './types'
 
 // ─── define 헬퍼 함수 ────────────────────────────────────────
 export { defineNovelConfig, BUILTIN_MODULES } from './define/defineNovelConfig'

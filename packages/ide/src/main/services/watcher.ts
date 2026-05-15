@@ -145,8 +145,8 @@ export class ProjectWatcher {
         })
         .join('\n')
 
-      const importBlock = imports ? `${imports}\n` : ''
-      return `${decl.header}${importBlock}${entries ? `\n${entries}\n` : ''}${decl.footer}`
+      const importBlock = imports ? `${imports}\n\n` : ''
+      return `${importBlock}${decl.header}${entries ? `\n${entries}\n` : ''}${decl.footer}`
     }
 
     // audios (WATCHER_DECL에 있지만 buildAudioDecl로 처리 — 여기 도달 안 함)
@@ -276,7 +276,7 @@ function buildFallbacksDecl(tsFiles: FileEntry[]): string {
     .join('\n')
 
   const importBlock = imports ? `${imports}\n\n` : ''
-  return `${decl.header}${importBlock}${entries ? `\n${entries}\n` : ''}${decl.footer}`
+  return `${importBlock}${decl.header}${entries ? `\n${entries}\n` : ''}${decl.footer}`
 }
 
 function buildDefaultDecl(folder: string, files: FileEntry[]): string {

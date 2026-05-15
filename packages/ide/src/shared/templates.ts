@@ -134,16 +134,16 @@ const FILE_TEMPLATE_GENERATORS: Partial<
     `import { defineCharacter } from 'fumika'\nimport assets from '${relativeDots}/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: {\n    normal: { src: '', width: 560, points: {} }\n  },\n  emotions: {\n    normal: {}\n  }\n})\n`,
 
   modules: (safeName) =>
-    `import { define } from 'fumika'\n\ninterface MyCmd {\n  type: '${safeName}'\n}\n\ninterface MySchema {\n  count: number\n}\n\ninterface MyHook {\n  '${safeName}:event': (val: number) => void\n}\n\nexport default define<MyCmd, MySchema, MyHook>({\n  count: 0\n})\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return null\n  })\n`,
+    `import { define } from 'fumika'\n\ninterface MyCmd { }\n\ninterface MySchema { }\n\ninterface MyHook {\n  '${safeName}:event': (val: unknown) => unknown\n}\n\nexport default define<MyCmd, MySchema, MyHook>({ })\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return null\n  })\n`,
 
   backgrounds: (_, relativeDots) =>
-    `import type Assets from '${relativeDots}/declarations/assets'\n\nexport const src: keyof typeof Assets = ''\nexport const parallax: boolean = false\n`,
+    `import type Assets from '${relativeDots}/declarations/assets'\n\nexport const src: keyof typeof Assets = ''\nexport const parallax: boolean = true\n`,
 
   effects: () =>
     `import type { EffectDef } from 'fumika'\n\nexport const effectDef: EffectDef = {}\n`,
 
   fallbacks: () =>
-    `export default {\n  type: 'dialogue',\n  defaults: {}\n} as const\n`,
+    `const fallback: FallbackItem = {\n  type: '',\n  defaults: {}\n}\n\nexport default fallback`,
 }
 
 export function getFileTemplate(
