@@ -1,6 +1,7 @@
-import { useEffect, useState, MouseEvent } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
 import { DialogBox } from '../UI/DialogBox'
+import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
 import { getFileTemplate } from '../../../../shared/templates'
 
 const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks']
@@ -21,9 +22,8 @@ interface PromptData {
   targetNode?: FileNode
   defaultValue: string
 }
-
 export function ProjectSidebar() {
-  const { projectPath, activeFile, setActiveFile } = useProjectStore()
+  const { projectPath, activeFile, setActiveFile, setGlobalLoading } = useProjectStore()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     scenes: true,
     assets: true,
@@ -35,8 +35,18 @@ export function ProjectSidebar() {
   })
   const [folderFiles, setFolderFiles] = useState<Record<string, FileNode[]>>({})
   const [promptData, setPromptData] = useState<PromptData | null>(null)
+  
+  interface ConfirmState {
+    isOpen: boolean
+    title: string
+    message: string
+    type?: 'warning' | 'info' | 'danger'
+    showCancel?: boolean
+    onConfirm: () => void
+  }
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null)
 
-  const toggleFolder = (folderPath: string, e?: MouseEvent) => {
+  const toggleFolder = (folderPath: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setExpanded((prev) => ({ ...prev, [folderPath]: !prev[folderPath] }))
   }
@@ -87,19 +97,31 @@ export function ProjectSidebar() {
 
   const handleUpdateProject = async () => {
     if (!projectPath) return
-    if (!window.confirm('프로젝트의 누락된 설정 파일을 복구하고 최신 버전의 fumika 엔진을 설치하시겠습니까? (이 작업은 수십 초 정도 소요될 수 있습니다)')) return
     
-    // UI에 로딩 상태를 표시하기 위해 promptData를 임시로 활용하거나 간단한 얼럿 표시
-    alert('프로젝트 의존성 설치 및 업데이트를 백그라운드에서 시작합니다...')
-    const res = await window.api.project.update(projectPath)
-    if (res.success) {
-      alert('프로젝트가 성공적으로 업데이트되었습니다!')
-    } else {
-      alert('프로젝트 업데이트에 실패했습니다:\n' + res.error)
-    }
+    setConfirmState({
+      isOpen: true,
+      title: '프로젝트 업데이트',
+      message: '프로젝트의 누락된 설정 파일을 복구하고 최신 버전의 엔진 의존성을 설치하시겠습니까?\n(이 작업은 네트워크 환경에 따라 수십 초 정도 소요될 수 있습니다)',
+      type: 'info',
+      onConfirm: async () => {
+        setConfirmState(null)
+        setGlobalLoading(true)
+        const res = await window.api.project.update(projectPath)
+        setGlobalLoading(false)
+        
+        setConfirmState({
+          isOpen: true,
+          title: res.success ? '업데이트 완료' : '업데이트 실패',
+          message: res.success ? '프로젝트 의존성이 성공적으로 업데이트되었습니다!' : `업데이트 중 오류가 발생했습니다:\n${res.error}`,
+          type: res.success ? 'info' : 'danger',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
+      }
+    })
   }
 
-  const handleAddFile = async (e: MouseEvent, folderPath: string, isFolder: boolean = false) => {
+  const handleAddFile = async (e: React.MouseEvent, folderPath: string, isFolder: boolean = false) => {
     e.stopPropagation()
     if (!projectPath) return
     
@@ -128,22 +150,30 @@ export function ProjectSidebar() {
     })
   }
 
-  const handleDelete = async (e: MouseEvent, folderPath: string, node: FileNode) => {
+  const handleDelete = async (e: React.MouseEvent, folderPath: string, node: FileNode) => {
     e.stopPropagation()
     if (!projectPath) return
-    if (!window.confirm(`정말 '${node.name}'을(를) 삭제하시겠습니까?`)) return
 
-    const fullPath = `${projectPath}/${folderPath}/${node.path}`
-    if (node.isDirectory) {
-      await window.api.fs.deleteDir(fullPath)
-    } else {
-      await window.api.fs.deleteFile(fullPath)
-      if (activeFile === fullPath) setActiveFile(null)
-    }
-    fetchFiles()
+    setConfirmState({
+      isOpen: true,
+      title: '항목 삭제',
+      message: `정말 '${node.name}'을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmState(null)
+        const fullPath = `${projectPath}/${folderPath}/${node.path}`
+        if (node.isDirectory) {
+          await window.api.fs.deleteDir(fullPath)
+        } else {
+          await window.api.fs.deleteFile(fullPath)
+          if (activeFile === fullPath) setActiveFile(null)
+        }
+        fetchFiles()
+      }
+    })
   }
 
-  const handleRename = (e: MouseEvent, folderPath: string, node: FileNode) => {
+  const handleRename = (e: React.MouseEvent, folderPath: string, node: FileNode) => {
     e.stopPropagation()
     const baseName = node.isDirectory ? node.name : node.name.replace(/\.[^/.]+$/, "")
     setPromptData({
@@ -349,6 +379,16 @@ export function ProjectSidebar() {
         defaultValue={promptData?.defaultValue}
         onConfirm={submitPrompt}
         onCancel={() => setPromptData(null)}
+      />
+      
+      <ConfirmDialogBox
+        isOpen={confirmState?.isOpen || false}
+        title={confirmState?.title || ''}
+        message={confirmState?.message || ''}
+        type={confirmState?.type || 'info'}
+        showCancel={confirmState?.showCancel !== false}
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
       />
     </aside>
   )
