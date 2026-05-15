@@ -106,17 +106,12 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         }
 
         // ── 2. fumika 타입 파일 ──
-        const fumikaTypesDir = projectPath + '\\node_modules\\fumika\\dist\\types'
-        const fumikaRes = await window.api.fs.readDir(fumikaTypesDir, true)
-        if (fumikaRes.success && fumikaRes.files) {
-          const dtsRelPaths = collectTsPaths(fumikaRes.files as DirEntry[], false)
-          for (const relPath of dtsRelPaths) {
-            const absPath = fumikaTypesDir + '\\' + relPath.replace(/\//g, '\\')
-            const fileRes = await window.api.fs.readFile(absPath)
-            if (!fileRes.success || fileRes.content === undefined) continue
-
+        const typesRes = await window.api.project.getTypes(projectPath)
+        if (typesRes.success && typesRes.types) {
+          for (const type of typesRes.types) {
+            const absPath = projectPath + '\\node_modules\\fumika\\dist\\types\\' + type.path.replace(/\//g, '\\')
             const libUri = toFileUri(absPath)
-            ts.typescriptDefaults.addExtraLib(fileRes.content, libUri)
+            ts.typescriptDefaults.addExtraLib(type.content, libUri)
           }
 
           // fumika 진입점

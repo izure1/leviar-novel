@@ -34,9 +34,10 @@ function App() {
   const submitNewProject = async (options: NewProjectOptions) => {
     if (!newProjectData || !options.folderName) return
     
-    // Windows 경로 대응
+    // Windows root drive (e.g. D:\) 처리를 위해 끝에 있는 슬래시 제거
+    const cleanParent = newProjectData.parentDir.replace(/[\\/]$/, '')
     const separator = newProjectData.parentDir.includes('\\') ? '\\' : '/'
-    const targetDir = `${newProjectData.parentDir}${separator}${options.folderName}`
+    const targetDir = `${cleanParent}${separator}${options.folderName}`
     
     setGlobalLoading(true)
     const check = await window.api.fs.checkExists(targetDir)

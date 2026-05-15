@@ -247,6 +247,13 @@ app.whenReady().then(() => {
         for (const entry of entries) {
           const isDir = entry.isDirectory()
           const relativePath = path.join(relativeRoot, entry.name).replace(/\\/g, '/')
+          
+          // 성능 문제 및 파일 잠금 에러(node_modules)를 방지하기 위해 스킵
+          if (isDir && entry.name === 'node_modules' && recursive) {
+            result.push({ name: entry.name, isDirectory: isDir, path: relativePath, children: [] })
+            continue
+          }
+
           const node = { name: entry.name, isDirectory: isDir, path: relativePath, children: [] as any[] }
           if (isDir && recursive) {
             node.children = await readRecursively(path.join(currentPath, entry.name), relativePath)
