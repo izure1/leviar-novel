@@ -49,8 +49,12 @@ async function main() {
   await novel.load()
   await novel.boot()
 
-  const startScene = config.scenes[0] || 'start'
-  novel.start(startScene as any)
+  // 기본적으로 'start' 씬을 시작하되, 없으면 로드된 첫 번째 씬을 시작합니다.
+  const availableScenes = Object.keys(Scenes)
+  const startScene = availableScenes.includes('start') ? 'start' : availableScenes[0]
+  if (startScene) {
+    novel.start(startScene as any)
+  }
 
   window.addEventListener('click', () => {
     novel.next()
@@ -161,7 +165,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
     `import { defineCharacter } from 'fumika'\nimport assets from '${relativeDots}/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: {\n    normal: { src: '', width: 560, points: {} }\n  },\n  emotions: {\n    normal: {}\n  }\n})\n`,
 
   modules: (safeName) =>
-    `import { define } from 'fumika'\n\ninterface MyCmd { }\n\ninterface MySchema { }\n\ninterface MyHook {\n  '${safeName}:event': (val: unknown) => unknown\n}\n\nexport default define<MyCmd, MySchema, MyHook>({ })\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return null\n  })\n`,
+    `import { define } from 'fumika'\n\ninterface MyCmd { }\n\ninterface MySchema { }\n\ninterface MyHook {\n  '${safeName}:event': (val: unknown) => unknown\n}\n\nexport default define<MyCmd, MySchema, MyHook>({ })\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return {\n      show: () => {},\n      hide: () => {},\n      onUpdate: () => {},\n      onCleanup: () => {}\n    }\n  })\n`,
 
   backgrounds: (_, relativeDots) =>
     `import type Assets from '${relativeDots}/declarations/assets'\n\nexport const src: keyof typeof Assets = ''\nexport const parallax: boolean = true\n`,
