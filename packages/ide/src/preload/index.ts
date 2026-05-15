@@ -10,13 +10,15 @@ const api = {
   project: {
     scaffold: (targetDir: string) => ipcRenderer.invoke('project:scaffold', targetDir),
     load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
-    update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath)
+    update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath),
+    getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath)
   },
   preview: {
     start: (projectPath: string) => ipcRenderer.invoke('preview:start', projectPath),
     stop: () => ipcRenderer.invoke('preview:stop')
   },
   fs: {
+    checkExists: (path: string) => ipcRenderer.invoke('fs:checkExists', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
     writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
     copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest),

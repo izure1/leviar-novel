@@ -74,24 +74,14 @@ export default defineCustomModules(modules)
 `
 
 const AUDIOS_TEMPLATE = `import { defineAudios } from 'fumika'
-import assets from './declarations/assets'
+import Assets from './declarations/assets'
 
-export default defineAudios(assets)({
-
+export default defineAudios({
+  // 'my_audio': Assets['audio_filename']
 })
 `
 
-export async function ensureProjectDependencies(targetDir: string): Promise<void> {
-  const { exec } = require('child_process')
-  
-  // Node.js 설치 여부 검사
-  const isNodeInstalled = await new Promise((resolve) => {
-    exec('npm -v', (err: any) => resolve(!err))
-  })
-  if (!isNodeInstalled) {
-    throw new Error('Fumika IDE Requires Node.js.\n프로젝트를 생성/업데이트하려면 컴퓨터에 Node.js(및 npm)가 설치되어 있어야 합니다. https://nodejs.org 에서 먼저 설치해주세요.')
-  }
-
+export async function ensureProjectDependencies(targetDir: string, forceUpdate = false): Promise<void> {
   const packageJsonPath = path.join(targetDir, 'package.json')
   let needsInstall = false
 
@@ -141,41 +131,28 @@ export async function ensureProjectDependencies(targetDir: string): Promise<void
     await fs.writeFile(tsconfigPath, JSON.stringify(tsconfig, null, 2), 'utf-8')
   }
 
-  if (needsInstall) {
-    const { exec } = require('child_process')
-    return new Promise((resolve, reject) => {
-      console.log('[IDE] Installing dependencies in', targetDir)
-      exec('npm install fumika', { cwd: targetDir }, (error: any, stdout: string, stderr: string) => {
-        if (error) {
-          console.error('[IDE] npm install failed:', stderr)
-          reject(error)
-        } else {
-          console.log('[IDE] npm install success:', stdout)
-          resolve()
-        }
-      })
-    })
+  if (needsInstall || forceUpdate) {
+    console.log('[IDE] Copying bundled fumika engine to', targetDir)
+    const { app } = require('electron')
+    const sourceDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'core-template')
+      : path.join(app.getAppPath(), 'resources/core-template')
+      
+    const destDir = path.join(targetDir, 'node_modules', 'fumika')
+    
+    try {
+      await fs.cp(sourceDir, destDir, { recursive: true, force: true })
+      console.log('[IDE] Successfully copied fumika engine.')
+    } catch (err) {
+      console.error('[IDE] Failed to copy fumika engine:', err)
+      throw err
+    }
   }
 }
 
 export async function updateProject(targetDir: string): Promise<void> {
-  // Ensure basic files
-  await ensureProjectDependencies(targetDir)
-
-  // Force update fumika to latest
-  const { exec } = require('child_process')
-  return new Promise((resolve, reject) => {
-    console.log('[IDE] Updating fumika in', targetDir)
-    exec('npm install fumika@latest', { cwd: targetDir }, (error: any, stdout: string, stderr: string) => {
-      if (error) {
-        console.error('[IDE] npm update failed:', stderr)
-        reject(error)
-      } else {
-        console.log('[IDE] npm update success:', stdout)
-        resolve()
-      }
-    })
-  })
+  // Force update by passing true
+  await ensureProjectDependencies(targetDir, true)
 }
 
 /**

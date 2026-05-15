@@ -131,10 +131,11 @@ export function EditorArea() {
             <p className="text-slate-400">텍스트로 편집할 수 없는 파일입니다.</p>
           </div>
         ) : (
-          <CodeEditor 
-            code={content} 
-            onChange={handleContentChange} 
-            language={activeFile.endsWith('.ts') ? 'typescript' : 'javascript'} 
+          <CodeEditor
+            code={content}
+            onChange={handleContentChange}
+            language={activeFile.endsWith('.ts') ? 'typescript' : 'javascript'}
+            filePath={activeFile}
           />
         )}
       </div>

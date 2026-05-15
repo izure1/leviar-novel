@@ -3,10 +3,12 @@ import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
 import { EditorArea } from './components/Editor/EditorArea'
+import { DialogBox } from './components/UI/DialogBox'
 
 function App() {
   const { projectPath, setProjectPath } = useProjectStore()
   const [loading, setLoading] = useState(false)
+  const [newProjectData, setNewProjectData] = useState<{ isOpen: boolean, parentDir: string } | null>(null)
 
   const handleOpenProject = async () => {
     const path = await window.api.dialog.openDirectory()
@@ -23,18 +25,37 @@ function App() {
   }
 
   const handleScaffoldProject = async () => {
-    const path = await window.api.dialog.openDirectory()
-    if (path) {
-      setLoading(true)
-      const res = await window.api.project.scaffold(path)
-      if (res.success) {
-        await window.api.project.load(path)
-        setProjectPath(path)
-      } else {
-        alert('Failed to scaffold project: ' + res.error)
-      }
-      setLoading(false)
+    const parentDir = await window.api.dialog.openDirectory()
+    if (parentDir) {
+      setNewProjectData({ isOpen: true, parentDir })
     }
+  }
+
+  const submitNewProject = async (projectName: string) => {
+    if (!projectName || !newProjectData) return
+    const safeName = projectName.replace(/[^a-zA-Z0-9_-]/g, '_')
+    // Windows 경로 대응
+    const separator = newProjectData.parentDir.includes('\\') ? '\\' : '/'
+    const targetDir = `${newProjectData.parentDir}${separator}${safeName}`
+    
+    setLoading(true)
+    const check = await window.api.fs.checkExists(targetDir)
+    if (check.exists) {
+      alert(`이미 해당 경로에 폴더가 존재합니다:\n${targetDir}`)
+      setLoading(false)
+      setNewProjectData(null)
+      return
+    }
+
+    const res = await window.api.project.scaffold(targetDir)
+    if (res.success) {
+      await window.api.project.load(targetDir)
+      setProjectPath(targetDir)
+    } else {
+      alert('Failed to scaffold project: ' + res.error)
+    }
+    setLoading(false)
+    setNewProjectData(null)
   }
 
   if (!projectPath) {
@@ -62,6 +83,14 @@ function App() {
             </button>
           </div>
         </div>
+
+        <DialogBox
+          isOpen={newProjectData?.isOpen || false}
+          title="새 프로젝트 이름 입력"
+          defaultValue="my-visual-novel"
+          onConfirm={submitNewProject}
+          onCancel={() => setNewProjectData(null)}
+        />
       </div>
     )
   }

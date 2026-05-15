@@ -12,12 +12,14 @@ declare global {
         scaffold: (targetDir: string) => Promise<{ success: boolean; error?: string }>
         load: (projectPath: string) => Promise<{ success: boolean; error?: string }>
         update: (projectPath: string) => Promise<{ success: boolean; error?: string }>
+        getTypes: (projectPath: string) => Promise<{ success: boolean; types?: { path: string; content: string }[]; error?: string }>
       }
       preview: {
         start: (projectPath: string) => Promise<{ success: boolean; url?: string; error?: string }>
         stop: () => Promise<{ success: boolean; error?: string }>
       }
       fs: {
+        checkExists: (path: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>
         readFile: (path: string) => Promise<{ success: boolean; content?: string; error?: string }>
         writeFile: (path: string, content: string) => Promise<{ success: boolean; error?: string }>
         copyFile: (src: string, dest: string) => Promise<{ success: boolean; error?: string }>

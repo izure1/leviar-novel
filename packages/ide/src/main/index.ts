@@ -118,7 +118,53 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
+    try {
+      const fs = require('fs/promises')
+      const path = require('path')
+      const typesDir = app.isPackaged
+        ? path.join(process.resourcesPath, 'core-template', 'dist', 'types')
+        : path.join(app.getAppPath(), 'resources', 'core-template', 'dist', 'types')
+      
+      const types: { path: string, content: string }[] = []
+      
+      const readTypesRecursively = async (currentPath: string, relativeRoot: string = '') => {
+        try {
+          const entries = await fs.readdir(currentPath, { withFileTypes: true })
+          for (const entry of entries) {
+            const entryPath = path.join(currentPath, entry.name)
+            const relPath = relativeRoot ? `${relativeRoot}/${entry.name}` : entry.name
+            
+            if (entry.isDirectory()) {
+              await readTypesRecursively(entryPath, relPath)
+            } else if (entry.name.endsWith('.d.ts')) {
+              const content = await fs.readFile(entryPath, 'utf-8')
+              types.push({ path: relPath, content })
+            }
+          }
+        } catch (e) {
+          console.error('[IDE] Failed to read types dir:', currentPath, e)
+        }
+      }
+      
+      await readTypesRecursively(typesDir)
+      return { success: true, types }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   // File System IPCs
+  ipcMain.handle('fs:checkExists', async (_, targetPath: string) => {
+    try {
+      const fs = require('fs/promises')
+      await fs.access(targetPath)
+      return { success: true, exists: true }
+    } catch {
+      return { success: true, exists: false }
+    }
+  })
+
   ipcMain.handle('fs:readFile', async (_, filePath: string) => {
     try {
       const fs = require('fs/promises')

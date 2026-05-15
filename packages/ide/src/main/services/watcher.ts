@@ -108,18 +108,13 @@ export class ProjectWatcher {
           const importName = '_' + relativePathNoExt.replace(/[^a-zA-Z0-9_]/g, '_')
           
           imports += `import ${importName} from '../${folder}/${relativePathNoExt}'\n`
-          
-          // if it's deeply nested, should the key be just the basename?
-          // To prevent collision, it's safer to use the basename, but what if there are duplicates?
-          // For now, let's export it as baseName but prefix it with dir name if needed?
-          // The user usually wants the filename to be the key. Let's use basename as before.
           exports += `  ...${importName},\n`
         } else {
           // assets (png, wav, etc)
           const relativePathForwardSlash = file.rel.replace(/\\/g, '/')
-          // 중첩된 폴더 구조를 고려하여 key 생성 (예: ch1/bg.png -> ch1/bg)
           const relativePathNoExt = parsed.dir ? `${parsed.dir}/${parsed.name}` : parsed.name
           const assetKey = relativePathNoExt.replace(/\\/g, '/')
+          
           exports += `  '${assetKey}': './${folder}/${relativePathForwardSlash}',\n`
         }
       }
