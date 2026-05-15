@@ -1,12 +1,16 @@
 import { watch, FSWatcher } from 'chokidar'
 import path from 'path'
 import { promises as fs } from 'fs'
+import { WATCHER_DECL, getDeclarationTemplate } from '../../shared/templates'
 
 const WATCH_FOLDERS = [
   'assets',
   'scenes',
   'characters',
-  'modules'
+  'modules',
+  'backgrounds',
+  'effects',
+  'fallbacks',
 ]
 
 export class ProjectWatcher {
@@ -23,16 +27,15 @@ export class ProjectWatcher {
     const watchPaths = WATCH_FOLDERS.map((folder) => path.join(projectPath, folder))
 
     this.watcher = watch(watchPaths, {
-      ignored: /(^|[\\/])\\../, // ignore dotfiles
+      ignored: /(^|[\\\/])\../, // ignore dotfiles
       persistent: true,
-      ignoreInitial: false
+      ignoreInitial: false,
     })
 
     this.watcher
       .on('add', (filePath) => this.handleFileChange(filePath))
       .on('unlink', (filePath) => this.handleFileChange(filePath))
-      // on 'change', the declaration doesn't need to change unless the export changes,
-      // but usually the export structure remains the same, so we only watch add/unlink
+    // 'change'는 export 구조가 바뀌지 않으면 선언 재생성 불필요
   }
 
   /**
@@ -69,60 +72,27 @@ export class ProjectWatcher {
         return
       }
 
-      const getFilesRecursively = async (dir: string, relativeRoot: string = ''): Promise<{ name: string; path: string; rel: string }[]> => {
-        const entries = await fs.readdir(dir, { withFileTypes: true })
-        let result: { name: string; path: string; rel: string }[] = []
-        for (const entry of entries) {
-          if (entry.name.startsWith('.')) continue
-          
-          const relativeEntryPath = relativeRoot ? `${relativeRoot}/${entry.name}` : entry.name
-          const fullPath = path.join(dir, entry.name)
-
-          if (entry.isDirectory()) {
-            result = result.concat(await getFilesRecursively(fullPath, relativeEntryPath))
-          } else {
-            result.push({
-              name: entry.name,
-              path: fullPath,
-              rel: relativeEntryPath
-            })
-          }
-        }
-        return result
-      }
-
       const files = await getFilesRecursively(folderPath)
 
-      let imports = ''
-      let exports = 'export default {\n'
+      // ── WATCHER_DECL에 정의된 폴더: 헤더/푸터 기반 생성 ─────────
+      if (folder in WATCHER_DECL) {
+        const content = await this.buildDeclContent(folder, files)
+        await fs.mkdir(path.dirname(declPath), { recursive: true })
+        await fs.writeFile(declPath, content, 'utf-8')
+        console.log(`[IDE] Generated declaration: ${declPath}`)
 
-      for (const file of files) {
-        // file.rel is like "ch1/intro.ts" or "intro.ts"
-        const parsed = path.parse(file.rel)
-        const baseName = parsed.name
-        
-        if (file.name.endsWith('.ts')) {
-          // e.g. "ch1_intro" or just "intro"
-          // We use the full relative path without extension to generate a unique import name
-          const relativePathNoExt = parsed.dir ? `${parsed.dir}/${parsed.name}` : parsed.name
-          const importName = '_' + relativePathNoExt.replace(/[^a-zA-Z0-9_]/g, '_')
-          
-          imports += `import ${importName} from '../${folder}/${relativePathNoExt}'\n`
-          exports += `  ...${importName},\n`
-        } else {
-          // assets (png, wav, etc)
-          const relativePathForwardSlash = file.rel.replace(/\\/g, '/')
-          const relativePathNoExt = parsed.dir ? `${parsed.dir}/${parsed.name}` : parsed.name
-          const assetKey = relativePathNoExt.replace(/\\/g, '/')
-          
-          exports += `  '${assetKey}': './${folder}/${relativePathForwardSlash}',\n`
+        // assets 생성 시 audios.ts도 함께 갱신
+        if (folder === 'assets') {
+          const audioContent = buildAudioDecl(files)
+          const audioDeclPath = path.join(this.projectPath, 'declarations', 'audios.ts')
+          await fs.writeFile(audioDeclPath, audioContent, 'utf-8')
+          console.log(`[IDE] Generated declaration: ${audioDeclPath}`)
         }
+        return
       }
 
-      exports += '} as const\n'
-
-      const content = `${imports}\n${exports}`
-      
+      // ── 그 외 폴더 (scenes, characters): 기본 export 객체 ───────
+      const content = buildDefaultDecl(folder, files)
       await fs.mkdir(path.dirname(declPath), { recursive: true })
       await fs.writeFile(declPath, content, 'utf-8')
       console.log(`[IDE] Generated declaration: ${declPath}`)
@@ -130,4 +100,190 @@ export class ProjectWatcher {
       console.error(`[IDE] Failed to generate declaration for ${folder}:`, e)
     }
   }
+
+  private async buildDeclContent(
+    folder: string,
+    files: FileEntry[]
+  ): Promise<string> {
+    const decl = WATCHER_DECL[folder]!
+    const tsFiles = files.filter((f) => f.name.endsWith('.ts'))
+
+    if (folder === 'assets') {
+      return buildAssetDecl(files)
+    }
+
+    if (folder === 'modules') {
+      return buildModulesDecl(tsFiles)
+    }
+
+    if (folder === 'fallbacks') {
+      return buildFallbacksDecl(tsFiles)
+    }
+
+    // backgrounds, effects: namespace import
+    if (folder === 'backgrounds' || folder === 'effects') {
+      const imports = tsFiles
+        .map((f) => {
+          const importName = toImportName(f.rel)
+          const relPathNoExt = removeExt(f.rel)
+          return `import * as ${importName} from '../${folder}/${relPathNoExt}'`
+        })
+        .join('\n')
+
+      const entries = tsFiles
+        .map((f) => {
+          const importName = toImportName(f.rel)
+          const key = removeExt(f.rel).replace(/\\/g, '/')
+          return `  '${key}': ${importName},`
+        })
+        .join('\n')
+
+      const importBlock = imports ? `${imports}\n` : ''
+      return `${decl.header}${importBlock}${entries ? `\n${entries}\n` : ''}${decl.footer}`
+    }
+
+    // audios (WATCHER_DECL에 있지만 buildAudioDecl로 처리 — 여기 도달 안 함)
+    return getDeclarationTemplate(folder)
+  }
+}
+
+// ─── 순수 함수 헬퍼 ──────────────────────────────────────────
+
+interface FileEntry {
+  name: string
+  path: string
+  rel: string
+}
+
+async function getFilesRecursively(
+  dir: string,
+  relativeRoot: string = ''
+): Promise<FileEntry[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true })
+  let result: FileEntry[] = []
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue
+
+    const relativeEntryPath = relativeRoot
+      ? `${relativeRoot}/${entry.name}`
+      : entry.name
+    const fullPath = path.join(dir, entry.name)
+
+    if (entry.isDirectory()) {
+      result = result.concat(await getFilesRecursively(fullPath, relativeEntryPath))
+    } else {
+      result.push({ name: entry.name, path: fullPath, rel: relativeEntryPath })
+    }
+  }
+  return result
+}
+
+/** `ch1/intro.ts` → `_ch1_intro` */
+function toImportName(rel: string): string {
+  return '_' + removeExt(rel).replace(/[^a-zA-Z0-9_]/g, '_')
+}
+
+/** `ch1/intro.ts` → `ch1/intro` */
+function removeExt(rel: string): string {
+  const parsed = path.parse(rel)
+  return parsed.dir ? `${parsed.dir}/${parsed.name}` : parsed.name
+}
+
+// ─── 폴더별 선언 생성 함수 ────────────────────────────────────
+
+function buildAssetDecl(files: FileEntry[]): string {
+  const decl = WATCHER_DECL['assets']!
+  const entries = files
+    .filter((f) => !f.name.endsWith('.ts'))
+    .map((f) => {
+      const relFwd = f.rel.replace(/\\/g, '/')
+      const key = removeExt(relFwd)
+      return `  '${key}': './assets/${relFwd}',`
+    })
+    .join('\n')
+
+  return `${decl.header}${entries ? `\n${entries}\n` : ''}${decl.footer}`
+}
+
+function buildAudioDecl(files: FileEntry[]): string {
+  const decl = WATCHER_DECL['audios']!
+  const audioExt = /\.(mp3|wav|ogg|m4a|aac)$/i
+  const entries = files
+    .filter((f) => audioExt.test(f.name))
+    .map((f) => {
+      const relFwd = f.rel.replace(/\\/g, '/')
+      const key = removeExt(relFwd)
+      return `  '${key}': Assets['${key}'],`
+    })
+    .join('\n')
+
+  return `${decl.header}${entries ? `\n${entries}\n` : ''}${decl.footer}`
+}
+
+function buildModulesDecl(tsFiles: FileEntry[]): string {
+  const decl = WATCHER_DECL['modules']!
+
+  if (tsFiles.length === 0) {
+    return `${decl.header}\nexport default defineCustomModules({\n\n${decl.footer}`
+  }
+
+  const imports = tsFiles
+    .map((f) => {
+      const importName = toImportName(f.rel)
+      const relPathNoExt = removeExt(f.rel)
+      return `import ${importName} from '../modules/${relPathNoExt}'`
+    })
+    .join('\n')
+
+  const entries = tsFiles
+    .map((f) => {
+      const importName = toImportName(f.rel)
+      const key = removeExt(f.rel).replace(/\\/g, '/')
+      return `  '${key}': ${importName},`
+    })
+    .join('\n')
+
+  return `${decl.header}${imports}\n\nexport default defineCustomModules({\n${entries}\n${decl.footer}`
+}
+
+function buildFallbacksDecl(tsFiles: FileEntry[]): string {
+  const decl = WATCHER_DECL['fallbacks']!
+
+  const imports = tsFiles
+    .map((f) => {
+      const importName = toImportName(f.rel)
+      const relPathNoExt = removeExt(f.rel)
+      return `import ${importName} from '../fallbacks/${relPathNoExt}'`
+    })
+    .join('\n')
+
+  const entries = tsFiles
+    .map((f) => `  ${toImportName(f.rel)},`)
+    .join('\n')
+
+  const importBlock = imports ? `${imports}\n\n` : ''
+  return `${decl.header}${importBlock}${entries ? `\n${entries}\n` : ''}${decl.footer}`
+}
+
+function buildDefaultDecl(folder: string, files: FileEntry[]): string {
+  const tsFiles = files.filter((f) => f.name.endsWith('.ts'))
+
+  const imports = tsFiles
+    .map((f) => {
+      const importName = toImportName(f.rel)
+      const relPathNoExt = removeExt(f.rel)
+      return `import ${importName} from '../${folder}/${relPathNoExt}'`
+    })
+    .join('\n')
+
+  const entries = tsFiles
+    .map((f) => {
+      const key = removeExt(f.rel).replace(/\\/g, '/')
+      return `  '${key}': ${toImportName(f.rel)},`
+    })
+    .join('\n')
+
+  const importBlock = imports ? `${imports}\n\n` : ''
+  return `${importBlock}export default {\n${entries}\n} as const\n`
 }

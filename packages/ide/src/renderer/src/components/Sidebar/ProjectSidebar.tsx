@@ -1,9 +1,10 @@
 import { useEffect, useState, MouseEvent } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
 import { DialogBox } from '../UI/DialogBox'
+import { getFileTemplate } from '../../../../shared/templates'
 
-const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules']
-const CONFIG_FILES = ['novel.config.ts', 'backgrounds.ts', 'audios.ts', 'main.ts']
+const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks']
+const CONFIG_FILES = ['novel.config.ts', 'main.ts']
 
 interface FileNode {
   name: string
@@ -28,6 +29,9 @@ export function ProjectSidebar() {
     assets: true,
     characters: true,
     modules: true,
+    backgrounds: true,
+    effects: true,
+    fallbacks: true,
   })
   const [folderFiles, setFolderFiles] = useState<Record<string, FileNode[]>>({})
   const [promptData, setPromptData] = useState<PromptData | null>(null)
@@ -165,16 +169,7 @@ export function ProjectSidebar() {
       const filePath = `${projectPath}/${targetFolder}/${safeName}.ts`
       const relativeDots = Array(targetFolder.split(/[/\\]/).length).fill('..').join('/')
 
-      let template = ''
-      if (rootType === 'scenes') {
-        template = `import { defineScene } from 'fumika'\nimport type config from '${relativeDots}/novel.config'\n\nexport default defineScene<typeof config['variables'], typeof config>({\n  // initial: {},\n})(({ label, next }) => [\n  label('start'),\n  { type: 'dialogue', text: '새로운 씬입니다.' }\n])\n`
-      } else if (rootType === 'characters') {
-        template = `import { defineCharacter } from 'fumika'\nimport assets from '${relativeDots}/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: {\n    normal: { src: '', width: 560, points: {} }\n  },\n  emotions: {\n    normal: {}\n  }\n})\n`
-      } else if (rootType === 'modules') {
-        template = `import { define } from 'fumika'\n\ninterface MyCmd {\n  type: '${safeName}'\n}\n\ninterface MySchema {\n  count: number\n}\n\ninterface MyHook {\n  '${safeName}:event': (val: number) => void\n}\n\nexport default define<MyCmd, MySchema, MyHook>({\n  count: 0\n})\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return null\n  })\n`
-      } else {
-        template = `// New file`
-      }
+      const template = getFileTemplate(rootType, safeName, relativeDots)
 
       await window.api.fs.writeFile(filePath, template)
       setActiveFile(filePath)

@@ -6,80 +6,14 @@ const DEFAULT_FOLDERS = [
   'scenes',
   'characters',
   'modules',
-  'declarations'
+  'declarations',
+  'backgrounds',
+  'effects',
+  'fallbacks'
 ]
 
-const NOVEL_CONFIG_CONTENT = `import Assets from './declarations/assets'
-import Scenes from './declarations/scenes'
-import Characters from './declarations/characters'
-import Modules from './modules'
-import Backgrounds from './backgrounds'
-import Audios from './audios'
+import { NOVEL_CONFIG_CONTENT, MAIN_TS_CONTENT, INDEX_HTML_CONTENT, getDeclarationTemplate } from '../../shared/templates'
 
-import { defineNovelConfig } from 'fumika'
-
-export default defineNovelConfig({
-  assets: Assets,
-  scenes: Scenes,
-  characters: Characters,
-  modules: Modules,
-  backgrounds: Backgrounds,
-  audios: Audios,
-})
-`
-
-const MAIN_TS_CONTENT = `// Fumika Engine Entry Point
-import { createEngine } from 'fumika'
-import config from './novel.config'
-
-const engine = createEngine(config)
-engine.mount('#app')
-`
-
-const INDEX_HTML_CONTENT = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fumika Visual Novel</title>
-    <style>
-      body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-      #app { width: 100%; height: 100%; }
-    </style>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/main.ts"></script>
-  </body>
-</html>
-`
-
-const DECLARATION_TEMPLATE = `export default {
-
-}
-`
-
-const BACKGROUNDS_TEMPLATE = `import { defineBackgrounds } from 'fumika'
-import assets from './declarations/assets'
-
-export default defineBackgrounds(assets)({
-
-})
-`
-
-const MODULES_TEMPLATE = `import { defineCustomModules } from 'fumika'
-import modules from './declarations/modules'
-
-export default defineCustomModules(modules)
-`
-
-const AUDIOS_TEMPLATE = `import { defineAudios } from 'fumika'
-import Assets from './declarations/assets'
-
-export default defineAudios({
-  // 'my_audio': Assets['audio_filename']
-})
-`
 
 export async function ensureProjectDependencies(targetDir: string, forceUpdate = false): Promise<void> {
   const packageJsonPath = path.join(targetDir, 'package.json')
@@ -166,14 +100,22 @@ export async function scaffoldProject(targetDir: string): Promise<void> {
   }
 
   // 2. declarations 하위 파일 기본 생성
-  const declareFiles = ['assets', 'scenes', 'characters', 'modules']
+  const declareFiles = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'audios']
   for (const file of declareFiles) {
     const filePath = path.join(targetDir, 'declarations', `${file}.ts`)
     try {
       await fs.access(filePath)
     } catch {
-      await fs.writeFile(filePath, DECLARATION_TEMPLATE, 'utf-8')
+      await fs.writeFile(filePath, getDeclarationTemplate(file as any), 'utf-8')
     }
+  }
+
+  // types.d.ts: FallbackItem 전역 선언 (declare global)
+  const typesDeclPath = path.join(targetDir, 'declarations', 'types.d.ts')
+  try {
+    await fs.access(typesDeclPath)
+  } catch {
+    await fs.writeFile(typesDeclPath, getDeclarationTemplate('types'), 'utf-8')
   }
 
   // 3. 기본 설정 파일 생성
@@ -199,26 +141,7 @@ export async function scaffoldProject(targetDir: string): Promise<void> {
     await fs.writeFile(indexPath, INDEX_HTML_CONTENT, 'utf-8')
   }
 
-  const bgPath = path.join(targetDir, 'backgrounds.ts')
-  try {
-    await fs.access(bgPath)
-  } catch {
-    await fs.writeFile(bgPath, BACKGROUNDS_TEMPLATE, 'utf-8')
-  }
 
-  const modulesPath = path.join(targetDir, 'modules.ts')
-  try {
-    await fs.access(modulesPath)
-  } catch {
-    await fs.writeFile(modulesPath, MODULES_TEMPLATE, 'utf-8')
-  }
-
-  const audioPath = path.join(targetDir, 'audios.ts')
-  try {
-    await fs.access(audioPath)
-  } catch {
-    await fs.writeFile(audioPath, AUDIOS_TEMPLATE, 'utf-8')
-  }
 
   await ensureProjectDependencies(targetDir)
 }

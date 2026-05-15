@@ -118,7 +118,7 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
+  ipcMain.handle('project:getTypes', async (_, _projectPath: string) => {
     try {
       const fs = require('fs/promises')
       const path = require('path')
