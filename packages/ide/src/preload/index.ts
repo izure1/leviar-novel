@@ -17,6 +17,9 @@ const api = {
     start: (projectPath: string) => ipcRenderer.invoke('preview:start', projectPath),
     stop: () => ipcRenderer.invoke('preview:stop')
   },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url)
+  },
   fs: {
     checkExists: (path: string) => ipcRenderer.invoke('fs:checkExists', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),

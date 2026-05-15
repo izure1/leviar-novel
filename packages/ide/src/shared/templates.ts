@@ -155,7 +155,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   Record<DeclarationFolder, (safeName: string, relativeDots: string) => string>
 > = {
   scenes: (_, relativeDots) =>
-    `import { defineScene } from 'fumika'\nimport config from '${relativeDots}/novel.config'\n\nexport default defineScene({ config })(({ label, next }) => [\n  label('start'),\n  { type: 'dialogue', text: '새로운 씬입니다.' },\n])\n`,
+    `import { defineScene } from 'fumika'\nimport type Config from '${relativeDots}/novel.config'\n\nexport default defineScene({ config: {} as typeof Config })(({ label, next }) => [\n  label('start'),\n  { type: 'dialogue', text: '새로운 씬입니다.' },\n])\n`,
 
   characters: (safeName, relativeDots) =>
     `import { defineCharacter } from 'fumika'\nimport assets from '${relativeDots}/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: {\n    normal: { src: '', width: 560, points: {} }\n  },\n  emotions: {\n    normal: {}\n  }\n})\n`,

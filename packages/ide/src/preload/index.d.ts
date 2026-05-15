@@ -18,6 +18,9 @@ declare global {
         start: (projectPath: string) => Promise<{ success: boolean; url?: string; error?: string }>
         stop: () => Promise<{ success: boolean; error?: string }>
       }
+      shell: {
+        openExternal: (url: string) => Promise<{ success: boolean }>
+      }
       fs: {
         checkExists: (path: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>
         readFile: (path: string) => Promise<{ success: boolean; content?: string; error?: string }>

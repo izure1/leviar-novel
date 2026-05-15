@@ -13,7 +13,19 @@ export class PreviewService {
         server: {
           port: this.port,
           strictPort: false,
-        }
+        },
+        plugins: [
+          {
+            name: 'fumika-debug-injector',
+            transform(code, id) {
+              if (id.endsWith('main.ts') || id.endsWith('main.js')) {
+                // inject debugMode = true after Novel instance is created
+                return code.replace(/(const novel = new Novel\(.*?\))/g, '$1\n  Novel.debugMode = true\n')
+              }
+              return null
+            }
+          }
+        ]
       }
 
       this.server = await createServer(config)

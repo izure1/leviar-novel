@@ -119,6 +119,11 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('shell:openExternal', async (_, url: string) => {
+    await shell.openExternal(url)
+    return { success: true }
+  })
+
   ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
     try {
       const fs = require('fs/promises')

@@ -3,11 +3,12 @@ import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
 import { EditorArea } from './components/Editor/EditorArea'
+import { DebugToolbar } from './components/Toolbar/DebugToolbar'
 import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectDialog'
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
 
 function App() {
-  const { projectPath, setProjectPath, globalLoading, setGlobalLoading } = useProjectStore()
+  const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen } = useProjectStore()
   const [newProjectData, setNewProjectData] = useState<{ isOpen: boolean, parentDir: string } | null>(null)
 
   const handleOpenProject = async () => {
@@ -100,15 +101,18 @@ function App() {
       <ProjectSidebar />
 
       {/* Main Editor Area */}
-      <main className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center border-b border-slate-800 bg-slate-900/50 px-6 backdrop-blur-md">
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <header className="flex h-14 shrink-0 items-center border-b border-slate-800 bg-slate-900/50 px-6 backdrop-blur-md">
           <h3 className="text-sm font-medium">Editor</h3>
+          <DebugToolbar />
         </header>
-        <div className="flex-1 p-6 flex gap-6 h-[calc(100vh-56px)]">
+        <div className="flex-1 p-6 flex gap-6 overflow-hidden">
           <EditorArea />
-          <div className="w-[400px] flex flex-col shrink-0">
-            <PreviewPanel />
-          </div>
+          {isPreviewOpen && (
+            <div className="w-[400px] flex flex-col shrink-0 h-full">
+              <PreviewPanel />
+            </div>
+          )}
         </div>
       </main>
       <LoadingOverlay />
