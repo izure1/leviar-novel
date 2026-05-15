@@ -1,6 +1,5 @@
 ﻿import config from '../novel.config'
 import { defineScene } from 'fumika'
-import { commonInitial } from './common-initial'
 
 export default defineScene({
   config

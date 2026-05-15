@@ -1,6 +1,7 @@
-﻿import { defineCharacter } from 'fumika'
+import { defineCharacter } from 'fumika'
+import assets from '../assets'
 
-export default defineCharacter({
+export default defineCharacter(assets)({
   name: '후미카',
   bases: {
     normal: {

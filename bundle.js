@@ -4053,10 +4053,10 @@
     for (const entry of entries) visit(entry);
     return sorted;
   }
-  function mergePoint(previous, next, fallback) {
+  function mergePoint(previous, next, fallback2) {
     return {
-      x: next?.x ?? previous?.x ?? fallback.x,
-      y: next?.y ?? previous?.y ?? fallback.y
+      x: next?.x ?? previous?.x ?? fallback2.x,
+      y: next?.y ?? previous?.y ?? fallback2.y
     };
   }
   function mergeScale(previous, next) {
@@ -4532,8 +4532,28 @@
     const mergedModules = { ...BUILTIN_MODULES, ...config.modules ?? {} };
     return { ...config, modules: mergedModules };
   }
-  function defineCharacter(def) {
-    return def;
+  function defineCharacter(assets) {
+    return (def) => {
+      return def;
+    };
+  }
+  function defineAssets(assets) {
+    return assets;
+  }
+  function defineBackgrounds(assets) {
+    return (backgrounds2) => backgrounds2;
+  }
+  function defineAudios(audios2) {
+    return audios2;
+  }
+  function defineEffects(effects2) {
+    return effects2;
+  }
+  function defineFallback(modules2) {
+    return (rules) => rules;
+  }
+  function defineCustomModules(modules2) {
+    return modules2;
   }
   function defineInitial(config) {
     return (initial) => initial;
@@ -4690,7 +4710,7 @@
       })(exports, function() {
         return (
           /******/
-          (function(modules) {
+          (function(modules2) {
             var installedModules = {};
             function __webpack_require__(moduleId) {
               if (installedModules[moduleId]) {
@@ -4705,11 +4725,11 @@
                 exports: {}
                 /******/
               };
-              modules[moduleId].call(module2.exports, module2, module2.exports, __webpack_require__);
+              modules2[moduleId].call(module2.exports, module2, module2.exports, __webpack_require__);
               module2.l = true;
               return module2.exports;
             }
-            __webpack_require__.m = modules;
+            __webpack_require__.m = modules2;
             __webpack_require__.c = installedModules;
             __webpack_require__.d = function(exports2, name, getter) {
               if (!__webpack_require__.o(exports2, name)) {
@@ -18892,8 +18912,8 @@ ${addLineNumbers(fragment)}`);
     _runInitial(preservedState) {
       const initial = this.definition.initial || {};
       const r = this.renderer;
-      const modules = r.config.modules;
-      if (!modules) return;
+      const modules2 = r.config.modules;
+      if (!modules2) return;
       const stateStore = this.callbacks.getStateStore();
       const uiRegistry = this.callbacks.getUIRegistry();
       const sceneRunner = this;
@@ -18963,7 +18983,7 @@ ${addLineNumbers(fragment)}`);
           get: (name) => this.definition.actions?.[name]
         }
       };
-      for (const [moduleKey, module] of Object.entries(modules)) {
+      for (const [moduleKey, module] of Object.entries(modules2)) {
         if (typeof module.__viewBuilder !== "function") continue;
         const initialData = initial[moduleKey];
         const preserved = preservedState?.get(moduleKey);
@@ -19141,9 +19161,9 @@ ${addLineNumbers(fragment)}`);
       if (FLOW_CONTROL_HANDLERS[type]) {
         return FLOW_CONTROL_HANDLERS[type](params, ctx);
       }
-      const modules = r.config.modules;
-      if (modules && typeof modules[type]?.__handler === "function") {
-        return modules[type].__handler(params, ctx);
+      const modules2 = r.config.modules;
+      if (modules2 && typeof modules2[type]?.__handler === "function") {
+        return modules2[type].__handler(params, ctx);
       }
       if (BUILTIN_HANDLERS[type]) {
         return BUILTIN_HANDLERS[type](params, ctx);
@@ -19371,9 +19391,9 @@ ${addLineNumbers(fragment)}`);
     /**
      * config.modules를 순회하며 모듈을 _modules에 등록하고 key를 주입합니다.
      */
-    _collectModules(modules) {
-      if (!modules) return;
-      for (const [key, module] of Object.entries(modules)) {
+    _collectModules(modules2) {
+      if (!modules2) return;
+      for (const [key, module] of Object.entries(modules2)) {
         if (module && typeof module.__setKey === "function") {
           module.__setKey(key);
           this._modules.set(key, module);
@@ -20261,14 +20281,37 @@ ${addLineNumbers(fragment)}`);
   };
 
   // characters/chat.ts
-  var chat_default = defineCharacter({
+  var chat_default = defineCharacter({})({
     name: "\uCC44\uD305\uCC3D",
     bases: {},
     emotions: {}
   });
 
+  // assets.ts
+  var assets_default = defineAssets({
+    // 배경
+    bg_floor: "./assets/bg_floor.png",
+    bg_room: "./assets/bg_room.png",
+    bg_park: "./assets/bg_park.png",
+    // 캐릭터 베이스
+    fumika_base_normal: "./assets/fumika_base_normal.png",
+    // 캐릭터 표정
+    fumika_emotion_base_normal: "./assets/fumika_emotion_base_normal.png",
+    fumika_emotion_base_angry: "./assets/fumika_emotion_base_angry.png",
+    fumika_emotion_base_smile: "./assets/fumika_emotion_base_smile.png",
+    fumika_emotion_base_embarrassed: "./assets/fumika_emotion_base_embarrassed.png",
+    // 기타 이미지
+    img_card_heroine: "./assets/img_card_hero.png",
+    // 파티클
+    dust: "./assets/particle_dust.png",
+    rain: "./assets/particle_rain.png",
+    snow: "./assets/particle_snow.png",
+    sakura: "./assets/particle_sakura.png",
+    fog: "./assets/particle_fog.png"
+  });
+
   // characters/fumika.ts
-  var fumika_default = defineCharacter({
+  var fumika_default = defineCharacter(assets_default)({
     name: "\uD6C4\uBBF8\uCE74",
     bases: {
       normal: {
@@ -20290,7 +20333,7 @@ ${addLineNumbers(fragment)}`);
 
   // novel.config.ts
   var testModule = define2();
-  testModule.onBoot(async (world) => {
+  testModule.onBoot(async (_world) => {
     console.log("booting...");
   }).defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
@@ -20307,12 +20350,38 @@ ${addLineNumbers(fragment)}`);
     },
     onCleanup: () => {
     },
-    onUpdate: (ctx, state, setState) => {
+    onUpdate: (ctx, state, _setState2) => {
       ctx.world.debugMode = state.on;
     }
-  })).defineCommand(function* (cmd, ctx, state, setState) {
+  })).defineCommand(function* (_cmd, _ctx, state, setState) {
     setState({ on: !state.on });
     return true;
+  });
+  var modules = defineCustomModules({
+    "test-cmd": testModule,
+    "debug": debugModule
+  });
+  var backgrounds = defineBackgrounds(assets_default)({
+    "floor": { src: "bg_floor", parallax: true },
+    "room": { src: "bg_room", parallax: true },
+    "park": { src: "bg_park", parallax: true }
+  });
+  var audios = defineAudios({
+    "am223": "./assets/bgm_am223.mp3",
+    "daytime": "./assets/bgm_daytime.mp3"
+  });
+  var fallback = defineFallback(modules)([
+    { type: "character", action: "show", defaults: { duration: 300 } },
+    { type: "character", action: "remove", defaults: { duration: 1e3 } }
+  ]);
+  var effects = defineEffects({
+    sakura: {
+      clip: {
+        size: [
+          [1, 2]
+        ]
+      }
+    }
   });
   var novel_config_default = defineNovelConfig({
     width: 1280,
@@ -20327,10 +20396,7 @@ ${addLineNumbers(fragment)}`);
     environments: {
       $bgmVolume: 1
     },
-    modules: {
-      "test-cmd": testModule,
-      "debug": debugModule
-    },
+    modules,
     scenes: [
       "scene-title",
       "scene-ui",
@@ -20347,48 +20413,11 @@ ${addLineNumbers(fragment)}`);
       "chat": chat_default,
       "fumika": fumika_default
     },
-    backgrounds: {
-      "floor": { src: "bg_floor", parallax: true },
-      "room": { src: "bg_room", parallax: true },
-      "park": { src: "bg_park", parallax: true }
-    },
-    audios: {
-      "am223": "./assets/bgm_am223.mp3",
-      "daytime": "./assets/bgm_daytime.mp3"
-    },
-    assets: {
-      // 배경
-      bg_floor: "./assets/bg_floor.png",
-      bg_room: "./assets/bg_room.png",
-      bg_park: "./assets/bg_park.png",
-      // 캐릭터 베이스
-      fumika_base_normal: "./assets/fumika_base_normal.png",
-      // 캐릭터 표정
-      fumika_emotion_base_normal: "./assets/fumika_emotion_base_normal.png",
-      fumika_emotion_base_angry: "./assets/fumika_emotion_base_angry.png",
-      fumika_emotion_base_smile: "./assets/fumika_emotion_base_smile.png",
-      fumika_emotion_base_embarrassed: "./assets/fumika_emotion_base_embarrassed.png",
-      img_card_heroine: "./assets/img_card_hero.png",
-      // 파티클
-      dust: "./assets/particle_dust.png",
-      rain: "./assets/particle_rain.png",
-      snow: "./assets/particle_snow.png",
-      sakura: "./assets/particle_sakura.png",
-      fog: "./assets/particle_fog.png"
-    },
-    fallback: [
-      { type: "character", action: "show", defaults: { duration: 300 } },
-      { type: "character", action: "remove", defaults: { duration: 1e3 } }
-    ],
-    effects: {
-      sakura: {
-        clip: {
-          size: [
-            [1, 2]
-          ]
-        }
-      }
-    }
+    backgrounds,
+    audios,
+    assets: assets_default,
+    fallback,
+    effects
   });
 
   // scenes/common-initial.ts
