@@ -8,10 +8,11 @@ import { PreviewService } from './services/preview'
 
 const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -84,7 +85,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:load', async (_, projectPath: string) => {
     try {
-      await watcher.start(projectPath)
+      await watcher.start(projectPath, mainWindow ?? undefined)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }

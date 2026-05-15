@@ -6,20 +6,15 @@ import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
-// Vite Web Worker 설정 (타입 추론 및 언어 지원용)
+// Vite Web Worker 설정
 self.MonacoEnvironment = {
-  getWorker(_: any, label: string) {
-    if (label === 'json') {
-      return new jsonWorker()
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return new tsWorker()
-    }
+  getWorker(_: string, label: string) {
+    if (label === 'json') return new jsonWorker()
+    if (label === 'typescript' || label === 'javascript') return new tsWorker()
     return new editorWorker()
   }
 }
 
-// CDN을 사용하지 않고 로컬 노드 모듈의 monaco-editor를 직접 사용하도록 설정
 loader.config({ monaco })
 
 interface Props {
@@ -29,7 +24,10 @@ interface Props {
   filePath?: string
 }
 
-// Windows/Mac 절대 경로 → file:/// URI 변환
+/**
+ * Windows 절대경로 → file URI 문자열.
+ * addExtraLib의 키로 사용되며, <Editor path>와 동일한 형식이어야 한다.
+ */
 function toFileUri(absPath: string): string {
   return 'file:///' + absPath.replace(/\\/g, '/')
 }
@@ -37,16 +35,15 @@ function toFileUri(absPath: string): string {
 export function CodeEditor({ code, onChange, language = 'typescript', filePath }: Props) {
   const monacoInstance = useMonaco()
   const { projectPath } = useProjectStore()
-  // 마지막으로 주입한 projectPath 추적 (중복 주입 방지)
-  const injectedProjectPath = useRef<string | null>(null)
+  // 마지막으로 주입한 projectPath (동일 프로젝트 중복 주입 방지)
+  const injectedProjectRef = useRef<string | null>(null)
 
-  // fumika 타입 및 Monaco 기본 설정
+  // Monaco TS 컴파일러 옵션
   useEffect(() => {
     if (!monacoInstance) return
 
     monacoInstance.editor.setTheme('vs-dark')
 
-    // TypeScript 컴파일러 옵션 설정 (타입 에러 우회를 위해 any 캐스팅)
     const ts = (monacoInstance.languages as any).typescript
     if (!ts) return
 
@@ -59,94 +56,99 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
       esModuleInterop: true,
     })
 
-    // 로컬 파일 시스템이 완벽하게 가상화되어 있지 않으므로, 모듈을 찾을 수 없다는 에러 무시 (단, fumika 등 주입된 모듈은 에러가 발생하지 않음)
     ts.typescriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: false,
       noSyntaxValidation: false,
-      // 2307: Cannot find module
-      // 주입되지 않은 외부 모듈이나 로컬 상대경로 임포트에 대한 에러만 무시
       diagnosticCodesToIgnore: [2307, 2792]
     })
-
-    // fumika 코어 타입 강제 주입
-    const injectFumikaTypes = async () => {
-      try {
-        const res = await window.api.project.getTypes('')
-        if (res.success && res.types) {
-          res.types.forEach((t) => {
-            const libUri = `file:///node_modules/fumika/dist/types/${t.path}`
-            if (!ts.typescriptDefaults.getExtraLibs()[libUri]) {
-              ts.typescriptDefaults.addExtraLib(t.content, libUri)
-            }
-          })
-
-          const entryUri = 'file:///node_modules/fumika/index.d.ts'
-          if (!ts.typescriptDefaults.getExtraLibs()[entryUri]) {
-            ts.typescriptDefaults.addExtraLib(`export * from './dist/types/index'`, entryUri)
-          }
-        }
-      } catch (e) {
-        console.error('Failed to inject fumika types:', e)
-      }
-    }
-    injectFumikaTypes()
   }, [monacoInstance])
 
-  // 프로젝트 .ts 파일들을 Monaco 모델로 주입 → 상대경로 import 타입 추론 활성화
+  // 프로젝트 파일 + fumika 타입을 addExtraLib으로 주입
+  // addExtraLib은 TS 워커의 별도 가상 파일시스템을 사용하므로
+  // createModel/program 동기화 문제를 회피한다.
   useEffect(() => {
     if (!monacoInstance || !projectPath) return
-    if (injectedProjectPath.current === projectPath) return
-    injectedProjectPath.current = projectPath
+    if (injectedProjectRef.current === projectPath) return
+    injectedProjectRef.current = projectPath
 
-    const injectProjectFiles = async () => {
+    const ts = (monacoInstance.languages as any).typescript
+    if (!ts) return
+
+    const injectAll = async () => {
       try {
+        // ── 1. 프로젝트 소스 파일 (node_modules 제외) ──
         const res = await window.api.fs.readDir(projectPath, true)
         if (!res.success || !res.files) return
 
         type DirEntry = { name: string; isDirectory: boolean; path: string; children: DirEntry[] }
 
-        const collectTsPaths = (entries: DirEntry[]): string[] => {
+        const collectTsPaths = (entries: DirEntry[], skipNodeModules = true): string[] => {
           const result: string[] = []
           for (const entry of entries) {
             if (entry.isDirectory) {
-              if (entry.name === 'node_modules') continue
-              result.push(...collectTsPaths(entry.children ?? []))
-            } else if (entry.name.endsWith('.ts')) {
-              // entry.path는 슬래시 구분자 상대 경로 (e.g. "declarations/assets.ts")
+              if (skipNodeModules && entry.name === 'node_modules') continue
+              result.push(...collectTsPaths(entry.children ?? [], skipNodeModules))
+            } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) {
               result.push(entry.path)
             }
           }
           return result
         }
 
-        const relativePaths = collectTsPaths(res.files as DirEntry[])
-
-        for (const relPath of relativePaths) {
+        const srcPaths = collectTsPaths(res.files as DirEntry[], true)
+        for (const relPath of srcPaths) {
           const absPath = projectPath + '\\' + relPath.replace(/\//g, '\\')
-
-          // 현재 편집 중인 파일은 <Editor>가 직접 관리하므로 건너뜀
-          if (filePath && absPath.toLowerCase() === filePath.toLowerCase()) continue
-
           const fileRes = await window.api.fs.readFile(absPath)
           if (!fileRes.success || fileRes.content === undefined) continue
 
-          const modelUri = monacoInstance.Uri.parse(toFileUri(absPath))
-          const existing = monacoInstance.editor.getModel(modelUri)
-          if (existing) {
-            if (existing.getValue() !== fileRes.content) {
-              existing.setValue(fileRes.content)
-            }
-          } else {
-            monacoInstance.editor.createModel(fileRes.content, 'typescript', modelUri)
+          const libUri = toFileUri(absPath)
+          ts.typescriptDefaults.addExtraLib(fileRes.content, libUri)
+        }
+
+        // ── 2. fumika 타입 파일 ──
+        const fumikaTypesDir = projectPath + '\\node_modules\\fumika\\dist\\types'
+        const fumikaRes = await window.api.fs.readDir(fumikaTypesDir, true)
+        if (fumikaRes.success && fumikaRes.files) {
+          const dtsRelPaths = collectTsPaths(fumikaRes.files as DirEntry[], false)
+          for (const relPath of dtsRelPaths) {
+            const absPath = fumikaTypesDir + '\\' + relPath.replace(/\//g, '\\')
+            const fileRes = await window.api.fs.readFile(absPath)
+            if (!fileRes.success || fileRes.content === undefined) continue
+
+            const libUri = toFileUri(absPath)
+            ts.typescriptDefaults.addExtraLib(fileRes.content, libUri)
           }
+
+          // fumika 진입점
+          const fumikaIndexUri = toFileUri(projectPath + '\\node_modules\\fumika\\index.d.ts')
+          ts.typescriptDefaults.addExtraLib(
+            `export * from './dist/types/index'`,
+            fumikaIndexUri
+          )
         }
       } catch (e) {
-        console.error('Failed to inject project files into Monaco:', e)
+        console.error('Failed to inject project files:', e)
       }
     }
 
-    injectProjectFiles()
-  }, [monacoInstance, projectPath, filePath])
+    injectAll()
+  }, [monacoInstance, projectPath])
+
+  // watcher 선언 파일 갱신 → addExtraLib 업데이트
+  useEffect(() => {
+    if (!monacoInstance) return
+
+    const ts = (monacoInstance.languages as any).typescript
+    if (!ts) return
+
+    const unsubscribe = window.api.fs.onFileChanged(({ path: changedPath, content }) => {
+      const libUri = toFileUri(changedPath)
+      // addExtraLib은 같은 URI로 호출 시 자동 교체
+      ts.typescriptDefaults.addExtraLib(content, libUri)
+    })
+
+    return unsubscribe
+  }, [monacoInstance])
 
   const fileUri = filePath ? toFileUri(filePath) : undefined
 

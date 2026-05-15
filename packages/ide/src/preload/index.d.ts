@@ -28,6 +28,7 @@ declare global {
         deleteFile: (path: string) => Promise<{ success: boolean; error?: string }>
         deleteDir: (path: string) => Promise<{ success: boolean; error?: string }>
         mkdir: (path: string) => Promise<{ success: boolean; error?: string }>
+        onFileChanged: (callback: (data: { path: string; content: string }) => void) => () => void
       }
     }
   }

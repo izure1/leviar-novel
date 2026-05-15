@@ -1,6 +1,7 @@
 import { watch, FSWatcher } from 'chokidar'
 import path from 'path'
 import { promises as fs } from 'fs'
+import type { BrowserWindow } from 'electron'
 import { WATCHER_DECL, getDeclarationTemplate } from '../../shared/templates'
 
 const WATCH_FOLDERS = [
@@ -16,13 +17,15 @@ const WATCH_FOLDERS = [
 export class ProjectWatcher {
   private watcher: FSWatcher | null = null
   private projectPath: string = ''
+  private win: BrowserWindow | null = null
 
   /**
    * 프로젝트 디렉토리 감시를 시작합니다.
    */
-  public async start(projectPath: string) {
+  public async start(projectPath: string, win?: BrowserWindow) {
     this.stop()
     this.projectPath = projectPath
+    this.win = win ?? null
 
     const watchPaths = WATCH_FOLDERS.map((folder) => path.join(projectPath, folder))
 
@@ -46,6 +49,7 @@ export class ProjectWatcher {
       this.watcher.close()
       this.watcher = null
     }
+    this.win = null
   }
 
   private async handleFileChange(filePath: string) {
@@ -80,6 +84,7 @@ export class ProjectWatcher {
         await fs.mkdir(path.dirname(declPath), { recursive: true })
         await fs.writeFile(declPath, content, 'utf-8')
         console.log(`[IDE] Generated declaration: ${declPath}`)
+        this.notifyFileChanged(declPath, content)
 
         // assets 생성 시 audios.ts도 함께 갱신
         if (folder === 'assets') {
@@ -87,15 +92,17 @@ export class ProjectWatcher {
           const audioDeclPath = path.join(this.projectPath, 'declarations', 'audios.ts')
           await fs.writeFile(audioDeclPath, audioContent, 'utf-8')
           console.log(`[IDE] Generated declaration: ${audioDeclPath}`)
+          this.notifyFileChanged(audioDeclPath, audioContent)
         }
         return
       }
 
       // ── 그 외 폴더 (scenes, characters): 기본 export 객체 ───────
-      const content = buildDefaultDecl(folder, files)
+      const content2 = buildDefaultDecl(folder, files)
       await fs.mkdir(path.dirname(declPath), { recursive: true })
-      await fs.writeFile(declPath, content, 'utf-8')
+      await fs.writeFile(declPath, content2, 'utf-8')
       console.log(`[IDE] Generated declaration: ${declPath}`)
+      this.notifyFileChanged(declPath, content2)
     } catch (e) {
       console.error(`[IDE] Failed to generate declaration for ${folder}:`, e)
     }
@@ -144,6 +151,12 @@ export class ProjectWatcher {
 
     // audios (WATCHER_DECL에 있지만 buildAudioDecl로 처리 — 여기 도달 안 함)
     return getDeclarationTemplate(folder)
+  }
+
+  private notifyFileChanged(filePath: string, content: string): void {
+    if (this.win && !this.win.isDestroyed()) {
+      this.win.webContents.send('fs:fileChanged', { path: filePath, content })
+    }
   }
 }
 

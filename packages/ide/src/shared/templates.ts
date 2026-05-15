@@ -73,7 +73,7 @@ const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   modules: `import { defineCustomModules } from 'fumika'\n\nexport default defineCustomModules({\n\n})\n`,
   backgrounds: `import { defineBackgrounds } from 'fumika'\nimport assets from './assets'\n\nexport default defineBackgrounds(assets)({\n\n})\n`,
   effects: `import { defineEffects } from 'fumika'\n\nexport default defineEffects({\n\n})\n`,
-  fallbacks: `import { defineFallback } from 'fumika'\nimport modules from './modules'\n\nexport default defineFallback(modules)([\n\n] satisfies FallbackItem[])\n`,
+  fallbacks: `import { defineFallback } from 'fumika'\nimport modules from './modules'\n\nexport default defineFallback(modules)([\n\n])\n`,
   audios: `import { defineAudios } from 'fumika'\nimport Assets from './assets'\n\nexport default defineAudios({\n\n})\n`,
   types: `import type { FallbackRuleOf } from 'fumika'\nimport type Modules from './modules'\n\ndeclare global {\n  type FallbackItem = FallbackRuleOf<typeof Modules>\n}\n`,
 }
@@ -118,7 +118,7 @@ export const WATCHER_DECL: Partial<Record<string, WatcherDeclSection>> = {
   },
   fallbacks: {
     header: `import { defineFallback } from 'fumika'\nimport modules from './modules'\n\nexport default defineFallback(modules)([\n`,
-    footer: `] satisfies FallbackItem[])\n`,
+    footer: `])\n`,
   },
 }
 

@@ -26,7 +26,12 @@ const api = {
     renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:renameFile', oldPath, newPath),
     deleteFile: (path: string) => ipcRenderer.invoke('fs:deleteFile', path),
     deleteDir: (path: string) => ipcRenderer.invoke('fs:deleteDir', path),
-    mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path)
+    mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path),
+    onFileChanged: (callback: (data: { path: string; content: string }) => void) => {
+      const listener = (_: Electron.IpcRendererEvent, data: { path: string; content: string }) => callback(data)
+      ipcRenderer.on('fs:fileChanged', listener)
+      return () => ipcRenderer.removeListener('fs:fileChanged', listener)
+    }
   }
 }
 
