@@ -23,7 +23,7 @@ interface PromptData {
   defaultValue: string
 }
 export function ProjectSidebar() {
-  const { projectPath, activeFile, setActiveFile, setGlobalLoading, isDirty } = useProjectStore()
+  const { projectPath, activeFile, setActiveFile, setGlobalLoading } = useProjectStore()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     scenes: true,
     assets: true,
@@ -53,20 +53,7 @@ export function ProjectSidebar() {
 
   const handleFileClick = (targetPath: string) => {
     if (activeFile === targetPath) return
-    if (isDirty) {
-      setConfirmState({
-        isOpen: true,
-        title: '저장되지 않은 변경 사항',
-        message: '현재 파일에 저장되지 않은 변경 사항이 있습니다. 변경 사항을 무시하고 다른 파일을 여시겠습니까?',
-        type: 'warning',
-        onConfirm: () => {
-          setConfirmState(null)
-          setActiveFile(targetPath)
-        }
-      })
-    } else {
-      setActiveFile(targetPath)
-    }
+    setActiveFile(targetPath)
   }
 
   const fetchFiles = async () => {

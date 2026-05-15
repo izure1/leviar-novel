@@ -98,7 +98,14 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         const srcPaths = collectTsPaths(res.files as DirEntry[], true)
         for (const relPath of srcPaths) {
           const absPath = projectPath + '\\' + relPath.replace(/\//g, '\\')
-          const fileRes = await window.api.fs.readFile(absPath)
+          
+          const draftPath = absPath.replace(/([^/\\]+)$/, '.$1.draft')
+          let fileRes = await window.api.fs.readFile(draftPath)
+          
+          if (!fileRes.success || fileRes.content === undefined) {
+            fileRes = await window.api.fs.readFile(absPath)
+          }
+
           if (!fileRes.success || fileRes.content === undefined) continue
 
           const libUri = toFileUri(absPath)
@@ -144,6 +151,21 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
 
     return unsubscribe
   }, [monacoInstance])
+
+  // 현재 에디터의 변경사항을 가상 파일시스템에 동기화 (디바운스)
+  // 원본이 아닌 에디터의 최신 상태(임시저장본 포함)를 타입 추론에 반영
+  useEffect(() => {
+    if (!monacoInstance || !filePath || code === undefined) return
+    const ts = (monacoInstance.languages as any).typescript
+    if (!ts) return
+
+    const timer = setTimeout(() => {
+      const libUri = toFileUri(filePath)
+      ts.typescriptDefaults.addExtraLib(code, libUri)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [monacoInstance, filePath, code])
 
   const fileUri = filePath ? toFileUri(filePath) : undefined
 
