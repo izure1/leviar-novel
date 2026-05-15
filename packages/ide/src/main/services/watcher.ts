@@ -298,5 +298,14 @@ function buildDefaultDecl(folder: string, files: FileEntry[]): string {
     .join('\n')
 
   const importBlock = imports ? `${imports}\n\n` : ''
+  
+  if (folder === 'scenes') {
+    const keys = tsFiles
+      .map((f) => `  '${removeExt(f.rel).replace(/\\/g, '/')}'`)
+      .join(',\n')
+    const keysBlock = `export const sceneKeys = [\n${keys}\n] as const\n\n`
+    return `${importBlock}${keysBlock}export default {\n${entries}\n} as const\n`
+  }
+
   return `${importBlock}export default {\n${entries}\n} as const\n`
 }

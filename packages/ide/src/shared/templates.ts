@@ -5,7 +5,7 @@
 // ─── 최상위 설정 파일 ─────────────────────────────────────────
 
 export const NOVEL_CONFIG_CONTENT = `import Assets from './declarations/assets'
-import Scenes from './declarations/scenes'
+import { sceneKeys } from './declarations/scenes'
 import Characters from './declarations/characters'
 import Modules from './declarations/modules'
 import Backgrounds from './declarations/backgrounds'
@@ -16,8 +16,12 @@ import Fallbacks from './declarations/fallbacks'
 import { defineNovelConfig } from 'fumika'
 
 export default defineNovelConfig({
+  width: 1920,
+  height: 1080,
+  variables: {},
+  environments: {},
   assets: Assets,
-  scenes: Scenes,
+  scenes: sceneKeys,
   characters: Characters,
   modules: Modules,
   backgrounds: Backgrounds,
@@ -28,11 +32,30 @@ export default defineNovelConfig({
 `
 
 export const MAIN_TS_CONTENT = `// Fumika Engine Entry Point
-import { createEngine } from 'fumika'
+import { Novel } from 'fumika'
 import config from './novel.config'
+import Scenes from './declarations/scenes'
 
-const engine = createEngine(config)
-engine.mount('#app')
+async function main() {
+  const element = document.getElementById('app') as HTMLDivElement
+
+  const novel = new Novel(config, {
+    element,
+    scenes: Scenes
+  })
+
+  await novel.load()
+  await novel.boot()
+
+  const startScene = config.scenes[0] || 'start'
+  novel.start(startScene as any)
+
+  window.addEventListener('click', () => {
+    novel.next()
+  })
+}
+
+main().catch(console.error)
 `
 
 export const INDEX_HTML_CONTENT = `<!DOCTYPE html>
@@ -68,7 +91,7 @@ export type DeclarationFolder =
 
 const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   assets: `import { defineAssets } from 'fumika'\n\nexport default defineAssets({\n\n})\n`,
-  scenes: `export default {}\n`,
+  scenes: `export const sceneKeys = [] as const;\n\nexport default {}\n`,
   characters: `export default {} as const\n`,
   modules: `import { defineCustomModules } from 'fumika'\n\nexport default defineCustomModules({\n\n})\n`,
   backgrounds: `import { defineBackgrounds } from 'fumika'\nimport assets from './assets'\n\nexport default defineBackgrounds(assets)({\n\n})\n`,
