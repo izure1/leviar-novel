@@ -158,18 +158,18 @@ function App() {
           <h3 className="text-sm font-medium">Editor</h3>
           <DebugToolbar />
         </header>
-        <div className="flex-1 p-6 flex overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-hidden rounded-sm">
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden rounded-none">
             <EditorArea />
           </div>
           {isPreviewOpen && (
             <>
               <div 
-                className="w-2 mx-3 cursor-col-resize rounded-none transition-colors hover:bg-indigo-500 active:bg-indigo-500 shrink-0 self-stretch" 
+                className="w-2 cursor-col-resize rounded-none transition-colors hover:bg-indigo-500 active:bg-indigo-500 shrink-0 self-stretch" 
                 onMouseDown={handlePreviewResizeStart}
                 title="프리뷰 크기 조절"
               />
-              <div className="flex flex-col shrink-0 h-full rounded-sm overflow-hidden border border-slate-800 bg-slate-900/50 shadow-xl" style={{ width: previewWidth }}>
+              <div className="flex flex-col shrink-0 h-full rounded-none overflow-hidden border-l border-slate-800 bg-slate-900/50 shadow-xl" style={{ width: previewWidth }}>
                 <PreviewPanel />
               </div>
             </>

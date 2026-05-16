@@ -6,7 +6,7 @@ export function PreviewPanel() {
   if (!isPreviewOpen) return null
 
   return (
-    <div className="w-full flex-1 border border-slate-800 bg-slate-900/50 flex flex-col overflow-hidden relative">
+    <div className="w-full flex-1 bg-slate-900/50 flex flex-col overflow-hidden relative border-t-0 border-b-0 border-r-0 border-l-0">
       {/* Header bar for preview */}
       <div className="h-10 bg-slate-800/80 border-b border-slate-700/50 flex items-center px-4 shrink-0">
         <span className="text-xs font-semibold text-slate-300 flex items-center">

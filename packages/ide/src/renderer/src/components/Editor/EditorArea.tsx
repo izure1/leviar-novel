@@ -272,7 +272,7 @@ export function EditorArea() {
   }
 
   return (
-    <div className="flex-1 rounded-md border border-slate-800 bg-slate-900/50 flex flex-col overflow-hidden">
+    <div className="flex-1 rounded-none border-t-0 border-l-0 border-b-0 border-r-0 bg-slate-900/50 flex flex-col overflow-hidden">
       {/* Tab Bar */}
       {openTabs.length > 0 && (
         <div className="flex bg-[#181818] overflow-x-auto overflow-y-hidden border-b border-slate-800 shrink-0 custom-scrollbar h-10 items-end">
