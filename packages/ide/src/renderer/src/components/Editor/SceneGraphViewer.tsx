@@ -338,7 +338,15 @@ function findMatchingBracket(content: string, pos: number, open: string, close: 
 
 let _condUid = 0
 
-function parseSceneContent(content: string): ParseResult {
+function parseSceneContent(rawContent: string): ParseResult {
+  // Strip comments but preserve length and newlines to keep line numbers accurate
+  const content = rawContent.replace(/(["'`])(?:(?!\1)[^\\]|\\.)*\1|\/\/.*|\/\*[\s\S]*?\*\//g, (match) => {
+    if (match.startsWith('//') || match.startsWith('/*')) {
+      return match.replace(/[^\n]/g, ' ')
+    }
+    return match
+  })
+
   const externalConnections: SceneConnection[] = []
   const seen = new Set<string>()
   _condUid = 0
