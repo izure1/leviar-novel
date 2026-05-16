@@ -44,7 +44,25 @@ interface ParseResult {
   externalConnections: SceneConnection[]
 }
 
-// ─── Sub-node style lookup table ─────────────────────────────
+interface HandleInfo {
+  id: string
+  type: 'source' | 'target'
+  kind: 'label' | 'goto' | 'call' | 'next' | 'condition-if' | 'condition-else' | 'entry'
+  label: string
+  depth: number
+  line?: number
+}
+
+interface RowItem {
+  kind: FlowItem['kind']
+  label: string
+  handles: HandleInfo[]
+  depth: number
+  branchLabel?: string
+  line?: number
+}
+
+// ─── Style lookup tables ─────────────────────────────────────
 
 const SUB_STYLES: Record<string, { bg: string, border: string, text: string }> = {
   label:     { bg: '#064e3b', border: '#10b981', text: '#6ee7b7' },
@@ -54,50 +72,19 @@ const SUB_STYLES: Record<string, { bg: string, border: string, text: string }> =
   condition: { bg: '#422006', border: '#eab308', text: '#fde047' },
 }
 
-// ─── Edge style lookup table ─────────────────────────────────
-
 const EXT_EDGE_STYLES: Record<string, { color: string, dash: string }> = {
   next: { color: '#8b5cf6', dash: 'none' },
   call: { color: '#f59e0b', dash: '5,5' },
   goto: { color: '#f59e0b', dash: '3,3' },
 }
 
-// ─── Custom Node: Scene ──────────────────────────────────────
+// ─── Blueprint row constants ─────────────────────────────────
 
-function SceneNodeComponent({ data }: NodeProps) {
-  return (
-    <div className="group relative flex items-center min-w-[220px] px-4 py-3 bg-surface-800/90 backdrop-blur-md border border-surface-700/50 rounded-md shadow-lg transition-all duration-300 hover:shadow-primary-500/20 hover:border-primary-500/50 hover:-translate-y-0.5">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-md pointer-events-none" />
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!w-3 !h-3 !bg-surface-800 !border-2 !border-primary-500 rounded-full !-ml-1.5"
-      />
-      
-      <div className="flex items-center gap-3 relative z-10 w-full">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-surface-900/80 border border-surface-700/50 text-primary-400 shadow-inner shrink-0">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-          </svg>
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[10px] font-bold text-primary-500/80 uppercase tracking-wider mb-0.5">Scene</span>
-          <span className="text-sm font-bold text-surface-100 font-mono truncate w-full" title={String(data.label || '')}>
-            {String(data.label || '')}
-          </span>
-        </div>
-      </div>
-
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!w-3 !h-3 !bg-surface-800 !border-2 !border-primary-500 rounded-full !-mr-1.5"
-      />
-    </div>
-  )
-}
-
-// ─── Custom Node: Sub (FlowItem) ─────────────────────────────
+const ROW_H = 28
+const ROW_STRIDE = 30  // ROW_H + 2px (my-px margin top + bottom)
+const HEADER_H = 44
+const NODE_W = 320
+const ROWS_PAD_TOP = 4 // py-1
 
 const SUB_ICONS: Record<string, string> = {
   label: '⌗',
@@ -107,47 +94,121 @@ const SUB_ICONS: Record<string, string> = {
   condition: '◇',
 }
 
-function SubNodeComponent({ data }: NodeProps) {
-  const kind = String(data.kind || 'label')
-  const s = SUB_STYLES[kind] || SUB_STYLES.label
-  const icon = SUB_ICONS[kind] || '•'
+// ─── Custom Node: Scene Block (Blueprint) ────────────────────
+
+function SceneBlockComponent({ data }: NodeProps) {
+  const rows = (data.rows || []) as RowItem[]
+  const handles = (data.handles || []) as HandleInfo[]
+  const entryHandle = handles.find(h => h.kind === 'entry')
 
   return (
     <div
-      className="relative flex items-center min-w-[160px] h-8 px-3 rounded-full shadow-sm transition-all hover:brightness-110 hover:shadow-md"
-      style={{
-        background: `linear-gradient(135deg, ${s.bg}e6, ${s.bg}b3)`,
-        border: `1px solid ${s.border}40`,
-        backdropFilter: 'blur(4px)',
-      }}
+      className="group relative bg-surface-900/95 backdrop-blur-md border border-surface-700/60 rounded-lg shadow-xl transition-all duration-300 hover:shadow-primary-500/15 hover:border-primary-500/40"
+      style={{ minWidth: NODE_W }}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!w-2 !h-2 !rounded-full !border-none !-ml-1"
-        style={{ background: s.border }}
-      />
-      
-      <div className="flex items-center gap-2 w-full min-w-0">
-        <span className="flex items-center justify-center w-5 h-5 rounded-full opacity-90 shrink-0" style={{ color: s.border, background: `${s.border}20`, fontSize: '11px' }}>
-          {icon}
-        </span>
-        <span className="text-[10px] font-bold uppercase tracking-wider opacity-90 shrink-0" style={{ color: s.text }}>
-          {kind}
-        </span>
-        {String(data.label || '') && (
-          <span className="text-xs font-medium truncate flex-1 text-right ml-1 opacity-90" style={{ color: '#e2e8f0' }} title={String(data.label || '')}>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none" />
+
+      {/* ── Header ── */}
+      <div
+        className="relative flex items-center gap-3 px-4 border-b border-surface-700/40 rounded-t-lg"
+        style={{ height: HEADER_H, background: 'linear-gradient(135deg, rgba(139,92,246,0.08), transparent)' }}
+      >
+        {entryHandle && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            id={entryHandle.id}
+            className="!w-3 !h-3 !bg-surface-800 !border-2 !border-primary-500 rounded-full"
+            style={{ top: HEADER_H / 2, left: -6 }}
+          />
+        )}
+        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-surface-800/80 border border-surface-700/50 text-primary-400 shrink-0">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+          </svg>
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[9px] font-bold text-primary-500/70 uppercase tracking-wider">Scene</span>
+          <span className="text-xs font-bold text-surface-100 font-mono truncate" title={String(data.label || '')}>
             {String(data.label || '')}
           </span>
-        )}
+        </div>
       </div>
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!w-2 !h-2 !rounded-full !border-none !-mr-1"
-        style={{ background: s.border }}
-      />
+      {/* ── Flow rows ── */}
+      <div className="py-1">
+        {rows.map((row, ri) => {
+          const s = SUB_STYLES[row.kind] || SUB_STYLES.label
+          const icon = SUB_ICONS[row.kind] || '•'
+
+          return (
+            <div
+              key={ri}
+              className="relative flex items-center h-7 px-3 mx-1 my-px rounded transition-colors hover:brightness-125"
+              style={{
+                paddingLeft: 12 + row.depth * 14,
+                background: `${s.bg}40`,
+              }}
+            >
+              {/* Row handles */}
+              {row.handles.map((h) => (
+                <Handle
+                  key={h.id}
+                  type={h.type}
+                  position={h.type === 'target' ? Position.Left : Position.Right}
+                  id={h.id}
+                  className="!w-2 !h-2 !rounded-full !border-none"
+                  style={{
+                    background: s.border,
+                    ...(h.type === 'target' ? { left: -4 } : { right: -4 }),
+                    top: '50%',
+                    transform: 'translateY(-50%)'
+                  }}
+                />
+              ))}
+
+              {/* Branch label (if/else) */}
+              {row.branchLabel && (
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider mr-1.5 shrink-0"
+                  style={{ color: row.branchLabel === 'if' ? '#10b981' : '#ef4444' }}
+                >
+                  {row.branchLabel}
+                </span>
+              )}
+
+              {/* Icon */}
+              <span
+                className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 mr-1.5"
+                style={{ color: s.border, background: `${s.border}20`, fontSize: '10px' }}
+              >
+                {icon}
+              </span>
+
+              {/* Kind tag */}
+              <span className="text-[9px] font-bold uppercase tracking-wider shrink-0 mr-2" style={{ color: s.text }}>
+                {row.kind === 'condition' ? 'cond' : row.kind}
+              </span>
+
+              {/* Label */}
+              {row.label && (
+                <span
+                  className="text-[11px] font-medium truncate flex-1 text-right font-mono"
+                  style={{ color: '#cbd5e1' }}
+                  title={row.label}
+                >
+                  {row.label}
+                </span>
+              )}
+            </div>
+          )
+        })}
+        {rows.length === 0 && (
+          <div className="h-7 flex items-center justify-center text-[10px] text-surface-500 italic">
+            (empty)
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -161,9 +222,10 @@ function MissingNodeComponent({ data }: NodeProps) {
       <Handle
         type="target"
         position={Position.Left}
+        id={`${String(data.sceneId || data.label || '')}__entry`}
         className="!w-3 !h-3 !bg-surface-800 !border-2 !border-red-500 rounded-full !-ml-1.5"
       />
-      
+
       <div className="flex items-center gap-3 relative z-10 w-full">
         <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-950/80 border border-red-900/50 text-red-400 shadow-inner shrink-0">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,29 +246,27 @@ function MissingNodeComponent({ data }: NodeProps) {
 // ─── nodeTypes (defined outside component to prevent re-renders) ─
 
 const nodeTypes = {
-  scene: SceneNodeComponent,
-  sub: SubNodeComponent,
+  'scene-block': SceneBlockComponent,
   missing: MissingNodeComponent,
 }
 
-// ─── dagre layout ────────────────────────────────────────────
-
-const NODE_SIZES: Record<string, { w: number, h: number }> = {
-  scene: { w: 220, h: 65 },
-  sub: { w: 160, h: 32 },
-  missing: { w: 220, h: 65 },
-}
+// ─── dagre layout (dynamic node sizes) ───────────────────────
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], direction = 'LR') {
   const g = new dagre.graphlib.Graph()
   g.setDefaultEdgeLabel(() => ({}))
 
   const isHorizontal = direction === 'LR'
-  g.setGraph({ rankdir: direction, ranksep: 100, nodesep: 30, edgesep: 20 })
+  g.setGraph({ rankdir: direction, ranksep: 120, nodesep: 40, edgesep: 30 })
 
   for (const node of nodes) {
-    const sz = NODE_SIZES[node.type || 'scene'] || NODE_SIZES.scene
-    g.setNode(node.id, { width: sz.w, height: sz.h })
+    if (node.type === 'missing') {
+      g.setNode(node.id, { width: 220, height: 65 })
+    } else {
+      const rowCount = Math.max(1, ((node.data?.rows as RowItem[])?.length ?? 0))
+      const h = HEADER_H + ROWS_PAD_TOP * 2 + rowCount * ROW_STRIDE
+      g.setNode(node.id, { width: NODE_W, height: h })
+    }
   }
 
   for (const edge of edges) {
@@ -217,12 +277,14 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], direction = 'LR') {
 
   for (const node of nodes) {
     const pos = g.node(node.id)
-    const sz = NODE_SIZES[node.type || 'scene'] || NODE_SIZES.scene
+    const w = node.type === 'missing' ? 220 : NODE_W
+    const rowCount = Math.max(1, ((node.data?.rows as RowItem[])?.length ?? 0))
+    const h = node.type === 'missing' ? 65 : HEADER_H + ROWS_PAD_TOP * 2 + rowCount * ROW_STRIDE
     node.targetPosition = isHorizontal ? Position.Left : Position.Top
     node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom
     node.position = {
-      x: pos.x - sz.w / 2,
-      y: pos.y - sz.h / 2,
+      x: pos.x - w / 2,
+      y: pos.y - h / 2,
     }
   }
 
@@ -376,128 +438,142 @@ function parseSceneContent(content: string): ParseResult {
   return { flowItems: [...optionFlowItems, ...scan(body, false, arrayStart)], externalConnections }
 }
 
-// ─── FlowItem → sub-nodes + edges builder ────────────────────
+// ─── FlowItem → handles + rows + edges builder ───────────────
 
-function buildSubGraph(
+function buildHandlesAndEdges(
   sceneId: string,
-  fullPath: string,
   items: FlowItem[],
-  parentId: string,
-  prefix: string,
-  branchMeta?: { color: string, label: string }
-): { nodes: Node[], internalEdges: Edge[], externalEdges: Edge[] } {
-  const nodes: Node[] = []
-  const internalEdges: Edge[] = []
-  const externalEdges: Edge[] = []
+  depth: number = 0,
+  branchLabel?: string,
+): { rows: RowItem[], handles: HandleInfo[], edges: Edge[] } {
+  const rows: RowItem[] = []
+  const handles: HandleInfo[] = []
+  const edges: Edge[] = []
 
-  // Flow-breaking kinds: these transfer control away, so next item is unreachable
-  const BREAKS_FLOW = new Set(['goto', 'next'])
+  // Track handle ID counters to avoid duplicates
+  const idCounters = new Map<string, number>()
+  function uniqueHandleId(base: string): string {
+    const count = idCounters.get(base) ?? 0
+    idCounters.set(base, count + 1)
+    return count === 0 ? base : `${base}__${count}`
+  }
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
-    const subId = `${sceneId}__${prefix}${i}`
-    let subLabel = ''
+    const rowHandles: HandleInfo[] = []
+    let rowLabel = ''
 
     switch (item.kind) {
-      case 'label': subLabel = item.name; break
-      case 'goto': subLabel = item.target; break
-      case 'next': subLabel = item.target; break
-      case 'call': subLabel = item.target; break
-      case 'condition': subLabel = `#${item.id}`; break
+      case 'label': {
+        rowLabel = item.name
+        const hId = uniqueHandleId(`${sceneId}__label__${item.name}`)
+        const h: HandleInfo = { id: hId, type: 'target', kind: 'label', label: item.name, depth, line: item.line }
+        rowHandles.push(h)
+        handles.push(h)
+        break
+      }
+      case 'goto': {
+        rowLabel = item.target
+        const hId = uniqueHandleId(`${sceneId}__goto__${item.target}`)
+        const h: HandleInfo = { id: hId, type: 'source', kind: 'goto', label: item.target, depth, line: item.line }
+        rowHandles.push(h)
+        handles.push(h)
+        break
+      }
+      case 'call': {
+        rowLabel = item.target
+        const hId = uniqueHandleId(`${sceneId}__call__${item.target}`)
+        const h: HandleInfo = { id: hId, type: 'source', kind: 'call', label: item.target, depth, line: item.line }
+        rowHandles.push(h)
+        handles.push(h)
+        // Edge: call → target scene entry
+        const s = EXT_EDGE_STYLES.call
+        edges.push({
+          id: `e-${hId}`,
+          source: sceneId,
+          sourceHandle: hId,
+          target: item.target,
+          targetHandle: `${item.target}__entry`,
+          animated: true,
+          style: { stroke: s.color, strokeWidth: 2, strokeDasharray: s.dash },
+          markerEnd: { type: MarkerType.ArrowClosed, color: s.color },
+        })
+        break
+      }
+      case 'next': {
+        rowLabel = item.target
+        const hId = uniqueHandleId(`${sceneId}__next__${item.target}`)
+        const h: HandleInfo = { id: hId, type: 'source', kind: 'next', label: item.target, depth, line: item.line }
+        rowHandles.push(h)
+        handles.push(h)
+        // Edge: next → target scene entry
+        const s = EXT_EDGE_STYLES.next
+        edges.push({
+          id: `e-${hId}`,
+          source: sceneId,
+          sourceHandle: hId,
+          target: item.target,
+          targetHandle: `${item.target}__entry`,
+          animated: true,
+          style: { stroke: s.color, strokeWidth: 2, strokeDasharray: s.dash },
+          markerEnd: { type: MarkerType.ArrowClosed, color: s.color },
+        })
+        break
+      }
+      case 'condition': {
+        rowLabel = `#${item.id}`
+        // condition header row (no handles on this row itself)
+        rows.push({
+          kind: 'condition',
+          label: rowLabel,
+          handles: [],
+          depth,
+          branchLabel: branchLabel,
+          line: item.line,
+        })
+
+        // if branch
+        if (item.ifBranch.length > 0) {
+          const ifResult = buildHandlesAndEdges(sceneId, item.ifBranch, depth + 1, 'if')
+          rows.push(...ifResult.rows)
+          handles.push(...ifResult.handles)
+          edges.push(...ifResult.edges)
+        } else {
+          // Empty if branch indicator
+          const hId = uniqueHandleId(`${sceneId}__cond__${item.id}__if`)
+          const h: HandleInfo = { id: hId, type: 'source', kind: 'condition-if', label: 'if (empty)', depth: depth + 1 }
+          handles.push(h)
+          rows.push({ kind: 'condition', label: '(empty)', handles: [h], depth: depth + 1, branchLabel: 'if' })
+        }
+
+        // else branch
+        if (item.elseBranch.length > 0) {
+          const elseResult = buildHandlesAndEdges(sceneId, item.elseBranch, depth + 1, 'else')
+          rows.push(...elseResult.rows)
+          handles.push(...elseResult.handles)
+          edges.push(...elseResult.edges)
+        } else {
+          const hId = uniqueHandleId(`${sceneId}__cond__${item.id}__else`)
+          const h: HandleInfo = { id: hId, type: 'source', kind: 'condition-else', label: 'else (empty)', depth: depth + 1 }
+          handles.push(h)
+          rows.push({ kind: 'condition', label: '(empty)', handles: [h], depth: depth + 1, branchLabel: 'else' })
+        }
+
+        continue // already pushed rows above
+      }
     }
 
-    nodes.push({
-      id: subId,
-      type: 'sub',
-      data: { kind: item.kind, label: subLabel, line: item.line, fullPath },
-      position: { x: 0, y: 0 },
+    rows.push({
+      kind: item.kind,
+      label: rowLabel,
+      handles: rowHandles,
+      depth,
+      branchLabel: i === 0 ? branchLabel : undefined,
+      line: item.line,
     })
-
-    // ── Connection edges ──
-    const isTopLevel = !branchMeta
-    const isLabel = item.kind === 'label'
-
-    if (isTopLevel && isLabel) {
-      // Label at top-level: always solid edge from scene (ownership/derivation)
-      internalEdges.push({
-        id: `e-own-${parentId}-${subId}`,
-        source: parentId,
-        target: subId,
-        style: { stroke: '#555', strokeWidth: 1.5 },
-      })
-      // Also add dashed fall-through from previous if it doesn't break flow
-      if (i > 0 && !BREAKS_FLOW.has(items[i - 1].kind)) {
-        const prevId = `${sceneId}__${prefix}${i - 1}`
-        internalEdges.push({
-          id: `e-flow-${prevId}-${subId}`,
-          source: prevId,
-          target: subId,
-          animated: true,
-          style: { stroke: '#555', strokeWidth: 1.5, strokeDasharray: '6,3' },
-        })
-      }
-    } else if (i === 0) {
-      // First item in scope (scene or condition branch)
-      const edgeColor = branchMeta?.color || '#555'
-      const isDashed = isTopLevel || !!branchMeta
-      internalEdges.push({
-        id: `e-entry-${parentId}-${subId}`,
-        source: parentId,
-        target: subId,
-        animated: isDashed,
-        style: { stroke: edgeColor, strokeWidth: 1.5, strokeDasharray: isDashed ? '6,3' : 'none' },
-        ...(branchMeta ? {
-          label: branchMeta.label,
-          labelStyle: { fill: edgeColor, fontSize: 9, fontWeight: 700 },
-          labelBgStyle: { fill: '#1e1e1e', fillOpacity: 0.8 },
-        } : {}),
-      })
-    } else {
-      // Sequential chain: dashed flow edge from previous (if not broken)
-      if (!BREAKS_FLOW.has(items[i - 1].kind)) {
-        const prevId = `${sceneId}__${prefix}${i - 1}`
-        internalEdges.push({
-          id: `e-flow-${prevId}-${subId}`,
-          source: prevId,
-          target: subId,
-          animated: true,
-          style: { stroke: '#555', strokeWidth: 1.5, strokeDasharray: '6,3' },
-        })
-      }
-    }
-
-    // ── External edges: next/call → target scene ──
-    if (item.kind === 'next' || item.kind === 'call') {
-      const s = EXT_EDGE_STYLES[item.kind]
-      externalEdges.push({
-        id: `e-ext-${subId}-${(item as { target: string }).target}`,
-        source: subId,
-        target: (item as { target: string }).target,
-        animated: true,
-        style: { stroke: s.color, strokeWidth: 2, strokeDasharray: s.dash },
-        markerEnd: { type: MarkerType.ArrowClosed, color: s.color },
-      })
-    }
-
-    // ── Recurse condition branches ──
-    if (item.kind === 'condition') {
-      const ifResult = buildSubGraph(
-        sceneId, fullPath, item.ifBranch, subId,
-        `${prefix}c${item.id}t_`,
-        { color: '#10b981', label: 'if' }
-      )
-      const elseResult = buildSubGraph(
-        sceneId, fullPath, item.elseBranch, subId,
-        `${prefix}c${item.id}f_`,
-        { color: '#ef4444', label: 'else' }
-      )
-      nodes.push(...ifResult.nodes, ...elseResult.nodes)
-      internalEdges.push(...ifResult.internalEdges, ...elseResult.internalEdges)
-      externalEdges.push(...ifResult.externalEdges, ...elseResult.externalEdges)
-    }
   }
 
-  return { nodes, internalEdges, externalEdges }
+  return { rows, handles, edges }
 }
 
 // ─── Main Component ──────────────────────────────────────────
@@ -534,10 +610,8 @@ export function SceneGraphViewer() {
         collectFiles(res.files)
       }
 
-      const sceneNodes: Node[] = []
-      const subNodes: Node[] = []
-      const internalEdges: Edge[] = []
-      const externalEdges: Edge[] = []
+      const allNodes: Node[] = []
+      const allEdges: Edge[] = []
 
       for (const file of allFiles) {
         const fileId = file.name
@@ -549,62 +623,84 @@ export function SceneGraphViewer() {
 
         const parsed = parseSceneContent(content)
 
-        // Scene node
-        sceneNodes.push({
+        // Build handles + rows from flow items
+        const { rows, handles, edges: itemEdges } = buildHandlesAndEdges(fileId, parsed.flowItems)
+
+        // Add entry handle
+        const entryHandle: HandleInfo = {
+          id: `${fileId}__entry`,
+          type: 'target',
+          kind: 'entry',
+          label: fileId,
+          depth: 0,
+        }
+        const allHandles = [entryHandle, ...handles]
+
+        // Scene block node
+        allNodes.push({
           id: fileId,
-          type: 'scene',
-          data: { label: fileId, fullPath: file.fullPath },
+          type: 'scene-block',
+          data: { label: fileId, fullPath: file.fullPath, rows, handles: allHandles },
           position: { x: 0, y: 0 },
         })
 
-        // Build sub-nodes from flow items
-        const sub = buildSubGraph(fileId, file.fullPath, parsed.flowItems, fileId, '')
-        subNodes.push(...sub.nodes)
-        internalEdges.push(...sub.internalEdges)
-        externalEdges.push(...sub.externalEdges)
+        allEdges.push(...itemEdges)
       }
 
       // Collect all known scene IDs
-      const knownIds = new Set(sceneNodes.map(n => n.id))
+      const knownIds = new Set(allNodes.map(n => n.id))
 
-      // Add missing scene nodes referenced by external edges
-      for (const edge of externalEdges) {
-        if (!knownIds.has(edge.target)) {
-          knownIds.add(edge.target)
-          sceneNodes.push({
-            id: edge.target,
+      // Build goto → label edges (within same or cross scene)
+      const labelHandleMap = new Map<string, { sceneId: string, handleId: string }>()
+      for (const node of allNodes) {
+        if (node.type !== 'scene-block') continue
+        const hs = (node.data?.handles as HandleInfo[]) || []
+        for (const h of hs) {
+          if (h.kind === 'label') {
+            labelHandleMap.set(`${node.id}:${h.label}`, { sceneId: node.id, handleId: h.id })
+          }
+        }
+      }
+
+      for (const node of allNodes) {
+        if (node.type !== 'scene-block') continue
+        const hs = (node.data?.handles as HandleInfo[]) || []
+        for (const h of hs) {
+          if (h.kind === 'goto') {
+            // Try same scene first, then cross-scene
+            const target = labelHandleMap.get(`${node.id}:${h.label}`)
+            if (target) {
+              const s = EXT_EDGE_STYLES.goto
+              allEdges.push({
+                id: `e-goto-${h.id}`,
+                source: node.id,
+                sourceHandle: h.id,
+                target: target.sceneId,
+                targetHandle: target.handleId,
+                animated: true,
+                style: { stroke: s.color, strokeWidth: 1.5, strokeDasharray: s.dash },
+                markerEnd: { type: MarkerType.ArrowClosed, color: s.color },
+              })
+            }
+          }
+        }
+      }
+
+      // Add missing scene nodes for unresolved edge targets
+      const edgeTargets = new Set(allEdges.map(e => e.target))
+      for (const targetId of edgeTargets) {
+        if (!knownIds.has(targetId)) {
+          knownIds.add(targetId)
+          allNodes.push({
+            id: targetId,
             type: 'missing',
-            data: { label: `${edge.target} (Missing)` },
+            data: { label: `${targetId} (Missing)`, sceneId: targetId },
             position: { x: 0, y: 0 },
           })
         }
       }
 
-      // Connect goto sub-nodes → label sub-nodes (within same scene)
-      const labelMap = new Map<string, string>()
-      for (const n of subNodes) {
-        if (n.data?.kind === 'label') labelMap.set(`${n.id.split('__')[0]}:${String(n.data.label)}`, n.id)
-      }
-      for (const n of subNodes) {
-        if (n.data?.kind === 'goto') {
-          const targetLabelId = labelMap.get(`${n.id.split('__')[0]}:${String(n.data.label)}`)
-          if (targetLabelId) {
-            const s = EXT_EDGE_STYLES.goto
-            internalEdges.push({
-              id: `e-goto-${n.id}-${targetLabelId}`,
-              source: n.id,
-              target: targetLabelId,
-              animated: true,
-              style: { stroke: s.color, strokeWidth: 1.5, strokeDasharray: s.dash },
-              markerEnd: { type: MarkerType.ArrowClosed, color: s.color },
-            })
-          }
-        }
-      }
-
-      // Layout all nodes together
-      const allNodes = [...sceneNodes, ...subNodes]
-      const allEdges = [...internalEdges, ...externalEdges]
+      // Layout
       const { nodes: laid, edges: laidE } = getLayoutedElements(allNodes, allEdges, 'LR')
       setNodes(laid)
       setEdges(laidE)
@@ -619,17 +715,14 @@ export function SceneGraphViewer() {
     processFiles()
   }, [processFiles])
 
-  // Double-click node → open in editor at specific line
-  const { setPendingLine } = useProjectStore()
+  // Double-click node → open in editor
   const onNodeDoubleClick = useCallback((_: unknown, node: Node) => {
     const fullPath = node.data?.fullPath
     if (fullPath) {
-      const line = node.data?.line as number | undefined
-      if (line) setPendingLine(line)
       setActiveFile(String(fullPath))
       setIsGraphOpen(false)
     }
-  }, [setActiveFile, setIsGraphOpen, setPendingLine])
+  }, [setActiveFile, setIsGraphOpen])
 
   const memoNodeTypes = useMemo(() => nodeTypes, [])
 
@@ -676,10 +769,6 @@ export function SceneGraphViewer() {
             <MiniMap
               nodeColor={(node) => {
                 if (node.type === 'missing') return '#ef4444'
-                if (node.type === 'sub') {
-                  const kind = String(node.data?.kind || '')
-                  return SUB_STYLES[kind]?.border || '#555'
-                }
                 return '#8b5cf6'
               }}
               maskColor="rgba(0, 0, 0, 0.7)"
