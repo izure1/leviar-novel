@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { scaffoldProject, updateProject } from './services/project'
+import { scaffoldProject, updateProject, ensureEffectsFiles } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
@@ -143,6 +143,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:load', async (_, projectPath: string) => {
     try {
+      await ensureEffectsFiles(projectPath)
       await watcher.start(projectPath, mainWindow ?? undefined)
       return { success: true }
     } catch (error: any) {
@@ -261,6 +262,22 @@ app.whenReady().then(() => {
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fs:formatCode', async (_, code: string) => {
+    try {
+      const prettier = require('prettier')
+      const formatted = await prettier.format(code, {
+        parser: 'typescript',
+        semi: false,
+        singleQuote: true,
+        trailingComma: 'none',
+      })
+      return { success: true, content: formatted }
+    } catch (error: any) {
+      console.error('[IDE] Prettier format error:', error)
+      return { success: false, content: code, error: error.message }
     }
   })
 

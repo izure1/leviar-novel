@@ -37,6 +37,7 @@ const api = {
     checkExists: (path: string) => ipcRenderer.invoke('fs:checkExists', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
     writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
+    formatCode: (code: string) => ipcRenderer.invoke('fs:formatCode', code),
     copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest),
     readDir: (path: string, recursive?: boolean) => ipcRenderer.invoke('fs:readDir', path, recursive),
     renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:renameFile', oldPath, newPath),

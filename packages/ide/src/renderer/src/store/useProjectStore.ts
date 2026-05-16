@@ -12,6 +12,7 @@ interface ProjectState {
   previewLoading: boolean
   themeColor: ThemeColor
   themeBg: ThemeBg
+  formatOnSave: boolean
   isSettingsOpen: boolean
   setProjectPath: (path: string | null) => void
   setActiveFile: (file: string | null) => void
@@ -21,6 +22,7 @@ interface ProjectState {
   setPreviewLoading: (loading: boolean) => void
   setThemeColor: (color: ThemeColor) => void
   setThemeBg: (bg: ThemeBg) => void
+  setFormatOnSave: (format: boolean) => void
   setIsSettingsOpen: (open: boolean) => void
   initSettings: () => Promise<void>
 }
@@ -34,6 +36,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   previewLoading: false,
   themeColor: 'amber',
   themeBg: 'neutral',
+  formatOnSave: true,
   isSettingsOpen: false,
   setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true }),
   setActiveFile: (file) => set({ activeFile: file }),
@@ -49,6 +52,10 @@ export const useProjectStore = create<ProjectState>((set) => ({
     set({ themeBg: bg })
     window.api.settings.set({ themeBg: bg }).catch(console.error)
   },
+  setFormatOnSave: (format) => {
+    set({ formatOnSave: format })
+    window.api.settings.set({ formatOnSave: format }).catch(console.error)
+  },
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   initSettings: async () => {
     try {
@@ -56,7 +63,8 @@ export const useProjectStore = create<ProjectState>((set) => ({
       if (res.success && res.settings) {
         set({ 
           themeColor: res.settings.themeColor || 'amber',
-          themeBg: res.settings.themeBg || 'neutral'
+          themeBg: res.settings.themeBg || 'neutral',
+          formatOnSave: res.settings.formatOnSave ?? true
         })
       }
     } catch (e) {

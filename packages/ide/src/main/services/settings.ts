@@ -5,11 +5,13 @@ import fs from 'fs'
 export interface IdeSettings {
   themeColor: 'indigo' | 'rose' | 'emerald' | 'amber' | 'sky' | 'violet'
   themeBg: 'slate' | 'zinc' | 'neutral' | 'stone' | 'gray'
+  formatOnSave?: boolean
 }
 
 const DEFAULT_SETTINGS: IdeSettings = {
   themeColor: 'amber',
-  themeBg: 'neutral'
+  themeBg: 'neutral',
+  formatOnSave: true
 }
 
 export class SettingsService {

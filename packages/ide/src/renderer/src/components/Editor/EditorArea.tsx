@@ -160,11 +160,21 @@ export function EditorArea() {
         delete draftTimers.current[activeFile]
       }
       
-      const res = await window.api.fs.writeFile(activeFile, data.content)
+      let contentToSave = data.content
+      const { formatOnSave } = useProjectStore.getState()
+      
+      if (formatOnSave && (activeFile.endsWith('.ts') || activeFile.endsWith('.json') || activeFile.endsWith('.js') || activeFile.endsWith('.tsx') || activeFile.endsWith('.jsx'))) {
+        const formatRes = await window.api.fs.formatCode(data.content)
+        if (formatRes.success && formatRes.content) {
+          contentToSave = formatRes.content
+        }
+      }
+      
+      const res = await window.api.fs.writeFile(activeFile, contentToSave)
       if (res.success) {
         setTabData(prev => ({
           ...prev,
-          [activeFile]: { ...prev[activeFile], isDirty: false }
+          [activeFile]: { ...prev[activeFile], content: contentToSave, isDirty: false }
         }))
         // 저장 시 임시 파일 삭제
         window.api.fs.deleteFile(getDraftPath(activeFile))

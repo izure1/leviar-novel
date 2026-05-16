@@ -24,10 +24,6 @@ interface Props {
   filePath?: string
 }
 
-/**
- * Windows 절대경로 → file URI 문자열.
- * addExtraLib의 키로 사용되며, <Editor path>와 동일한 형식이어야 한다.
- */
 function toFileUri(absPath: string): string {
   return monaco.Uri.file(absPath).toString()
 }

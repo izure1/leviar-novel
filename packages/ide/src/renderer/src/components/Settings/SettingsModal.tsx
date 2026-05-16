@@ -25,7 +25,7 @@ const BG_THEMES: { id: ThemeBg; name: string; hex: string }[] = [
 ]
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const { themeColor, setThemeColor, themeBg, setThemeBg } = useProjectStore()
+  const { themeColor, setThemeColor, themeBg, setThemeBg, formatOnSave, setFormatOnSave } = useProjectStore()
 
   if (!isOpen) return null
 
@@ -100,6 +100,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   )}
                 </button>
               ))}
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <h3 className="mb-4 text-sm font-medium text-surface-300">에디터 동작 (Editor Behavior)</h3>
+            <div className="flex items-center justify-between rounded-md border border-surface-700 bg-surface-800/50 p-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-surface-200">저장 시 자동 포맷팅</span>
+                <span className="text-xs text-surface-500">Ctrl+S로 저장할 때 코드를 자동으로 정렬합니다.</span>
+              </div>
+              <button
+                onClick={() => setFormatOnSave(!formatOnSave)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formatOnSave ? 'bg-primary-500' : 'bg-surface-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    formatOnSave ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
           </div>
           
