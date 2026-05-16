@@ -12,7 +12,12 @@ import { TitleBar } from './components/TitleBar/TitleBar'
 import welcomeFumika from './assets/welcome/char_fumika.png'
 import welcomeBg from './assets/welcome/bg.png'
 
-const WelcomeScene = () => {
+interface WelcomeSceneProps {
+  onOpenProject: () => Promise<void>;
+  onScaffoldProject: () => Promise<void>;
+}
+
+const WelcomeScene = (_props: WelcomeSceneProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -45,7 +50,7 @@ const WelcomeScene = () => {
       })
 
       // 로딩된 에셋 키(charWelcome)를 사용하여 이미지를 생성합니다.
-      const character = world.createImage({
+      world.createImage({
         attribute: { src: 'character-fumika' },
         style: {
           width: 750,
@@ -55,7 +60,7 @@ const WelcomeScene = () => {
           boxShadowOffsetY: 10,
         },
         transform: {
-          position: { x: -350, y: -250, z: 25 },
+          position: { x: -300, y: -250, z: 25 },
         }
       })
 
@@ -69,12 +74,6 @@ const WelcomeScene = () => {
         transform: {
           position: { z: 350 }
         }
-      })
-
-      character.fadeOut(1).once('end', () => {
-        character.fadeIn(2500).once('end', () => {
-          
-        })
       })
 
       window.addEventListener('mousemove', onMouseMove)
@@ -231,31 +230,73 @@ function App() {
     return (
       <div className="flex h-screen w-screen flex-col bg-surface-900 text-white overflow-hidden relative">
         <TitleBar />
-        <WelcomeScene />
-        {/* <div className="flex-1 flex flex-col items-center justify-center relative z-10 pointer-events-none">
-          <div className="pointer-events-auto rounded-2xl border border-surface-700/50 bg-surface-900/60 p-12 text-center shadow-2xl backdrop-blur-xl">
-            <h1 className="mb-3 text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-cyan-400 to-primary-500 drop-shadow-sm">
-              Fumika Engine
-            </h1>
-            <p className="mb-10 text-surface-400 font-medium tracking-wide">The Next Generation Visual Novel Studio</p>
-            <div className="flex flex-col gap-4 w-full max-w-sm mx-auto">
-              <button
-                onClick={handleOpenProject}
-                disabled={globalLoading}
-                className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary-600 px-8 py-3.5 font-semibold text-white shadow-lg shadow-primary-500/20 transition-all hover:bg-primary-500 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <span className="relative z-10">Open Existing Project</span>
-              </button>
-              <button
-                onClick={handleScaffoldProject}
-                disabled={globalLoading}
-                className="group flex items-center justify-center gap-2 rounded-lg border border-surface-700 bg-surface-800/50 px-8 py-3.5 font-semibold text-white transition-all hover:bg-surface-700 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                Create New Project
-              </button>
+        <WelcomeScene onOpenProject={handleOpenProject} onScaffoldProject={handleScaffoldProject} />
+        <div className="flex-1 flex justify-end items-center relative z-10 pointer-events-none pr-[5vw]">
+          <div className="pointer-events-auto w-[460px] p-10 relative">
+            <div className="relative z-10">
+              <div className="py-4 mb-8 -ml-10">
+                <style>{`
+                  @keyframes breathe-logo {
+                    0%, 100% { transform: rotate(-6deg) scale(1); }
+                    50% { transform: rotate(-6deg) scale(1.05); }
+                  }
+                  .animate-breathe-logo {
+                    animation: breathe-logo 4s ease-in-out infinite;
+                  }
+                `}</style>
+                <h1 className="flex flex-col text-[8rem] leading-none font-black tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)] origin-left animate-breathe-logo w-fit">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">Fumika</span>
+                  <span className="text-white text-[1.5rem] tracking-[0.2rem] self-end translate-x-8">Visualnovel Engine</span>
+                </h1>
+              </div>
+              
+              <div className="flex flex-col gap-5">
+                <button
+                  onClick={handleOpenProject}
+                  disabled={globalLoading}
+                  className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-primary-400/50 bg-gradient-to-br from-primary-600 to-primary-700 px-6 py-5 font-semibold text-white shadow-[0_0_40px_-10px_rgba(var(--color-primary-500),0.5)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_60px_-15px_rgba(var(--color-primary-500),0.7)] active:scale-[0.98] cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-1000 group-hover:translate-x-full" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/20 backdrop-blur-sm transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 shadow-inner">
+                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-lg font-bold tracking-tight">프로젝트 열기</div>
+                      <div className="text-sm font-medium text-primary-100/80">기존 작업 공간 불러오기</div>
+                    </div>
+                  </div>
+                  <svg className="w-6 h-6 text-primary-200 transition-transform duration-300 group-hover:translate-x-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={handleScaffoldProject}
+                  disabled={globalLoading}
+                  className="group flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md px-6 py-5 font-semibold text-white transition-all duration-300 hover:bg-black/60 hover:border-white/20 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                      <svg className="w-6 h-6 text-surface-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-lg font-bold tracking-tight text-surface-50">새 프로젝트</div>
+                      <div className="text-sm font-medium text-surface-400">새로운 비주얼 노벨 시작하기</div>
+                    </div>
+                  </div>
+                  <svg className="w-6 h-6 text-surface-500 transition-transform duration-300 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div> */}
+        </div>
 
         <NewProjectDialog
           isOpen={newProjectData?.isOpen || false}
