@@ -48,14 +48,146 @@ export function ProjectSidebar() {
   }
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null)
 
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
+  const [lastSelected, setLastSelected] = useState<string | null>(null)
+
   const toggleFolder = (folderPath: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setExpanded((prev) => ({ ...prev, [folderPath]: !prev[folderPath] }))
   }
 
-  const handleFileClick = (targetPath: string) => {
-    if (activeFile === targetPath) return
-    setActiveFile(targetPath)
+  const getVisibleNodes = () => {
+    const nodes: string[] = []
+    CONFIG_FILES.forEach(file => nodes.push(`${projectPath}/${file}`))
+    WATCH_FOLDERS.forEach(folder => {
+      const rootPath = `${projectPath}/${folder}`
+      nodes.push(rootPath)
+      if (expanded[folder]) {
+        const traverse = (children: FileNode[]) => {
+          children.forEach(node => {
+            const fullPath = `${projectPath}/${folder}/${node.path}`
+            nodes.push(fullPath)
+            if (node.isDirectory && expanded[fullPath] && node.children) {
+              traverse(node.children)
+            }
+          })
+        }
+        traverse(folderFiles[folder] || [])
+      }
+    })
+    return nodes
+  }
+
+  const handleNodeClick = (e: React.MouseEvent, targetPath: string, isDir: boolean, expandKey?: string) => {
+    e.stopPropagation()
+    
+    let newSelection = new Set(selectedFiles)
+
+    if (e.shiftKey && lastSelected) {
+      const visibleNodes = getVisibleNodes()
+      const startIdx = visibleNodes.indexOf(lastSelected)
+      const endIdx = visibleNodes.indexOf(targetPath)
+      
+      if (startIdx !== -1 && endIdx !== -1) {
+        if (!e.ctrlKey && !e.metaKey) newSelection = new Set()
+        const minIdx = Math.min(startIdx, endIdx)
+        const maxIdx = Math.max(startIdx, endIdx)
+        for (let i = minIdx; i <= maxIdx; i++) {
+          newSelection.add(visibleNodes[i])
+        }
+      }
+    } else if (e.ctrlKey || e.metaKey) {
+      if (newSelection.has(targetPath)) {
+        newSelection.delete(targetPath)
+      } else {
+        newSelection.add(targetPath)
+        setLastSelected(targetPath)
+      }
+    } else {
+      newSelection = new Set([targetPath])
+      setLastSelected(targetPath)
+      if (!isDir) {
+        if (activeFile !== targetPath) setActiveFile(targetPath)
+      } else if (expandKey) {
+        toggleFolder(expandKey)
+      }
+    }
+    
+    setSelectedFiles(newSelection)
+  }
+
+  const handleDragStart = (e: React.DragEvent, targetPath: string) => {
+    let dragFiles = Array.from(selectedFiles)
+    if (!selectedFiles.has(targetPath)) {
+      dragFiles = [targetPath]
+      setSelectedFiles(new Set(dragFiles))
+      setLastSelected(targetPath)
+    }
+
+    const configPaths = CONFIG_FILES.map(f => `${projectPath}/${f}`)
+    dragFiles = dragFiles.filter(p => !configPaths.includes(p))
+
+    const rootPaths = WATCH_FOLDERS.map(f => `${projectPath}/${f}`)
+    dragFiles = dragFiles.filter(p => !rootPaths.includes(p))
+
+    if (dragFiles.length === 0) {
+      e.preventDefault()
+      return
+    }
+
+    e.dataTransfer.setData('application/json', JSON.stringify({ paths: dragFiles }))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e: React.DragEvent, dropTargetPath: string, isDir: boolean) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!projectPath) return
+
+    try {
+      const dataStr = e.dataTransfer.getData('application/json')
+      if (!dataStr) return
+      const data = JSON.parse(dataStr)
+      if (!data.paths || !Array.isArray(data.paths)) return
+
+      let targetDir = dropTargetPath
+      if (!isDir) {
+        targetDir = dropTargetPath.substring(0, dropTargetPath.lastIndexOf('/'))
+      }
+
+      const targetRelPath = targetDir.replace(`${projectPath}/`, '')
+      const targetRoot = targetRelPath.split('/')[0]
+
+      for (const oldPath of data.paths) {
+        const oldRelPath = oldPath.replace(`${projectPath}/`, '')
+        const oldRoot = oldRelPath.split('/')[0]
+
+        if (oldRoot !== targetRoot) continue
+
+        const fileName = oldPath.split(/[/\\]/).pop()
+        const newPath = `${targetDir}/${fileName}`
+
+        if (oldPath !== newPath && oldPath !== targetDir && !newPath.startsWith(`${oldPath}/`)) {
+           await window.api.fs.renameFile(oldPath, newPath)
+           
+           if (activeFile === oldPath) setActiveFile(newPath)
+           
+           window.dispatchEvent(new CustomEvent('file-renamed', { 
+             detail: { oldPath, newPath, isDirectory: !oldPath.match(/\.[^/.]+$/) } 
+           }))
+        }
+      }
+      
+      fetchFiles()
+    } catch (err) {
+      console.error('Drop error:', err)
+    }
   }
 
   const fetchFiles = async () => {
@@ -244,18 +376,24 @@ export function ProjectSidebar() {
           const isDir = node.isDirectory
           const fullPath = `${projectPath}/${folderPath}/${node.path}`
           const isExpanded = expanded[fullPath]
+          const isSelected = selectedFiles.has(fullPath)
           const isActive = !isDir && activeFile === fullPath
 
           return (
-            <li key={node.path} className="group relative">
+            <li key={node.path}>
               <div 
-                className={`flex items-center justify-between cursor-pointer rounded px-2 py-1.5 text-xs transition-colors select-none ${
-                  isActive ? 'bg-indigo-600/30 text-indigo-300 font-medium' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                draggable
+                onDragStart={(e) => handleDragStart(e, fullPath)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, fullPath, isDir)}
+                className={`group relative flex items-center justify-between cursor-pointer rounded px-2 py-1.5 text-xs transition-colors select-none ${
+                  isSelected 
+                    ? 'bg-indigo-600/40 text-indigo-200 font-medium' 
+                    : isActive 
+                      ? 'bg-indigo-600/20 text-indigo-300 font-medium' 
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 }`}
-                onClick={(e) => {
-                  if (isDir) toggleFolder(fullPath, e)
-                  else handleFileClick(fullPath)
-                }}
+                onClick={(e) => handleNodeClick(e, fullPath, isDir, fullPath)}
                 title={node.name}
               >
                 <div className="flex items-center truncate max-w-[140px]">
@@ -323,16 +461,19 @@ export function ProjectSidebar() {
             <ul className="pl-2 mt-1 space-y-0.5">
               {CONFIG_FILES.map((file) => {
                 const filePath = `${projectPath}/${file}`
+                const isSelected = selectedFiles.has(filePath)
                 const isActive = activeFile === filePath
                 return (
                   <li 
                     key={file} 
                     className={`cursor-pointer rounded px-2 py-1.5 text-xs truncate transition-colors select-none ${
-                      isActive 
-                        ? 'bg-indigo-600/30 text-indigo-300 font-medium' 
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      isSelected 
+                        ? 'bg-indigo-600/40 text-indigo-200 font-medium' 
+                        : isActive 
+                          ? 'bg-indigo-600/20 text-indigo-300 font-medium' 
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
-                    onClick={() => handleFileClick(filePath)}
+                    onClick={(e) => handleNodeClick(e, filePath, false)}
                     title={file}
                   >
                     <span className="mr-1 opacity-40 w-3 inline-block text-center text-[10px]">•</span>
@@ -344,11 +485,18 @@ export function ProjectSidebar() {
           </div>
 
           {/* Folders */}
-          {WATCH_FOLDERS.map((folder) => (
+          {WATCH_FOLDERS.map((folder) => {
+            const rootPath = `${projectPath}/${folder}`
+            const isSelected = selectedFiles.has(rootPath)
+            return (
             <div key={folder} className="mb-2">
               <div 
-                className="flex items-center justify-between cursor-pointer py-1.5 text-slate-400 hover:text-white select-none transition-colors group rounded px-2"
-                onClick={(e) => toggleFolder(folder, e)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, rootPath, true)}
+                className={`flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
+                  isSelected ? 'bg-indigo-600/40 text-indigo-200' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+                onClick={(e) => handleNodeClick(e, rootPath, true, folder)}
               >
                 <div className="flex items-center">
                   <span className="mr-1 opacity-70 w-3 inline-block text-center text-[10px]">
@@ -376,7 +524,8 @@ export function ProjectSidebar() {
               
               {expanded[folder] && renderTree(folderFiles[folder] || [], folder)}
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
