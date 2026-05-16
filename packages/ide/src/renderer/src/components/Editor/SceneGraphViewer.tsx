@@ -291,7 +291,7 @@ function parseSceneContent(content: string): ParseResult {
       const afterName = m.index + m[0].length
 
       if (fnName === 'condition') {
-        const parenStart = text.lastIndexOf('(', afterName)
+        const parenStart = afterName - 1
         const parenEnd = findMatchingBracket(text, parenStart, '(', ')')
         const condBody = text.slice(afterName, parenEnd)
         const arrays: { text: string, offset: number }[] = []
