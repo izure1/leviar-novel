@@ -160,22 +160,12 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
   }
 }
 
-export async function updateProject(targetDir: string): Promise<void> {
-  // Force update by passing true
-  await ensureProjectDependencies(targetDir, undefined, true)
-}
-
-/**
- * 스캐폴딩: 대상 디렉토리에 빈 프로젝트 구조를 생성합니다.
- */
-export async function scaffoldProject(targetDir: string, options: ProjectOptions): Promise<void> {
-  // 1. 디렉토리 생성
+export async function ensureProjectStructure(targetDir: string, options?: Partial<ProjectOptions>): Promise<void> {
   for (const folder of DEFAULT_FOLDERS) {
     const dirPath = path.join(targetDir, folder)
     await fs.mkdir(dirPath, { recursive: true })
   }
 
-  // 2. declarations 하위 파일 기본 생성
   const declareFiles = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'audios']
   for (const file of declareFiles) {
     const filePath = path.join(targetDir, 'declarations', `${file}.ts`)
@@ -186,7 +176,6 @@ export async function scaffoldProject(targetDir: string, options: ProjectOptions
     }
   }
 
-  // types.d.ts: FallbackItem 전역 선언 (declare global)
   const typesDeclPath = path.join(targetDir, 'declarations', 'types.d.ts')
   try {
     await fs.access(typesDeclPath)
@@ -194,14 +183,20 @@ export async function scaffoldProject(targetDir: string, options: ProjectOptions
     await fs.writeFile(typesDeclPath, getDeclarationTemplate('types'), 'utf-8')
   }
 
-  // 3. 기본 설정 파일 생성
+  await ensureEffectsFiles(targetDir)
+
+  // 기본 설정 파일 및 코어 파일 생성
+  const width = options?.width ?? 1920
+  const height = options?.height ?? 1080
+  const gameName = options?.gameName ?? 'My Novel Project'
+
   const configPath = path.join(targetDir, 'novel.config.ts')
   const mainPath = path.join(targetDir, 'main.ts')
 
   try {
     await fs.access(configPath)
   } catch {
-    await fs.writeFile(configPath, getNovelConfigContent(options.width, options.height), 'utf-8')
+    await fs.writeFile(configPath, getNovelConfigContent(width, height), 'utf-8')
   }
 
   try {
@@ -214,7 +209,7 @@ export async function scaffoldProject(targetDir: string, options: ProjectOptions
   try {
     await fs.access(indexPath)
   } catch {
-    await fs.writeFile(indexPath, getIndexHtmlContent(options.gameName), 'utf-8')
+    await fs.writeFile(indexPath, getIndexHtmlContent(gameName), 'utf-8')
   }
 
   const licensePath = path.join(targetDir, 'LICENSE')
@@ -245,6 +240,18 @@ SOFTWARE.
 `
     await fs.writeFile(licensePath, MIT_LICENSE, 'utf-8')
   }
+}
 
+export async function updateProject(targetDir: string): Promise<void> {
+  await ensureProjectStructure(targetDir)
+  // Force update by passing true
+  await ensureProjectDependencies(targetDir, undefined, true)
+}
+
+/**
+ * 스캐폴딩: 대상 디렉토리에 빈 프로젝트 구조를 생성합니다.
+ */
+export async function scaffoldProject(targetDir: string, options: ProjectOptions): Promise<void> {
+  await ensureProjectStructure(targetDir, options)
   await ensureProjectDependencies(targetDir, options.processName)
 }
