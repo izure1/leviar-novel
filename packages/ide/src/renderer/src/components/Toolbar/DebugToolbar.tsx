@@ -20,7 +20,17 @@ export function DebugToolbar() {
 
     setPreviewLoading(true)
     try {
-      const activeScene = activeFile ? activeFile.split(/[/\\]/).pop()?.replace(/\.[^/.]+$/, '') : undefined
+      let activeScene: string | undefined = undefined
+      if (activeFile && projectPath) {
+        const normalizedFile = activeFile.replace(/\\/g, '/')
+        const normalizedProject = projectPath.replace(/\\/g, '/')
+        const scenesPrefix = normalizedProject + '/scenes/'
+        
+        if (normalizedFile.startsWith(scenesPrefix)) {
+          activeScene = normalizedFile.substring(scenesPrefix.length).replace(/\.[^/.]+$/, '')
+        }
+      }
+      
       const res = await window.api.preview.start(projectPath, activeScene)
       if (res.success && res.url) {
         setPreviewUrl(res.url)
