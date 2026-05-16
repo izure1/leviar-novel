@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
+import prettier from 'prettier'
 
 const DEFAULT_FOLDERS = [
   'assets',
@@ -64,7 +65,17 @@ export async function ensureEffectsFiles(targetDir: string) {
       const particlePreset = JSON.stringify(EFFECT_PARTICLE_PRESETS[effectType], null, 2)
       const clipPreset = JSON.stringify(EFFECT_CLIP_PRESETS[effectType], null, 2)
       
-      const content = `import type { EffectDef } from 'fumika'\n\nexport const effectDef: EffectDef = {\n  particle: ${particlePreset.replace(/"([^"]+)":/g, '$1:')},\n  clip: ${clipPreset.replace(/"([^"]+)":/g, '$1:')}\n}\n`
+      let content = `import type { EffectDef } from 'fumika'\n\nexport const effectDef: EffectDef = {\n  particle: ${particlePreset.replace(/"([^"]+)":/g, '$1:')},\n  clip: ${clipPreset.replace(/"([^"]+)":/g, '$1:')}\n}\n`
+      try {
+        content = await prettier.format(content, {
+          parser: 'typescript',
+          semi: false,
+          singleQuote: true,
+          trailingComma: 'none'
+        })
+      } catch (e) {
+        console.warn('[IDE] Failed to format effect file:', e)
+      }
       await fs.writeFile(filePath, content, 'utf-8')
     }
   }
