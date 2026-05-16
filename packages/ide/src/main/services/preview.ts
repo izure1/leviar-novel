@@ -20,7 +20,7 @@ export class PreviewService {
             transform(code, id) {
               if (id.endsWith('main.ts') || id.endsWith('main.js')) {
                 // inject debugMode = true after Novel instance is created
-                return code.replace(/(const novel = new Novel\(.*?\))/g, '$1\n  Novel.debugMode = true\n')
+                return code.replace(/(const novel = new Novel\([\s\S]*?\))/g, '$1\n  novel.debugMode = true\n')
               }
               return null
             }
