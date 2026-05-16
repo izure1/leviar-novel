@@ -111,6 +111,15 @@ export class ProjectWatcher {
       await fs.writeFile(declPath, content2, 'utf-8')
       console.log(`[IDE] Generated declaration: ${declPath}`)
       this.notifyFileChanged(declPath, content2)
+
+      // scenes 생성 시 sceneKeys.ts도 함께 갱신
+      if (folder === 'scenes') {
+        const keysContent = buildSceneKeysDecl(files)
+        const keysPath = path.join(this.projectPath, 'declarations', 'sceneKeys.ts')
+        await fs.writeFile(keysPath, keysContent, 'utf-8')
+        console.log(`[IDE] Generated declaration: ${keysPath}`)
+        this.notifyFileChanged(keysPath, keysContent)
+      }
     } catch (e) {
       console.error(`[IDE] Failed to generate declaration for ${folder}:`, e)
     }
@@ -320,13 +329,13 @@ function buildDefaultDecl(folder: string, files: FileEntry[]): string {
 
   const importBlock = imports ? `${imports}\n\n` : ''
   
-  if (folder === 'scenes') {
-    const keys = tsFiles
-      .map((f) => `  '${removeExt(f.rel).replace(/\\/g, '/')}'`)
-      .join(',\n')
-    const keysBlock = `export const sceneKeys = [\n${keys}\n] as const\n\n`
-    return `${importBlock}${keysBlock}export default {\n${entries}\n} as const\n`
-  }
-
   return `${importBlock}export default {\n${entries}\n} as const\n`
+}
+
+function buildSceneKeysDecl(files: FileEntry[]): string {
+  const tsFiles = files.filter((f) => f.name.endsWith('.ts'))
+  const keys = tsFiles
+    .map((f) => `  '${removeExt(f.rel).replace(/\\/g, '/')}'`)
+    .join(',\n')
+  return `export default [\n${keys}\n] as const\n`
 }

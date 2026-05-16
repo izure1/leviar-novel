@@ -6,7 +6,7 @@
 
 export function getNovelConfigContent(width: number, height: number): string {
   return `import Assets from './declarations/assets'
-import { sceneKeys } from './declarations/scenes'
+import sceneKeys from './declarations/sceneKeys'
 import Characters from './declarations/characters'
 import Modules from './declarations/modules'
 import Backgrounds from './declarations/backgrounds'
@@ -89,6 +89,7 @@ export function getIndexHtmlContent(gameName: string): string {
 export type DeclarationFolder =
   | 'assets'
   | 'scenes'
+  | 'sceneKeys'
   | 'characters'
   | 'modules'
   | 'backgrounds'
@@ -101,7 +102,8 @@ export type DeclarationFolder =
 
 const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   assets: `import { defineAssets } from 'fumika'\n\nexport default defineAssets({\n\n})\n`,
-  scenes: `export const sceneKeys = [] as const;\n\nexport default {}\n`,
+  scenes: `export default {}\n`,
+  sceneKeys: `export default [] as const\n`,
   characters: `export default {} as const\n`,
   modules: `import { defineCustomModules } from 'fumika'\n\nexport default defineCustomModules({\n\n})\n`,
   backgrounds: `import { defineBackgrounds } from 'fumika'\nimport assets from './assets'\n\nexport default defineBackgrounds(assets)({\n\n})\n`,
