@@ -38,7 +38,7 @@ type FlowItem =
   | { kind: 'goto', target: string, line: number }
   | { kind: 'call', target: string, line: number }
   | { kind: 'next', target: string, line: number }
-  | { kind: 'condition', id: number, ifBranch: FlowItem[], elseBranch: FlowItem[], line: number }
+  | { kind: 'condition', id: number, expression?: string, ifBranch: FlowItem[], elseBranch: FlowItem[], line: number }
 
 interface ParseResult {
   flowItems: FlowItem[]
@@ -52,6 +52,7 @@ interface HandleInfo {
   label: string
   depth: number
   line?: number
+  expression?: string
 }
 
 interface RowItem {
@@ -61,6 +62,7 @@ interface RowItem {
   depth: number
   branchLabel?: string
   line?: number
+  expression?: string
 }
 
 // ─── Style lookup tables ─────────────────────────────────────
@@ -104,6 +106,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
   const { setCenter, getNode, setNodes } = useReactFlow()
   const [highlightedRow, setHighlightedRow] = useState<number | null>(null)
   const [hoveredGoto, setHoveredGoto] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
+  const [hoveredCondition, setHoveredCondition] = useState<{ ri: number, expr: string, raw: string, color: string } | null>(null)
 
   return (
     <div
@@ -112,7 +115,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
           ? 'bg-surface-800 border-primary-500 shadow-primary-500/50 scale-[1.02] z-50'
           : 'bg-surface-900/95 border-surface-700/60 scale-100 z-10'
       }`}
-      style={{ minWidth: NODE_W }}
+      style={{ width: NODE_W }}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none" />
 
@@ -169,6 +172,30 @@ function SceneBlockComponent({ data, id }: NodeProps) {
               fill={hoveredGoto.color} 
             />
           </svg>
+        )}
+
+        {/* ── Custom Condition Tooltip ── */}
+        {hoveredCondition && (
+          <div 
+            className="absolute z-[100] left-full ml-4 max-w-[400px] w-max bg-surface-950/95 backdrop-blur-xl border rounded-lg shadow-2xl pointer-events-none"
+            style={{ 
+              top: 18 + hoveredCondition.ri * 30, 
+              transform: 'translateY(-50%)',
+              borderColor: `${hoveredCondition.color}80` 
+            }}
+          >
+            <div 
+              className="px-3 py-1.5 border-b flex items-center gap-2 rounded-t-lg"
+              style={{ backgroundColor: `${hoveredCondition.color}15`, borderColor: `${hoveredCondition.color}30` }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: hoveredCondition.color }}>Condition Expression</span>
+            </div>
+            <div className="p-3">
+              <pre className="text-[11px] font-mono text-surface-100 whitespace-pre-wrap leading-relaxed m-0">
+                {hoveredCondition.expr}
+              </pre>
+            </div>
+          </div>
         )}
 
         {rows.map((row, ri) => {
@@ -274,7 +301,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                       }
                     }}
                     onMouseLeave={() => setHoveredGoto(null)}
-                    className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all hover:brightness-125 hover:shadow-md active:scale-95"
+                    className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all hover:brightness-125 hover:shadow-md active:scale-95 max-w-[160px] truncate"
                     style={{ color: '#fff', backgroundColor: `${s.border}50`, border: `1px solid ${s.border}90` }}
                     title={`Jump to ${row.label}`}
                   >
@@ -282,9 +309,41 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                   </button>
                 ) : (
                   <span
-                    className="text-[11px] font-medium truncate flex-1 text-right font-mono pointer-events-none"
+                    className="text-[11px] font-medium truncate flex-1 text-right font-mono pointer-events-auto min-w-0"
                     style={{ color: '#cbd5e1' }}
-                    title={row.label}
+                    title={row.kind === 'condition' ? undefined : row.label}
+                    onMouseEnter={async (e) => {
+                      if (row.kind === 'condition' && row.expression) {
+                        // Elevate the entire node's z-index to ensure the tooltip is on top of everything
+                        const nodeEl = e.currentTarget.closest('.react-flow__node') as HTMLElement
+                        if (nodeEl) nodeEl.style.zIndex = '1000'
+
+                        setHoveredCondition({ ri, expr: 'Formatting...', raw: row.expression, color: s.border })
+                        try {
+                          // Wrap the condition in a dummy statement to ensure prettier formats it properly
+                          const dummyCode = `if (${row.expression}) {}`
+                          const result = await window.api.fs.formatCode(dummyCode)
+                          
+                          if (result.success && result.content) {
+                            // Extract the formatted condition back out
+                            const match = result.content.match(/^if\s*\(([\s\S]*?)\)\s*\{/)
+                            const formatted = match ? match[1].trim() : result.content.trim()
+                            setHoveredCondition(prev => prev?.ri === ri ? { ri, expr: formatted, raw: row.expression!, color: s.border } : prev)
+                          } else {
+                            setHoveredCondition(prev => prev?.ri === ri ? { ri, expr: row.expression!, raw: row.expression!, color: s.border } : prev)
+                          }
+                        } catch (e) {
+                          setHoveredCondition(prev => prev?.ri === ri ? { ri, expr: row.expression!, raw: row.expression!, color: s.border } : prev)
+                        }
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (row.kind === 'condition') {
+                        setHoveredCondition(null)
+                        const nodeEl = e.currentTarget.closest('.react-flow__node') as HTMLElement
+                        if (nodeEl) nodeEl.style.zIndex = ''
+                      }
+                    }}
                   >
                     {row.label}
                   </span>
@@ -499,6 +558,14 @@ function parseSceneContent(rawContent: string): ParseResult {
         const parenStart = afterName - 1
         const parenEnd = findMatchingBracket(text, parenStart, '(', ')')
         const condBody = text.slice(afterName, parenEnd)
+        
+        let rawExpr = ''
+        const firstBracket = condBody.indexOf('[')
+        if (firstBracket !== -1) {
+          rawExpr = condBody.slice(0, firstBracket).trim()
+          if (rawExpr.endsWith(',')) rawExpr = rawExpr.slice(0, -1).trim()
+        }
+
         const arrays: { text: string, offset: number }[] = []
         let sf = 0
         while (sf < condBody.length) {
@@ -510,7 +577,7 @@ function parseSceneContent(rawContent: string): ParseResult {
         }
         const ifBranch = arrays[0] ? scan(arrays[0].text, true, arrays[0].offset) : []
         const elseBranch = arrays[1] ? scan(arrays[1].text, true, arrays[1].offset) : []
-        items.push({ kind: 'condition', id: _condUid++, ifBranch, elseBranch, line: matchLine })
+        items.push({ kind: 'condition', id: _condUid++, expression: rawExpr, ifBranch, elseBranch, line: matchLine })
         tokenRegex.lastIndex = afterName + (parenEnd - afterName)
         continue
       }
@@ -623,7 +690,7 @@ function buildHandlesAndEdges(
         break
       }
       case 'condition': {
-        rowLabel = `#${item.id}`
+        rowLabel = item.expression ? item.expression : `#${item.id}`
         // condition header row (no handles on this row itself)
         rows.push({
           kind: 'condition',
@@ -632,6 +699,7 @@ function buildHandlesAndEdges(
           depth,
           branchLabel: branchLabel,
           line: item.line,
+          expression: item.expression,
         })
 
         // if branch
