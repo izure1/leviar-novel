@@ -577,7 +577,11 @@ function parseSceneContent(rawContent: string): ParseResult {
         }
         const ifBranch = arrays[0] ? scan(arrays[0].text, true, arrays[0].offset) : []
         const elseBranch = arrays[1] ? scan(arrays[1].text, true, arrays[1].offset) : []
-        items.push({ kind: 'condition', id: _condUid++, expression: rawExpr, ifBranch, elseBranch, line: matchLine })
+        
+        if (ifBranch.length > 0 || elseBranch.length > 0) {
+          items.push({ kind: 'condition', id: _condUid++, expression: rawExpr, ifBranch, elseBranch, line: matchLine })
+        }
+        
         tokenRegex.lastIndex = afterName + (parenEnd - afterName)
         continue
       }
