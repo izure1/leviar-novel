@@ -11,7 +11,9 @@ import { SettingsModal } from './components/Settings/SettingsModal'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import welcomeFumika from './assets/welcome/char_fumika.png'
 import welcomeBg from './assets/welcome/bg.png'
+import welcomeSakura from './assets/welcome/particle_sakura.png'
 import { ToastContainer } from './components/UI/Toast'
+
 interface WelcomeSceneProps {
   onOpenProject: () => Promise<void>;
   onScaffoldProject: () => Promise<void>;
@@ -27,7 +29,7 @@ const WelcomeScene = (_props: WelcomeSceneProps) => {
       canvas: canvasRef.current,
       width: window.innerWidth * dpr,
       height: window.innerHeight * dpr
-    } as any)
+    })
     const camera = world.createCamera()
     world.camera = camera
 
@@ -47,6 +49,7 @@ const WelcomeScene = (_props: WelcomeSceneProps) => {
       await world.loader.load({
         'character-fumika': welcomeFumika,
         'background': welcomeBg,
+        'particle_sakura': welcomeSakura,
       })
 
       // 로딩된 에셋 키(charWelcome)를 사용하여 이미지를 생성합니다.
@@ -56,8 +59,8 @@ const WelcomeScene = (_props: WelcomeSceneProps) => {
           width: 750,
           boxShadowBlur: 0,
           boxShadowColor: '#ffcbcb',
-          boxShadowOffsetX: -10,
-          boxShadowOffsetY: 10,
+          boxShadowOffsetX: -14,
+          boxShadowOffsetY: 14,
         },
         transform: {
           position: { x: -300, y: -250, z: 25 },
@@ -69,23 +72,61 @@ const WelcomeScene = (_props: WelcomeSceneProps) => {
         style: {
           width: 1024 * 5,
           height: 576 * 5,
-          blur: 3,
         },
         transform: {
           position: { z: 350 }
         }
       })
 
-      window.addEventListener('mousemove', onMouseMove)
+      // 벚꽃 파티클 생성
+      world.particleManager.create({
+        name: 'sakura_clip',
+        src: 'particle_sakura',
+        impulse: 0.02,
+        lifespan: 6000,
+        interval: 300,
+        size: [[0.5, 0.8], [0.3, 0.5]],
+        opacity: [[0.0, 0.0], [0.5, 1.0], [0.5, 1.0], [0.0, 0.0]],
+        loop: true,
+        angularImpulse: 0.001,
+        rate: 18,
+        spawnX: 1024 * 1.5,
+        spawnY: 576 * 1.5,
+        spawnZ: 500,
+      })
 
-      world.on('update', () => {
+      const particle = world.createParticle({
+        attribute: {
+          gravityScale: 0.02,
+          frictionAir: 0.01,
+          src: 'sakura_clip',
+        },
+        style: {
+          width: 20,
+          height: 20,
+        },
+        transform: { position: { x: 0, y: 300, z: 100 } },
+      })
+      
+      window.addEventListener('mousemove', onMouseMove)
+      
+      // 벚꽃 파티클 바람(X축 중력) 설정
+      const minWind = -0.5
+      const maxWind = 0.3
+      const windOffset = (minWind + maxWind) / 2
+      const windAmplitude = (maxWind - minWind) / 2
+
+      world.on('update', (timestamp) => {
         // 부드러운 카메라 이동
         currentX += (targetX - currentX) * 0.05
         currentY += (targetY - currentY) * 0.05
         camera.transform.position.x = currentX
         camera.transform.position.y = currentY
-      })
 
+        world.gravity.x = windOffset + Math.sin(timestamp * 0.001) * windAmplitude
+      })
+      
+      particle.play()
       world.start()
     }
 
@@ -236,16 +277,18 @@ function App() {
             <div className="relative z-10">
               <div className="py-4 mb-8 -ml-10">
                 <style>{`
-                  @keyframes breathe-logo {
-                    0%, 100% { transform: rotate(-6deg) scale(1); }
-                    50% { transform: rotate(-6deg) scale(1.05); }
+                  @keyframes shimmer-text {
+                    0% { background-position: 0% 50%; }
+                    100% { background-position: 200% 50%; }
                   }
-                  .animate-breathe-logo {
-                    animation: breathe-logo 4s ease-in-out infinite;
+                  .animate-shimmer-text {
+                    background-image: linear-gradient(to right, #ffcbcb, #ffb199, #fbc2eb, #a18cd1, #4ef8ff, #ffcbcb);
+                    background-size: 200% auto;
+                    animation: shimmer-text 6s linear infinite;
                   }
                 `}</style>
-                <h1 className="flex flex-col text-[8rem] leading-none font-black tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)] origin-left animate-breathe-logo w-fit">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">Fumika</span>
+                <h1 className="flex flex-col text-[8rem] leading-none font-black tracking-tighter origin-left -rotate-6 w-fit">
+                  <span className="text-transparent bg-clip-text animate-shimmer-text">Fumika</span>
                   <span className="text-white text-[1.5rem] tracking-[0.2rem] self-end translate-x-8">Visualnovel Engine</span>
                 </h1>
               </div>
@@ -254,21 +297,20 @@ function App() {
                 <button
                   onClick={handleOpenProject}
                   disabled={globalLoading}
-                  className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-primary-400/50 bg-gradient-to-br from-primary-600 to-primary-700 px-6 py-5 font-semibold text-white shadow-[0_0_40px_-10px_rgba(var(--color-primary-500),0.5)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_60px_-15px_rgba(var(--color-primary-500),0.7)] active:scale-[0.98] cursor-pointer"
+                  className="group relative flex items-center justify-between overflow-hidden rounded-md border border-[#ffcbcb]/30 bg-gradient-to-br from-[#ffcbcb]/20 to-[#ffcbcb]/5 backdrop-blur-[2px] px-6 py-5 font-semibold text-white shadow-[0_0_30px_-5px_rgba(255,203,203,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(255,203,203,0.4)] hover:border-[#ffcbcb]/50 hover:bg-[#ffcbcb]/10 active:scale-[0.98] cursor-pointer"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-1000 group-hover:translate-x-full" />
                   <div className="flex items-center gap-4 relative z-10">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/20 backdrop-blur-sm transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 shadow-inner">
-                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-black/20 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 shadow-inner">
+                      <svg className="w-6 h-6 text-[#ffcbcb]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className="text-lg font-bold tracking-tight">프로젝트 열기</div>
-                      <div className="text-sm font-medium text-primary-100/80">기존 작업 공간 불러오기</div>
+                      <div className="text-2xl font-bold tracking-tight text-transparent bg-clip-text animate-shimmer-text drop-shadow-sm">프로젝트 열기</div>
                     </div>
                   </div>
-                  <svg className="w-6 h-6 text-primary-200 transition-transform duration-300 group-hover:translate-x-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-6 h-6 text-[#ffcbcb]/80 transition-transform duration-300 group-hover:translate-x-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -276,20 +318,20 @@ function App() {
                 <button
                   onClick={handleScaffoldProject}
                   disabled={globalLoading}
-                  className="group flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md px-6 py-5 font-semibold text-white transition-all duration-300 hover:bg-black/60 hover:border-white/20 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer"
+                  className="group relative overflow-hidden flex items-center justify-between rounded-md border border-white/20 bg-white/10 backdrop-blur-[2px] px-6 py-5 font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/30 hover:scale-[1.02] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
-                      <svg className="w-6 h-6 text-surface-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-1000 group-hover:translate-x-full" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-white/10 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 shadow-inner border border-white/10">
+                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className="text-lg font-bold tracking-tight text-surface-50">새 프로젝트</div>
-                      <div className="text-sm font-medium text-surface-400">새로운 비주얼 노벨 시작하기</div>
+                      <div className="text-2xl font-bold tracking-tight text-transparent bg-clip-text animate-shimmer-text drop-shadow-sm">새 프로젝트</div>
                     </div>
                   </div>
-                  <svg className="w-6 h-6 text-surface-500 transition-transform duration-300 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-6 h-6 text-white/60 transition-transform duration-300 group-hover:translate-x-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
