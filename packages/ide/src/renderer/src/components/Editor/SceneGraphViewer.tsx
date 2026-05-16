@@ -391,6 +391,7 @@ function buildSubGraph(
           id: `e-flow-${prevId}-${subId}`,
           source: prevId,
           target: subId,
+          animated: true,
           style: { stroke: '#555', strokeWidth: 1.5, strokeDasharray: '6,3' },
         })
       }
@@ -402,6 +403,7 @@ function buildSubGraph(
         id: `e-entry-${parentId}-${subId}`,
         source: parentId,
         target: subId,
+        animated: isDashed,
         style: { stroke: edgeColor, strokeWidth: 1.5, strokeDasharray: isDashed ? '6,3' : 'none' },
         ...(branchMeta ? {
           label: branchMeta.label,
@@ -417,6 +419,7 @@ function buildSubGraph(
           id: `e-flow-${prevId}-${subId}`,
           source: prevId,
           target: subId,
+          animated: true,
           style: { stroke: '#555', strokeWidth: 1.5, strokeDasharray: '6,3' },
         })
       }
