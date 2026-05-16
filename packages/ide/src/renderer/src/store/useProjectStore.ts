@@ -14,6 +14,7 @@ interface ProjectState {
   themeBg: ThemeBg
   formatOnSave: boolean
   isSettingsOpen: boolean
+  isGraphOpen: boolean
   setProjectPath: (path: string | null) => void
   setActiveFile: (file: string | null) => void
   setGlobalLoading: (loading: boolean) => void
@@ -24,10 +25,11 @@ interface ProjectState {
   setThemeBg: (bg: ThemeBg) => void
   setFormatOnSave: (format: boolean) => void
   setIsSettingsOpen: (open: boolean) => void
+  setIsGraphOpen: (open: boolean) => void
   initSettings: () => Promise<void>
 }
 
-export const useProjectStore = create<ProjectState>((set) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
   projectPath: null,
   activeFile: null,
   globalLoading: false,
@@ -38,8 +40,15 @@ export const useProjectStore = create<ProjectState>((set) => ({
   themeBg: 'neutral',
   formatOnSave: true,
   isSettingsOpen: false,
+  isGraphOpen: false,
   setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true }),
-  setActiveFile: (file) => set({ activeFile: file }),
+  setActiveFile: (file) => {
+    set({ activeFile: file })
+    const state = get()
+    if (state.isGraphOpen && file) {
+      set({ isGraphOpen: false })
+    }
+  },
   setGlobalLoading: (loading) => set({ globalLoading: loading }),
   setIsPreviewOpen: (open) => set({ isPreviewOpen: open }),
   setPreviewUrl: (url) => set({ previewUrl: url }),
@@ -57,6 +66,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
     window.api.settings.set({ formatOnSave: format }).catch(console.error)
   },
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
+  setIsGraphOpen: (open) => set({ isGraphOpen: open }),
   initSettings: async () => {
     try {
       const res = await window.api.settings.get()

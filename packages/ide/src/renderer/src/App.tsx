@@ -4,6 +4,7 @@ import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
 import { EditorArea } from './components/Editor/EditorArea'
+import { SceneGraphViewer } from './components/Editor/SceneGraphViewer'
 import { DebugToolbar } from './components/Toolbar/DebugToolbar'
 import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectDialog'
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
@@ -149,7 +150,7 @@ const WelcomeScene = (_props: WelcomeSceneProps) => {
 }
 
 function App() {
-  const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen, themeColor, themeBg, isSettingsOpen, setIsSettingsOpen, initSettings } = useProjectStore()
+  const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen, themeColor, themeBg, isSettingsOpen, setIsSettingsOpen, initSettings, isGraphOpen } = useProjectStore()
   const [newProjectData, setNewProjectData] = useState<{ isOpen: boolean, parentDir: string } | null>(null)
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [previewWidth, setPreviewWidth] = useState(400)
@@ -376,8 +377,8 @@ function App() {
       />
 
       {/* Main Editor Area */}
-      <main className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center border-b border-surface-800 bg-surface-900/50 px-6 backdrop-blur-md">
+      <main className="flex flex-1 flex-col overflow-hidden relative">
+        <header className="flex h-14 shrink-0 items-center border-b border-surface-800 bg-surface-900/50 px-6 backdrop-blur-md z-10">
           <h3 className="text-sm font-medium">Editor</h3>
           <DebugToolbar />
         </header>
@@ -397,6 +398,8 @@ function App() {
               </div>
             </>
           )}
+
+          {isGraphOpen && <SceneGraphViewer />}
         </div>
       </main>
       </div>
