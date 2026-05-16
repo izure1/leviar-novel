@@ -56,13 +56,14 @@ interface HandleInfo {
 }
 
 interface RowItem {
-  kind: FlowItem['kind']
+  kind: FlowItem['kind'] | 'return'
   label: string
   handles: HandleInfo[]
   depth: number
   branchLabel?: string
   line?: number
   expression?: string
+  returnTarget?: { callerId: string, callerRowIdx: number }
 }
 
 // ─── Style lookup tables ─────────────────────────────────────
@@ -73,6 +74,7 @@ const SUB_STYLES: Record<string, { bg: string, border: string, text: string }> =
   next:      { bg: '#2e1065', border: '#8b5cf6', text: '#c4b5fd' }, // violet
   call:      { bg: '#4c0519', border: '#f43f5e', text: '#fda4af' }, // rose
   condition: { bg: '#422006', border: '#eab308', text: '#fde047' }, // yellow
+  return:    { bg: '#1e3a8a', border: '#3b82f6', text: '#93c5fd' }, // blue
 }
 
 const EXT_EDGE_STYLES: Record<string, { color: string, dash: string }> = {
@@ -94,6 +96,7 @@ const SUB_ICONS: Record<string, string> = {
   next: '→',
   call: '↗',
   condition: '◇',
+  return: '↵',
 }
 
 // ─── Custom Node: Scene Block (Blueprint) ────────────────────
@@ -104,7 +107,8 @@ function SceneBlockComponent({ data, id }: NodeProps) {
   const entryHandle = handles.find(h => h.kind === 'entry')
   const { setPendingLine, setActiveFile, setIsGraphOpen } = useProjectStore()
   const { setCenter, getNode, setNodes } = useReactFlow()
-  const [highlightedRow, setHighlightedRow] = useState<number | null>(null)
+  const [localHighlightedRow, setLocalHighlightedRow] = useState<number | null>(null)
+  const highlightedRow = (data.highlightedRowIndex as number | null | undefined) ?? localHighlightedRow
   const [hoveredGoto, setHoveredGoto] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
   const [hoveredCondition, setHoveredCondition] = useState<{ ri: number, expr: string, raw: string, color: string } | null>(null)
 
@@ -271,21 +275,33 @@ function SceneBlockComponent({ data, id }: NodeProps) {
 
               {/* Label */}
               {row.label && (
-                ['goto', 'call', 'next'].includes(row.kind) ? (
+                ['goto', 'call', 'next', 'return'].includes(row.kind) ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       if (row.kind === 'goto') {
                         const targetIdx = rows.findIndex(r => r.kind === 'label' && r.label === row.label)
                         if (targetIdx !== -1) {
-                          setHighlightedRow(targetIdx)
-                          setTimeout(() => setHighlightedRow(null), 2000)
+                          setLocalHighlightedRow(targetIdx)
+                          setTimeout(() => setLocalHighlightedRow(null), 2000)
                           
                           const node = getNode(id)
                           if (node && node.position) {
                             const yOffset = HEADER_H + ROWS_PAD_TOP + targetIdx * ROW_STRIDE + 28 / 2
                             setCenter(node.position.x + NODE_W / 2, node.position.y + yOffset, { duration: 800, zoom: 1.2 })
                           }
+                        }
+                      } else if (row.kind === 'return' && row.returnTarget) {
+                        const { callerId, callerRowIdx } = row.returnTarget
+                        const targetNode = getNode(callerId)
+                        if (targetNode && targetNode.position) {
+                          const yOffset = HEADER_H + ROWS_PAD_TOP + callerRowIdx * ROW_STRIDE + 28 / 2
+                          setCenter(targetNode.position.x + NODE_W / 2, targetNode.position.y + yOffset, { duration: 800, zoom: 1.2 })
+                          
+                          setNodes(nds => nds.map(n => n.id === callerId ? { ...n, data: { ...n.data, highlightedRowIndex: callerRowIdx } } : n))
+                          setTimeout(() => {
+                            setNodes(nds => nds.map(n => n.id === callerId ? { ...n, data: { ...n.data, highlightedRowIndex: null } } : n))
+                          }, 2000)
                         }
                       } else {
                         // call or next -> jump to scene node
@@ -307,7 +323,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                       }
                     }}
                     onMouseLeave={() => setHoveredGoto(null)}
-                    className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all hover:brightness-125 hover:shadow-md active:scale-95 max-w-[160px] truncate"
+                    className="cursor-pointer ml-auto px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all hover:brightness-125 hover:shadow-md active:scale-95 max-w-[160px] truncate"
                     style={{ color: '#fff', backgroundColor: `${s.border}50`, border: `1px solid ${s.border}90` }}
                     title={`Jump to ${row.label}`}
                   >
@@ -829,6 +845,72 @@ export function SceneGraphViewer() {
 
       // Collect all known scene IDs
       const knownIds = new Set(allNodes.map(n => n.id))
+
+      // Build call graph to find subroutine terminal nodes
+      const directCallers = new Map<string, Set<string>>()
+      for (const node of allNodes) {
+        const rows = (node.data?.rows as RowItem[]) || []
+        for (let ri = 0; ri < rows.length; ri++) {
+          const row = rows[ri]
+          if (row.kind === 'call' && knownIds.has(row.label)) {
+            if (!directCallers.has(row.label)) directCallers.set(row.label, new Set())
+            directCallers.get(row.label)!.add(JSON.stringify({ callerId: node.id, callerRowIdx: ri }))
+          }
+        }
+      }
+
+      // Trace subroutine paths to find their terminal returns
+      const terminalReturns = new Map<string, Set<string>>()
+      for (const [subEntry, callers] of directCallers.entries()) {
+        const visited = new Set<string>()
+        const queue = [subEntry]
+        
+        while (queue.length > 0) {
+          const curr = queue.shift()!
+          if (visited.has(curr)) continue
+          visited.add(curr)
+          
+          const currNode = allNodes.find(n => n.id === curr)
+          if (!currNode) continue
+          
+          let hasNext = false
+          const hs = (currNode.data?.handles as HandleInfo[]) || []
+          for (const h of hs) {
+            if (h.kind === 'next' && knownIds.has(h.label)) {
+              hasNext = true
+              queue.push(h.label)
+            }
+          }
+          
+          // If no outgoing 'next' edges, it's a terminal node for this subroutine
+          if (!hasNext) {
+            if (!terminalReturns.has(curr)) terminalReturns.set(curr, new Set())
+            for (const caller of callers) {
+              terminalReturns.get(curr)!.add(caller)
+            }
+          }
+        }
+      }
+
+      // Append return rows to terminal nodes
+      for (const [terminalNodeId, callers] of terminalReturns.entries()) {
+        const node = allNodes.find(n => n.id === terminalNodeId)
+        if (!node) continue
+        
+        const rows = node.data.rows as RowItem[]
+        // Deduplicate callers and sort them for consistent rendering
+        const sortedCallers = Array.from(callers).sort()
+        for (const callerStr of sortedCallers) {
+          const { callerId, callerRowIdx } = JSON.parse(callerStr)
+          rows.push({
+            kind: 'return',
+            label: callerId,
+            handles: [],
+            depth: 0,
+            returnTarget: { callerId, callerRowIdx }
+          })
+        }
+      }
 
       // Build goto → label edges (within same or cross scene)
       const labelHandleMap = new Map<string, { sceneId: string, handleId: string }>()
