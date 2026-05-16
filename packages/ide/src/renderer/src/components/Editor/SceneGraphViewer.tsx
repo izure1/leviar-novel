@@ -80,8 +80,7 @@ const EXT_EDGE_STYLES: Record<string, { color: string, dash: string }> = {
 
 // ─── Blueprint row constants ─────────────────────────────────
 
-const ROW_H = 28
-const ROW_STRIDE = 30  // ROW_H + 2px (my-px margin top + bottom)
+const ROW_STRIDE = 30  // 28px (h-7) + 2px (my-px margin top + bottom)
 const HEADER_H = 44
 const NODE_W = 320
 const ROWS_PAD_TOP = 4 // py-1
@@ -100,6 +99,7 @@ function SceneBlockComponent({ data }: NodeProps) {
   const rows = (data.rows || []) as RowItem[]
   const handles = (data.handles || []) as HandleInfo[]
   const entryHandle = handles.find(h => h.kind === 'entry')
+  const { setPendingLine, setActiveFile, setIsGraphOpen } = useProjectStore()
 
   return (
     <div
@@ -144,7 +144,15 @@ function SceneBlockComponent({ data }: NodeProps) {
           return (
             <div
               key={ri}
-              className="relative flex items-center h-7 px-3 mx-1 my-px rounded transition-colors hover:brightness-125"
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                if (row.line !== undefined) setPendingLine(row.line)
+                if (data.fullPath) {
+                  setActiveFile(String(data.fullPath))
+                  setIsGraphOpen(false)
+                }
+              }}
+              className="relative flex items-center h-7 px-3 mx-1 my-px rounded cursor-pointer transition-colors hover:brightness-125"
               style={{
                 paddingLeft: 12 + row.depth * 14,
                 background: `${s.bg}40`,
@@ -435,7 +443,7 @@ function parseSceneContent(content: string): ParseResult {
     return items
   }
 
-  return { flowItems: [...optionFlowItems, ...scan(body, false, arrayStart)], externalConnections }
+  return { flowItems: [...scan(body, false, arrayStart), ...optionFlowItems], externalConnections }
 }
 
 // ─── FlowItem → handles + rows + edges builder ───────────────
