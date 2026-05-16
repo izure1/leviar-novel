@@ -10,7 +10,7 @@ export function TitleBar() {
 
   return (
     <div 
-      className="flex h-8 shrink-0 items-center justify-between bg-surface-900 border-b border-surface-800 select-none z-50"
+      className="relative flex h-8 shrink-0 items-center justify-between bg-surface-900 border-b border-surface-800 select-none z-50"
       style={{ WebkitAppRegion: 'drag' } as any}
     >
       <div className="flex items-center px-4 h-full">
@@ -41,8 +41,9 @@ export function TitleBar() {
           <Minus size={16} strokeWidth={1.5} />
         </button>
         <button
-          onClick={() => window.api.window.maximize()}
-          className="flex h-full w-12 items-center justify-center text-surface-400 hover:bg-surface-700 hover:text-surface-100 transition-colors"
+          onClick={() => projectPath && window.api.window.maximize()}
+          disabled={!projectPath}
+          className={`flex h-full w-12 items-center justify-center text-surface-400 transition-colors ${projectPath ? 'hover:bg-surface-700 hover:text-surface-100' : 'opacity-30 cursor-not-allowed'}`}
           title="최대화"
         >
           <Square size={14} strokeWidth={1.5} />

@@ -14,8 +14,8 @@ let mainWindow: BrowserWindow | null = null
 function createWindow(): void {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1024,
+    height: 576,
     show: false,
     autoHideMenuBar: true,
     frame: false,
@@ -89,6 +89,32 @@ app.whenReady().then(() => {
   
   ipcMain.handle('window:close', () => {
     mainWindow?.close()
+  })
+
+  ipcMain.handle('window:setResizable', (_, resizable: boolean) => {
+    mainWindow?.setResizable(resizable)
+    mainWindow?.setMaximizable(resizable)
+  })
+
+  ipcMain.handle('window:forceMaximize', () => {
+    if (mainWindow) {
+      mainWindow.setResizable(true)
+      mainWindow.setMaximizable(true)
+      mainWindow.maximize()
+    }
+  })
+
+  ipcMain.handle('window:restoreWelcomeSize', () => {
+    if (mainWindow) {
+      mainWindow.setResizable(true)
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize()
+      }
+      mainWindow.setSize(1024, 576)
+      mainWindow.center()
+      mainWindow.setResizable(false)
+      mainWindow.setMaximizable(false)
+    }
   })
 
   // Project Management IPCs

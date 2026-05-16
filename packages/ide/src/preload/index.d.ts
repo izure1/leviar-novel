@@ -26,6 +26,9 @@ declare global {
         minimize: () => Promise<void>
         maximize: () => Promise<void>
         close: () => Promise<void>
+        setResizable: (resizable: boolean) => Promise<void>
+        forceMaximize: () => Promise<void>
+        restoreWelcomeSize: () => Promise<void>
       }
       settings: {
         get: () => Promise<{ success: boolean; settings?: any; error?: string }>

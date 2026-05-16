@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { World } from 'leviar'
 import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
@@ -8,6 +9,109 @@ import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectD
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
 import { SettingsModal } from './components/Settings/SettingsModal'
 import { TitleBar } from './components/TitleBar/TitleBar'
+
+const WelcomeScene = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    if (!canvasRef.current) return
+    const dpr = window.devicePixelRatio || 1
+    const world = new World({
+      canvas: canvasRef.current,
+      width: window.innerWidth * dpr,
+      height: window.innerHeight * dpr
+    } as any)
+    const camera = world.createCamera()
+    world.camera = camera
+
+    const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899']
+
+    for (let i = 0; i < 40; i++) {
+      const size = 10 + Math.random() * 30
+      const box = world.createRectangle({
+        attribute: { name: `box_${i}` },
+        style: {
+          background: colors[Math.floor(Math.random() * colors.length)],
+          width: size,
+          height: size,
+          borderRadius: size / 4,
+          opacity: 0.2 + Math.random() * 0.4,
+          boxShadowBlur: 10,
+        },
+        transform: {
+          position: {
+            x: (Math.random() - 0.5) * window.innerWidth * 1.5,
+            y: (Math.random() - 0.5) * window.innerHeight * 1.5,
+            z: Math.random() * 100
+          },
+          rotation: {
+            x: Math.random() * 360,
+            y: Math.random() * 360,
+            z: Math.random() * 360
+          }
+        }
+      })
+
+      const animateBox = () => {
+        box.animate({
+          transform: { 
+            position: { y: '-=200', x: '+=50' },
+            rotation: { x: '+=180', y: '+=180', z: '+=180' } 
+          }
+        }, 10000 + Math.random() * 5000, 'linear').on('end', animateBox)
+      }
+      animateBox()
+
+      box.on('mouseover', () => {
+        box.animate({
+          style: { opacity: 0.9, boxShadowBlur: 20 },
+          transform: { scale: { x: 1.5, y: 1.5 } }
+        }, 200, 'easeOutExpo')
+      })
+      box.on('mouseout', () => {
+        box.animate({
+          style: { opacity: 0.2 + Math.random() * 0.4, boxShadowBlur: 10 },
+          transform: { scale: { x: 1, y: 1 } }
+        }, 300, 'easeOutExpo')
+      })
+    }
+
+    let targetX = 0
+    let targetY = 0
+    let currentX = 0
+    let currentY = 0
+
+    const onMouseMove = (e: MouseEvent) => {
+      const cx = window.innerWidth / 2
+      const cy = window.innerHeight / 2
+      targetX = (e.clientX - cx) * 0.15
+      targetY = (e.clientY - cy) * 0.15
+    }
+    window.addEventListener('mousemove', onMouseMove)
+
+    world.on('update', () => {
+      currentX += (targetX - currentX) * 0.05
+      currentY += (targetY - currentY) * 0.05
+      camera.transform.position.x = currentX
+      camera.transform.position.y = currentY
+    })
+
+    world.start()
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      world.stop()
+    }
+  }, [])
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="absolute inset-0 z-0 opacity-60"
+      width={1024}
+      height={576}
+    />
+  )
+}
 
 function App() {
   const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen, themeColor, themeBg, isSettingsOpen, setIsSettingsOpen, initSettings } = useProjectStore()
@@ -24,6 +128,16 @@ function App() {
     document.documentElement.dataset.theme = themeColor
     document.documentElement.dataset.bgTheme = themeBg
   }, [themeColor, themeBg])
+
+  useEffect(() => {
+    if (window.api?.window?.forceMaximize) {
+      if (projectPath) {
+        window.api.window.forceMaximize()
+      } else {
+        window.api.window.restoreWelcomeSize()
+      }
+    }
+  }, [projectPath])
 
   const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -120,26 +234,27 @@ function App() {
 
   if (!projectPath) {
     return (
-      <div className="flex h-screen w-screen flex-col bg-surface-900 text-white overflow-hidden">
+      <div className="flex h-screen w-screen flex-col bg-surface-900 text-white overflow-hidden relative">
         <TitleBar />
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="rounded-lg border border-surface-800 bg-surface-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
-            <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">
+        <WelcomeScene />
+        <div className="flex-1 flex flex-col items-center justify-center relative z-10 pointer-events-none">
+          <div className="pointer-events-auto rounded-2xl border border-surface-700/50 bg-surface-900/60 p-12 text-center shadow-2xl backdrop-blur-xl">
+            <h1 className="mb-3 text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-cyan-400 to-primary-500 drop-shadow-sm">
               Fumika Engine
             </h1>
-            <p className="mb-8 text-surface-400">The Visual Novel Studio</p>
-            <div className="flex flex-col gap-4">
+            <p className="mb-10 text-surface-400 font-medium tracking-wide">The Next Generation Visual Novel Studio</p>
+            <div className="flex flex-col gap-4 w-full max-w-sm mx-auto">
               <button
                 onClick={handleOpenProject}
                 disabled={globalLoading}
-                className="rounded-sm bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-500/30 transition-all hover:bg-primary-500 hover:-translate-y-0.5"
+                className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary-600 px-8 py-3.5 font-semibold text-white shadow-lg shadow-primary-500/20 transition-all hover:bg-primary-500 hover:-translate-y-0.5 active:translate-y-0"
               >
-                Open Existing Project
+                <span className="relative z-10">Open Existing Project</span>
               </button>
               <button
                 onClick={handleScaffoldProject}
                 disabled={globalLoading}
-                className="rounded-sm border border-surface-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-surface-800 hover:-translate-y-0.5"
+                className="group flex items-center justify-center gap-2 rounded-lg border border-surface-700 bg-surface-800/50 px-8 py-3.5 font-semibold text-white transition-all hover:bg-surface-700 hover:-translate-y-0.5 active:translate-y-0"
               >
                 Create New Project
               </button>

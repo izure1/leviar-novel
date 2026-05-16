@@ -23,7 +23,7 @@ interface PromptData {
   defaultValue: string
 }
 export function ProjectSidebar({ width = 256 }: { width?: number }) {
-  const { projectPath, activeFile, setActiveFile, setGlobalLoading } = useProjectStore()
+  const { projectPath, activeFile, setActiveFile, setGlobalLoading, setProjectPath } = useProjectStore()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     scenes: true,
     assets: true,
@@ -444,7 +444,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
 
   return (
     <aside className="border-r border-surface-800 bg-surface-900 flex flex-col shrink-0" style={{ width }}>
-      <div className="border-b border-surface-800 p-4 shrink-0 flex justify-between items-start">
+      <div className="border-b border-surface-800 p-4 shrink-0 flex justify-between items-center">
         <div className="overflow-hidden mr-2">
           <h2 
             className="font-bold text-surface-100 truncate cursor-pointer hover:underline"
@@ -453,17 +453,26 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
           >
             {projectPath ? projectPath.split(/[/\\]/).pop() : 'Project Explorer'}
           </h2>
-          <p className="truncate text-[10px] text-surface-500 mt-1" title={projectPath || ''}>
-            {projectPath}
-          </p>
         </div>
-        <button 
-          onClick={handleUpdateProject}
-          className="w-7 h-7 flex shrink-0 items-center justify-center rounded-none bg-primary-600/20 text-primary-400 hover:bg-primary-600/40 transition-colors"
-          title="의존성 복구 및 최신 엔진 업데이트 (npm install)"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button 
+            onClick={handleUpdateProject}
+            className="w-7 h-7 flex items-center justify-center rounded bg-primary-600/20 text-primary-400 hover:bg-primary-600/40 transition-colors"
+            title="의존성 복구 및 최신 엔진 업데이트 (npm install)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+          <button 
+            onClick={() => {
+              setProjectPath('');
+              setActiveFile(null);
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-colors"
+            title="프로젝트 닫기"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <div className="text-sm">
