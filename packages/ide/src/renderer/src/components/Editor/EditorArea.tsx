@@ -19,15 +19,74 @@ export function EditorArea() {
   const [openTabs, setOpenTabs] = useState<string[]>([])
   const [tabData, setTabData] = useState<Record<string, TabData>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [previewTab, setPreviewTabState] = useState<string | null>(null)
   
   const [confirmState, setConfirmState] = useState<any>(null)
   const draftTimers = useRef<Record<string, NodeJS.Timeout>>({})
   const fetchedTabs = useRef<Set<string>>(new Set())
 
+  const tabDataRef = useRef(tabData)
+  useEffect(() => { tabDataRef.current = tabData }, [tabData])
+  const openTabsRef = useRef(openTabs)
+  useEffect(() => { openTabsRef.current = openTabs }, [openTabs])
+  const previewTabRef = useRef(previewTab)
+  useEffect(() => { previewTabRef.current = previewTab }, [previewTab])
+
+  const setPreviewTab = useCallback((tab: string | null) => {
+    setPreviewTabState(tab)
+  }, [])
+
+  useEffect(() => {
+    const handlePinTab = (e: CustomEvent) => {
+      const { path } = e.detail
+      if (previewTabRef.current === path) {
+        setPreviewTab(null)
+      }
+    }
+    window.addEventListener('pin-tab', handlePinTab as EventListener)
+    return () => window.removeEventListener('pin-tab', handlePinTab as EventListener)
+  }, [setPreviewTab])
+
   useEffect(() => {
     if (!activeFile) return
 
-    setOpenTabs(prev => prev.includes(activeFile) ? prev : [...prev, activeFile])
+    const prevTabs = openTabsRef.current
+    if (!prevTabs.includes(activeFile)) {
+      let replacedTab: string | null = null
+      const currentPreview = previewTabRef.current
+      
+      if (currentPreview && prevTabs.includes(currentPreview)) {
+        const isDirty = tabDataRef.current[currentPreview]?.isDirty
+        if (!isDirty) {
+          replacedTab = currentPreview
+        }
+      }
+
+      setOpenTabs(prev => {
+        const next = [...prev]
+        if (replacedTab) {
+          const idx = next.indexOf(replacedTab)
+          if (idx !== -1) {
+            next[idx] = activeFile
+            return next
+          }
+        }
+        next.push(activeFile)
+        return next
+      })
+
+      setPreviewTab(activeFile)
+
+      if (replacedTab) {
+        fetchedTabs.current.delete(replacedTab)
+        setTabData(prev => {
+          const next = { ...prev }
+          delete next[replacedTab!]
+          return next
+        })
+        window.api.fs.deleteFile(getDraftPath(replacedTab))
+      }
+    }
 
     if (!fetchedTabs.current.has(activeFile)) {
       fetchedTabs.current.add(activeFile)
@@ -45,6 +104,10 @@ export function EditorArea() {
             ...prev,
             [activeFile]: { content: draftRes.content as string, isDirty: true, isLoading: false }
           }))
+          // dirty가 되면 preview 상태 해제
+          if (previewTabRef.current === activeFile) {
+            setPreviewTab(null)
+          }
         } else {
           // 원본 로드
           window.api.fs.readFile(activeFile)
@@ -75,11 +138,15 @@ export function EditorArea() {
                 ...prev,
                 [activeFile]: { content, isDirty, isLoading: false }
               }))
+              
+              if (isDirty && previewTabRef.current === activeFile) {
+                setPreviewTab(null)
+              }
             })
         }
       })
     }
-  }, [activeFile])
+  }, [activeFile, setPreviewTab])
 
   const handleSave = useCallback(async () => {
     if (!activeFile || isSaving) return
@@ -237,6 +304,10 @@ export function EditorArea() {
       [tab]: { ...prev[tab], content: newContent, isDirty: true }
     }))
 
+    if (previewTabRef.current === tab) {
+      setPreviewTab(null)
+    }
+
     // 디바운스로 임시 파일 저장 (1초)
     if (draftTimers.current[tab]) clearTimeout(draftTimers.current[tab])
     draftTimers.current[tab] = setTimeout(() => {
@@ -259,6 +330,7 @@ export function EditorArea() {
           }
           // 저장하지 않고 닫을 경우 임시 파일도 폐기
           window.api.fs.deleteFile(getDraftPath(tab))
+          if (previewTab === tab) setPreviewTab(null)
           removeTab(tab)
         }
       })
@@ -267,6 +339,7 @@ export function EditorArea() {
         clearTimeout(draftTimers.current[tab])
         delete draftTimers.current[tab]
       }
+      if (previewTab === tab) setPreviewTab(null)
       removeTab(tab)
     }
   }
@@ -280,6 +353,7 @@ export function EditorArea() {
             const fileName = tab.split(/[/\\]/).pop()
             const isActive = tab === activeFile
             const isDirty = tabData[tab]?.isDirty
+            const isPreview = previewTab === tab
 
             return (
               <div 
@@ -288,9 +362,10 @@ export function EditorArea() {
                   isActive ? 'bg-[#1e1e1e] text-indigo-400 border-t-2 border-t-indigo-500' : 'bg-[#181818] text-slate-500 hover:bg-slate-800/80 border-t-2 border-t-transparent'
                 }`}
                 onClick={() => setActiveFile(tab)}
+                onDoubleClick={() => { if (isPreview) setPreviewTab(null) }}
                 title={tab}
               >
-                <span className="truncate flex-1 text-xs select-none">{fileName}</span>
+                <span className={`truncate flex-1 text-xs select-none ${isPreview ? 'italic text-indigo-300/80' : ''}`}>{fileName}</span>
                 <div className="flex items-center w-4 h-4 justify-center shrink-0">
                   {isDirty ? (
                     <div className="w-2 h-2 rounded-full bg-amber-400 group-hover:hidden" />

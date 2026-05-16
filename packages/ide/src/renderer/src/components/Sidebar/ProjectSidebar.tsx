@@ -116,6 +116,13 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     setSelectedFiles(newSelection)
   }
 
+  const handleNodeDoubleClick = (e: React.MouseEvent, targetPath: string, isDir: boolean) => {
+    e.stopPropagation()
+    if (!isDir) {
+      window.dispatchEvent(new CustomEvent('pin-tab', { detail: { path: targetPath } }))
+    }
+  }
+
   const handleDragStart = (e: React.DragEvent, targetPath: string) => {
     let dragFiles = Array.from(selectedFiles)
     if (!selectedFiles.has(targetPath)) {
@@ -394,6 +401,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                       : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 }`}
                 onClick={(e) => handleNodeClick(e, fullPath, isDir, fullPath)}
+                onDoubleClick={(e) => handleNodeDoubleClick(e, fullPath, isDir)}
                 title={node.name}
               >
                 <div className="flex items-center truncate max-w-[140px]">
@@ -480,6 +488,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                           : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
                     onClick={(e) => handleNodeClick(e, filePath, false)}
+                    onDoubleClick={(e) => handleNodeDoubleClick(e, filePath, false)}
                     title={file}
                   >
                     <span className="mr-1 opacity-40 w-3 inline-block text-center text-[10px]">•</span>
