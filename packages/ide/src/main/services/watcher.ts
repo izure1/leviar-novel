@@ -20,6 +20,7 @@ export class ProjectWatcher {
   private watcher: FSWatcher | null = null
   private projectPath: string = ''
   private win: BrowserWindow | null = null
+  private debounceMap: Map<string, NodeJS.Timeout> = new Map()
 
   /**
    * 프로젝트 디렉토리 감시를 시작합니다.
@@ -57,16 +58,31 @@ export class ProjectWatcher {
       this.watcher.close()
       this.watcher = null
     }
+    for (const timeout of this.debounceMap.values()) {
+      clearTimeout(timeout)
+    }
+    this.debounceMap.clear()
     this.win = null
   }
 
-  private async handleFileChange(filePath: string) {
+  private handleFileChange(filePath: string) {
     try {
       const relativePath = path.relative(this.projectPath, filePath)
       const folder = relativePath.split(path.sep)[0]
 
       if (WATCH_FOLDERS.includes(folder)) {
-        await this.generateDeclaration(folder)
+        if (this.debounceMap.has(folder)) {
+          clearTimeout(this.debounceMap.get(folder)!)
+        }
+        this.debounceMap.set(
+          folder,
+          setTimeout(() => {
+            this.debounceMap.delete(folder)
+            this.generateDeclaration(folder).catch((e) => {
+              console.error(`[IDE] Failed to generate declaration for ${folder}:`, e)
+            })
+          }, 300)
+        )
       }
     } catch (e) {
       console.error('File change handling error:', e)
