@@ -15,6 +15,7 @@ interface ProjectState {
   formatOnSave: boolean
   isSettingsOpen: boolean
   isGraphOpen: boolean
+  pendingLine: number | null
   setProjectPath: (path: string | null) => void
   setActiveFile: (file: string | null) => void
   setGlobalLoading: (loading: boolean) => void
@@ -26,6 +27,7 @@ interface ProjectState {
   setFormatOnSave: (format: boolean) => void
   setIsSettingsOpen: (open: boolean) => void
   setIsGraphOpen: (open: boolean) => void
+  setPendingLine: (line: number | null) => void
   initSettings: () => Promise<void>
 }
 
@@ -41,6 +43,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   formatOnSave: true,
   isSettingsOpen: false,
   isGraphOpen: false,
+  pendingLine: null,
   setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true }),
   setActiveFile: (file) => {
     set({ activeFile: file })
@@ -67,6 +70,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setIsGraphOpen: (open) => set({ isGraphOpen: open }),
+  setPendingLine: (line) => set({ pendingLine: line }),
   initSettings: async () => {
     try {
       const res = await window.api.settings.get()

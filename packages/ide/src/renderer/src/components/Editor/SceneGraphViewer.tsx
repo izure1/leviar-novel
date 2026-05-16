@@ -33,11 +33,11 @@ interface SceneConnection {
 }
 
 type FlowItem =
-  | { kind: 'label', name: string }
-  | { kind: 'goto', target: string }
-  | { kind: 'call', target: string }
-  | { kind: 'next', target: string }
-  | { kind: 'condition', id: number, ifBranch: FlowItem[], elseBranch: FlowItem[] }
+  | { kind: 'label', name: string, line: number }
+  | { kind: 'goto', target: string, line: number }
+  | { kind: 'call', target: string, line: number }
+  | { kind: 'next', target: string, line: number }
+  | { kind: 'condition', id: number, ifBranch: FlowItem[], elseBranch: FlowItem[], line: number }
 
 interface ParseResult {
   flowItems: FlowItem[]
@@ -233,6 +233,15 @@ function parseSceneContent(content: string): ParseResult {
   _condUid = 0
   const optionFlowItems: FlowItem[] = []
 
+  // Helper: character offset → 1-based line number
+  function offsetToLine(offset: number): number {
+    let line = 1
+    for (let i = 0; i < offset && i < content.length; i++) {
+      if (content[i] === '\n') line++
+    }
+    return line
+  }
+
   // 1. defineScene option-level next
   const optNextMatch = content.match(/defineScene\s*\(\s*\{/)
   if (optNextMatch && optNextMatch.index != null) {
@@ -240,21 +249,21 @@ function parseSceneContent(content: string): ParseResult {
     const braceEnd = findMatchingBracket(content, braceStart, '{', '}')
     const optBlock = content.slice(braceStart, braceEnd + 1)
     const objNext = optBlock.match(/next\s*:\s*\{\s*scene\s*:\s*['"`]([^'"`]+)['"`]/)
-    if (objNext) {
+    if (objNext && objNext.index != null) {
       const k = `next:${objNext[1]}`
       if (!seen.has(k)) {
         seen.add(k)
         externalConnections.push({ type: 'next', target: objNext[1], conditional: false })
-        optionFlowItems.push({ kind: 'next', target: objNext[1] })
+        optionFlowItems.push({ kind: 'next', target: objNext[1], line: offsetToLine(braceStart + objNext.index) })
       }
     }
     const strNext = optBlock.match(/next\s*:\s*['"`]([^'"`]+)['"`]/)
-    if (strNext) {
+    if (strNext && strNext.index != null) {
       const k = `next:${strNext[1]}`
       if (!seen.has(k)) {
         seen.add(k)
         externalConnections.push({ type: 'next', target: strNext[1], conditional: false })
-        optionFlowItems.push({ kind: 'next', target: strNext[1] })
+        optionFlowItems.push({ kind: 'next', target: strNext[1], line: offsetToLine(braceStart + strNext.index) })
       }
     }
   }
@@ -269,13 +278,15 @@ function parseSceneContent(content: string): ParseResult {
   const body = content.slice(arrayStart, arrayEnd + 1)
 
   // 3. Recursive scan → FlowItem[]
-  function scan(text: string, isConditional: boolean): FlowItem[] {
+  // textOffset = offset of `text` within the full `content`
+  function scan(text: string, isConditional: boolean, textOffset: number): FlowItem[] {
     const items: FlowItem[] = []
     const tokenRegex = /\b(label|goto|next|call|condition)\s*\(|goto\s*:\s*['"`]([^'"`]+)['"`]/g
     let m: RegExpExecArray | null
 
     while ((m = tokenRegex.exec(text)) !== null) {
-      if (m[2]) { items.push({ kind: 'goto', target: m[2] }); continue }
+      const matchLine = offsetToLine(textOffset + m.index)
+      if (m[2]) { items.push({ kind: 'goto', target: m[2], line: matchLine }); continue }
       const fnName = m[1]
       const afterName = m.index + m[0].length
 
@@ -283,18 +294,18 @@ function parseSceneContent(content: string): ParseResult {
         const parenStart = text.lastIndexOf('(', afterName)
         const parenEnd = findMatchingBracket(text, parenStart, '(', ')')
         const condBody = text.slice(afterName, parenEnd)
-        const arrays: string[] = []
+        const arrays: { text: string, offset: number }[] = []
         let sf = 0
         while (sf < condBody.length) {
           const bi = condBody.indexOf('[', sf)
           if (bi === -1) break
           const be = findMatchingBracket(condBody, bi, '[', ']')
-          arrays.push(condBody.slice(bi + 1, be))
+          arrays.push({ text: condBody.slice(bi + 1, be), offset: textOffset + afterName + bi + 1 })
           sf = be + 1
         }
-        const ifBranch = arrays[0] ? scan(arrays[0], true) : []
-        const elseBranch = arrays[1] ? scan(arrays[1], true) : []
-        items.push({ kind: 'condition', id: _condUid++, ifBranch, elseBranch })
+        const ifBranch = arrays[0] ? scan(arrays[0].text, true, arrays[0].offset) : []
+        const elseBranch = arrays[1] ? scan(arrays[1].text, true, arrays[1].offset) : []
+        items.push({ kind: 'condition', id: _condUid++, ifBranch, elseBranch, line: matchLine })
         tokenRegex.lastIndex = afterName + (parenEnd - afterName)
         continue
       }
@@ -302,16 +313,16 @@ function parseSceneContent(content: string): ParseResult {
       const arg = extractStringArg(text, afterName)
       if (!arg) continue
       switch (fnName) {
-        case 'label': items.push({ kind: 'label', name: arg.value }); break
-        case 'goto': items.push({ kind: 'goto', target: arg.value }); break
+        case 'label': items.push({ kind: 'label', name: arg.value, line: matchLine }); break
+        case 'goto': items.push({ kind: 'goto', target: arg.value, line: matchLine }); break
         case 'next': {
-          items.push({ kind: 'next', target: arg.value })
+          items.push({ kind: 'next', target: arg.value, line: matchLine })
           const k = `next:${arg.value}:${isConditional}`
           if (!seen.has(k)) { seen.add(k); externalConnections.push({ type: 'next', target: arg.value, conditional: isConditional }) }
           break
         }
         case 'call': {
-          items.push({ kind: 'call', target: arg.value })
+          items.push({ kind: 'call', target: arg.value, line: matchLine })
           const k = `call:${arg.value}:${isConditional}`
           if (!seen.has(k)) { seen.add(k); externalConnections.push({ type: 'call', target: arg.value, conditional: isConditional }) }
           break
@@ -321,13 +332,14 @@ function parseSceneContent(content: string): ParseResult {
     return items
   }
 
-  return { flowItems: [...optionFlowItems, ...scan(body, false)], externalConnections }
+  return { flowItems: [...optionFlowItems, ...scan(body, false, arrayStart)], externalConnections }
 }
 
 // ─── FlowItem → sub-nodes + edges builder ────────────────────
 
 function buildSubGraph(
   sceneId: string,
+  fullPath: string,
   items: FlowItem[],
   parentId: string,
   prefix: string,
@@ -356,7 +368,7 @@ function buildSubGraph(
     nodes.push({
       id: subId,
       type: 'sub',
-      data: { kind: item.kind, label: subLabel },
+      data: { kind: item.kind, label: subLabel, line: item.line, fullPath },
       position: { x: 0, y: 0 },
     })
 
@@ -405,12 +417,12 @@ function buildSubGraph(
     // ── Recurse condition branches ──
     if (item.kind === 'condition') {
       const ifResult = buildSubGraph(
-        sceneId, item.ifBranch, subId,
+        sceneId, fullPath, item.ifBranch, subId,
         `${prefix}c${item.id}t_`,
         { color: '#10b981', label: 'if' }
       )
       const elseResult = buildSubGraph(
-        sceneId, item.elseBranch, subId,
+        sceneId, fullPath, item.elseBranch, subId,
         `${prefix}c${item.id}f_`,
         { color: '#ef4444', label: 'else' }
       )
@@ -481,7 +493,7 @@ export function SceneGraphViewer() {
         })
 
         // Build sub-nodes from flow items
-        const sub = buildSubGraph(fileId, parsed.flowItems, fileId, '')
+        const sub = buildSubGraph(fileId, file.fullPath, parsed.flowItems, fileId, '')
         subNodes.push(...sub.nodes)
         internalEdges.push(...sub.internalEdges)
         externalEdges.push(...sub.externalEdges)
@@ -542,14 +554,17 @@ export function SceneGraphViewer() {
     processFiles()
   }, [processFiles])
 
-  // Double-click scene node → open in editor
+  // Double-click node → open in editor at specific line
+  const { setPendingLine } = useProjectStore()
   const onNodeDoubleClick = useCallback((_: unknown, node: Node) => {
     const fullPath = node.data?.fullPath
     if (fullPath) {
+      const line = node.data?.line as number | undefined
+      if (line) setPendingLine(line)
       setActiveFile(String(fullPath))
       setIsGraphOpen(false)
     }
-  }, [setActiveFile, setIsGraphOpen])
+  }, [setActiveFile, setIsGraphOpen, setPendingLine])
 
   const memoNodeTypes = useMemo(() => nodeTypes, [])
 

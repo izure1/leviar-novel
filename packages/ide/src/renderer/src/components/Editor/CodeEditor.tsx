@@ -1,6 +1,6 @@
-import Editor, { useMonaco, loader } from '@monaco-editor/react'
+import Editor, { useMonaco, loader, type OnMount } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
@@ -30,9 +30,28 @@ function toFileUri(absPath: string): string {
 
 export function CodeEditor({ code, onChange, language = 'typescript', filePath }: Props) {
   const monacoInstance = useMonaco()
-  const { projectPath } = useProjectStore()
+  const { projectPath, pendingLine, setPendingLine } = useProjectStore()
   // 마지막으로 주입한 projectPath (동일 프로젝트 중복 주입 방지)
   const injectedProjectRef = useRef<string | null>(null)
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+
+  const handleEditorMount: OnMount = useCallback((editor) => {
+    editorRef.current = editor
+  }, [])
+
+  // pendingLine 감지 → 해당 라인으로 커서 이동
+  useEffect(() => {
+    if (pendingLine == null || !editorRef.current) return
+    const editor = editorRef.current
+    // 약간의 딜레이로 에디터가 content를 로드한 뒤 이동
+    const timer = setTimeout(() => {
+      editor.revealLineInCenter(pendingLine)
+      editor.setPosition({ lineNumber: pendingLine, column: 1 })
+      editor.focus()
+      setPendingLine(null)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [pendingLine, setPendingLine])
 
   // Monaco TS 컴파일러 옵션 — 프로젝트 tsconfig.json 자동 동기화
   useEffect(() => {
@@ -248,6 +267,7 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         path={fileUri}
         value={code}
         onChange={onChange}
+        onMount={handleEditorMount}
         theme="vs-dark"
         options={{
           minimap: { enabled: false },
