@@ -17,7 +17,7 @@
   --color-surface-900: var(--theme-surface-900, var(--color-slate-900));
   --color-surface-950: var(--theme-surface-950, var(--color-slate-950));
 
-  --font-inter: "Inter", system-ui, sans-serif;
+  --font-inter: "Noto Sans KR", "Inter", system-ui, sans-serif;
 }
 
 [data-theme="indigo"] { --theme-primary-400: var(--color-indigo-400); --theme-primary-500: var(--color-indigo-500); --theme-primary-600: var(--color-indigo-600); }
