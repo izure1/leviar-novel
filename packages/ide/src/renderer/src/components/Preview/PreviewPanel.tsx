@@ -1,5 +1,5 @@
 import { useProjectStore } from '../../store/useProjectStore'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 interface ConsoleLog {
   level: number
@@ -40,7 +40,31 @@ export function PreviewPanel() {
   const { projectPath, previewUrl, previewLoading, isPreviewOpen } = useProjectStore()
   const [logs, setLogs] = useState<ConsoleLog[]>([])
   const [showConsole, setShowConsole] = useState(true)
+  const [consoleHeight, setConsoleHeight] = useState(192)
+  const [isResizing, setIsResizing] = useState(false)
   const consoleEndRef = useRef<HTMLDivElement>(null)
+
+  const handleConsoleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    const startY = e.clientY
+    const startHeight = consoleHeight
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newHeight = Math.max(100, Math.min(600, startHeight + (startY - moveEvent.clientY)))
+      setConsoleHeight(newHeight)
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      setIsResizing(false)
+    }
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = 'row-resize'
+  }, [consoleHeight])
 
   useEffect(() => {
     if (previewLoading) {
@@ -139,7 +163,16 @@ export function PreviewPanel() {
 
         {/* Console Area */}
         {showConsole && (
-          <div className="h-48 border-t border-surface-700/50 bg-surface-900 flex flex-col shrink-0">
+          <>
+            <div 
+              className="h-1 cursor-row-resize bg-surface-700/50 hover:bg-primary-500 active:bg-primary-500 z-10 transition-colors shrink-0"
+              onMouseDown={handleConsoleResizeStart}
+              title="콘솔 크기 조절"
+            />
+            <div 
+              className="bg-surface-900 flex flex-col shrink-0"
+              style={{ height: consoleHeight }}
+            >
             <div className="flex items-center justify-between px-3 py-1 bg-surface-800/50 border-b border-surface-700/50">
               <span className="text-[10px] font-semibold text-surface-400 uppercase tracking-wider">Browser Console</span>
               <button
@@ -165,8 +198,13 @@ export function PreviewPanel() {
               )}
             </div>
           </div>
+          </>
         )}
       </div>
+
+      {isResizing && (
+        <div className="fixed inset-0 z-50 cursor-row-resize select-none" />
+      )}
     </div>
   )
 }

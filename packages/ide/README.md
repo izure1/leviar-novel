@@ -1,86 +1,51 @@
 # Fumika IDE
 
-후미카 ide는 fumika 엔진을 기반으로 동작합니다.
+Fumika IDE는 `leviar` 비주얼 노벨 엔진을 위한 전용 통합 개발 환경(IDE)입니다. 이 페이지에서는 IDE가 왜 필요한지, 그리고 어떻게 시작할 수 있는지 안내해 드립니다.
 
-## 프로젝트 구조
+## 왜 필요한가요?
 
-게임 프로젝트 구조는 다음과 같습니다
+순수하게 코드로만 비주얼 노벨을 작성하다 보면, 씬(Scene)의 흐름이나 에셋이 올바르게 로드되었는지 확인하기 위해 매번 게임을 새로고침해야 하는 번거로움이 있죠. Fumika IDE는 이러한 문제를 해결합니다.
+
+> [!NOTE]
+> Fumika IDE는 단순한 코드 에디터가 아닙니다. 작성 중인 로직을 즉시 확인하고, 드래그 앤 드롭으로 에셋을 관리할 수 있는 강력한 시각화 도구예요.
+
+## 주요 기능
+
+- **프로젝트 관리**: `leviar` 프로젝트를 손쉽게 생성하고 관리해 보세요.
+- **실시간 프리뷰**: 코드를 수정하면 IDE 내에서 씬과 게임 로직을 실시간으로 렌더링하여 보여줍니다.
+- **통합 코드 에디터**: Monaco 기반의 에디터를 통해 TypeScript 자동 완성의 편리함을 누려 봅시다.
+
+## 기본 사용법
+
+가장 먼저 IDE를 실행해 볼까요? 걱정하지 마세요, 과정은 아주 간단합니다.
+
+### 1. 요구 사항 확인
+- Node.js (v18 이상 권장)
+- npm 또는 yarn
+
+### 2. 설치 및 실행
+프로젝트를 클론한 뒤 의존성을 설치합니다.
 
 ```bash
-- 루트
-  - novel.config.ts
-  - main.ts
+# ❌ 이렇게 하면 안 됩니다. (루트가 아닌 IDE 폴더에서만 설치하는 경우 의존성이 꼬일 수 있습니다)
+cd packages/ide && npm install
 
-  - declarations:
-    - assets.ts
-    - scenes.ts
-    - characters.ts
-    - modules.ts
-    - backgrounds.ts
-    - audios.ts
-
-  - assets:
-    - [이름].asset.ts
-
-  - scenes:
-    - [이름].scene.ts
-
-  - characters:
-    - [이름].character.ts
-
-  - modules:
-    - [이름].module.ts
-
-  - backgrounds:
-    - [이름].background.ts
-
-  - audios:
-    - [이름].audio.ts
+# ✅ 이렇게 하세요. (루트 디렉토리에서 전체 패키지를 설치합니다)
+npm install
 ```
 
-assets에 파일을 추가하면, `assets.ts`에 자동으로 반영됩니다.
-scenes에 파일을 추가하면, `scenes.ts`에 자동으로 반영됩니다.
-characters에 파일을 추가하면, `characters.ts`에 자동으로 반영됩니다.
-modules에 파일을 추가하면, `modules.ts`에 자동으로 반영됩니다.
-backgrounds에 파일을 추가하면, `backgrounds.ts`에 자동으로 반영됩니다.
-audios에 파일을 추가하면, `audios.ts`에 자동으로 반영됩니다.
+그 다음, 개발 모드로 IDE를 실행해 봅시다.
 
-각 파일들은 자기 자신의 이름을 키로 가진 객체로 구성된 default export를 가집니다.
-예를 들어 `assets/bg_floor.asset.ts` 파일은 다음과 같습니다.
-
-```typescript
-import { defineBackgrounds } from 'fumika'
-
-export default {
-  bg_floor: { src: 'assets/bg_floor.png', parallax: true },
-})
+```bash
+npm run dev:ide
 ```
 
-이렇게 반영된 파일들을 `novel.config.ts`에서 가져와서 사용합니다.
+> [!TIP]
+> IDE를 실행한 후, 새 프로젝트를 생성하거나 기존 `leviar` 프로젝트 폴더를 열어서 바로 작업을 시작할 수 있습니다.
 
-```typescript
-import Assets from './declarations/assets'
-import Scenes from './declarations/scenes'
-import Characters from './declarations/characters'
-import Modules from './declarations/modules'
-import Backgrounds from './declarations/backgrounds'
-import Audios from './declarations/audios'
+## 라이선스 (License)
 
-import { defineNovelConfig } from 'fumika'
+Fumika IDE의 소스 코드는 학습을 위해 공개되어 있지만, 전용 최종 사용자 사용권 계약(EULA)을 따릅니다.
 
-export default defineNovelConfig({
-  assets: Assets,
-  scenes: Scenes,
-  characters: Characters,
-  modules: Modules,
-  backgrounds: Backgrounds,
-  audios: Audios,
-})
-```
-
-## 기본 세팅
-
-프로젝트 생성 시 `Assets`, `Scenes`, `Characters`, `Modules`, `Backgrounds`, `Audios` 폴더와 함께 기본적으로 `assets.ts`, `scenes.ts`, `characters.ts`, `modules.ts`, `backgrounds.ts`, `audios.ts` 파일이 생성됩니다.
-
-또한 `novel.config.ts`, `main.ts` 파일이 생성됩니다.
-
+> [!WARNING]
+> 명시적인 허가 없는 상업적 이용이나 수정한 버전의 배포는 엄격히 금지됩니다. 자세한 내용은 `LICENSE` 파일을 꼭 확인하시기 바랍니다.

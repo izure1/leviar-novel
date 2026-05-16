@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { Copy } from 'lucide-react'
+import { useToastStore } from '../../store/useToastStore'
+import EULA_TEXT from '../../../../../LICENSE?raw'
 
 export interface NewProjectOptions {
   folderName: string
@@ -16,8 +19,18 @@ export interface NewProjectDialogProps {
 }
 
 export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDialogProps) {
+  const { addToast } = useToastStore()
   const [step, setStep] = useState(1)
   const maxStep = 4
+
+  const handleCopyLicense = async () => {
+    try {
+      await navigator.clipboard.writeText(EULA_TEXT)
+      addToast('라이선스 약관이 클립보드에 복사되었습니다.', 'success')
+    } catch (err) {
+      addToast('클립보드 복사에 실패했습니다.', 'error')
+    }
+  }
 
   const [folderName, setFolderName] = useState('my-visual-novel')
   const [gameName, setGameName] = useState('My Visual Novel')
@@ -126,19 +139,20 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
         <div className="flex flex-col gap-4 mb-6 min-h-[140px]">
           {step === 1 && (
             <div className="flex flex-col gap-2 animate-fade-in text-surface-300">
-              <span className="font-semibold text-xs text-primary-400">오픈소스 라이선스 안내</span>
-              <div className="bg-surface-900 border border-surface-700 p-3 rounded-sm text-[10px] h-[100px] overflow-y-auto whitespace-pre-wrap font-mono text-surface-400">
-                {`MIT 라이선스
-
-저작권 (c) ${new Date().getFullYear()}
-
-이 소프트웨어 및 관련 문서 파일("소프트웨어")의 복제본을 얻는 모든 사람에게, 본 소프트웨어를 사용, 복사, 수정, 병합, 출판, 배포, 서브라이선스 부여 및/또는 판매할 수 있는 권리를 제한 없이 무상으로 취득하는 것을 허가합니다. 단, 다음 조건에 따라 소프트웨어를 제공받는 사람에게도 이러한 권리를 허여해야 합니다:
-
-위의 저작권 고지 및 이 허가 고지는 본 소프트웨어의 모든 복제본 또는 주요 부분에 포함되어야 합니다.
-
-본 소프트웨어는 상품성, 특정 목적에의 적합성 및 비침해성에 대한 보증을 포함하되 이에 국한되지 않는 어떤 형태의 명시적 또는 묵시적 보증 없이 "있는 그대로" 제공됩니다. 어떠한 경우에도 저작권자나 소프트웨어 개발자는 계약, 불법행위 기타 원인에 관계없이 소프트웨어 또는 소프트웨어의 사용이나 기타 거래와 관련하여 발생하는 청구, 손해 또는 기타 책임에 대해 어떠한 책임도 지지 않습니다.`}
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-xs text-primary-400">Fumika IDE 최종 사용자 약관 (EULA)</span>
+                <button
+                  onClick={handleCopyLicense}
+                  className="flex items-center gap-1 px-2 py-1 bg-surface-700 hover:bg-surface-600 rounded-sm text-[10px] text-surface-200 transition-colors cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>복사</span>
+                </button>
               </div>
-              <p className="text-xs text-surface-400 mt-1">프로젝트를 생성하면 본 라이선스 규정에 동의하게 되며, 엔진 개발자는 소프트웨어 사용으로 인한 책임을 지지 않습니다.</p>
+              <div className="bg-surface-900 border border-surface-700 p-3 rounded-sm text-[10px] h-[100px] overflow-y-auto whitespace-pre-wrap font-mono text-surface-400 leading-relaxed">
+                {EULA_TEXT}
+              </div>
+              <p className="text-xs text-surface-400 mt-1">새 프로젝트를 생성하시면 위의 라이선스 약관에 모두 동의하시는 것으로 간주됩니다.</p>
             </div>
           )}
 

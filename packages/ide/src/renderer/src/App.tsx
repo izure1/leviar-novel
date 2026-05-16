@@ -11,7 +11,7 @@ import { SettingsModal } from './components/Settings/SettingsModal'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import welcomeFumika from './assets/welcome/char_fumika.png'
 import welcomeBg from './assets/welcome/bg.png'
-
+import { ToastContainer } from './components/UI/Toast'
 interface WelcomeSceneProps {
   onOpenProject: () => Promise<void>;
   onScaffoldProject: () => Promise<void>;
@@ -304,6 +304,7 @@ function App() {
           onCancel={() => setNewProjectData(null)}
         />
         <LoadingOverlay />
+        <ToastContainer />
       </div>
     )
   }
@@ -352,6 +353,7 @@ function App() {
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <LoadingOverlay />
+      <ToastContainer />
     </div>
   )
 }
