@@ -21,6 +21,18 @@ const resolveUniqueName = (baseName: string, existingNodes: FileNode[], isFolder
   }
   return `${baseName}_${counter}`
 }
+
+/**
+ * 전체 경로에서 루트 장르(첫 번째 세그먼트)를 반환합니다.
+ * 예) projectPath/scenes/start.ts → 'scenes'
+ */
+const getRootGenre = (fullPath: string, projectPath: string): string => {
+  const rel = fullPath.startsWith(projectPath)
+    ? fullPath.slice(projectPath.length).replace(/^[/\\]/, '')
+    : fullPath
+  return rel.split(/[/\\]/)[0]
+}
+
 const CONFIG_FILES = ['novel.config.ts', 'main.ts']
 
 interface FileNode {
@@ -97,20 +109,35 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
 
   const handleNodeClick = (e: React.MouseEvent, targetPath: string, isDir: boolean, expandKey?: string) => {
     e.stopPropagation()
-    
-    let newSelection = new Set(selectedFiles)
+    if (!projectPath) return
+
+    // 루트 장르 폴더 (scenes, assets 등)는 선택 불가 — 폴더 토글만 허용
+    const rootFolderPaths = new Set(WATCH_FOLDERS.map(f => `${projectPath}/${f}`))
+    if (rootFolderPaths.has(targetPath)) {
+      if (expandKey) toggleFolder(expandKey)
+      return
+    }
+
+    const targetGenre = getRootGenre(targetPath, projectPath)
+
+    // 다른 장르가 섞인 기존 선택은 초기화 후 시작
+    let newSelection = new Set(
+      Array.from(selectedFiles).filter(p => getRootGenre(p, projectPath) === targetGenre)
+    )
 
     if (e.shiftKey && lastSelected) {
       const visibleNodes = getVisibleNodes()
       const startIdx = visibleNodes.indexOf(lastSelected)
       const endIdx = visibleNodes.indexOf(targetPath)
-      
+
       if (startIdx !== -1 && endIdx !== -1) {
         if (!e.ctrlKey && !e.metaKey) newSelection = new Set()
         const minIdx = Math.min(startIdx, endIdx)
         const maxIdx = Math.max(startIdx, endIdx)
         for (let i = minIdx; i <= maxIdx; i++) {
-          newSelection.add(visibleNodes[i])
+          const p = visibleNodes[i]
+          // Shift 범위 선택: 동일 장르 + 루트 폴더 제외
+          if (getRootGenre(p, projectPath) === targetGenre && !rootFolderPaths.has(p)) newSelection.add(p)
         }
       }
     } else if (e.ctrlKey || e.metaKey) {
@@ -129,7 +156,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
         toggleFolder(expandKey)
       }
     }
-    
+
     setSelectedFiles(newSelection)
   }
 
