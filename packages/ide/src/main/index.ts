@@ -159,9 +159,9 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('preview:start', async (_, projectPath: string) => {
+  ipcMain.handle('preview:start', async (_, projectPath: string, targetScene?: string) => {
     try {
-      const url = await previewService.start(projectPath)
+      const url = await previewService.start(projectPath, targetScene)
       return { success: true, url }
     } catch (error: any) {
       return { success: false, error: error.message }

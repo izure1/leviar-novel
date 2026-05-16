@@ -15,7 +15,7 @@ declare global {
         getTypes: (projectPath: string) => Promise<{ success: boolean; types?: { path: string; content: string }[]; error?: string }>
       }
       preview: {
-        start: (projectPath: string) => Promise<{ success: boolean; url?: string; error?: string }>
+        start: (projectPath: string, targetScene?: string) => Promise<{ success: boolean; url?: string; error?: string }>
         stop: () => Promise<{ success: boolean; error?: string }>
       }
       shell: {

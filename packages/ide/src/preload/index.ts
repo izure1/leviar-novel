@@ -14,7 +14,7 @@ const api = {
     getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath)
   },
   preview: {
-    start: (projectPath: string) => ipcRenderer.invoke('preview:start', projectPath),
+    start: (projectPath: string, targetScene?: string) => ipcRenderer.invoke('preview:start', projectPath, targetScene),
     stop: () => ipcRenderer.invoke('preview:stop')
   },
   shell: {

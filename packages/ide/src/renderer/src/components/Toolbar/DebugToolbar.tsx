@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore'
 export function DebugToolbar() {
   const {
     projectPath,
+    activeFile,
     isPreviewOpen,
     previewUrl,
     previewLoading,
@@ -11,12 +12,16 @@ export function DebugToolbar() {
     setPreviewLoading
   } = useProjectStore()
 
+  const isSceneActive = activeFile ? activeFile.includes('/scenes/') && activeFile.endsWith('.ts') : false
+
   const startPreview = async () => {
     if (!projectPath) return
+    if (!isSceneActive) return
 
     setPreviewLoading(true)
     try {
-      const res = await window.api.preview.start(projectPath)
+      const activeScene = activeFile ? activeFile.split(/[/\\]/).pop()?.replace(/\.[^/.]+$/, '') : undefined
+      const res = await window.api.preview.start(projectPath, activeScene)
       if (res.success && res.url) {
         setPreviewUrl(res.url)
         if (!isPreviewOpen) setIsPreviewOpen(true)
@@ -64,8 +69,11 @@ export function DebugToolbar() {
           </button>
           <button
             onClick={startPreview}
-            disabled={previewLoading}
-            className="flex items-center justify-center rounded bg-surface-800 px-3 py-1.5 text-xs font-semibold text-surface-300 transition-colors hover:bg-surface-700"
+            disabled={previewLoading || !isSceneActive}
+            className={`flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+              !isSceneActive ? 'bg-surface-800 text-surface-500 cursor-not-allowed opacity-50' : 'bg-surface-800 text-surface-300 hover:bg-surface-700'
+            }`}
+            title={!isSceneActive ? "에디터에서 씬 파일을 열어야 디버깅할 수 있습니다." : ""}
           >
             <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -85,8 +93,11 @@ export function DebugToolbar() {
       ) : (
         <button
           onClick={startPreview}
-          disabled={previewLoading}
-          className="flex items-center justify-center rounded bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-400 transition-colors hover:bg-green-500/20"
+          disabled={previewLoading || !isSceneActive}
+          className={`flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+            !isSceneActive ? 'bg-surface-800 text-surface-500 cursor-not-allowed opacity-50' : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+          }`}
+          title={!isSceneActive ? "에디터에서 씬 파일을 열어야 디버깅할 수 있습니다." : ""}
         >
           {previewLoading ? (
             <div className="w-3.5 h-3.5 border-2 border-green-500 border-t-transparent rounded-full animate-spin mr-1" />
