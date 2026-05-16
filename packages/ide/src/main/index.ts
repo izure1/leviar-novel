@@ -119,16 +119,18 @@ app.whenReady().then(() => {
 
   // Project Management IPCs
   ipcMain.handle('dialog:openDirectory', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    })
+    const options: Electron.OpenDialogOptions = { properties: ['openDirectory'] }
+    const { canceled, filePaths } = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options)
     return canceled ? null : filePaths[0]
   })
 
   ipcMain.handle('dialog:openFile', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-      properties: ['openFile', 'multiSelections']
-    })
+    const options: Electron.OpenDialogOptions = { properties: ['openFile', 'multiSelections'] }
+    const { canceled, filePaths } = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options)
     return canceled ? null : filePaths
   })
 

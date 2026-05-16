@@ -154,6 +154,7 @@ function App() {
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [previewWidth, setPreviewWidth] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
+  const [isActionPending, setIsActionPending] = useState(false)
 
   useEffect(() => {
     initSettings()
@@ -219,23 +220,35 @@ function App() {
   }, [previewWidth])
 
   const handleOpenProject = async () => {
-    const path = await window.api.dialog.openDirectory()
-    if (path) {
-      setGlobalLoading(true)
-      const res = await window.api.project.load(path)
-      if (res.success) {
-        setProjectPath(path)
-      } else {
-        alert('Failed to load project: ' + res.error)
+    if (isActionPending) return
+    setIsActionPending(true)
+    try {
+      const path = await window.api.dialog.openDirectory()
+      if (path) {
+        setGlobalLoading(true)
+        const res = await window.api.project.load(path)
+        if (res.success) {
+          setProjectPath(path)
+        } else {
+          alert('Failed to load project: ' + res.error)
+        }
+        setGlobalLoading(false)
       }
-      setGlobalLoading(false)
+    } finally {
+      setIsActionPending(false)
     }
   }
 
   const handleScaffoldProject = async () => {
-    const parentDir = await window.api.dialog.openDirectory()
-    if (parentDir) {
-      setNewProjectData({ isOpen: true, parentDir })
+    if (isActionPending) return
+    setIsActionPending(true)
+    try {
+      const parentDir = await window.api.dialog.openDirectory()
+      if (parentDir) {
+        setNewProjectData({ isOpen: true, parentDir })
+      }
+    } finally {
+      setIsActionPending(false)
     }
   }
 
@@ -296,7 +309,7 @@ function App() {
               <div className="flex flex-col gap-5">
                 <button
                   onClick={handleOpenProject}
-                  disabled={globalLoading}
+                  disabled={globalLoading || isActionPending}
                   className="group relative flex items-center justify-between overflow-hidden rounded-md border border-[#ffcbcb]/30 bg-gradient-to-br from-[#ffcbcb]/20 to-[#ffcbcb]/5 backdrop-blur-[2px] px-6 py-5 font-semibold text-white shadow-[0_0_30px_-5px_rgba(255,203,203,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(255,203,203,0.4)] hover:border-[#ffcbcb]/50 hover:bg-[#ffcbcb]/10 active:scale-[0.98] cursor-pointer"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-1000 group-hover:translate-x-full" />
@@ -317,7 +330,7 @@ function App() {
 
                 <button
                   onClick={handleScaffoldProject}
-                  disabled={globalLoading}
+                  disabled={globalLoading || isActionPending}
                   className="group relative overflow-hidden flex items-center justify-between rounded-md border border-white/20 bg-white/10 backdrop-blur-[2px] px-6 py-5 font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/30 hover:scale-[1.02] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] active:scale-[0.98] cursor-pointer"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-1000 group-hover:translate-x-full" />
