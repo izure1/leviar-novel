@@ -342,22 +342,44 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     e.stopPropagation()
     if (!projectPath) return
 
+    const clickedFullPath = `${projectPath}/${folderPath}/${node.path}`
+
+    // 보호 대상 경로 (삭제 불가): config 파일, 루트 감시 폴더
+    const protectedPaths = new Set([
+      ...CONFIG_FILES.map(f => `${projectPath}/${f}`),
+      ...WATCH_FOLDERS.map(f => `${projectPath}/${f}`),
+    ])
+
+    const isMultiDelete = selectedFiles.has(clickedFullPath) && selectedFiles.size >= 2
+    const targetPaths = isMultiDelete
+      ? Array.from(selectedFiles).filter(p => !protectedPaths.has(p))
+      : [clickedFullPath]
+
+    if (targetPaths.length === 0) return
+
+    const confirmMessage = isMultiDelete
+      ? `선택된 ${targetPaths.length}개 항목을 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+      : `정말 '${node.name}'을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+
     setConfirmState({
       isOpen: true,
       title: '항목 삭제',
-      message: `정말 '${node.name}'을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+      message: confirmMessage,
       type: 'danger',
       onConfirm: async () => {
         setConfirmState(null)
-        const fullPath = `${projectPath}/${folderPath}/${node.path}`
-        if (node.isDirectory) {
-          await window.api.fs.deleteDir(fullPath)
-          window.dispatchEvent(new CustomEvent('dir-deleted', { detail: { path: fullPath } }))
-        } else {
-          await window.api.fs.deleteFile(fullPath)
-          window.dispatchEvent(new CustomEvent('file-deleted', { detail: { path: fullPath } }))
-          if (activeFile === fullPath) setActiveFile(null)
+        for (const fullPath of targetPaths) {
+          const isDirectory = !fullPath.match(/\.[^/.]+$/)
+          if (isDirectory) {
+            await window.api.fs.deleteDir(fullPath)
+            window.dispatchEvent(new CustomEvent('dir-deleted', { detail: { path: fullPath } }))
+          } else {
+            await window.api.fs.deleteFile(fullPath)
+            window.dispatchEvent(new CustomEvent('file-deleted', { detail: { path: fullPath } }))
+            if (activeFile === fullPath) setActiveFile(null)
+          }
         }
+        if (isMultiDelete) setSelectedFiles(new Set())
         fetchFiles()
       }
     })
