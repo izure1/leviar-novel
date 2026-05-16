@@ -9,6 +9,8 @@ import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectD
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
 import { SettingsModal } from './components/Settings/SettingsModal'
 import { TitleBar } from './components/TitleBar/TitleBar'
+import welcomeFumika from './assets/welcome/char_fumika.png'
+import welcomeBg from './assets/welcome/bg.png'
 
 const WelcomeScene = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -24,79 +26,72 @@ const WelcomeScene = () => {
     const camera = world.createCamera()
     world.camera = camera
 
-    const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899']
-
-    for (let i = 0; i < 40; i++) {
-      const size = 10 + Math.random() * 30
-      const box = world.createRectangle({
-        attribute: { name: `box_${i}` },
-        style: {
-          background: colors[Math.floor(Math.random() * colors.length)],
-          width: size,
-          height: size,
-          borderRadius: size / 4,
-          opacity: 0.2 + Math.random() * 0.4,
-          boxShadowBlur: 10,
-        },
-        transform: {
-          position: {
-            x: (Math.random() - 0.5) * window.innerWidth * 1.5,
-            y: (Math.random() - 0.5) * window.innerHeight * 1.5,
-            z: Math.random() * 100
-          },
-          rotation: {
-            x: Math.random() * 360,
-            y: Math.random() * 360,
-            z: Math.random() * 360
-          }
-        }
-      })
-
-      const animateBox = () => {
-        box.animate({
-          transform: { 
-            position: { y: '-=200', x: '+=50' },
-            rotation: { x: '+=180', y: '+=180', z: '+=180' } 
-          }
-        }, 10000 + Math.random() * 5000, 'linear').on('end', animateBox)
-      }
-      animateBox()
-
-      box.on('mouseover', () => {
-        box.animate({
-          style: { opacity: 0.9, boxShadowBlur: 20 },
-          transform: { scale: { x: 1.5, y: 1.5 } }
-        }, 200, 'easeOutExpo')
-      })
-      box.on('mouseout', () => {
-        box.animate({
-          style: { opacity: 0.2 + Math.random() * 0.4, boxShadowBlur: 10 },
-          transform: { scale: { x: 1, y: 1 } }
-        }, 300, 'easeOutExpo')
-      })
-    }
-
     let targetX = 0
     let targetY = 0
     let currentX = 0
     let currentY = 0
 
     const onMouseMove = (e: MouseEvent) => {
-      const cx = window.innerWidth / 2
-      const cy = window.innerHeight / 2
-      targetX = (e.clientX - cx) * 0.15
-      targetY = (e.clientY - cy) * 0.15
+      // 캔버스 중앙을 0,0 으로 하는 마우스 오프셋 좌표
+      targetX = (e.clientX - window.innerWidth / 2) * 0.1
+      targetY = (e.clientY - window.innerHeight / 2) * 0.1
     }
-    window.addEventListener('mousemove', onMouseMove)
 
-    world.on('update', () => {
-      currentX += (targetX - currentX) * 0.05
-      currentY += (targetY - currentY) * 0.05
-      camera.transform.position.x = currentX
-      camera.transform.position.y = currentY
-    })
+    const initWorld = async () => {
+      // 에셋을 먼저 비동기로 로드합니다.
+      await world.loader.load({
+        'character-fumika': welcomeFumika,
+        'background': welcomeBg,
+      })
 
-    world.start()
+      // 로딩된 에셋 키(charWelcome)를 사용하여 이미지를 생성합니다.
+      const character = world.createImage({
+        attribute: { src: 'character-fumika' },
+        style: {
+          width: 750,
+          boxShadowBlur: 0,
+          boxShadowColor: '#ffcbcb',
+          boxShadowOffsetX: -10,
+          boxShadowOffsetY: 10,
+        },
+        transform: {
+          position: { x: -350, y: -250, z: 25 },
+        }
+      })
+
+      world.createImage({
+        attribute: { src: 'background' },
+        style: {
+          width: 1024 * 5,
+          height: 576 * 5,
+          blur: 3,
+        },
+        transform: {
+          position: { z: 350 }
+        }
+      })
+
+      character.fadeOut(1).once('end', () => {
+        character.fadeIn(2500).once('end', () => {
+          
+        })
+      })
+
+      window.addEventListener('mousemove', onMouseMove)
+
+      world.on('update', () => {
+        // 부드러운 카메라 이동
+        currentX += (targetX - currentX) * 0.05
+        currentY += (targetY - currentY) * 0.05
+        camera.transform.position.x = currentX
+        camera.transform.position.y = currentY
+      })
+
+      world.start()
+    }
+
+    initWorld()
+
     return () => {
       window.removeEventListener('mousemove', onMouseMove)
       world.stop()
@@ -106,7 +101,7 @@ const WelcomeScene = () => {
   return (
     <canvas 
       ref={canvasRef} 
-      className="absolute inset-0 z-0 opacity-60"
+      className="absolute inset-0 z-0 opacity-80"
       width={1024}
       height={576}
     />
@@ -237,7 +232,7 @@ function App() {
       <div className="flex h-screen w-screen flex-col bg-surface-900 text-white overflow-hidden relative">
         <TitleBar />
         <WelcomeScene />
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10 pointer-events-none">
+        {/* <div className="flex-1 flex flex-col items-center justify-center relative z-10 pointer-events-none">
           <div className="pointer-events-auto rounded-2xl border border-surface-700/50 bg-surface-900/60 p-12 text-center shadow-2xl backdrop-blur-xl">
             <h1 className="mb-3 text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-cyan-400 to-primary-500 drop-shadow-sm">
               Fumika Engine
@@ -260,7 +255,7 @@ function App() {
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <NewProjectDialog
           isOpen={newProjectData?.isOpen || false}
