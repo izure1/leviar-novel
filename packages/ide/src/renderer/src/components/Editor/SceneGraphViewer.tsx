@@ -110,6 +110,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
   const [localHighlightedRow, setLocalHighlightedRow] = useState<number | null>(null)
   const highlightedRow = (data.highlightedRowIndex as number | null | undefined) ?? localHighlightedRow
   const [hoveredGoto, setHoveredGoto] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
+  const [hoveredParentLine, setHoveredParentLine] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
   const [hoveredCondition, setHoveredCondition] = useState<{ ri: number, expr: string, raw: string, color: string } | null>(null)
 
   return (
@@ -153,7 +154,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
       {/* ── Flow rows ── */}
       <div className="py-1 relative flex flex-col gap-[2px]">
         {/* ── Internal Flow Overlay ── */}
-        {hoveredGoto && (
+        {(hoveredGoto || hoveredParentLine) && (
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-50 overflow-visible">
             <style>{`
               @keyframes flow-dash {
@@ -161,26 +162,38 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                 to { stroke-dashoffset: 0; }
               }
             `}</style>
-            <path
-              d={`M ${NODE_W - 7} ${18 + hoveredGoto.sourceRi * 30} C ${NODE_W + 55} ${18 + hoveredGoto.sourceRi * 30}, ${NODE_W + 55} ${18 + hoveredGoto.targetRi * 30}, ${NODE_W - 7} ${18 + hoveredGoto.targetRi * 30}`}
-              fill="none"
-              stroke={hoveredGoto.color}
-              strokeWidth="1.5"
-              strokeDasharray="4,4"
-              style={{ animation: 'flow-dash 0.5s linear infinite' }}
-            />
-            <circle 
-              cx={NODE_W - 7} 
-              cy={18 + hoveredGoto.sourceRi * 30} 
-              r="3" 
-              fill={hoveredGoto.color} 
-            />
-            <circle 
-              cx={NODE_W - 7} 
-              cy={18 + hoveredGoto.targetRi * 30} 
-              r="3" 
-              fill={hoveredGoto.color} 
-            />
+            
+            {/* Goto line on the right */}
+            {hoveredGoto && (
+              <g>
+                <path
+                  d={`M ${NODE_W - 7} ${18 + hoveredGoto.sourceRi * 30} C ${NODE_W + 55} ${18 + hoveredGoto.sourceRi * 30}, ${NODE_W + 55} ${18 + hoveredGoto.targetRi * 30}, ${NODE_W - 7} ${18 + hoveredGoto.targetRi * 30}`}
+                  fill="none"
+                  stroke={hoveredGoto.color}
+                  strokeWidth="1.5"
+                  strokeDasharray="4,4"
+                  style={{ animation: 'flow-dash 0.5s linear infinite' }}
+                />
+                <circle cx={NODE_W - 7} cy={18 + hoveredGoto.sourceRi * 30} r="3" fill={hoveredGoto.color} />
+                <circle cx={NODE_W - 7} cy={18 + hoveredGoto.targetRi * 30} r="3" fill={hoveredGoto.color} />
+              </g>
+            )}
+
+            {/* Parent hierarchy line on the left */}
+            {hoveredParentLine && (
+              <g>
+                <path
+                  d={`M 7 ${18 + hoveredParentLine.sourceRi * 30} C -55 ${18 + hoveredParentLine.sourceRi * 30}, -55 ${18 + hoveredParentLine.targetRi * 30}, 7 ${18 + hoveredParentLine.targetRi * 30}`}
+                  fill="none"
+                  stroke={hoveredParentLine.color}
+                  strokeWidth="1.5"
+                  strokeDasharray="4,4"
+                  style={{ animation: 'flow-dash 0.5s linear infinite' }}
+                />
+                <circle cx={7} cy={18 + hoveredParentLine.sourceRi * 30} r="3" fill={hoveredParentLine.color} />
+                <circle cx={7} cy={18 + hoveredParentLine.targetRi * 30} r="3" fill={hoveredParentLine.color} />
+              </g>
+            )}
           </svg>
         )}
 
@@ -215,6 +228,28 @@ function SceneBlockComponent({ data, id }: NodeProps) {
           return (
             <div
               key={ri}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (row.depth > 0) {
+                  let parentIdx = -1
+                  for (let i = ri - 1; i >= 0; i--) {
+                    if (rows[i].depth === row.depth - 1 && rows[i].kind === 'condition') {
+                      parentIdx = i
+                      break
+                    }
+                  }
+                  if (parentIdx !== -1) {
+                    setLocalHighlightedRow(parentIdx)
+                    setTimeout(() => setLocalHighlightedRow(null), 2000)
+                    
+                    const node = getNode(id)
+                    if (node && node.position) {
+                      const yOffset = HEADER_H + ROWS_PAD_TOP + parentIdx * ROW_STRIDE + 28 / 2
+                      setCenter(node.position.x + NODE_W / 2, node.position.y + yOffset, { duration: 800, zoom: 1.2 })
+                    }
+                  }
+                }
+              }}
               onDoubleClick={(e) => {
                 e.stopPropagation()
                 if (row.line !== undefined) setPendingLine(row.line)
@@ -222,6 +257,29 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                   setActiveFile(String(data.fullPath))
                   setIsGraphOpen(false)
                 }
+              }}
+              onMouseEnter={() => {
+                if (row.kind === 'goto') {
+                  const targetIdx = rows.findIndex(r => r.kind === 'label' && r.label === row.label)
+                  if (targetIdx !== -1) setHoveredGoto({ sourceRi: ri, targetRi: targetIdx, color: s.border })
+                }
+                
+                if (row.depth > 0) {
+                  let parentIdx = -1
+                  for (let i = ri - 1; i >= 0; i--) {
+                    if (rows[i].depth === row.depth - 1 && rows[i].kind === 'condition') {
+                      parentIdx = i
+                      break
+                    }
+                  }
+                  if (parentIdx !== -1) {
+                    setHoveredParentLine({ sourceRi: parentIdx, targetRi: ri, color: SUB_STYLES.condition.border })
+                  }
+                }
+              }}
+              onMouseLeave={() => {
+                setHoveredGoto(null)
+                setHoveredParentLine(null)
               }}
               className="relative flex shrink-0 items-center h-7 px-3 mx-1 rounded cursor-pointer transition-all hover:brightness-125"
               style={{
@@ -316,13 +374,6 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                         }
                       }
                     }}
-                    onMouseEnter={() => {
-                      if (row.kind === 'goto') {
-                        const targetIdx = rows.findIndex(r => r.kind === 'label' && r.label === row.label)
-                        if (targetIdx !== -1) setHoveredGoto({ sourceRi: ri, targetRi: targetIdx, color: s.border })
-                      }
-                    }}
-                    onMouseLeave={() => setHoveredGoto(null)}
                     className="cursor-pointer ml-auto px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all hover:brightness-125 hover:shadow-md active:scale-95 max-w-[160px] truncate"
                     style={{ color: '#fff', backgroundColor: `${s.border}50`, border: `1px solid ${s.border}90` }}
                     title={`Jump to ${row.label}`}
