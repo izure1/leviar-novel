@@ -406,22 +406,22 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   <span className="truncate">{node.name}</span>
                 </div>
                 
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 px-1 rounded absolute right-0">
+                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-slate-800 shadow-xl border border-slate-700/80 rounded-md z-50 px-1 py-1 gap-1">
                   {isDir && (
                     <>
-                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, false)} className="w-5 h-5 flex items-center justify-center hover:text-indigo-400" title="새 파일">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, false)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors" title="새 파일">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                       </button>
-                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, true)} className="w-5 h-5 flex items-center justify-center hover:text-indigo-400" title="새 폴더">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, true)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors" title="새 폴더">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
                       </button>
                     </>
                   )}
-                  <button onClick={(e) => handleRename(e, folderPath, node)} className="w-5 h-5 flex items-center justify-center hover:text-yellow-400" title="이름 변경">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  <button onClick={(e) => handleRename(e, folderPath, node)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-yellow-400 transition-colors" title="이름 변경">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
-                  <button onClick={(e) => handleDelete(e, folderPath, node)} className="w-5 h-5 flex items-center justify-center hover:text-red-400" title="삭제">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  <button onClick={(e) => handleDelete(e, folderPath, node)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-red-400 transition-colors" title="삭제">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
               </div>
@@ -499,7 +499,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
               <div 
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, rootPath, true)}
-                className={`flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
+                className={`relative flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
                   isSelected ? 'bg-indigo-600/40 text-indigo-200' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
                 onClick={(e) => handleNodeClick(e, rootPath, true, folder)}
@@ -510,20 +510,20 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   </span>
                   <span className="font-semibold capitalize">{folder}</span>
                 </div>
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-slate-800 shadow-xl border border-slate-700/80 rounded-md z-50 px-1 py-1 gap-1">
                   <button 
                     onClick={(e) => handleAddFile(e, folder, false)}
-                    className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400"
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors"
                     title={`새 ${folder} 리소스 추가`}
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   </button>
                   <button 
                     onClick={(e) => handleAddFile(e, folder, true)}
-                    className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400"
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors"
                     title={`새 폴더 추가`}
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
                   </button>
                 </div>
               </div>
