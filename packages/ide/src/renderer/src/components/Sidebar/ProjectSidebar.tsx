@@ -5,6 +5,22 @@ import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
 import { getFileTemplate } from '../../../../shared/templates'
 
 const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'initials', 'hooks']
+
+/**
+ * 해당 폴더의 기존 이름 목록을 받아, 충돌 시 _1, _2, ... 형태의 고유 이름을 반환합니다.
+ * 파일의 경우 확장자 없이 비교하고, 폴더는 그대로 비교합니다.
+ */
+const resolveUniqueName = (baseName: string, existingNodes: FileNode[], isFolder: boolean): string => {
+  const existingNames = new Set(
+    existingNodes.map(n => isFolder ? n.name : n.name.replace(/\.[^/.]+$/, ''))
+  )
+  if (!existingNames.has(baseName)) return baseName
+  let counter = 1
+  while (existingNames.has(`${baseName}_${counter}`)) {
+    counter++
+  }
+  return `${baseName}_${counter}`
+}
 const CONFIG_FILES = ['novel.config.ts', 'main.ts']
 
 interface FileNode {
@@ -296,11 +312,28 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       options = effectTypes.map(t => ({ label: t, value: t }));
     }
 
+    // 대상 폴더의 현재 파일 목록을 가져와 중복 이름 방지
+    const targetRelPath = folderPath
+    const rootFolder = targetRelPath.split(/[/\\]/)[0]
+    const subPath = targetRelPath.split(/[/\\]/).slice(1).join('/')
+
+    const findNodes = (nodes: FileNode[], parts: string[]): FileNode[] => {
+      if (parts.length === 0 || parts[0] === '') return nodes
+      const found = nodes.find(n => n.name === parts[0] && n.isDirectory)
+      return found?.children ? findNodes(found.children, parts.slice(1)) : []
+    }
+
+    const rootNodes = folderFiles[rootFolder] || []
+    const currentNodes = subPath ? findNodes(rootNodes, subPath.split('/')) : rootNodes
+
+    const rawDefault = isFolder ? 'new_folder' : (options ? options[0].value : `new_${rootType.slice(0, -1)}`)
+    const uniqueDefault = resolveUniqueName(rawDefault, currentNodes, isFolder)
+
     setPromptData({
       isOpen: true,
       action: isFolder ? 'create_folder' : 'create_file',
       targetFolder: folderPath,
-      defaultValue: isFolder ? 'new_folder' : (options ? options[0].value : `new_${rootType.slice(0, -1)}`),
+      defaultValue: uniqueDefault,
       options
     })
   }
