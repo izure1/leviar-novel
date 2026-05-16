@@ -11,6 +11,7 @@ import {
   MarkerType,
   Position,
   Handle,
+  useReactFlow,
   type NodeProps
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -66,21 +67,21 @@ interface RowItem {
 
 const SUB_STYLES: Record<string, { bg: string, border: string, text: string }> = {
   label:     { bg: '#064e3b', border: '#10b981', text: '#6ee7b7' },
-  goto:      { bg: '#451a03', border: '#f59e0b', text: '#fcd34d' },
-  next:      { bg: '#2e1065', border: '#8b5cf6', text: '#c4b5fd' },
-  call:      { bg: '#431407', border: '#f97316', text: '#fdba74' },
-  condition: { bg: '#422006', border: '#eab308', text: '#fde047' },
+  goto:      { bg: '#27272a', border: '#71717a', text: '#a1a1aa' }, // gray (zinc)
+  next:      { bg: '#2e1065', border: '#8b5cf6', text: '#c4b5fd' }, // violet
+  call:      { bg: '#4c0519', border: '#f43f5e', text: '#fda4af' }, // rose
+  condition: { bg: '#422006', border: '#eab308', text: '#fde047' }, // yellow
 }
 
 const EXT_EDGE_STYLES: Record<string, { color: string, dash: string }> = {
-  next: { color: '#8b5cf6', dash: 'none' },
-  call: { color: '#f59e0b', dash: '5,5' },
-  goto: { color: '#f59e0b', dash: '3,3' },
+  next: { color: '#8b5cf6', dash: 'none' }, // violet
+  call: { color: '#f43f5e', dash: '5,5' },  // rose
+  goto: { color: '#71717a', dash: 'none' }, // gray
 }
 
 // ─── Blueprint row constants ─────────────────────────────────
 
-const ROW_STRIDE = 30  // 28px (h-7) + 2px (my-px margin top + bottom)
+const ROW_STRIDE = 30  // 28px (h-7) + 2px (flex gap)
 const HEADER_H = 44
 const NODE_W = 320
 const ROWS_PAD_TOP = 4 // py-1
@@ -95,15 +96,22 @@ const SUB_ICONS: Record<string, string> = {
 
 // ─── Custom Node: Scene Block (Blueprint) ────────────────────
 
-function SceneBlockComponent({ data }: NodeProps) {
+function SceneBlockComponent({ data, id }: NodeProps) {
   const rows = (data.rows || []) as RowItem[]
   const handles = (data.handles || []) as HandleInfo[]
   const entryHandle = handles.find(h => h.kind === 'entry')
   const { setPendingLine, setActiveFile, setIsGraphOpen } = useProjectStore()
+  const { setCenter, getNode, setNodes } = useReactFlow()
+  const [highlightedRow, setHighlightedRow] = useState<number | null>(null)
+  const [hoveredGoto, setHoveredGoto] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
 
   return (
     <div
-      className="group relative bg-surface-900/95 backdrop-blur-md border border-surface-700/60 rounded-lg shadow-xl transition-all duration-300 hover:shadow-primary-500/15 hover:border-primary-500/40"
+      className={`group relative backdrop-blur-md border rounded-lg shadow-xl transition-all duration-300 hover:shadow-primary-500/15 hover:border-primary-500/40 ${
+        data.highlighted
+          ? 'bg-surface-800 border-primary-500 shadow-primary-500/50 scale-[1.02] z-50'
+          : 'bg-surface-900/95 border-surface-700/60 scale-100 z-10'
+      }`}
       style={{ minWidth: NODE_W }}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none" />
@@ -136,7 +144,33 @@ function SceneBlockComponent({ data }: NodeProps) {
       </div>
 
       {/* ── Flow rows ── */}
-      <div className="py-1">
+      <div className="py-1 relative flex flex-col gap-[2px]">
+        {/* ── Internal Flow Overlay ── */}
+        {hoveredGoto && (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-50 overflow-visible">
+            <style>{`
+              @keyframes flow-dash {
+                from { stroke-dashoffset: 16; }
+                to { stroke-dashoffset: 0; }
+              }
+            `}</style>
+            <path
+              d={`M ${NODE_W - 14} ${18 + hoveredGoto.sourceRi * 30} C ${NODE_W + 50} ${18 + hoveredGoto.sourceRi * 30}, ${NODE_W + 50} ${18 + hoveredGoto.targetRi * 30}, ${NODE_W - 14} ${18 + hoveredGoto.targetRi * 30}`}
+              fill="none"
+              stroke={hoveredGoto.color}
+              strokeWidth="1.5"
+              strokeDasharray="4,4"
+              style={{ animation: 'flow-dash 0.5s linear infinite' }}
+            />
+            <circle 
+              cx={NODE_W - 14} 
+              cy={18 + hoveredGoto.targetRi * 30} 
+              r="2.5" 
+              fill={hoveredGoto.color} 
+            />
+          </svg>
+        )}
+
         {rows.map((row, ri) => {
           const s = SUB_STYLES[row.kind] || SUB_STYLES.label
           const icon = SUB_ICONS[row.kind] || '•'
@@ -152,10 +186,14 @@ function SceneBlockComponent({ data }: NodeProps) {
                   setIsGraphOpen(false)
                 }
               }}
-              className="relative flex items-center h-7 px-3 mx-1 my-px rounded cursor-pointer transition-colors hover:brightness-125"
+              className="relative flex shrink-0 items-center h-7 px-3 mx-1 rounded cursor-pointer transition-all hover:brightness-125"
               style={{
                 paddingLeft: 12 + row.depth * 14,
                 background: `${s.bg}40`,
+                border: highlightedRow === ri ? `1px solid ${s.border}` : '1px solid transparent',
+                boxShadow: highlightedRow === ri ? `0 0 12px ${s.border}80, inset 0 0 8px ${s.border}40` : 'none',
+                transform: highlightedRow === ri ? 'scale(1.02)' : 'scale(1)',
+                zIndex: highlightedRow === ri ? 10 : 1,
               }}
             >
               {/* Row handles */}
@@ -200,13 +238,57 @@ function SceneBlockComponent({ data }: NodeProps) {
 
               {/* Label */}
               {row.label && (
-                <span
-                  className="text-[11px] font-medium truncate flex-1 text-right font-mono"
-                  style={{ color: '#cbd5e1' }}
-                  title={row.label}
-                >
-                  {row.label}
-                </span>
+                ['goto', 'call', 'next'].includes(row.kind) ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (row.kind === 'goto') {
+                        const targetIdx = rows.findIndex(r => r.kind === 'label' && r.label === row.label)
+                        if (targetIdx !== -1) {
+                          setHighlightedRow(targetIdx)
+                          setTimeout(() => setHighlightedRow(null), 2000)
+                          
+                          const node = getNode(id)
+                          if (node && node.position) {
+                            const yOffset = HEADER_H + ROWS_PAD_TOP + targetIdx * ROW_STRIDE + 28 / 2
+                            setCenter(node.position.x + NODE_W / 2, node.position.y + yOffset, { duration: 800, zoom: 1.2 })
+                          }
+                        }
+                      } else {
+                        // call or next -> jump to scene node
+                        const targetNodeId = row.label
+                        const targetNode = getNode(targetNodeId)
+                        if (targetNode && targetNode.position) {
+                          setCenter(targetNode.position.x + NODE_W / 2, targetNode.position.y + HEADER_H, { duration: 800, zoom: 1.2 })
+                          setNodes(nds => nds.map(n => n.id === targetNodeId ? { ...n, data: { ...n.data, highlighted: true } } : n))
+                          setTimeout(() => {
+                            setNodes(nds => nds.map(n => n.id === targetNodeId ? { ...n, data: { ...n.data, highlighted: false } } : n))
+                          }, 2000)
+                        }
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      if (row.kind === 'goto') {
+                        const targetIdx = rows.findIndex(r => r.kind === 'label' && r.label === row.label)
+                        if (targetIdx !== -1) setHoveredGoto({ sourceRi: ri, targetRi: targetIdx, color: s.border })
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredGoto(null)}
+                    className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all hover:brightness-125 hover:shadow-md active:scale-95"
+                    style={{ color: '#fff', backgroundColor: `${s.border}50`, border: `1px solid ${s.border}90` }}
+                    title={`Jump to ${row.label}`}
+                  >
+                    {row.label}
+                  </button>
+                ) : (
+                  <span
+                    className="text-[11px] font-medium truncate flex-1 text-right font-mono pointer-events-none"
+                    style={{ color: '#cbd5e1' }}
+                    title={row.label}
+                  >
+                    {row.label}
+                  </span>
+                )
               )}
             </div>
           )
@@ -225,7 +307,11 @@ function SceneBlockComponent({ data }: NodeProps) {
 
 function MissingNodeComponent({ data }: NodeProps) {
   return (
-    <div className="group relative flex items-center min-w-[220px] px-4 py-3 bg-red-950/60 backdrop-blur-md border border-red-900/50 rounded-md shadow-lg transition-all duration-300 hover:shadow-red-500/20 hover:border-red-500/50 hover:-translate-y-0.5">
+    <div className={`group relative flex items-center min-w-[220px] px-4 py-3 backdrop-blur-md border rounded-md shadow-lg transition-all duration-300 hover:shadow-red-500/20 hover:border-red-500/50 hover:-translate-y-0.5 ${
+      data.highlighted
+        ? 'bg-red-900/40 border-red-400 shadow-red-500/50 scale-[1.02] z-50'
+        : 'bg-red-950/60 border-red-900/50 scale-100 z-10'
+    }`}>
       <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-md pointer-events-none" />
       <Handle
         type="target"
@@ -686,6 +772,10 @@ export function SceneGraphViewer() {
             // Try same scene first, then cross-scene
             const target = labelHandleMap.get(`${node.id}:${h.label}`)
             if (target) {
+              const isInternal = target.sceneId === node.id
+              // Skip internal lines to avoid visual clutter. The text alone is sufficient.
+              if (isInternal) continue
+              
               const s = EXT_EDGE_STYLES.goto
               allEdges.push({
                 id: `e-goto-${h.id}`,
