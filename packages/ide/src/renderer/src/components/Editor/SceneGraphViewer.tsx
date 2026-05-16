@@ -66,19 +66,32 @@ const EXT_EDGE_STYLES: Record<string, { color: string, dash: string }> = {
 
 function SceneNodeComponent({ data }: NodeProps) {
   return (
-    <div className="scene-graph-node">
+    <div className="group relative flex items-center min-w-[220px] px-4 py-3 bg-surface-800/90 backdrop-blur-md border border-surface-700/50 rounded-md shadow-lg transition-all duration-300 hover:shadow-primary-500/20 hover:border-primary-500/50 hover:-translate-y-0.5">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-md pointer-events-none" />
       <Handle
         type="target"
         position={Position.Left}
-        className="scene-graph-handle"
+        className="!w-3 !h-3 !bg-surface-800 !border-2 !border-primary-500 rounded-full !-ml-1.5"
       />
-      <div className="scene-graph-node-label">
-        {String(data.label || '')}
+      
+      <div className="flex items-center gap-3 relative z-10 w-full">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-surface-900/80 border border-surface-700/50 text-primary-400 shadow-inner shrink-0">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+          </svg>
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] font-bold text-primary-500/80 uppercase tracking-wider mb-0.5">Scene</span>
+          <span className="text-sm font-bold text-surface-100 font-mono truncate w-full" title={String(data.label || '')}>
+            {String(data.label || '')}
+          </span>
+        </div>
       </div>
+
       <Handle
         type="source"
         position={Position.Right}
-        className="scene-graph-handle"
+        className="!w-3 !h-3 !bg-surface-800 !border-2 !border-primary-500 rounded-full !-mr-1.5"
       />
     </div>
   )
@@ -101,25 +114,39 @@ function SubNodeComponent({ data }: NodeProps) {
 
   return (
     <div
-      className="scene-graph-sub-node"
+      className="relative flex items-center min-w-[160px] h-8 px-3 rounded-full shadow-sm transition-all hover:brightness-110 hover:shadow-md"
       style={{
-        background: s.bg,
-        border: `1px solid ${s.border}`,
-        color: s.text,
+        background: `linear-gradient(135deg, ${s.bg}e6, ${s.bg}b3)`,
+        border: `1px solid ${s.border}40`,
+        backdropFilter: 'blur(4px)',
       }}
     >
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: s.border, width: 5, height: 5 }}
+        className="!w-2 !h-2 !rounded-full !border-none !-ml-1"
+        style={{ background: s.border }}
       />
-      <span className="scene-graph-sub-icon">{icon}</span>
-      <span className="scene-graph-sub-kind">{kind}</span>
-      <span className="scene-graph-sub-label">{String(data.label || '')}</span>
+      
+      <div className="flex items-center gap-2 w-full min-w-0">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full opacity-90 shrink-0" style={{ color: s.border, background: `${s.border}20`, fontSize: '11px' }}>
+          {icon}
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-wider opacity-90 shrink-0" style={{ color: s.text }}>
+          {kind}
+        </span>
+        {String(data.label || '') && (
+          <span className="text-xs font-medium truncate flex-1 text-right ml-1 opacity-90" style={{ color: '#e2e8f0' }} title={String(data.label || '')}>
+            {String(data.label || '')}
+          </span>
+        )}
+      </div>
+
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: s.border, width: 5, height: 5 }}
+        className="!w-2 !h-2 !rounded-full !border-none !-mr-1"
+        style={{ background: s.border }}
       />
     </div>
   )
@@ -129,13 +156,27 @@ function SubNodeComponent({ data }: NodeProps) {
 
 function MissingNodeComponent({ data }: NodeProps) {
   return (
-    <div className="scene-graph-missing-node">
+    <div className="group relative flex items-center min-w-[220px] px-4 py-3 bg-red-950/60 backdrop-blur-md border border-red-900/50 rounded-md shadow-lg transition-all duration-300 hover:shadow-red-500/20 hover:border-red-500/50 hover:-translate-y-0.5">
+      <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-md pointer-events-none" />
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#ef4444', width: 6, height: 6 }}
+        className="!w-3 !h-3 !bg-surface-800 !border-2 !border-red-500 rounded-full !-ml-1.5"
       />
-      <span>{String(data.label || '')}</span>
+      
+      <div className="flex items-center gap-3 relative z-10 w-full">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-950/80 border border-red-900/50 text-red-400 shadow-inner shrink-0">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-wider mb-0.5">Missing Scene</span>
+          <span className="text-sm font-bold text-red-200 font-mono truncate w-full" title={String(data.label || '').replace(' (Missing)', '')}>
+            {String(data.label || '').replace(' (Missing)', '')}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -151,9 +192,9 @@ const nodeTypes = {
 // ─── dagre layout ────────────────────────────────────────────
 
 const NODE_SIZES: Record<string, { w: number, h: number }> = {
-  scene: { w: 180, h: 50 },
-  sub: { w: 150, h: 28 },
-  missing: { w: 180, h: 50 },
+  scene: { w: 220, h: 65 },
+  sub: { w: 160, h: 32 },
+  missing: { w: 220, h: 65 },
 }
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], direction = 'LR') {
@@ -603,7 +644,7 @@ export function SceneGraphViewer() {
         </div>
         <button
           onClick={() => setIsGraphOpen(false)}
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-surface-800 text-surface-400 hover:bg-surface-700 hover:text-white transition-colors"
+          className="flex items-center justify-center w-8 h-8 rounded-sm bg-surface-800 text-surface-400 hover:bg-surface-700 hover:text-white transition-colors"
           title="닫기"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
