@@ -124,6 +124,11 @@ app.whenReady().then(() => {
     return { success: true }
   })
 
+  ipcMain.handle('shell:openPath', async (_, path: string) => {
+    await shell.openPath(path)
+    return { success: true }
+  })
+
   ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
     try {
       const fs = require('fs/promises')

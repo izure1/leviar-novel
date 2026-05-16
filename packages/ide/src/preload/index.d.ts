@@ -20,6 +20,7 @@ declare global {
       }
       shell: {
         openExternal: (url: string) => Promise<{ success: boolean }>
+        openPath: (path: string) => Promise<{ success: boolean }>
       }
       fs: {
         checkExists: (path: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>

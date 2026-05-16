@@ -18,7 +18,8 @@ const api = {
     stop: () => ipcRenderer.invoke('preview:stop')
   },
   shell: {
-    openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url)
+    openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+    openPath: (path: string) => ipcRenderer.invoke('shell:openPath', path)
   },
   fs: {
     checkExists: (path: string) => ipcRenderer.invoke('fs:checkExists', path),

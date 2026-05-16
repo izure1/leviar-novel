@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
@@ -10,6 +10,53 @@ import { LoadingOverlay } from './components/UI/LoadingOverlay'
 function App() {
   const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen } = useProjectStore()
   const [newProjectData, setNewProjectData] = useState<{ isOpen: boolean, parentDir: string } | null>(null)
+  const [sidebarWidth, setSidebarWidth] = useState(256)
+  const [previewWidth, setPreviewWidth] = useState(400)
+  const [isResizing, setIsResizing] = useState(false)
+
+  const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    const startX = e.clientX
+    const startWidth = sidebarWidth
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(150, Math.min(600, startWidth + (moveEvent.clientX - startX)))
+      setSidebarWidth(newWidth)
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      setIsResizing(false)
+    }
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = 'col-resize'
+  }, [sidebarWidth])
+
+  const handlePreviewResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    const startX = e.clientX
+    const startWidth = previewWidth
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(200, Math.min(1000, startWidth - (moveEvent.clientX - startX)))
+      setPreviewWidth(newWidth)
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      setIsResizing(false)
+    }
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = 'col-resize'
+  }, [previewWidth])
 
   const handleOpenProject = async () => {
     const path = await window.api.dialog.openDirectory()
@@ -63,7 +110,7 @@ function App() {
   if (!projectPath) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-900 text-white">
-        <div className="rounded-2xl border border-slate-800 bg-slate-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
+        <div className="rounded-lg border border-slate-800 bg-slate-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
           <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
             Fumika Engine
           </h1>
@@ -72,14 +119,14 @@ function App() {
             <button
               onClick={handleOpenProject}
               disabled={globalLoading}
-              className="rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-500 hover:-translate-y-0.5"
+              className="rounded-sm bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-500 hover:-translate-y-0.5"
             >
               Open Existing Project
             </button>
             <button
               onClick={handleScaffoldProject}
               disabled={globalLoading}
-              className="rounded-lg border border-slate-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:-translate-y-0.5"
+              className="rounded-sm border border-slate-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:-translate-y-0.5"
             >
               Create New Project
             </button>
@@ -98,7 +145,12 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-300">
-      <ProjectSidebar />
+      <ProjectSidebar width={sidebarWidth} />
+      <div 
+        className="w-1 cursor-col-resize bg-slate-800 hover:bg-indigo-500 active:bg-indigo-500 z-10 transition-colors shrink-0"
+        onMouseDown={handleSidebarResizeStart}
+        title="사이드바 크기 조절"
+      />
 
       {/* Main Editor Area */}
       <main className="flex flex-1 flex-col overflow-hidden">
@@ -106,15 +158,30 @@ function App() {
           <h3 className="text-sm font-medium">Editor</h3>
           <DebugToolbar />
         </header>
-        <div className="flex-1 p-6 flex gap-6 overflow-hidden">
-          <EditorArea />
+        <div className="flex-1 p-6 flex overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden rounded-sm">
+            <EditorArea />
+          </div>
           {isPreviewOpen && (
-            <div className="w-[400px] flex flex-col shrink-0 h-full">
-              <PreviewPanel />
-            </div>
+            <>
+              <div 
+                className="w-2 mx-3 cursor-col-resize rounded-none transition-colors hover:bg-indigo-500 active:bg-indigo-500 shrink-0 self-stretch" 
+                onMouseDown={handlePreviewResizeStart}
+                title="프리뷰 크기 조절"
+              />
+              <div className="flex flex-col shrink-0 h-full rounded-sm overflow-hidden border border-slate-800 bg-slate-900/50 shadow-xl" style={{ width: previewWidth }}>
+                <PreviewPanel />
+              </div>
+            </>
           )}
         </div>
       </main>
+
+      {/* 리사이즈 중 iframe 등이 이벤트를 가로채는 것을 방지하는 전체 화면 보호 오버레이 */}
+      {isResizing && (
+        <div className="fixed inset-0 z-50 cursor-col-resize select-none" />
+      )}
+
       <LoadingOverlay />
     </div>
   )

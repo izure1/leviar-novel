@@ -22,7 +22,7 @@ interface PromptData {
   targetNode?: FileNode
   defaultValue: string
 }
-export function ProjectSidebar() {
+export function ProjectSidebar({ width = 256 }: { width?: number }) {
   const { projectPath, activeFile, setActiveFile, setGlobalLoading } = useProjectStore()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     scenes: true,
@@ -435,17 +435,23 @@ export function ProjectSidebar() {
   }
 
   return (
-    <aside className="w-64 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0">
+    <aside className="border-r border-slate-800 bg-slate-900 flex flex-col shrink-0" style={{ width }}>
       <div className="border-b border-slate-800 p-4 shrink-0 flex justify-between items-start">
         <div className="overflow-hidden mr-2">
-          <h2 className="font-bold text-slate-100 truncate">Project Explorer</h2>
+          <h2 
+            className="font-bold text-slate-100 truncate cursor-pointer hover:underline"
+            onClick={() => projectPath && window.api.shell.openPath(projectPath)}
+            title="클릭하여 폴더 열기"
+          >
+            {projectPath ? projectPath.split(/[/\\]/).pop() : 'Project Explorer'}
+          </h2>
           <p className="truncate text-[10px] text-slate-500 mt-1" title={projectPath || ''}>
             {projectPath}
           </p>
         </div>
         <button 
           onClick={handleUpdateProject}
-          className="w-7 h-7 flex shrink-0 items-center justify-center rounded-md bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 transition-colors"
+          className="w-7 h-7 flex shrink-0 items-center justify-center rounded-none bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 transition-colors"
           title="의존성 복구 및 최신 엔진 업데이트 (npm install)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>

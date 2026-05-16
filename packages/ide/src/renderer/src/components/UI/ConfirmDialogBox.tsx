@@ -74,7 +74,7 @@ export function ConfirmDialogBox({
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div className="bg-slate-900 border border-slate-700/60 p-6 rounded-2xl shadow-2xl shadow-black/50 w-full max-w-lg min-w-[320px] md:max-w-xl mx-4 animate-fade-scale overflow-hidden relative">
+      <div className="bg-slate-900 border border-slate-700/60 p-6 rounded-md shadow-2xl shadow-black/50 w-full max-w-lg min-w-[320px] md:max-w-xl mx-4 animate-fade-scale overflow-hidden relative">
         {/* Glow effect */}
         <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none ${
           type === 'danger' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-indigo-500'
@@ -97,7 +97,7 @@ export function ConfirmDialogBox({
           {showCancel && (
             <button
               type="button"
-              className="inline-flex w-full justify-center rounded-lg bg-transparent px-4 py-2 text-sm font-semibold text-slate-300 shadow-sm ring-1 ring-inset ring-slate-600 hover:bg-slate-800 transition-colors sm:w-auto sm:min-w-[4rem]"
+              className="inline-flex w-full justify-center rounded-sm bg-transparent px-4 py-2 text-sm font-semibold text-slate-300 shadow-sm ring-1 ring-inset ring-slate-600 hover:bg-slate-800 transition-colors sm:w-auto sm:min-w-[4rem]"
               onClick={onCancel}
             >
               {cancelText}
@@ -106,7 +106,7 @@ export function ConfirmDialogBox({
           <button
             type="button"
             ref={confirmRef}
-            className={`inline-flex w-full justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 sm:w-auto sm:min-w-[4rem] ${
+            className={`inline-flex w-full justify-center rounded-sm px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 sm:w-auto sm:min-w-[4rem] ${
               type === 'danger' 
                 ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30 shadow-lg' 
                 : type === 'warning'
