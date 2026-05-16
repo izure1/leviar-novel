@@ -372,15 +372,37 @@ function buildSubGraph(
       position: { x: 0, y: 0 },
     })
 
-    // ── Connection from predecessor ──
-    if (i === 0) {
-      // First item: connect from parent (scene node or condition node)
+    // ── Connection edges ──
+    const isTopLevel = !branchMeta
+    const isLabel = item.kind === 'label'
+
+    if (isTopLevel && isLabel) {
+      // Label at top-level: always solid edge from scene (ownership/derivation)
+      internalEdges.push({
+        id: `e-own-${parentId}-${subId}`,
+        source: parentId,
+        target: subId,
+        style: { stroke: '#555', strokeWidth: 1.5 },
+      })
+      // Also add dashed fall-through from previous if it doesn't break flow
+      if (i > 0 && !BREAKS_FLOW.has(items[i - 1].kind)) {
+        const prevId = `${sceneId}__${prefix}${i - 1}`
+        internalEdges.push({
+          id: `e-flow-${prevId}-${subId}`,
+          source: prevId,
+          target: subId,
+          style: { stroke: '#555', strokeWidth: 1.5, strokeDasharray: '6,3' },
+        })
+      }
+    } else if (i === 0) {
+      // First item in scope (scene or condition branch)
       const edgeColor = branchMeta?.color || '#555'
+      const isDashed = isTopLevel || !!branchMeta
       internalEdges.push({
         id: `e-entry-${parentId}-${subId}`,
         source: parentId,
         target: subId,
-        style: { stroke: edgeColor, strokeWidth: 1.5, strokeDasharray: branchMeta ? '4,3' : 'none' },
+        style: { stroke: edgeColor, strokeWidth: 1.5, strokeDasharray: isDashed ? '6,3' : 'none' },
         ...(branchMeta ? {
           label: branchMeta.label,
           labelStyle: { fill: edgeColor, fontSize: 9, fontWeight: 700 },
@@ -388,15 +410,14 @@ function buildSubGraph(
         } : {}),
       })
     } else {
-      // Chain from previous item, unless previous breaks flow
-      const prevItem = items[i - 1]
-      if (!BREAKS_FLOW.has(prevItem.kind)) {
+      // Sequential chain: dashed flow edge from previous (if not broken)
+      if (!BREAKS_FLOW.has(items[i - 1].kind)) {
         const prevId = `${sceneId}__${prefix}${i - 1}`
         internalEdges.push({
-          id: `e-chain-${prevId}-${subId}`,
+          id: `e-flow-${prevId}-${subId}`,
           source: prevId,
           target: subId,
-          style: { stroke: '#555', strokeWidth: 1.5 },
+          style: { stroke: '#555', strokeWidth: 1.5, strokeDasharray: '6,3' },
         })
       }
     }
