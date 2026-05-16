@@ -22,6 +22,11 @@ declare global {
         openExternal: (url: string) => Promise<{ success: boolean }>
         openPath: (path: string) => Promise<{ success: boolean }>
       }
+      window: {
+        minimize: () => Promise<void>
+        maximize: () => Promise<void>
+        close: () => Promise<void>
+      }
       settings: {
         get: () => Promise<{ success: boolean; settings?: any; error?: string }>
         set: (settings: any) => Promise<{ success: boolean; settings?: any; error?: string }>

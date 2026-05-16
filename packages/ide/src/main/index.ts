@@ -18,6 +18,7 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: true,
+    frame: false,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -72,6 +73,23 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Window Controls
+  ipcMain.handle('window:minimize', () => {
+    mainWindow?.minimize()
+  })
+  
+  ipcMain.handle('window:maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow?.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+  })
+  
+  ipcMain.handle('window:close', () => {
+    mainWindow?.close()
+  })
 
   // Project Management IPCs
   ipcMain.handle('dialog:openDirectory', async () => {

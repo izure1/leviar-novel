@@ -7,6 +7,7 @@ import { DebugToolbar } from './components/Toolbar/DebugToolbar'
 import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectDialog'
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
 import { SettingsModal } from './components/Settings/SettingsModal'
+import { TitleBar } from './components/TitleBar/TitleBar'
 
 function App() {
   const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen, themeColor, themeBg, isSettingsOpen, setIsSettingsOpen, initSettings } = useProjectStore()
@@ -119,27 +120,30 @@ function App() {
 
   if (!projectPath) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-surface-900 text-white">
-        <div className="rounded-lg border border-surface-800 bg-surface-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
-          <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">
-            Fumika Engine
-          </h1>
-          <p className="mb-8 text-surface-400">The Visual Novel Studio</p>
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={handleOpenProject}
-              disabled={globalLoading}
-              className="rounded-sm bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-500/30 transition-all hover:bg-primary-500 hover:-transurface-y-0.5"
-            >
-              Open Existing Project
-            </button>
-            <button
-              onClick={handleScaffoldProject}
-              disabled={globalLoading}
-              className="rounded-sm border border-surface-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-surface-800 hover:-transurface-y-0.5"
-            >
-              Create New Project
-            </button>
+      <div className="flex h-screen w-screen flex-col bg-surface-900 text-white overflow-hidden">
+        <TitleBar />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="rounded-lg border border-surface-800 bg-surface-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
+            <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">
+              Fumika Engine
+            </h1>
+            <p className="mb-8 text-surface-400">The Visual Novel Studio</p>
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={handleOpenProject}
+                disabled={globalLoading}
+                className="rounded-sm bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-500/30 transition-all hover:bg-primary-500 hover:-translate-y-0.5"
+              >
+                Open Existing Project
+              </button>
+              <button
+                onClick={handleScaffoldProject}
+                disabled={globalLoading}
+                className="rounded-sm border border-surface-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-surface-800 hover:-translate-y-0.5"
+              >
+                Create New Project
+              </button>
+            </div>
           </div>
         </div>
 
@@ -154,10 +158,12 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-surface-950 text-surface-300">
-      <ProjectSidebar width={sidebarWidth} />
-      <div 
-        className="w-1 cursor-col-resize bg-surface-800 hover:bg-primary-500 active:bg-primary-500 z-10 transition-colors shrink-0"
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface-950 text-surface-300">
+      <TitleBar />
+      <div className="flex flex-1 overflow-hidden">
+        <ProjectSidebar width={sidebarWidth} />
+        <div 
+          className="w-1 cursor-col-resize bg-surface-800 hover:bg-primary-500 active:bg-primary-500 z-10 transition-colors shrink-0"
         onMouseDown={handleSidebarResizeStart}
         title="사이드바 크기 조절"
       />
@@ -186,6 +192,7 @@ function App() {
           )}
         </div>
       </main>
+      </div>
 
       {/* 리사이즈 중 iframe 등이 이벤트를 가로채는 것을 방지하는 전체 화면 보호 오버레이 */}
       {isResizing && (

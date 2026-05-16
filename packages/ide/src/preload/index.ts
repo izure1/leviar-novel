@@ -21,6 +21,11 @@ const api = {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
     openPath: (path: string) => ipcRenderer.invoke('shell:openPath', path)
   },
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close')
+  },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (settings: any) => ipcRenderer.invoke('settings:set', settings)
