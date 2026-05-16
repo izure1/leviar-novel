@@ -10,6 +10,11 @@ export class PreviewService {
     try {
       const config: InlineConfig = {
         root: projectPath,
+        resolve: {
+          alias: {
+            '@': projectPath
+          }
+        },
         server: {
           port: this.port,
           strictPort: false,
