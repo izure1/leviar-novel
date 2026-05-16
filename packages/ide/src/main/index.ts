@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -46,6 +46,18 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // 로컬 파일 접근을 위한 커스텀 프로토콜 등록
+  protocol.registerFileProtocol('local-resource', (request, callback) => {
+    try {
+      // local-resource:///D:/my-visual-novel/... -> file:///D:/my-visual-novel/...
+      const fileUrl = request.url.replace('local-resource://', 'file://')
+      const { fileURLToPath } = require('url')
+      const filePath = fileURLToPath(fileUrl)
+      callback(filePath)
+    } catch (error) {
+      console.error('[IDE] Custom protocol error:', error)
+    }
+  })
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 

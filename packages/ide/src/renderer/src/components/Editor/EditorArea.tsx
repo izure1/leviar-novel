@@ -355,13 +355,42 @@ export function EditorArea() {
             )
           }
           
+          const lowerFile = activeFile.toLowerCase()
+          const isImage = lowerFile.match(/\.(png|jpe?g|webp|gif|svg)$/)
+          const isVideo = lowerFile.match(/\.(mp4|webm)$/)
+          const isAudio = lowerFile.match(/\.(mp3|wav|m4a|ogg)$/)
+          
+          if (isImage || isVideo || isAudio) {
+            // 커스텀 프로토콜을 사용해 로컬 파일 접근 (보안 제약 회피)
+            const fileUrl = `local-resource:///${activeFile.replace(/\\/g, '/')}`
+            const fileName = activeFile.split(/[/\\]/).pop()
+
+            return (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#1e1e1e]">
+                {isImage && (
+                  <img src={fileUrl} alt={fileName} className="max-w-[90%] max-h-[90%] object-contain rounded shadow-lg" />
+                )}
+                {isVideo && (
+                  <video src={fileUrl} controls className="max-w-[90%] max-h-[90%] rounded shadow-lg outline-none" />
+                )}
+                {isAudio && (
+                  <div className="bg-slate-800 p-8 rounded-xl shadow-xl flex flex-col items-center gap-4">
+                    <svg className="w-16 h-16 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                    <span className="text-slate-300 font-medium truncate max-w-[250px]">{fileName}</span>
+                    <audio src={fileUrl} controls className="outline-none" />
+                  </div>
+                )}
+              </div>
+            )
+          }
+
           if (!isEditable) {
             return (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
                 <svg className="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p className="text-slate-400">텍스트로 편집할 수 없는 파일입니다.</p>
+                <p className="text-slate-400">미리보기를 지원하지 않는 파일입니다.</p>
               </div>
             )
           }
