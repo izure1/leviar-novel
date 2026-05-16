@@ -158,7 +158,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
               }
             `}</style>
             <path
-              d={`M ${NODE_W - 14} ${18 + hoveredGoto.sourceRi * 30} C ${NODE_W + 50} ${18 + hoveredGoto.sourceRi * 30}, ${NODE_W + 50} ${18 + hoveredGoto.targetRi * 30}, ${NODE_W - 14} ${18 + hoveredGoto.targetRi * 30}`}
+              d={`M ${NODE_W - 7} ${18 + hoveredGoto.sourceRi * 30} C ${NODE_W + 55} ${18 + hoveredGoto.sourceRi * 30}, ${NODE_W + 55} ${18 + hoveredGoto.targetRi * 30}, ${NODE_W - 7} ${18 + hoveredGoto.targetRi * 30}`}
               fill="none"
               stroke={hoveredGoto.color}
               strokeWidth="1.5"
@@ -166,9 +166,15 @@ function SceneBlockComponent({ data, id }: NodeProps) {
               style={{ animation: 'flow-dash 0.5s linear infinite' }}
             />
             <circle 
-              cx={NODE_W - 14} 
+              cx={NODE_W - 7} 
+              cy={18 + hoveredGoto.sourceRi * 30} 
+              r="3" 
+              fill={hoveredGoto.color} 
+            />
+            <circle 
+              cx={NODE_W - 7} 
               cy={18 + hoveredGoto.targetRi * 30} 
-              r="2.5" 
+              r="3" 
               fill={hoveredGoto.color} 
             />
           </svg>
@@ -228,12 +234,12 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                 <Handle
                   key={h.id}
                   type={h.type}
-                  position={h.type === 'target' ? Position.Left : Position.Right}
+                  position={Position.Right}
                   id={h.id}
                   className="!w-2 !h-2 !rounded-full !border-none"
                   style={{
                     background: s.border,
-                    ...(h.type === 'target' ? { left: -4 } : { right: -4 }),
+                    right: -4,
                     top: '50%',
                     transform: 'translateY(-50%)'
                   }}
@@ -255,7 +261,7 @@ function SceneBlockComponent({ data, id }: NodeProps) {
                 className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 mr-1.5"
                 style={{ color: s.border, background: `${s.border}20`, fontSize: '10px' }}
               >
-                {icon}
+                <span className="-translate-y-[0.5px] leading-none">{icon}</span>
               </span>
 
               {/* Kind tag */}
