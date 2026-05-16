@@ -21,6 +21,10 @@ const api = {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
     openPath: (path: string) => ipcRenderer.invoke('shell:openPath', path)
   },
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    set: (settings: any) => ipcRenderer.invoke('settings:set', settings)
+  },
   fs: {
     checkExists: (path: string) => ipcRenderer.invoke('fs:checkExists', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),

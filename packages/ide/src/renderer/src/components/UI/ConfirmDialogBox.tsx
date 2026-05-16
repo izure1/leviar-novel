@@ -59,8 +59,8 @@ export function ConfirmDialogBox({
         )
       default:
         return (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 sm:mx-0 sm:h-10 sm:w-10">
-            <svg className="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-500/20 sm:mx-0 sm:h-10 sm:w-10">
+            <svg className="h-6 w-6 text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
             </svg>
           </div>
@@ -74,10 +74,10 @@ export function ConfirmDialogBox({
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div className="bg-slate-900 border border-slate-700/60 p-6 rounded-md shadow-2xl shadow-black/50 w-full max-w-lg min-w-[320px] md:max-w-xl mx-4 animate-fade-scale overflow-hidden relative">
+      <div className="bg-surface-900 border border-surface-700/60 p-6 rounded-md shadow-2xl shadow-black/50 w-full max-w-lg min-w-[320px] md:max-w-xl mx-4 animate-fade-scale overflow-hidden relative">
         {/* Glow effect */}
         <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none ${
-          type === 'danger' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-indigo-500'
+          type === 'danger' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-primary-500'
         }`}></div>
 
         <div className="sm:flex sm:items-start relative z-10">
@@ -87,7 +87,7 @@ export function ConfirmDialogBox({
               {title}
             </h3>
             <div className="mt-2">
-              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+              <p className="text-sm text-surface-300 leading-relaxed whitespace-pre-wrap">
                 {message}
               </p>
             </div>
@@ -97,7 +97,7 @@ export function ConfirmDialogBox({
           {showCancel && (
             <button
               type="button"
-              className="inline-flex w-full justify-center rounded-sm bg-transparent px-4 py-2 text-sm font-semibold text-slate-300 shadow-sm ring-1 ring-inset ring-slate-600 hover:bg-slate-800 transition-colors sm:w-auto sm:min-w-[4rem]"
+              className="inline-flex w-full justify-center rounded-sm bg-transparent px-4 py-2 text-sm font-semibold text-surface-300 shadow-sm ring-1 ring-inset ring-surface-600 hover:bg-surface-800 transition-colors sm:w-auto sm:min-w-[4rem]"
               onClick={onCancel}
             >
               {cancelText}
@@ -106,12 +106,12 @@ export function ConfirmDialogBox({
           <button
             type="button"
             ref={confirmRef}
-            className={`inline-flex w-full justify-center rounded-sm px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 sm:w-auto sm:min-w-[4rem] ${
+            className={`inline-flex w-full justify-center rounded-sm px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-transurface-y-0.5 sm:w-auto sm:min-w-[4rem] ${
               type === 'danger' 
                 ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30 shadow-lg' 
                 : type === 'warning'
                 ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/30 shadow-lg'
-                : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30 shadow-lg'
+                : 'bg-primary-600 hover:bg-primary-500 shadow-primary-500/30 shadow-lg'
             }`}
             onClick={onConfirm}
           >

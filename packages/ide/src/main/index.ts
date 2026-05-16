@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { scaffoldProject, updateProject } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
+import { settingsService } from './services/settings'
 
 const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
@@ -174,6 +175,16 @@ app.whenReady().then(() => {
     } catch (error: any) {
       return { success: false, error: error.message }
     }
+  })
+
+  // Settings IPCs
+  ipcMain.handle('settings:get', async () => {
+    return { success: true, settings: settingsService.getSettings() }
+  })
+
+  ipcMain.handle('settings:set', async (_, partialSettings: any) => {
+    const updated = settingsService.updateSettings(partialSettings)
+    return { success: true, settings: updated }
   })
 
   // File System IPCs

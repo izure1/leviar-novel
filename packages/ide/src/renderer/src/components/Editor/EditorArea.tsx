@@ -345,10 +345,10 @@ export function EditorArea() {
   }
 
   return (
-    <div className="flex-1 rounded-none border-t-0 border-l-0 border-b-0 border-r-0 bg-slate-900/50 flex flex-col overflow-hidden">
+    <div className="flex-1 rounded-none border-t-0 border-l-0 border-b-0 border-r-0 bg-surface-900/50 flex flex-col overflow-hidden">
       {/* Tab Bar */}
       {openTabs.length > 0 && (
-        <div className="flex bg-[#181818] overflow-x-auto overflow-y-hidden border-b border-slate-800 shrink-0 custom-scrollbar h-10 items-end">
+        <div className="flex bg-[#181818] overflow-x-auto overflow-y-hidden border-b border-surface-800 shrink-0 custom-scrollbar h-10 items-end">
           {openTabs.map(tab => {
             const fileName = tab.split(/[/\\]/).pop()
             const isActive = tab === activeFile
@@ -358,20 +358,20 @@ export function EditorArea() {
             return (
               <div 
                 key={tab} 
-                className={`flex items-center gap-2 px-3 h-full border-r border-slate-800 cursor-pointer min-w-[120px] max-w-[200px] group transition-colors ${
-                  isActive ? 'bg-[#1e1e1e] text-indigo-400 border-t-2 border-t-indigo-500' : 'bg-[#181818] text-slate-500 hover:bg-slate-800/80 border-t-2 border-t-transparent'
+                className={`flex items-center gap-2 px-3 h-full border-r border-surface-800 cursor-pointer min-w-[120px] max-w-[200px] group transition-colors ${
+                  isActive ? 'bg-[#1e1e1e] text-primary-400 border-t-2 border-t-primary-500' : 'bg-[#181818] text-surface-500 hover:bg-surface-800/80 border-t-2 border-t-transparent'
                 }`}
                 onClick={() => setActiveFile(tab)}
                 onDoubleClick={() => { if (isPreview) setPreviewTab(null) }}
                 title={tab}
               >
-                <span className={`truncate flex-1 text-xs select-none ${isPreview ? 'italic text-indigo-300/80' : ''}`}>{fileName}</span>
+                <span className={`truncate flex-1 text-xs select-none ${isPreview ? 'italic text-primary-300/80' : ''}`}>{fileName}</span>
                 <div className="flex items-center w-4 h-4 justify-center shrink-0">
                   {isDirty ? (
                     <div className="w-2 h-2 rounded-full bg-amber-400 group-hover:hidden" />
                   ) : null}
                   <button 
-                    className={`w-4 h-4 rounded-sm flex items-center justify-center hover:bg-slate-700 hover:text-white transition-opacity ${isDirty ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'}`}
+                    className={`w-4 h-4 rounded-sm flex items-center justify-center hover:bg-surface-700 hover:text-white transition-opacity ${isDirty ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'}`}
                     onClick={(e) => { e.stopPropagation(); handleCloseTab(tab) }}
                     title="닫기"
                   >
@@ -386,9 +386,9 @@ export function EditorArea() {
 
       {/* Editor Header */}
       {activeFile && (
-        <div className="h-10 bg-slate-800/80 flex items-center px-4 justify-between shrink-0 border-b border-slate-800/50">
+        <div className="h-10 bg-surface-800/80 flex items-center px-4 justify-between shrink-0 border-b border-surface-800/50">
           <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-400 font-medium">
+            <span className="text-xs text-surface-400 font-medium">
               {activeFile.replace(/\\/g, '/').split('/').slice(-3).join(' / ')}
             </span>
           </div>
@@ -397,8 +397,8 @@ export function EditorArea() {
             disabled={!tabData[activeFile]?.isDirty || isSaving}
             className={`text-xs px-3 py-1.5 rounded font-medium transition-all ${
               tabData[activeFile]?.isDirty && !isSaving
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-900/20'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-900/20'
+                : 'bg-surface-800 text-surface-500 cursor-not-allowed'
             }`}
           >
             {isSaving ? '저장 중...' : '저장 (Ctrl+S)'}
@@ -410,10 +410,10 @@ export function EditorArea() {
       <div className="flex-1 relative bg-[#1e1e1e]">
         {!activeFile ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-            <svg className="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-16 h-16 text-surface-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="text-slate-500 font-medium">탭을 선택하세요</p>
+            <p className="text-surface-500 font-medium">탭을 선택하세요</p>
           </div>
         ) : (() => {
           const data = tabData[activeFile]
@@ -424,8 +424,8 @@ export function EditorArea() {
           if (data.isLoading) {
             return (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-sm text-slate-400">파일을 불러오는 중...</p>
+                <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-sm text-surface-400">파일을 불러오는 중...</p>
               </div>
             )
           }
@@ -449,9 +449,9 @@ export function EditorArea() {
                   <video src={fileUrl} controls className="max-w-[90%] max-h-[90%] rounded shadow-lg outline-none" />
                 )}
                 {isAudio && (
-                  <div className="bg-slate-800 p-8 rounded-xl shadow-xl flex flex-col items-center gap-4">
-                    <svg className="w-16 h-16 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                    <span className="text-slate-300 font-medium truncate max-w-[250px]">{fileName}</span>
+                  <div className="bg-surface-800 p-8 rounded-xl shadow-xl flex flex-col items-center gap-4">
+                    <svg className="w-16 h-16 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                    <span className="text-surface-300 font-medium truncate max-w-[250px]">{fileName}</span>
                     <audio src={fileUrl} controls className="outline-none" />
                   </div>
                 )}
@@ -462,10 +462,10 @@ export function EditorArea() {
           if (!isEditable) {
             return (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                <svg className="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 text-surface-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p className="text-slate-400">미리보기를 지원하지 않는 파일입니다.</p>
+                <p className="text-surface-400">미리보기를 지원하지 않는 파일입니다.</p>
               </div>
             )
           }

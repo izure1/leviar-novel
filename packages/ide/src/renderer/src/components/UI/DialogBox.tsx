@@ -37,24 +37,24 @@ export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
-      <div className="bg-slate-800 border border-slate-700 p-4 rounded-sm shadow-xl w-full max-w-md min-w-[320px] mx-4 animate-fade-scale">
+      <div className="bg-surface-800 border border-surface-700 p-4 rounded-sm shadow-xl w-full max-w-md min-w-[320px] mx-4 animate-fade-scale">
         <h3 className="text-sm font-bold text-white mb-2">{title}</h3>
         <input
           ref={inputRef}
-          className="w-full bg-slate-900 border border-slate-600 text-white px-2 py-1 rounded-sm mb-4 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-surface-900 border border-surface-600 text-white px-2 py-1 rounded-sm mb-4 focus:outline-none focus:border-primary-500"
           defaultValue={defaultValue}
           placeholder={placeholder}
           onKeyDown={handleKeyDown}
         />
         <div className="flex justify-end gap-2">
           <button 
-            className="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded-sm text-white" 
+            className="px-3 py-1 text-xs bg-surface-700 hover:bg-surface-600 rounded-sm text-white" 
             onClick={onCancel}
           >
             취소
           </button>
           <button 
-            className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-sm text-white" 
+            className="px-3 py-1 text-xs bg-primary-600 hover:bg-primary-500 rounded-sm text-white" 
             onClick={handleConfirm}
           >
             확인

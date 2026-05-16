@@ -1,11 +1,46 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-500: #6366f1;
-  --color-dark-900: #0f172a;
-  --color-dark-800: #1e293b;
-  --color-dark-700: #334155;
+  --color-primary-400: var(--theme-primary-400, var(--color-indigo-400));
+  --color-primary-500: var(--theme-primary-500, var(--color-indigo-500));
+  --color-primary-600: var(--theme-primary-600, var(--color-indigo-600));
+
+  --color-surface-50: var(--theme-surface-50, var(--color-slate-50));
+  --color-surface-100: var(--theme-surface-100, var(--color-slate-100));
+  --color-surface-200: var(--theme-surface-200, var(--color-slate-200));
+  --color-surface-300: var(--theme-surface-300, var(--color-slate-300));
+  --color-surface-400: var(--theme-surface-400, var(--color-slate-400));
+  --color-surface-500: var(--theme-surface-500, var(--color-slate-500));
+  --color-surface-600: var(--theme-surface-600, var(--color-slate-600));
+  --color-surface-700: var(--theme-surface-700, var(--color-slate-700));
+  --color-surface-800: var(--theme-surface-800, var(--color-slate-800));
+  --color-surface-900: var(--theme-surface-900, var(--color-slate-900));
+  --color-surface-950: var(--theme-surface-950, var(--color-slate-950));
+
   --font-inter: "Inter", system-ui, sans-serif;
+}
+
+[data-theme="indigo"] { --theme-primary-400: var(--color-indigo-400); --theme-primary-500: var(--color-indigo-500); --theme-primary-600: var(--color-indigo-600); }
+[data-theme="rose"] { --theme-primary-400: var(--color-rose-400); --theme-primary-500: var(--color-rose-500); --theme-primary-600: var(--color-rose-600); }
+[data-theme="emerald"] { --theme-primary-400: var(--color-emerald-400); --theme-primary-500: var(--color-emerald-500); --theme-primary-600: var(--color-emerald-600); }
+[data-theme="amber"] { --theme-primary-400: var(--color-amber-400); --theme-primary-500: var(--color-amber-500); --theme-primary-600: var(--color-amber-600); }
+[data-theme="sky"] { --theme-primary-400: var(--color-sky-400); --theme-primary-500: var(--color-sky-500); --theme-primary-600: var(--color-sky-600); }
+[data-theme="violet"] { --theme-primary-400: var(--color-violet-400); --theme-primary-500: var(--color-violet-500); --theme-primary-600: var(--color-violet-600); }
+
+[data-bg-theme="slate"] {
+  --theme-surface-50: var(--color-slate-50); --theme-surface-100: var(--color-slate-100); --theme-surface-200: var(--color-slate-200); --theme-surface-300: var(--color-slate-300); --theme-surface-400: var(--color-slate-400); --theme-surface-500: var(--color-slate-500); --theme-surface-600: var(--color-slate-600); --theme-surface-700: var(--color-slate-700); --theme-surface-800: var(--color-slate-800); --theme-surface-900: var(--color-slate-900); --theme-surface-950: var(--color-slate-950);
+}
+[data-bg-theme="zinc"] {
+  --theme-surface-50: var(--color-zinc-50); --theme-surface-100: var(--color-zinc-100); --theme-surface-200: var(--color-zinc-200); --theme-surface-300: var(--color-zinc-300); --theme-surface-400: var(--color-zinc-400); --theme-surface-500: var(--color-zinc-500); --theme-surface-600: var(--color-zinc-600); --theme-surface-700: var(--color-zinc-700); --theme-surface-800: var(--color-zinc-800); --theme-surface-900: var(--color-zinc-900); --theme-surface-950: var(--color-zinc-950);
+}
+[data-bg-theme="neutral"] {
+  --theme-surface-50: var(--color-neutral-50); --theme-surface-100: var(--color-neutral-100); --theme-surface-200: var(--color-neutral-200); --theme-surface-300: var(--color-neutral-300); --theme-surface-400: var(--color-neutral-400); --theme-surface-500: var(--color-neutral-500); --theme-surface-600: var(--color-neutral-600); --theme-surface-700: var(--color-neutral-700); --theme-surface-800: var(--color-neutral-800); --theme-surface-900: var(--color-neutral-900); --theme-surface-950: var(--color-neutral-950);
+}
+[data-bg-theme="stone"] {
+  --theme-surface-50: var(--color-stone-50); --theme-surface-100: var(--color-stone-100); --theme-surface-200: var(--color-stone-200); --theme-surface-300: var(--color-stone-300); --theme-surface-400: var(--color-stone-400); --theme-surface-500: var(--color-stone-500); --theme-surface-600: var(--color-stone-600); --theme-surface-700: var(--color-stone-700); --theme-surface-800: var(--color-stone-800); --theme-surface-900: var(--color-stone-900); --theme-surface-950: var(--color-stone-950);
+}
+[data-bg-theme="gray"] {
+  --theme-surface-50: var(--color-gray-50); --theme-surface-100: var(--color-gray-100); --theme-surface-200: var(--color-gray-200); --theme-surface-300: var(--color-gray-300); --theme-surface-400: var(--color-gray-400); --theme-surface-500: var(--color-gray-500); --theme-surface-600: var(--color-gray-600); --theme-surface-700: var(--color-gray-700); --theme-surface-800: var(--color-gray-800); --theme-surface-900: var(--color-gray-900); --theme-surface-950: var(--color-gray-950);
 }
 
 body {

@@ -22,6 +22,10 @@ declare global {
         openExternal: (url: string) => Promise<{ success: boolean }>
         openPath: (path: string) => Promise<{ success: boolean }>
       }
+      settings: {
+        get: () => Promise<{ success: boolean; settings?: any; error?: string }>
+        set: (settings: any) => Promise<{ success: boolean; settings?: any; error?: string }>
+      }
       fs: {
         checkExists: (path: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>
         readFile: (path: string) => Promise<{ success: boolean; content?: string; error?: string }>

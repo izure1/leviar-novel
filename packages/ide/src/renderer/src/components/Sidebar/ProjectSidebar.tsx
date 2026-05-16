@@ -375,9 +375,9 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
 
   const renderTree = (nodes: FileNode[], folderPath: string) => {
     return (
-      <ul className="pl-3 mt-1 space-y-0.5 border-l border-slate-700/50 ml-2">
+      <ul className="pl-3 mt-1 space-y-0.5 border-l border-surface-700/50 ml-2">
         {nodes.length === 0 && (
-          <li className="text-xs text-slate-600 italic px-2 py-1 select-none">Empty</li>
+          <li className="text-xs text-surface-600 italic px-2 py-1 select-none">Empty</li>
         )}
         {nodes.map(node => {
           const isDir = node.isDirectory
@@ -395,10 +395,10 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                 onDrop={(e) => handleDrop(e, fullPath, isDir)}
                 className={`group relative flex items-center justify-between cursor-pointer rounded px-2 py-1.5 text-xs transition-colors select-none ${
                   isSelected 
-                    ? 'bg-indigo-600/40 text-indigo-200 font-medium' 
+                    ? 'bg-primary-600/40 text-primary-200 font-medium' 
                     : isActive 
-                      ? 'bg-indigo-600/20 text-indigo-300 font-medium' 
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      ? 'bg-primary-600/20 text-primary-300 font-medium' 
+                      : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200'
                 }`}
                 onClick={(e) => handleNodeClick(e, fullPath, isDir, fullPath)}
                 onDoubleClick={(e) => handleNodeDoubleClick(e, fullPath, isDir)}
@@ -414,21 +414,21 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   <span className="truncate">{node.name}</span>
                 </div>
                 
-                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-slate-800 shadow-xl border border-slate-700/80 rounded-md z-50 px-1 py-1 gap-1">
+                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-surface-800 shadow-xl border border-surface-700/80 rounded-md z-50 px-1 py-1 gap-1">
                   {isDir && (
                     <>
-                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, false)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors" title="새 파일">
+                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, false)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors" title="새 파일">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                       </button>
-                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, true)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors" title="새 폴더">
+                      <button onClick={(e) => handleAddFile(e, `${folderPath}/${node.path}`, true)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors" title="새 폴더">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
                       </button>
                     </>
                   )}
-                  <button onClick={(e) => handleRename(e, folderPath, node)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-yellow-400 transition-colors" title="이름 변경">
+                  <button onClick={(e) => handleRename(e, folderPath, node)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-yellow-400 transition-colors" title="이름 변경">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
-                  <button onClick={(e) => handleDelete(e, folderPath, node)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-red-400 transition-colors" title="삭제">
+                  <button onClick={(e) => handleDelete(e, folderPath, node)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-red-400 transition-colors" title="삭제">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -443,23 +443,23 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
   }
 
   return (
-    <aside className="border-r border-slate-800 bg-slate-900 flex flex-col shrink-0" style={{ width }}>
-      <div className="border-b border-slate-800 p-4 shrink-0 flex justify-between items-start">
+    <aside className="border-r border-surface-800 bg-surface-900 flex flex-col shrink-0" style={{ width }}>
+      <div className="border-b border-surface-800 p-4 shrink-0 flex justify-between items-start">
         <div className="overflow-hidden mr-2">
           <h2 
-            className="font-bold text-slate-100 truncate cursor-pointer hover:underline"
+            className="font-bold text-surface-100 truncate cursor-pointer hover:underline"
             onClick={() => projectPath && window.api.shell.openPath(projectPath)}
             title="클릭하여 폴더 열기"
           >
             {projectPath ? projectPath.split(/[/\\]/).pop() : 'Project Explorer'}
           </h2>
-          <p className="truncate text-[10px] text-slate-500 mt-1" title={projectPath || ''}>
+          <p className="truncate text-[10px] text-surface-500 mt-1" title={projectPath || ''}>
             {projectPath}
           </p>
         </div>
         <button 
           onClick={handleUpdateProject}
-          className="w-7 h-7 flex shrink-0 items-center justify-center rounded-none bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 transition-colors"
+          className="w-7 h-7 flex shrink-0 items-center justify-center rounded-none bg-primary-600/20 text-primary-400 hover:bg-primary-600/40 transition-colors"
           title="의존성 복구 및 최신 엔진 업데이트 (npm install)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -469,7 +469,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
         <div className="text-sm">
           {/* Configurations */}
           <div className="mb-4">
-            <div className="flex items-center py-1 text-slate-400 select-none">
+            <div className="flex items-center py-1 text-surface-400 select-none">
               <span className="font-semibold uppercase text-xs tracking-wider">Configurations</span>
             </div>
             <ul className="pl-2 mt-1 space-y-0.5">
@@ -482,10 +482,10 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                     key={file} 
                     className={`cursor-pointer rounded px-2 py-1.5 text-xs truncate transition-colors select-none ${
                       isSelected 
-                        ? 'bg-indigo-600/40 text-indigo-200 font-medium' 
+                        ? 'bg-primary-600/40 text-primary-200 font-medium' 
                         : isActive 
-                          ? 'bg-indigo-600/20 text-indigo-300 font-medium' 
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          ? 'bg-primary-600/20 text-primary-300 font-medium' 
+                          : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200'
                     }`}
                     onClick={(e) => handleNodeClick(e, filePath, false)}
                     onDoubleClick={(e) => handleNodeDoubleClick(e, filePath, false)}
@@ -509,7 +509,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, rootPath, true)}
                 className={`relative flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
-                  isSelected ? 'bg-indigo-600/40 text-indigo-200' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  isSelected ? 'bg-primary-600/40 text-primary-200' : 'text-surface-400 hover:bg-surface-800 hover:text-white'
                 }`}
                 onClick={(e) => handleNodeClick(e, rootPath, true, folder)}
               >
@@ -519,17 +519,17 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   </span>
                   <span className="font-semibold capitalize">{folder}</span>
                 </div>
-                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-slate-800 shadow-xl border border-slate-700/80 rounded-md z-50 px-1 py-1 gap-1">
+                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-surface-800 shadow-xl border border-surface-700/80 rounded-md z-50 px-1 py-1 gap-1">
                   <button 
                     onClick={(e) => handleAddFile(e, folder, false)}
-                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors"
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors"
                     title={`새 ${folder} 리소스 추가`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   </button>
                   <button 
                     onClick={(e) => handleAddFile(e, folder, true)}
-                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-700 hover:text-indigo-400 transition-colors"
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors"
                     title={`새 폴더 추가`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>

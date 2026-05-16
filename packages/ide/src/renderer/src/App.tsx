@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useProjectStore } from './store/useProjectStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
@@ -6,13 +6,23 @@ import { EditorArea } from './components/Editor/EditorArea'
 import { DebugToolbar } from './components/Toolbar/DebugToolbar'
 import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectDialog'
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
+import { SettingsModal } from './components/Settings/SettingsModal'
 
 function App() {
-  const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen } = useProjectStore()
+  const { projectPath, setProjectPath, globalLoading, setGlobalLoading, isPreviewOpen, themeColor, themeBg, isSettingsOpen, setIsSettingsOpen, initSettings } = useProjectStore()
   const [newProjectData, setNewProjectData] = useState<{ isOpen: boolean, parentDir: string } | null>(null)
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [previewWidth, setPreviewWidth] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
+
+  useEffect(() => {
+    initSettings()
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeColor
+    document.documentElement.dataset.bgTheme = themeBg
+  }, [themeColor, themeBg])
 
   const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -109,24 +119,24 @@ function App() {
 
   if (!projectPath) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-900 text-white">
-        <div className="rounded-lg border border-slate-800 bg-slate-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
-          <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-surface-900 text-white">
+        <div className="rounded-lg border border-surface-800 bg-surface-800/50 p-10 text-center shadow-2xl backdrop-blur-xl">
+          <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-cyan-400">
             Fumika Engine
           </h1>
-          <p className="mb-8 text-slate-400">The Visual Novel Studio</p>
+          <p className="mb-8 text-surface-400">The Visual Novel Studio</p>
           <div className="flex flex-col gap-4">
             <button
               onClick={handleOpenProject}
               disabled={globalLoading}
-              className="rounded-sm bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-500 hover:-translate-y-0.5"
+              className="rounded-sm bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-500/30 transition-all hover:bg-primary-500 hover:-transurface-y-0.5"
             >
               Open Existing Project
             </button>
             <button
               onClick={handleScaffoldProject}
               disabled={globalLoading}
-              className="rounded-sm border border-slate-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:-translate-y-0.5"
+              className="rounded-sm border border-surface-700 bg-transparent px-6 py-3 font-semibold text-white transition-all hover:bg-surface-800 hover:-transurface-y-0.5"
             >
               Create New Project
             </button>
@@ -144,17 +154,17 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-300">
+    <div className="flex h-screen w-screen overflow-hidden bg-surface-950 text-surface-300">
       <ProjectSidebar width={sidebarWidth} />
       <div 
-        className="w-1 cursor-col-resize bg-slate-800 hover:bg-indigo-500 active:bg-indigo-500 z-10 transition-colors shrink-0"
+        className="w-1 cursor-col-resize bg-surface-800 hover:bg-primary-500 active:bg-primary-500 z-10 transition-colors shrink-0"
         onMouseDown={handleSidebarResizeStart}
         title="사이드바 크기 조절"
       />
 
       {/* Main Editor Area */}
       <main className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center border-b border-slate-800 bg-slate-900/50 px-6 backdrop-blur-md">
+        <header className="flex h-14 shrink-0 items-center border-b border-surface-800 bg-surface-900/50 px-6 backdrop-blur-md">
           <h3 className="text-sm font-medium">Editor</h3>
           <DebugToolbar />
         </header>
@@ -165,11 +175,11 @@ function App() {
           {isPreviewOpen && (
             <>
               <div 
-                className="w-2 cursor-col-resize rounded-none transition-colors hover:bg-indigo-500 active:bg-indigo-500 shrink-0 self-stretch" 
+                className="w-2 cursor-col-resize rounded-none transition-colors hover:bg-primary-500 active:bg-primary-500 shrink-0 self-stretch" 
                 onMouseDown={handlePreviewResizeStart}
                 title="프리뷰 크기 조절"
               />
-              <div className="flex flex-col shrink-0 h-full rounded-none overflow-hidden border-l border-slate-800 bg-slate-900/50 shadow-xl" style={{ width: previewWidth }}>
+              <div className="flex flex-col shrink-0 h-full rounded-none overflow-hidden border-l border-surface-800 bg-surface-900/50 shadow-xl" style={{ width: previewWidth }}>
                 <PreviewPanel />
               </div>
             </>
@@ -182,9 +192,11 @@ function App() {
         <div className="fixed inset-0 z-50 cursor-col-resize select-none" />
       )}
 
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <LoadingOverlay />
     </div>
   )
 }
 
 export default App
+

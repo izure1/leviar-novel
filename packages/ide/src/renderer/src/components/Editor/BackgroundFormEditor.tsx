@@ -39,16 +39,16 @@ export default {
   }
 
   return (
-    <div className="p-6 bg-[#1e1e1e] h-full overflow-y-auto text-slate-300">
+    <div className="p-6 bg-[#1e1e1e] h-full overflow-y-auto text-surface-300">
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
           <h2 className="text-xl font-bold text-white mb-1">Background Asset Editor</h2>
-          <p className="text-sm text-slate-500">배경 이미지를 등록하고 속성을 설정합니다. 템플릿 덮어쓰기 방식으로 동작합니다.</p>
+          <p className="text-sm text-surface-500">배경 이미지를 등록하고 속성을 설정합니다. 템플릿 덮어쓰기 방식으로 동작합니다.</p>
         </div>
 
-        <div className="space-y-4 bg-slate-800/30 p-5 rounded-lg border border-slate-700/50">
+        <div className="space-y-4 bg-surface-800/30 p-5 rounded-lg border border-surface-700/50">
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">배경 식별자 (ID)</label>
+            <label className="block text-sm font-medium text-surface-400 mb-1">배경 식별자 (ID)</label>
             <input 
               type="text" 
               value={bgName}
@@ -56,13 +56,13 @@ export default {
                 setBgName(e.target.value)
                 updateTemplate(e.target.value, src, parallax)
               }}
-              className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+              className="w-full bg-surface-900 border border-surface-700 rounded p-2 text-sm text-white focus:border-primary-500 focus:outline-none"
               placeholder="예: bg_room"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">이미지 경로 (src)</label>
+            <label className="block text-sm font-medium text-surface-400 mb-1">이미지 경로 (src)</label>
             <input 
               type="text" 
               value={src}
@@ -70,7 +70,7 @@ export default {
                 setSrc(e.target.value)
                 updateTemplate(bgName, e.target.value, parallax)
               }}
-              className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+              className="w-full bg-surface-900 border border-surface-700 rounded p-2 text-sm text-white focus:border-primary-500 focus:outline-none"
               placeholder="예: assets/bg_room.png"
             />
           </div>
@@ -82,11 +82,11 @@ export default {
                 setParallax(newVal)
                 updateTemplate(bgName, src, newVal)
               }}
-              className={`w-12 h-6 rounded-full transition-colors relative ${parallax ? 'bg-indigo-500' : 'bg-slate-700'}`}
+              className={`w-12 h-6 rounded-full transition-colors relative ${parallax ? 'bg-primary-500' : 'bg-surface-700'}`}
             >
-              <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${parallax ? 'translate-x-6' : ''}`} />
+              <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${parallax ? 'transurface-x-6' : ''}`} />
             </button>
-            <label className="text-sm font-medium text-slate-300">
+            <label className="text-sm font-medium text-surface-300">
               패럴랙스(Parallax) 효과 활성화
             </label>
           </div>

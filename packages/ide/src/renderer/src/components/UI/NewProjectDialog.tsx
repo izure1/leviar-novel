@@ -118,16 +118,16 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in text-sm px-4">
-      <div className="bg-slate-800 border border-slate-700 p-6 rounded-sm shadow-xl w-full max-w-lg min-w-[320px] md:max-w-xl animate-fade-scale transition-all" onKeyDown={handleKeyDown}>
+      <div className="bg-surface-800 border border-surface-700 p-6 rounded-sm shadow-xl w-full max-w-lg min-w-[320px] md:max-w-xl animate-fade-scale transition-all" onKeyDown={handleKeyDown}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-white">새 프로젝트 생성 (단계 {step}/{maxStep})</h3>
         </div>
         
         <div className="flex flex-col gap-4 mb-6 min-h-[140px]">
           {step === 1 && (
-            <div className="flex flex-col gap-2 animate-fade-in text-slate-300">
-              <span className="font-semibold text-xs text-indigo-400">오픈소스 라이선스 안내</span>
-              <div className="bg-slate-900 border border-slate-700 p-3 rounded-sm text-[10px] h-[100px] overflow-y-auto whitespace-pre-wrap font-mono text-slate-400">
+            <div className="flex flex-col gap-2 animate-fade-in text-surface-300">
+              <span className="font-semibold text-xs text-primary-400">오픈소스 라이선스 안내</span>
+              <div className="bg-surface-900 border border-surface-700 p-3 rounded-sm text-[10px] h-[100px] overflow-y-auto whitespace-pre-wrap font-mono text-surface-400">
                 {`MIT 라이선스
 
 저작권 (c) ${new Date().getFullYear()}
@@ -138,27 +138,27 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
 
 본 소프트웨어는 상품성, 특정 목적에의 적합성 및 비침해성에 대한 보증을 포함하되 이에 국한되지 않는 어떤 형태의 명시적 또는 묵시적 보증 없이 "있는 그대로" 제공됩니다. 어떠한 경우에도 저작권자나 소프트웨어 개발자는 계약, 불법행위 기타 원인에 관계없이 소프트웨어 또는 소프트웨어의 사용이나 기타 거래와 관련하여 발생하는 청구, 손해 또는 기타 책임에 대해 어떠한 책임도 지지 않습니다.`}
               </div>
-              <p className="text-xs text-slate-400 mt-1">프로젝트를 생성하면 본 라이선스 규정에 동의하게 되며, 엔진 개발자는 소프트웨어 사용으로 인한 책임을 지지 않습니다.</p>
+              <p className="text-xs text-surface-400 mt-1">프로젝트를 생성하면 본 라이선스 규정에 동의하게 되며, 엔진 개발자는 소프트웨어 사용으로 인한 책임을 지지 않습니다.</p>
             </div>
           )}
 
           {step === 2 && (
             <>
-              <label className="flex flex-col gap-1 text-slate-300 animate-fade-in">
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
                 <span className="font-semibold text-xs">폴더 이름 (영문/숫자/하이픈)</span>
                 <input
                   ref={inputRef}
-                  className={`bg-slate-900 border ${errors.folderName ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-indigo-500`}
+                  className={`bg-surface-900 border ${errors.folderName ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))}
                 />
                 {errors.folderName && <span className="text-red-400 text-[10px]">{errors.folderName}</span>}
               </label>
 
-              <label className="flex flex-col gap-1 text-slate-300 animate-fade-in">
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
                 <span className="font-semibold text-xs">프로세스 이름 (작업 관리자 표시용)</span>
                 <input
-                  className={`bg-slate-900 border ${errors.processName ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-indigo-500`}
+                  className={`bg-surface-900 border ${errors.processName ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
                   value={processName}
                   onChange={(e) => setProcessName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 />
@@ -169,21 +169,21 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
 
           {step === 3 && (
             <>
-              <label className="flex flex-col gap-1 text-slate-300 animate-fade-in">
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
                 <span className="font-semibold text-xs">게임 이름 (실제 표기용)</span>
                 <input
                   ref={inputRef}
-                  className={`bg-slate-900 border ${errors.gameName ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-indigo-500`}
+                  className={`bg-surface-900 border ${errors.gameName ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
                   value={gameName}
                   onChange={(e) => setGameName(e.target.value)}
                 />
                 {errors.gameName && <span className="text-red-400 text-[10px]">{errors.gameName}</span>}
               </label>
 
-              <label className="flex flex-col gap-1 text-slate-300 animate-fade-in">
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
                 <span className="font-semibold text-xs">프로젝트 ID (com.example.game)</span>
                 <input
-                  className={`bg-slate-900 border ${errors.projectId ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-indigo-500`}
+                  className={`bg-surface-900 border ${errors.projectId ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
                 />
@@ -195,22 +195,22 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
           {step === 4 && (
             <>
               <div className="flex gap-2 animate-fade-in">
-                <label className="flex flex-col gap-1 text-slate-300 flex-1">
+                <label className="flex flex-col gap-1 text-surface-300 flex-1">
                   <span className="font-semibold text-xs">가로 해상도</span>
                   <input
                     ref={inputRef}
                     type="number"
-                    className={`bg-slate-900 border ${errors.width ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-indigo-500`}
+                    className={`bg-surface-900 border ${errors.width ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
                     value={width}
                     onChange={(e) => setWidth(Number(e.target.value))}
                   />
                   {errors.width && <span className="text-red-400 text-[10px]">{errors.width}</span>}
                 </label>
-                <label className="flex flex-col gap-1 text-slate-300 flex-1">
+                <label className="flex flex-col gap-1 text-surface-300 flex-1">
                   <span className="font-semibold text-xs">세로 해상도</span>
                   <input
                     type="number"
-                    className={`bg-slate-900 border ${errors.height ? 'border-red-500' : 'border-slate-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-indigo-500`}
+                    className={`bg-surface-900 border ${errors.height ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
                     value={height}
                     onChange={(e) => setHeight(Number(e.target.value))}
                   />
@@ -223,7 +223,7 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
 
         <div className="flex justify-between items-center">
           <button 
-            className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 rounded-sm text-white transition-colors" 
+            className="px-4 py-2 text-sm bg-surface-700 hover:bg-surface-600 rounded-sm text-white transition-colors" 
             onClick={onCancel}
           >
             취소
@@ -232,7 +232,7 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
           <div className="flex gap-2">
             {step > 1 && (
               <button 
-                className="px-4 py-2 text-sm border border-slate-600 hover:bg-slate-700 rounded-sm text-white transition-colors" 
+                className="px-4 py-2 text-sm border border-surface-600 hover:bg-surface-700 rounded-sm text-white transition-colors" 
                 onClick={handlePrev}
               >
                 이전
@@ -240,14 +240,14 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
             )}
             {step < maxStep ? (
               <button 
-                className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 rounded-sm text-white transition-colors font-semibold" 
+                className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-500 rounded-sm text-white transition-colors font-semibold" 
                 onClick={handleNext}
               >
                 다음
               </button>
             ) : (
               <button 
-                className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 rounded-sm text-white transition-colors font-semibold" 
+                className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-500 rounded-sm text-white transition-colors font-semibold" 
                 onClick={handleConfirm}
               >
                 완료

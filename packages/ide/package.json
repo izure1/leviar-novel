@@ -22,12 +22,13 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@monaco-editor/react": "^4.6.0",
     "chokidar": "^5.0.0",
     "electron-updater": "^6.3.9",
     "fumika": "*",
-    "zustand": "^5.0.13",
+    "lucide-react": "^1.16.0",
     "vite": "^7.2.6",
-    "@monaco-editor/react": "^4.6.0"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
