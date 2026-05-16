@@ -61,7 +61,6 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
         lib: ['ESNext', 'DOM'],
         moduleResolution: 'bundler',
         paths: {
-          '*': ['./*'],
           '@/*': ['./*']
         },
         strict: true,

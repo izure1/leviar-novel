@@ -5,14 +5,14 @@
 // ─── 최상위 설정 파일 ─────────────────────────────────────────
 
 export function getNovelConfigContent(width: number, height: number): string {
-  return `import Assets from './declarations/assets'
-import sceneKeys from './declarations/sceneKeys'
-import Characters from './declarations/characters'
-import Modules from './declarations/modules'
-import Backgrounds from './declarations/backgrounds'
-import Audios from './declarations/audios'
-import Effects from './declarations/effects'
-import Fallbacks from './declarations/fallbacks'
+  return `import Assets from '@/declarations/assets'
+import sceneKeys from '@/declarations/sceneKeys'
+import Characters from '@/declarations/characters'
+import Modules from '@/declarations/modules'
+import Backgrounds from '@/declarations/backgrounds'
+import Audios from '@/declarations/audios'
+import Effects from '@/declarations/effects'
+import Fallbacks from '@/declarations/fallbacks'
 
 import { defineNovelConfig } from 'fumika'
 
@@ -35,8 +35,8 @@ export default defineNovelConfig({
 
 export const MAIN_TS_CONTENT = `// Fumika Engine Entry Point
 import { Novel } from 'fumika'
-import config from './novel.config'
-import Scenes from './declarations/scenes'
+import config from '@/novel.config'
+import Scenes from '@/declarations/scenes'
 
 async function main() {
   const element = document.getElementById('app') as HTMLDivElement
@@ -106,11 +106,11 @@ const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   sceneKeys: `export default [] as const\n`,
   characters: `export default {} as const\n`,
   modules: `import { defineCustomModules } from 'fumika'\n\nexport default defineCustomModules({\n\n})\n`,
-  backgrounds: `import { defineBackgrounds } from 'fumika'\nimport assets from './assets'\n\nexport default defineBackgrounds(assets)({\n\n})\n`,
+  backgrounds: `import { defineBackgrounds } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineBackgrounds(assets)({\n\n})\n`,
   effects: `import { defineEffects } from 'fumika'\n\nexport default defineEffects({\n\n})\n`,
-  fallbacks: `import { defineFallback } from 'fumika'\nimport modules from './modules'\n\nexport default defineFallback(modules)([\n\n])\n`,
+  fallbacks: `import { defineFallback } from 'fumika'\nimport modules from '@/declarations/modules'\n\nexport default defineFallback(modules)([\n\n])\n`,
   audios: `import { defineAudios } from 'fumika'\n\nexport default defineAudios({\n\n})\n`,
-  types: `import type { FallbackRuleOf } from 'fumika'\nimport type Modules from './modules'\n\ndeclare global {\n  type FallbackItem = FallbackRuleOf<typeof Modules>\n}\n`,
+  types: `import type { FallbackRuleOf } from 'fumika'\nimport type Modules from '@/declarations/modules'\n\ndeclare global {\n  type FallbackItem = FallbackRuleOf<typeof Modules>\n}\n`,
   initials: `export default {}\n`,
   hooks: `export default {}\n`,
 }
@@ -140,7 +140,7 @@ export const WATCHER_DECL: Partial<Record<string, WatcherDeclSection>> = {
     footer: `})\n`,
   },
   backgrounds: {
-    header: `import { defineBackgrounds } from 'fumika'\nimport assets from './assets'\n\nexport default defineBackgrounds(assets)({\n`,
+    header: `import { defineBackgrounds } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineBackgrounds(assets)({\n`,
     footer: `})\n`,
   },
   effects: {
@@ -154,7 +154,7 @@ export const WATCHER_DECL: Partial<Record<string, WatcherDeclSection>> = {
     footer: `})\n`,
   },
   fallbacks: {
-    header: `import { defineFallback } from 'fumika'\nimport modules from './modules'\n\nexport default defineFallback(modules)([\n`,
+    header: `import { defineFallback } from 'fumika'\nimport modules from '@/declarations/modules'\n\nexport default defineFallback(modules)([\n`,
     footer: `])\n`,
   },
 }

@@ -166,7 +166,7 @@ export class ProjectWatcher {
         .map((f) => {
           const importName = toImportName(f.rel)
           const relPathNoExt = removeExt(f.rel)
-          return `import * as ${importName} from '../${folder}/${relPathNoExt}'`
+          return `import * as ${importName} from '@/${folder}/${relPathNoExt}'`
         })
         .join('\n')
 
@@ -291,7 +291,7 @@ function buildModulesDecl(tsFiles: FileEntry[]): string {
     .map((f) => {
       const importName = toImportName(f.rel)
       const relPathNoExt = removeExt(f.rel)
-      return `import ${importName} from '../modules/${relPathNoExt}'`
+      return `import ${importName} from '@/modules/${relPathNoExt}'`
     })
     .join('\n')
 
@@ -313,7 +313,7 @@ function buildFallbacksDecl(tsFiles: FileEntry[]): string {
     .map((f) => {
       const importName = toImportName(f.rel)
       const relPathNoExt = removeExt(f.rel)
-      return `import ${importName} from '../fallbacks/${relPathNoExt}'`
+      return `import ${importName} from '@/fallbacks/${relPathNoExt}'`
     })
     .join('\n')
 
@@ -332,7 +332,7 @@ function buildDefaultDecl(folder: string, files: FileEntry[]): string {
     .map((f) => {
       const importName = toImportName(f.rel)
       const relPathNoExt = removeExt(f.rel)
-      return `import ${importName} from '../${folder}/${relPathNoExt}'`
+      return `import ${importName} from '@/${folder}/${relPathNoExt}'`
     })
     .join('\n')
 

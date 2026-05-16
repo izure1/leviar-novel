@@ -47,6 +47,13 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     const ts = (monacoInstance.languages as any).typescript
     if (!ts) return
 
+    // projectPath 기반으로 @/ alias 경로 생성
+    const paths: Record<string, string[]> = {}
+    if (projectPath) {
+      const projectUri = monaco.Uri.file(projectPath).toString() + '/'
+      paths['@/*'] = [projectUri + '*']
+    }
+
     ts.typescriptDefaults.setCompilerOptions({
       target: ts.ScriptTarget.ESNext,
       allowNonTsExtensions: true,
@@ -54,6 +61,7 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
       module: ts.ModuleKind.ESNext,
       noEmit: true,
       esModuleInterop: true,
+      paths,
     })
 
     ts.typescriptDefaults.setDiagnosticsOptions({
@@ -61,7 +69,7 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
       noSyntaxValidation: false,
       diagnosticCodesToIgnore: [2307, 2792]
     })
-  }, [monacoInstance])
+  }, [monacoInstance, projectPath])
 
   // 프로젝트 파일 + fumika 타입을 addExtraLib으로 주입
   // addExtraLib은 TS 워커의 별도 가상 파일시스템을 사용하므로
