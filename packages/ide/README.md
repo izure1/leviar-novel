@@ -42,5 +42,4 @@ npm run dev:ide
 
 상업적 이용 및 배포와 관련된 정책은 아래 링크를 참고해 주세요.
 
-- [Fumika 라이선스 레퍼런스 (LICENSE)](../../LICENSE)
-- [IDE 아키텍처 가이드 (추가 예정)](#)
+- [Fumika 라이선스 (LICENSE)](./LICENSE)
